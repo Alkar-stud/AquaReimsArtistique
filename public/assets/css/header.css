@@ -22,7 +22,6 @@
 }
 .nav-link:hover, .nav-link:focus {
     background: var(--ara-color-purple) !important;
-    color: var(--ara-color-darkblue) !important;
     border-radius: 0.25rem;
 }
 header {

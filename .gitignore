@@ -1,6 +1,11 @@
 /.idea/*
-###> symfony/framework-bundle ###
-/.env.*
+
+/.env
+/.env.local
 /var/
 /vendor/
-###< symfony/framework-bundle ###
+
+
+/public/storage
+
+*.log

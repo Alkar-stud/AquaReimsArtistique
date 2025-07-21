@@ -1,7 +1,20 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
+use app\Attributes\Route;
 
-Route::get('/', function () {
-    return view('welcome');
-});
+$routes = [];
+
+foreach (glob(__DIR__ . '/../app/Controllers/*.php') as $file) {
+    require_once $file;
+    $className = 'app\\Controllers\\' . basename($file, '.php');
+    if (class_exists($className)) {
+        $reflection = new ReflectionClass($className);
+        $attributes = $reflection->getAttributes(Route::class);
+        foreach ($attributes as $attribute) {
+            $instance = $attribute->newInstance();
+            $routes[$instance->path] = $file;
+        }
+    }
+}
+
+return $routes;

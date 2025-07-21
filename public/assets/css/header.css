@@ -1,0 +1,77 @@
+/* Menu navbar */
+.navbar {
+    background: var(--ara-color-darkblue) !important;
+}
+.navbar .container {
+    justify-content: flex-start !important;
+}
+.navbar-brand {
+    margin-right: 0.5rem;
+    margin-left: 0 !important;
+    padding-left: 0 !important;
+    color: var(--ara-color-lightblue) !important;
+    font-weight: bold;
+}
+.navbar-nav {
+    flex-direction: row;
+    gap: 1rem;
+}
+.nav-link {
+    color: var(--ara-color-lightblue) !important;
+    transition: background 0.2s, color 0.2s;
+}
+.nav-link:hover, .nav-link:focus {
+    background: var(--ara-color-purple) !important;
+    color: var(--ara-color-darkblue) !important;
+    border-radius: 0.25rem;
+}
+header {
+    background: var(--ara-color-purple);
+    width: 100%;
+    padding: 1rem 0;
+}
+header .container img {
+    height: 80px;
+}
+.navbar-toggler {
+    border-color: var(--ara-color-lightblue);
+}
+.navbar-toggler:focus {
+    outline: none;
+    box-shadow: none;
+}
+.navbar-toggler:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 0.15rem var(--ara-color-white);
+}
+.navbar-toggler-icon {
+    background-image: url("data:image/svg+xml;charset=utf8,%3Csvg viewBox='0 0 30 30' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath stroke='rgba(232,248,255,1)' stroke-width='2' stroke-linecap='round' stroke-miterlimit='10' d='M4 7h22M4 15h22M4 23h22'/%3E%3C/svg%3E");
+}
+@media (max-width: 768px) {
+    .navbar-nav {
+        flex-direction: column !important;
+        width: 100%;
+        gap: 0;
+    }
+    .nav-link {
+        width: 100%;
+        text-align: left;
+        padding: 1rem;
+        border-radius: 0;
+    }
+    .nav-link-important {
+        background: var(--ara-color-darkpink) !important;
+        color: var(--ara-color-white) !important;
+        font-size: 1.2rem;
+        font-weight: bold;
+        border-radius: 0.25rem;
+        box-shadow: 0 2px 8px rgba(250,78,154,0.15);
+    }
+    .nav-link-important:hover,
+    .nav-link-important:active,
+    .nav-link-important:focus {
+        background: var(--ara-color-purple) !important;
+        color: var(--ara-color-white) !important;
+        box-shadow: 0 2px 8px rgba(92,130,206,0.15);
+    }
+}

@@ -1,17 +1,12 @@
 <?php
 
-$config = [];
+// On parcourt $_ENV pour construire le tableau $config spécifique à l'application.
+foreach ($_ENV as $key => $value) {
 
-$envFile = __DIR__ . '/../.env.local';
-if (file_exists($envFile)) {
-    $lines = file($envFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
-    foreach ($lines as $line) {
-        if (preg_match('/^\s*#/', $line) || trim($line) === '') continue;
-        if (preg_match('/^(DB_|MAIL_)/', $line)) continue;
-        if (preg_match('/^([A-Z0-9_]+)=(.*)$/', $line, $matches)) {
-            $key = $matches[1];
-            $value = trim($matches[2], "\"'");
-            $config[strtolower($key)] = $value;
-        }
+
+    // On s'assure que la clé est bien au format attendu (lettres majuscules et underscores)
+    if (preg_match('/^[A-Z0-9_]+$/', $key)) {
+        // On convertit la clé en minuscules pour le tableau $config, comme dans votre version originale.
+        $config[strtolower($key)] = $value;
     }
 }

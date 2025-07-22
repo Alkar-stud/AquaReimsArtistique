@@ -1,7 +1,9 @@
 <?php
 namespace app\Attributes;
 
-#[\Attribute(\Attribute::TARGET_CLASS)]
+use Attribute;
+
+#[Attribute(Attribute::TARGET_CLASS | Attribute::TARGET_METHOD)] // Permet d'utiliser l'attribut sur une classe ou une méthode
 class Route
 {
     public function __construct(

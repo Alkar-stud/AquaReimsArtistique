@@ -22,6 +22,17 @@
                     <li class="nav-item">
                         <a class="nav-link" href="/reservation">Réservation</a>
                     </li>
+                    <?php if (isset($_SESSION['user']['role']) && $_SESSION['user']['role']['level'] < 2): ?>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/gestion">Gestion</a>
+                        </li>
+                    <?php endif; ?>
+
+                    <?php if (isset($_SESSION['user'])): ?>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/account">Mon compte</a>
+                        </li>
+                    <?php endif; ?>
                     <li class="nav-item">
                         <?php if (isset($_SESSION['user'])): ?>
                             <a class="nav-link" href="/logout">Déconnexion</a>

@@ -1,4 +1,4 @@
-    <footer class="mt-auto py-3 text-center bg-primary text-white">
+    <footer class="mt-auto py-3 text-center bg-secondary text-white">
         <div class="container">
             <small>
                 Contact pour le gala uniquement : <a href="mailto:<?= htmlspecialchars(EMAIL_GALA ?? ''); ?>" class="link-light"><?= htmlspecialchars(EMAIL_GALA ?? ''); ?></a>

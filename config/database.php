@@ -1,12 +1,4 @@
 <?php
-require_once __DIR__ . '/../vendor/autoload.php';
-
-if (file_exists(__DIR__ . '/../.env.local')) {
-    $dotenv = Dotenv\Dotenv::createImmutable(__DIR__ . '/../', '.env.local');
-} else {
-    $dotenv = Dotenv\Dotenv::createImmutable(__DIR__ . '/../');
-}
-$dotenv->safeLoad();
 
 define('DB_NAME', $_ENV['DB_NAME'] ?? '');
 define('DB_USER', $_ENV['DB_USER'] ?? '');

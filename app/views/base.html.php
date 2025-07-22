@@ -20,7 +20,7 @@
 
 </head>
 <body class="d-flex flex-column min-vh-100">
-    <?php include __DIR__ . '/menu.html.php'; ?>
+    <?php include __DIR__ . '/header.html.php'; ?>
 
     <main id="main-page" class="container-fluid p-3 flex-grow-1">
         <?= $content ?? '' ?>

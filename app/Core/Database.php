@@ -34,7 +34,7 @@ class Database
         if (self::$instance === null) {
             // Vos constantes sont déjà chargées par un require dans vos fichiers de config
             // Il n'est donc pas nécessaire de les recharger ici.
-            $dsn = 'mysql:host=' . DB_HOST . ';dbname=' . DB_NAME . ';charset=' . DB_CHARSET;
+            $dsn = 'mysql:host=' . $_ENV['DB_HOST'] . ';dbname=' . $_ENV['DB_NAME'] . ';charset=' . $_ENV['DB_CHARSET'];
 
             $options = [
                 PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION, // Lance des exceptions en cas d'erreur
@@ -43,7 +43,7 @@ class Database
             ];
 
             try {
-                self::$instance = new PDO($dsn, DB_USER, DB_PASSWORD, $options);
+                self::$instance = new PDO($dsn, $_ENV['DB_USER'], $_ENV['DB_PASSWORD'], $options);
             } catch (PDOException $e) {
                 // En développement, on peut afficher l'erreur. En production, il faudrait logger l'erreur et afficher un message générique.
                 throw new PDOException("Erreur de connexion à la base de données : " . $e->getMessage(), (int)$e->getCode());

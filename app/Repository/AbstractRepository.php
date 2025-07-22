@@ -27,17 +27,6 @@ abstract class AbstractRepository
         return $stmt->fetchAll();
     }
 
-    /**
-     * Récupère un enregistrement par son ID.
-     * @param int $id
-     * @return array|false
-     */
-    public function findById(int $id): array|false
-    {
-        $stmt = $this->prepare("SELECT * FROM {$this->tableName} WHERE id = :id");
-        $stmt->execute(['id' => $id]);
-        return $stmt->fetch();
-    }
 
     /**
      * Supprime un enregistrement par son ID.

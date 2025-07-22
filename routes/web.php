@@ -1,23 +1,40 @@
 <?php
 
-use App\Attributes\Route;
+use app\Attributes\Route;
 
 $routes = [];
 
 foreach (glob(__DIR__ . '/../app/Controllers/*.php') as $file) {
     require_once $file;
 
-    // On récupère le nom de base du fichier, qui est aussi le nom de la classe
     $controllerBaseName = basename($file, '.php');
     $className = 'app\\Controllers\\' . $controllerBaseName;
 
     if (class_exists($className)) {
-        $reflection = new ReflectionClass($className);
-        $attributes = $reflection->getAttributes(Route::class);
-        foreach ($attributes as $attribute) {
+        $reflectionClass = new ReflectionClass($className);
+
+        // 1. On cherche d'abord une route sur la CLASSE elle-même
+        $classAttributes = $reflectionClass->getAttributes(Route::class);
+        foreach ($classAttributes as $attribute) {
             $instance = $attribute->newInstance();
-            // On stocke directement le nom complet de la classe
-            $routes[$instance->path] = $className; // $className vaut 'app\Controllers\HomeController'
+            // Par convention, une route sur une classe appelle la méthode 'index'
+            $routes[$instance->path] = [
+                'controller' => $className,
+                'method' => 'index'
+            ];
+        }
+
+        // 2. ENSUITE, on cherche des routes sur les MÉTHODES pour les cas spécifiques
+        foreach ($reflectionClass->getMethods() as $method) {
+            $attributes = $method->getAttributes(Route::class);
+
+            foreach ($attributes as $attribute) {
+                $instance = $attribute->newInstance();
+                $routes[$instance->path] = [
+                    'controller' => $className,
+                    'method' => $method->getName()
+                ];
+            }
         }
     }
 }

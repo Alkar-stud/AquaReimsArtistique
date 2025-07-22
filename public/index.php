@@ -7,6 +7,14 @@ session_start();
 
 //Chargement des dépendances
 require_once __DIR__ . '/../vendor/autoload.php';
+// Chargement des variables d'environnement
+if (file_exists(__DIR__ . '/../.env.local')) {
+    $dotenv = Dotenv\Dotenv::createImmutable(__DIR__ . '/../', '.env.local');
+} else {
+    $dotenv = Dotenv\Dotenv::createImmutable(__DIR__ . '/../');
+}
+$dotenv->load();
+
 //Chargement des variables d'environnement pour la base de données
 require_once __DIR__ . '/../config/database.php';
 //Chargement des variables de configuration
@@ -24,21 +32,36 @@ if (MAINTENANCE && $uri != '/login') {
 
 //On ajoutera plus tard si le $user est super admin
 if (isset($routes[$uri])) {
-    // Le nom complet de la classe est déjà dans le tableau
-    $controllerClass = $routes[$uri];
+    // On récupère le tableau contenant le contrôleur et la méthode
+    $routeInfo = $routes[$uri];
+    $controllerClass = $routeInfo['controller'];
+    $methodName = $routeInfo['method'];
 
     if (class_exists($controllerClass)) {
         $controller = new $controllerClass();
-        $controller->index();
+
+        // On vérifie que la méthode existe avant de l'appeler
+        if (method_exists($controller, $methodName)) {
+            // On appelle la méthode spécifiée (ex: index() ou logout())
+            $controller->$methodName();
+        } else {
+            http_response_code(500);
+            echo "Erreur: La méthode '$methodName' n'existe pas dans le contrôleur '$controllerClass'.";
+        }
     } else {
         http_response_code(500);
         echo "Erreur: Le contrôleur '$controllerClass' n'a pas été trouvé.";
     }
 } else {
-    // Gérer la page 404 proprement
+    // Gérer la page 404
     http_response_code(404);
-    // On peut aussi créer un ErrorController pour gérer ça
-    $title = 'Erreur 404';
-    $page = __DIR__ . '/../app/views/404.html.php';
-    require __DIR__ . '/../app/views/base.html.php';
+    $title = 'Erreur 404 - Page non trouvée';
+
+    // On utilise la même logique que la méthode render() pour générer le contenu
+    ob_start();
+    require_once __DIR__ . '/../app/views/404.html.php';
+    $content = ob_get_clean();
+
+    // On inclut le template de base qui utilisera $title et $content
+    require_once __DIR__ . '/../app/views/base.html.php';
 }

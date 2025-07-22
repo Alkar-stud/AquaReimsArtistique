@@ -1,1 +1,1 @@
-ici c'est la page pour les réservations
+Ici c'est la page pour les réservations

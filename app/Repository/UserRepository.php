@@ -2,29 +2,106 @@
 
 namespace app\Repository;
 
+use app\Models\User;
+use DateMalformedStringException;
+
 class UserRepository extends AbstractRepository
 {
     public function __construct()
     {
-        // On passe le nom de la table au constructeur parent
-        parent::__construct('users');
+        parent::__construct('user');
     }
 
     /**
-     * Exemple de méthode spécifique à ce repository.
+     * Trouve un utilisateur par son nom d'utilisateur.
+     *
+     * @param string $username
+     * @return User|false
+     */
+    public function findByUsername(string $username): User|false
+    {
+        $sql = "SELECT * FROM {$this->tableName} WHERE username = :username";
+        $result = $this->query($sql, ['username' => $username]);
+        return $result ? $this->hydrate($result[0]) : false;
+    }
+
+    /**
      * Trouve un utilisateur par son email.
      *
      * @param string $email
-     * @return array|false
+     * @return User|false
      */
-    public function findByEmail(string $email): array|false
+    public function findByEmail(string $email): User|false
     {
-        // On utilise la méthode "query" héritée, mais on ne veut qu'un seul résultat
-        $results = $this->query("SELECT * FROM {$this->tableName} WHERE email = :email", ['email' => $email]);
-        // On retourne le premier résultat, ou false s'il n'y en a pas.
-        return $results[0] ?? false;
+        $sql = "SELECT * FROM {$this->tableName} WHERE email = :email";
+        $result = $this->query($sql, ['email' => $email]);
+        return $result ? $this->hydrate($result[0]) : false;
     }
 
-    // On peut ajouter ici toutes les méthodes spécifiques aux utilisateurs
-    // par exemple : createUser, updateUserPassword, etc.
+    /**
+     * Trouve un utilisateur par son token de réinitialisation valide.
+     * @return User|false
+     */
+    public function findByValidResetToken(string $token): User|false
+    {
+        $sql = "SELECT * FROM {$this->tableName} WHERE password_reset_token = :token AND password_reset_expires_at > NOW()";
+        $result = $this->query($sql, ['token' => $token]);
+        return $result ? $this->hydrate($result[0]) : false;
+    }
+
+    /**
+     * Met à jour le mot de passe d'un utilisateur.
+     */
+    public function updatePassword(int $userId, string $newHashedPassword): bool
+    {
+        $sql = "UPDATE {$this->tableName} SET password = :password WHERE id = :id";
+        return $this->execute($sql, ['password' => $newHashedPassword, 'id' => $userId]);
+    }
+
+    /**
+     * Sauvegarde le token de réinitialisation et sa date d'expiration pour un utilisateur.
+     */
+    public function savePasswordResetToken(int $userId, string $token, string $expiresAt): bool
+    {
+        $sql = "UPDATE {$this->tableName} SET password_reset_token = :token, password_reset_expires_at = :expires_at WHERE id = :id";
+        return $this->execute($sql, ['token' => $token, 'expires_at' => $expiresAt, 'id' => $userId]);
+    }
+
+    /**
+     * Invalide le token de réinitialisation pour un utilisateur en le mettant à NULL.
+     */
+    public function clearResetToken(int $userId): bool
+    {
+        $sql = "UPDATE {$this->tableName} SET password_reset_token = NULL, password_reset_expires_at = NULL WHERE id = :id";
+        return $this->execute($sql, ['id' => $userId]);
+    }
+
+    /**
+     * Crée et remplit un objet User à partir d'un tableau de données (BDD).
+     * @throws DateMalformedStringException
+     */
+    private function hydrate(array $data): User
+    {
+        $user = new User();
+        $user->setId($data['id'])
+            ->setUsername($data['username'])
+            ->setPassword($data['password'])
+            ->setEmail($data['email'])
+            // ->setRoles($data['roles']) // <-- ANCIENNE LIGNE À SUPPRIMER
+            ->setCreatedAt($data['created_at'])
+            ->setUpdatedAt($data['updated_at'])
+            ->setPasswordResetToken($data['password_reset_token'])
+            ->setPasswordResetExpiresAt($data['password_reset_expires_at']);
+
+        // AJOUT : Hydratation de la relation avec le rôle
+        if (!empty($data['roles'])) {
+            $roleRepository = new RoleRepository();
+            $role = $roleRepository->findById($data['roles']);
+            $user->setRole($role);
+        }
+
+        return $user;
+    }
+
+
 }

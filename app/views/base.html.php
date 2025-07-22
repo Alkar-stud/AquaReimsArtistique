@@ -1,5 +1,6 @@
+
 <!DOCTYPE html>
-<html lang="<?= str_replace('_', '-', $config['app_name'] ?? 'fr'); ?>">
+<html lang="<?= str_replace('_', '-', $_ENV['APP_NAME'] ?? 'fr'); ?>">
 <head>
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="Description" content="Site de réservation pour les galas du Aqua Reims Artistique" />
@@ -15,7 +16,7 @@
     <script type="text/javascript" src="/assets/js/scripts.js" charset="UTF8"></script>
 
     <title>
-        <?= htmlspecialchars(($config['app_name'] ?? 'Titre') . ' - ' . ($title ?? ''), ENT_QUOTES, 'UTF-8'); ?>
+        <?= htmlspecialchars(($_ENV['APP_NAME'] ?? 'Titre') . ' - ' . ($title ?? ''), ENT_QUOTES, 'UTF-8'); ?>
     </title>
 
 </head>

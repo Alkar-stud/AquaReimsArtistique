@@ -42,6 +42,7 @@ try {
 
 
 // --- Chargement de la configuration de l'application ---
+require_once __DIR__ . '/../config/env.php';
 //Chargement des variables d'environnement pour la base de données
 require_once __DIR__ . '/../config/database.php';
 //Chargement des variables de configuration

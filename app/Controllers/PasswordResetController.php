@@ -34,7 +34,9 @@ class PasswordResetController extends AbstractController
                 $token = bin2hex(random_bytes(32));
 
                 // Définir une date d'expiration (ex: 1 heure)
-                $expiresAt = new \DateTime()->modify('+1 hour')->format('Y-m-d H:i:s');
+                $date = new \DateTime();
+                $date->modify('+1 hour');
+                $expiresAt = $date->format('Y-m-d H:i:s');
 
                 // Sauvegarder le token et la date dans la BDD
                 $userRepository->savePasswordResetToken($user->getId(), $token, $expiresAt);

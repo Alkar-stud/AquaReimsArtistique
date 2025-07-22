@@ -21,7 +21,7 @@
 </head>
 <body>
     <?php include __DIR__ . '/menu.html.php'; ?>
-    <main id="main-page" class="container pt-1">
+    <main id="main-page" class="container-fluid pt-1 m-2 bg-primary">
         <?php if (isset($page)) include $page; ?>
     </main>
 

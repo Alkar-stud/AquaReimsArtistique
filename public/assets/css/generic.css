@@ -1,6 +1,5 @@
 
 :root {
-    --bs-primary: #5C82CE; /* Correspond à --ara-color-purple */
 
     /* colors */
     --ara-color-black: #2A2A2A;
@@ -17,10 +16,15 @@
     --ara-color-pink: #F6ADCD;
 
     --ara-color-purple: #5C82CE;
+    --ara-color-purple-darker: #4a6aaa; /* Une version un peu plus foncée pour le survol */
 
     --ara-color-red: #aa0000;
 
     --ara-color-white: #fff;
+
+    /* Surcharge des variables Bootstrap */
+    --bs-primary: var(--ara-color-purple);
+    --bs-primary-rgb: 92, 130, 206; /* La version RGB est utilisée par Bootstrap pour les transparences (ex: box-shadow) */
 
 }
 
@@ -28,7 +32,3 @@
     padding: 2rem;
 }
 
-.btn-primary {
-    background-color: var(--bs-primary) !important;
-    border-color: var(--bs-primary) !important;
-}

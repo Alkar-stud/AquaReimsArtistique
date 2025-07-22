@@ -1,6 +1,6 @@
 <?php
 
-use app\Attributes\Route;
+use App\Attributes\Route;
 
 $routes = [];
 

@@ -1,14 +1,18 @@
 <?php
 namespace app\Controllers;
 
-use app\BaseController;
 use app\Attributes\Route;
+// REMPLACER : use app\BaseControllerBak;
 
 #[Route('/login', name: 'app_login')]
-class LoginController extends BaseController
+// REMPLACER : class LoginController extends BaseControllerBak
+class LoginController extends AbstractController // HÉRITE DU BON CONTRÔLEUR
 {
     public function index()
     {
-        $this->render('Login');
+        // CORRIGER : $this->render('Login');
+        // On utilise la nouvelle signature de render()
+        // Le premier paramètre est le nom du fichier de vue (sans .html.php)
+        $this->render('login', [], 'Connexion');
     }
 }

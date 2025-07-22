@@ -1,15 +1,15 @@
 <?php
 namespace app\Controllers;
 
-use app\BaseController;
 use app\Attributes\Route;
 
 #[Route('/', name: 'app_home')]
 
-class HomeController extends BaseController
+class HomeController extends AbstractController
 {
-    public function index()
+    public function index(): void
     {
-        $this->render('Accueil');
+        // On appelle la méthode render héritée
+        $this->render('home', [], 'Accueil');
     }
 }

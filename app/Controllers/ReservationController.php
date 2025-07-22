@@ -1,14 +1,13 @@
 <?php
 namespace app\Controllers;
 
-use app\BaseController;
 use app\Attributes\Route;
 
 #[Route('/reservation', name: 'app_reservation')]
-class ReservationController extends BaseController
+class ReservationController extends AbstractController
 {
     public function index()
     {
-        $this->render('Réservation');
+        $this->render('reservation', [], 'Réservation');
     }
 }

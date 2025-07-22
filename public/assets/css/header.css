@@ -1,6 +1,6 @@
 /* Menu navbar */
 .navbar {
-    background: var(--ara-color-darkblue) !important;
+    background: var(--ara-color-darkblue);
 }
 .navbar .container {
     justify-content: flex-start !important;

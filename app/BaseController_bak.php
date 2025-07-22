@@ -1,7 +1,7 @@
 <?php
 namespace app;
 
-abstract class BaseController
+abstract class BaseControllerBak
 {
     protected function render($title = '', $config = [])
     {

@@ -1,8 +1,8 @@
 <?php
 
-namespace App\Repository;
+namespace app\Repository;
 
-use App\Core\Database;
+use app\Core\Database;
 use PDO;
 use PDOStatement;
 

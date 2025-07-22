@@ -17,6 +17,7 @@ $routes = require __DIR__ . '/../routes/web.php';
 $uri = strtok($_SERVER['REQUEST_URI'], '?');
 
 // Determine if the application is in maintenance mode...
+/** @noinspection PhpUndefinedConstantInspection */
 if (MAINTENANCE && $uri != '/login') {
     $uri = '/maintenance';
 }

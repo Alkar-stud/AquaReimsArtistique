@@ -42,25 +42,41 @@ try {
     );
 }
 
+//On récupère la route courante
+$uri = strtok($_SERVER['REQUEST_URI'], '?');
 
 // --- Chargement de la configuration de l'application ---
 require_once __DIR__ . '/../config/env.php';
 //Chargement des variables d'environnement pour la base de données
 require_once __DIR__ . '/../config/database.php';
-//Chargement des variables de configuration
-require_once __DIR__ . '/../config/app.php';
-
 // Chargement des routes
 $routes = require __DIR__ . '/../routes/web.php';
-$uri = strtok($_SERVER['REQUEST_URI'], '?');
 
+//Après, il faut que tout soit installé en BDD
+if ($uri != '/install') {
+    //Chargement des variables de configuration
+    require_once __DIR__ . '/../config/app.php';
 
-// Determine si l'application est en mode maintenance...
-/** @noinspection PhpUndefinedConstantInspection */
-if (MAINTENANCE && $uri != '/login') {
-    $uri = '/maintenance';
+    // Determine si l'application est en mode maintenance...
+    /** @noinspection PhpUndefinedConstantInspection */
+    if (MAINTENANCE && $uri != '/login') {
+        $uri = '/maintenance';
+    }
 }
 
 // Utilisation du routeur
 $router = new Router($routes);
-$router->dispatch($uri);
+try {
+    $router->dispatch($uri);
+} catch (\Exception $e) {
+    if ($e->getMessage() === '404') {
+        http_response_code(404);
+        $title = '404';
+        ob_start();
+        require __DIR__ . '/../app/views/404.html.php';
+        $content = ob_get_clean();
+        require __DIR__ . '/../app/views/base.html.php';
+        exit;
+    }
+    throw $e;
+}

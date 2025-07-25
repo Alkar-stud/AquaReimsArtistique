@@ -5,15 +5,18 @@ namespace app\Repository;
 use app\Core\Database;
 use PDO;
 use PDOStatement;
+use app\Traits\HasPdoConnection;
+
 
 abstract class AbstractRepository
 {
-    protected PDO $pdo;
+    use HasPdoConnection;
+
     protected string $tableName;
 
     public function __construct(string $tableName)
     {
-        $this->pdo = Database::getInstance();
+        $this->initPdo();
         $this->tableName = $tableName;
     }
 

@@ -6,9 +6,9 @@
     <?php unset($_SESSION['flash_message']); ?>
 <?php endif; ?>
 
-<div class="container" style="max-width: 500px;">
+<div class="container">
     <h2 class="mb-4">Mon compte</h2>
-
+    <?php if ($_SESSION['user']['role']['level'] > 0): ?>
     <!-- Formulaire de modification des informations -->
     <form action="/account/update" method="POST" class="mb-5">
         <div class="mb-3">
@@ -23,6 +23,7 @@
         </div>
         <button type="submit" class="btn btn-primary w-100">Mettre à jour mes informations</button>
     </form>
+    <?php endif; ?>
 
     <!-- Formulaire de changement de mot de passe -->
     <form action="/account/password" method="POST">

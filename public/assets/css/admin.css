@@ -1,0 +1,67 @@
+/* Affiche le sous-menu au survol du parent */
+.nav-item.dropdown:hover .dropdown-menu {
+    display: block;
+    margin-top: 0; /* optionnel, ajuste l’alignement */
+}
+
+/* Personnalisation du sous-menu */
+.dropdown-menu {
+    background-color: var(--ara-color-darkblue);      /* Couleur de fond */
+    border-radius: 8px;          /* Coins arrondis */
+    border: none;                /* Pas de bordure */
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15); /* Ombre */
+    min-width: 200px;
+    padding: 0.5rem 0;
+}
+
+.dropdown-item {
+    color: var(--ara-color-white);                 /* Couleur du texte */
+    padding: 0.75rem 1.5rem;
+    font-family: 'Roboto', Arial, sans-serif;
+    transition: background 0.2s;
+}
+
+.dropdown-item:hover, .dropdown-item:focus {
+    background: var(--ara-color-purple) !important;
+    color: var(--ara-color-white) !important;
+    box-shadow: 0 2px 8px rgba(92,130,206,0.15);
+}
+
+/*
+ * Pour des tableaux transposés
+ */
+@media (max-width: 768px) {
+    .table-responsive table,
+    .table-responsive thead,
+    .table-responsive tbody,
+    .table-responsive tr,
+    .table-responsive th,
+    .table-responsive td {
+        display: block;
+        width: 100%;
+    }
+    .table-responsive thead {
+        display: none;
+    }
+    .table-responsive tr {
+        margin-bottom: 1rem;
+        border-bottom: 2px solid #eee;
+    }
+    .table-responsive td {
+        position: relative;
+        padding-left: 50%;
+        border: none;
+        border-bottom: 1px solid #eee;
+    }
+    .table-responsive td::before {
+        content: attr(data-label) " : ";
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 48%;
+        padding-left: 1rem;
+        font-weight: bold;
+        color: #555;
+        white-space: normal;
+    }
+}

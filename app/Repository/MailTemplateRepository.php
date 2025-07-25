@@ -5,8 +5,6 @@ namespace app\Repository;
 use app\Models\MailTemplate;
 use DateMalformedStringException;
 
-// <-- AJOUT
-
 class MailTemplateRepository extends AbstractRepository
 {
     public function __construct()

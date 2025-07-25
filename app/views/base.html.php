@@ -11,6 +11,8 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-LN+7fdVzj6u52u30Kp6M/trliBMCMKTyK833zpbD+pXdCLuTusPj697FH4R/5mcr" crossorigin="anonymous">
     <link rel="stylesheet" href="/assets/css/style.css">
     <link rel="stylesheet" href="/assets/css/generic.css">
+    <?php if (str_starts_with($_SERVER['REQUEST_URI'], '/gestion')): ?><link rel="stylesheet" href="/assets/css/admin.css">
+    <?php endif; ?>
 
     <script type="text/javascript" src="/assets/js/scripts.js" charset="UTF8"></script>
 
@@ -35,6 +37,8 @@
 
 <?php
 
-echo '<pre>';
-print_r($_SESSION);
-echo '</pre>';
+if (isset($_SESSION['user']) && $_SESSION['user']['role']['level'] <= 1 && $_ENV['APP_DEBUG'] === "true") {
+    echo '<pre>';
+    print_r($_SESSION);
+    echo '</pre>';
+}

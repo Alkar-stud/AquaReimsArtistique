@@ -65,3 +65,53 @@
         white-space: normal;
     }
 }
+
+
+/*
+ * Gestion des tarifs
+ */
+@media (max-width: 768px) {
+    .d-md-block { display: none !important; }
+    .d-md-none { display: block !important; }
+}
+@media (min-width: 769px) {
+    .d-md-block { display: block !important; }
+    .d-md-none { display: none !important; }
+}
+
+.modal { display:none; }
+.modal[style*="display: block"] { display: block; }
+
+.btn-close {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    line-height: 1;
+    color: #000;
+    opacity: 0.7;
+    cursor: pointer;
+    position: absolute;
+    top: 12px;
+    right: 16px;
+}
+.btn-close::after {
+    content: '×';
+    font-weight: bold;
+}
+.btn-close:hover { opacity: 1; }
+
+.nav-tabs .nav-link {
+    background-color: var(--ara-color-darkblue);
+    color: var(--ara-color-white);
+    border: 1px solid var(--ara-color-darkblue);
+    transition: background 0.2s, color 0.2s;
+}
+.nav-tabs .nav-link:hover {
+    background-color: var(--ara-color-purple);
+    color: var(--ara-color-white);
+}
+.nav-tabs .nav-link.active {
+    background-color: var(--ara-color-red);
+    color: var(--ara-color-white);
+    border-color: var(--ara-color-red);
+}

@@ -33,8 +33,9 @@ abstract class AbstractController
     public function checkUserSession(bool $isPublicRoute = false): void
     {
         //Si n'existe pas, c'est peut-être que pas encore connecté
-        if (!isset($_SESSION['user'])) {
-            return;
+        if (!isset($_SESSION['user']) && !$isPublicRoute) {
+            header('Location: /login');
+            exit;
         }
 
         $timeout = 1800; // 30 minutes ==> à récupérer en BDD config quand sera implémenté

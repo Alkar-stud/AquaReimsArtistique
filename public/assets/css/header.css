@@ -28,6 +28,10 @@ header {
     background: var(--ara-color-purple);
     width: 100%;
     padding: 1rem 0;
+    flex: 0 0 auto;
+    z-index: 100;
+    position: sticky;
+    top: 0;
 }
 header .container img {
     height: 80px;

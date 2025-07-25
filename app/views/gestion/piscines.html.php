@@ -6,7 +6,7 @@
     <?php unset($_SESSION['flash_message']); ?>
 <?php endif; ?>
 
-    <div class="container">
+    <div class="container-fluid">
         <h2 class="mb-4">Gestion des piscines</h2>
 
         <div class="table-responsive">

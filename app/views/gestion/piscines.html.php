@@ -75,7 +75,7 @@
                                     <?php endif; ?>
                                 </td>
                                 <td data-label="Actions">
-                                    <button type="submit" class="btn btn-primary btn-sm">Enregistrer</button>
+                                    <button type="submit" class="btn btn-secondary btn-sm">Enregistrer</button>
                                     <a href="/gestion/piscines/delete/<?= $piscine->getId() ?>" class="btn btn-danger btn-sm" onclick="return confirm('Supprimer cette piscine ?');">Supprimer</a>
                                 </td>
                             </form>

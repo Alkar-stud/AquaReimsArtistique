@@ -12,11 +12,13 @@ class User
     private string $username;
     private string $password;
     private string $email;
+    private ?string $display_name = null;
     private ?Role $role = null;
     private DateTimeInterface $created_at;
     private ?DateTimeInterface $updated_at = null;
     private ?string $password_reset_token = null;
     private ?DateTimeInterface $password_reset_expires_at = null;
+    private ?string $session_id = null;
 
     // --- GETTERS ---
 
@@ -38,6 +40,12 @@ class User
     public function getEmail(): string
     {
         return $this->email;
+    }
+
+    public function getDisplayName(): string
+    {
+        //S'il n'y a pas de nom d'affichage, on retourne le nom d'utilisateur
+        return $this->display_name ?: $this->getUsername();
     }
 
     public function getRole(): ?Role
@@ -65,6 +73,11 @@ class User
         return $this->password_reset_expires_at;
     }
 
+    public function getSessionId(): ?string
+    {
+        return $this->session_id;
+    }
+
     // --- SETTERS
 
     public function setId(int $id): self
@@ -88,6 +101,12 @@ class User
     public function setEmail(string $email): self
     {
         $this->email = $email;
+        return $this;
+    }
+
+    public function setDisplayName(?string $display_name): self
+    {
+        $this->display_name = $display_name;
         return $this;
     }
 
@@ -127,6 +146,12 @@ class User
     public function setPasswordResetExpiresAt(?string $password_reset_expires_at): self
     {
         $this->password_reset_expires_at = $password_reset_expires_at ? new DateTime($password_reset_expires_at) : null;
+        return $this;
+    }
+
+    public function setSessionId(?string $session_id): self
+    {
+        $this->session_id = $session_id;
         return $this;
     }
 }

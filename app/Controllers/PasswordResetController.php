@@ -9,6 +9,10 @@ use Random\RandomException;
 
 class PasswordResetController extends AbstractController
 {
+    public function __construct()
+    {
+        parent::__construct(true); // true = route publique, pas de vérif session pour éviter le TOO_MANY_REDIRECT
+    }
     /**
      * Gère l'affichage (GET) et le traitement (POST) du formulaire de mot de passe oublié.
      * @throws RandomException
@@ -49,7 +53,7 @@ class PasswordResetController extends AbstractController
 
                     $mailService->sendPasswordResetEmail(
                         $user->getEmail(),
-                        $user->getUsername(),
+                        $user->getDisplayName(),
                         $resetLink
                     );
                 } catch (\Exception $e) {

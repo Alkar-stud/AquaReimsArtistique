@@ -7,6 +7,10 @@ use app\Attributes\Route;
 
 class HomeController extends AbstractController
 {
+    public function __construct()
+    {
+        parent::__construct(true); // true = route publique, pas de vérif session pour éviter le TOO_MANY_REDIRECT
+    }
     public function index(): void
     {
         // On appelle la méthode render héritée
@@ -14,8 +18,7 @@ class HomeController extends AbstractController
     }
 }
 
-/*
+
 echo '<pre>';
 print_r($_SESSION);
 echo '</pre>';
-*/

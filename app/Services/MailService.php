@@ -103,7 +103,7 @@ class MailService
      * Envoie un email de réinitialisation de mot de passe.
      *
      * @param string $recipientEmail L'adresse email du destinataire.
-     * @param string $username Le nom de l'utilisateur pour la personnalisation. // <-- AJOUT
+     * @param string $username Le nom de l'utilisateur pour la personnalisation.
      * @param string $resetLink Le lien de réinitialisation à inclure.
      * @return bool True si l'email est envoyé, false sinon.
      * @throws DateMalformedStringException
@@ -114,6 +114,23 @@ class MailService
         return $this->send($recipientEmail, 'password_reset', [
             'username' => $username,
             'link' => $resetLink
+        ]);
+    }
+
+    /**
+     * Envoie un email suite changement du mot de passe
+     *
+     * @param string $recipientEmail L'adresse email du destinataire.
+     * @param string $username Le nom de l'utilisateur pour la personnalisation.
+     * @return bool True si l'email est envoyé, false sinon.
+     * @throws DateMalformedStringException
+     */
+    public function sendPasswordModifiedEmail(string $recipientEmail, string $username): bool
+    {
+        // On appelle la méthode générique avec les bons paramètres
+        return $this->send($recipientEmail, 'password_modified', [
+            'username' => $username,
+            'email_club' => EMAIL_CLUB
         ]);
     }
 }

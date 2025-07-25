@@ -8,6 +8,7 @@ ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 date_default_timezone_set('Europe/Paris');
 session_start();
+$session_id = session_id();
 
 //Chargement des dépendances
 require_once __DIR__ . '/../vendor/autoload.php';
@@ -51,6 +52,7 @@ require_once __DIR__ . '/../config/app.php';
 // Chargement des routes
 $routes = require __DIR__ . '/../routes/web.php';
 $uri = strtok($_SERVER['REQUEST_URI'], '?');
+
 
 // Determine if the application is in maintenance mode...
 /** @noinspection PhpUndefinedConstantInspection */

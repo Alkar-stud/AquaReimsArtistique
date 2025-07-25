@@ -13,7 +13,7 @@ foreach (glob(__DIR__ . '/../app/Controllers/*.php') as $file) {
     if (class_exists($className)) {
         $reflectionClass = new ReflectionClass($className);
 
-        // 1. On cherche d'abord une route sur la CLASSE elle-même
+        // On cherche d'abord une route sur la CLASSE elle-même
         $classAttributes = $reflectionClass->getAttributes(Route::class);
         foreach ($classAttributes as $attribute) {
             $instance = $attribute->newInstance();
@@ -24,7 +24,7 @@ foreach (glob(__DIR__ . '/../app/Controllers/*.php') as $file) {
             ];
         }
 
-        // 2. ENSUITE, on cherche des routes sur les MÉTHODES pour les cas spécifiques
+        // ENSUITE, on cherche des routes sur les MÉTHODES pour les cas spécifiques
         foreach ($reflectionClass->getMethods() as $method) {
             $attributes = $method->getAttributes(Route::class);
 

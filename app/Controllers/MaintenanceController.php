@@ -9,7 +9,13 @@ class MaintenanceController extends AbstractController
 {
     public function index(): void
     {
-        // On appelle la méthode render héritée
-        $this->render('maintenance', [], 'En maintenance...');
+        //Si le user est role <= 1, il peut accéder à la page /gestion
+        if (isset($_SESSION['user']['role']['level']) && $_SESSION['user']['role']['level'] <= 1 && $_SERVER['REQUEST_URI'] == '/gestion') {
+            $this->render('gestion/gestion', [], 'Gestion');
+            exit;
+        } else {
+            // On appelle la méthode render héritée
+            $this->render('maintenance', [], 'En maintenance...');
+        }
     }
 }

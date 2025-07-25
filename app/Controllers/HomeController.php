@@ -17,8 +17,3 @@ class HomeController extends AbstractController
         $this->render('home', [], 'Accueil');
     }
 }
-
-
-echo '<pre>';
-print_r($_SESSION);
-echo '</pre>';

@@ -27,6 +27,7 @@
 
     <!-- Formulaire de changement de mot de passe -->
     <form action="/account/password" method="POST">
+        <input type="text" name="username" value="<?= htmlspecialchars($_SESSION['user']['username'] ?? ''); ?>" autocomplete="username" hidden>
         <h4 class="mb-3">Changer mon mot de passe</h4>
         <div class="mb-3">
             <label for="current_password" class="form-label">Mot de passe actuel</label>

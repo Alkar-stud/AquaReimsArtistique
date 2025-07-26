@@ -1,4 +1,5 @@
-    <!-- Header avec logo centré -->
+<?php $uri = strtok($_SERVER['REQUEST_URI'], '?'); ?>
+<!-- Header avec logo centré -->
     <header>
         <div class="container text-center">
             <a href="/">
@@ -21,59 +22,60 @@
                 <ul class="navbar-nav">
                     <?php if (!str_starts_with($_SERVER['REQUEST_URI'], '/gestion')): ?>
                         <li class="nav-item">
-                            <a class="nav-link" href="/reservation">Réservation</a>
+                            <a class="nav-link <?= $uri === '/reservation' ? 'active-link' : '' ?>" href="/reservation">Réservation</a>
                         </li>
                     <?php endif; ?>
                     <?php if (isset($_SESSION['user']['role']) && $_SESSION['user']['role']['level'] <= 2 && !str_starts_with($_SERVER['REQUEST_URI'], '/gestion')): ?>
                         <li class="nav-item">
                             <a class="nav-link" href="/gestion">Gestion</a>
+
                         </li>
                     <?php endif; ?>
 
                     <?php if (isset($_SESSION['user']['role']) && $_SESSION['user']['role']['level'] <= 2 && str_starts_with($_SERVER['REQUEST_URI'], '/gestion')): ?>
                         <li class="nav-item">
-                            <a class="nav-link" href="/gestion/accueil">Page d'accueil</a>
+                            <a class="nav-link <?= $uri === '/gestion/accueil' ? 'active-link' : '' ?>" href="/gestion/accueil">Page d'accueil</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="/gestion/reservations">Réservations</a>
+                            <a class="nav-link <?= $uri === '/gestion/reservations' ? 'active-link' : '' ?>" href="/gestion/reservations">Réservations</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="/gestion/piscines">Piscines</a>
+                            <a class="nav-link <?= $uri === '/gestion/piscines' ? 'active-link' : '' ?>" href="/gestion/piscines">Piscines</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="/gestion/tarifs">Tarifs</a>
+                            <a class="nav-link <?= $uri === '/gestion/tarifs' ? 'active-link' : '' ?>" href="/gestion/tarifs">Tarifs</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="/gestion/events">Évènements</a>
+                            <a class="nav-link <?= $uri === '/gestion/events' ? 'active-link' : '' ?>" href="/gestion/events">Évènements</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="/gestion/groupes-nageuses">Nageuses</a>
+                            <a class="nav-link <?= $uri === '/gestion/groupes-nageuses' ? 'active-link' : '' ?>" href="/gestion/groupes-nageuses">Nageuses</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="/gestion/mails">Mails</a>
+                            <a class="nav-link <?= $uri === '/gestion/mails' ? 'active-link' : '' ?>" href="/gestion/mails">Mails</a>
                         </li>
                     <?php endif; ?>
                     <?php if (isset($_SESSION['user']['role']) && $_SESSION['user']['role']['level'] <= 1 && str_starts_with($_SERVER['REQUEST_URI'], '/gestion')): ?>
                         <li class="nav-item">
-                            <a class="nav-link" href="/gestion/users">Utilisateurs</a>
+                            <a class="nav-link <?= $uri === '/gestion/users' ? 'active-link' : '' ?>" href="/gestion/users">Utilisateurs</a>
                         </li>
                         <li class="nav-item dropdown">
                             <a class="nav-link dropdown-toggle" href="#" id="configDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                                 Configuration
                             </a>
                             <ul class="dropdown-menu" aria-labelledby="configDropdown">
-                                <li><a class="dropdown-item" href="/gestion/configuration/configs">Configs</a></li>
-                                <li><a class="dropdown-item" href="/gestion/configuration/pages">Pages (à venir)</a></li>
-                                <li><a class="dropdown-item" href="/gestion/configuration/erreurs">Messages d'erreur (à venir)</a></li>
+                                <li><a class="dropdown-item <?= $uri === '/gestion/configuration/configs' ? 'active-link' : '' ?>" href="/gestion/configuration/configs">Configs</a></li>
+                                <li><a class="dropdown-item <?= $uri === '/gestion/configuration/pages' ? 'active-link' : '' ?>" href="/gestion/configuration/pages">Pages (à venir)</a></li>
+                                <li><a class="dropdown-item <?= $uri === '/gestion/configuration/erreurs' ? 'active-link' : '' ?>" href="/gestion/configuration/erreurs">Messages d'erreur (à venir)</a></li>
                             </ul>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="/gestion/logs">Logs</a>
+                            <a class="nav-link <?= $uri === '/account' ? 'active-link' : '' ?>" href="/gestion/logs">Logs</a>
                         </li>
                     <?php endif; ?>
                     <?php if (isset($_SESSION['user']) && !str_starts_with($_SERVER['REQUEST_URI'], '/gestion')): ?>
                         <li class="nav-item">
-                            <a class="nav-link" href="/account">Mon compte</a>
+                            <a class="nav-link <?= $uri === '/account' ? 'active-link' : '' ?>" href="/account">Mon compte</a>
                         </li>
                     <?php endif; ?>
                     <li class="nav-item">

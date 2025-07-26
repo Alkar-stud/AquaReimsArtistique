@@ -47,6 +47,7 @@ class LoginController extends AbstractController
             $_SESSION['user'] = [
                 'id' => $user->getId(),
                 'LAST_ACTIVITY' => time(),
+                'username' => $user->getUsername(),
                 'displayname' => $user->getDisplayName(),
                 'email' => $user->getEmail(),
             ];

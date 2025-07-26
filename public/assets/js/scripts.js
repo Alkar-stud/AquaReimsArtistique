@@ -130,3 +130,36 @@ function closeTarifModal() {
     modal.style.display = 'none';
 }
 
+/*
+ * Pour refermer le sous menu en mode mobile
+ */
+document.addEventListener('DOMContentLoaded', function () {
+    const configDropdown = document.getElementById('configDropdown');
+    const menu = configDropdown ? configDropdown.nextElementSibling : null;
+
+    if (configDropdown && menu) {
+        configDropdown.addEventListener('click', function (e) {
+            e.preventDefault();
+            if (menu.classList.contains('show')) {
+                menu.classList.remove('show');
+                menu.style.display = 'none';
+                configDropdown.setAttribute('aria-expanded', 'false');
+            } else {
+                menu.classList.add('show');
+                menu.style.display = 'block';
+                configDropdown.setAttribute('aria-expanded', 'true');
+            }
+        });
+
+        document.addEventListener('click', function (e) {
+            if (!configDropdown.contains(e.target) && !menu.contains(e.target)) {
+                menu.classList.remove('show');
+                menu.style.display = 'none';
+                configDropdown.setAttribute('aria-expanded', 'false');
+            }
+        });
+
+        // Initialement masqué
+        menu.style.display = 'none';
+    }
+});

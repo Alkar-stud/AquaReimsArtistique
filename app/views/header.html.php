@@ -60,7 +60,7 @@
                             <a class="nav-link <?= $uri === '/gestion/users' ? 'active-link' : '' ?>" href="/gestion/users">Utilisateurs</a>
                         </li>
                         <li class="nav-item dropdown">
-                            <a class="nav-link dropdown-toggle" href="#" id="configDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <a class="nav-link dropdown-toggle" href="#" id="configDropdown" role="button" aria-expanded="false">
                                 Configuration
                             </a>
                             <ul class="dropdown-menu" aria-labelledby="configDropdown">

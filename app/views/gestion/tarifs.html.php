@@ -38,7 +38,20 @@ unset($_SESSION['onglet_tarif']);
         <?php if (!empty($data)): ?>
             <ul class="list-group mb-3">
                 <?php foreach ($data as $tarif): ?>
-                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                    <li class="list-group-item d-flex justify-content-between align-items-center"
+                        data-id="<?= $tarif->getId() ?>"
+                        data-libelle="<?= htmlspecialchars($tarif->getLibelle()) ?>"
+                        data-description="<?= htmlspecialchars($tarif->getDescription()) ?>"
+                        data-nb_place="<?= htmlspecialchars($tarif->getNbPlace() ?? '') ?>"
+                        data-age_min="<?= htmlspecialchars($tarif->getAgeMin() ?? '') ?>"
+                        data-age_max="<?= htmlspecialchars($tarif->getAgeMax() ?? '') ?>"
+                        data-max_tickets="<?= htmlspecialchars($tarif->getMaxTickets() ?? '') ?>"
+                        data-price="<?= number_format($tarif->getPrice(), 2, '.', '') ?>"
+                        data-is_program_show_include="<?= $tarif->getIsProgramShowInclude() ? '1' : '0' ?>"
+                        data-is_proof_required="<?= $tarif->getIsProofRequired() ? '1' : '0' ?>"
+                        data-access_code="<?= htmlspecialchars($tarif->getAccessCode()) ?>"
+                        data-is_active="<?= $tarif->getIsActive() ? '1' : '0' ?>"
+                        onclick="openTarifModal('edit', this.dataset)">
                         <span><?= htmlspecialchars($tarif->getLibelle()) ?></span>
                         <span><?= number_format($tarif->getPrice(), 2, ',', ' ') ?> €</span>
                         <a href="/gestion/tarifs/delete/<?= $tarif->getId() ?>" class="btn btn-danger btn-sm" onclick="return confirm('Supprimer ce tarif ?');">Supprimer</a>
@@ -47,18 +60,18 @@ unset($_SESSION['onglet_tarif']);
             </ul>
         <?php endif; ?>
         <!-- Bouton Ajouter -->
-        <button type="button" class="btn btn-success btn-sm w-100" onclick="document.getElementById('modal-ajout-tarif').style.display='block'">Ajouter</button>
+        <button type="button" class="btn btn-success btn-sm w-100" onclick="openTarifModal('add')">Ajouter</button>
     </div>
 
-    <!-- Modale d'ajout mobile -->
-    <div id="modal-ajout-tarif" class="modal" style="display:none; position:fixed; z-index:1050; left:0; top:0; width:100vw; height:100vh; background:rgba(0,0,0,0.5);">
+    <!-- Modale unique -->
+    <div id="modal-tarif" class="modal" style="display:none; position:fixed; z-index:1050; left:0; top:0; width:100vw; height:100vh; background:rgba(0,0,0,0.5);">
         <div class="modal-dialog" style="max-width:500px; margin:10vh auto; background:#fff; border-radius:8px; overflow:hidden;">
             <div class="modal-content p-3">
                 <div class="modal-header d-flex justify-content-between align-items-center">
-                    <h5 class="modal-title">Ajouter un tarif</h5>
-                    <button type="button" class="btn-close" aria-label="Fermer" onclick="document.getElementById('modal-ajout-tarif').style.display='none'"></button>
+                    <h5 class="modal-title" id="modal-tarif-title">Ajouter un tarif</h5>
+                    <button type="button" class="btn-close" aria-label="Fermer" onclick="closeTarifModal()"></button>
                 </div>
-                <form action="/gestion/tarifs/add" method="POST">
+                <form id="tarif-form" method="POST">
                     <div class="mb-2">
                         <label>Libellé <input type="text" name="libelle" class="form-control" required></label>
                     </div>
@@ -96,8 +109,8 @@ unset($_SESSION['onglet_tarif']);
                         <label class="form-check-label" for="actif">Actif</label>
                     </div>
                     <div class="d-flex justify-content-end gap-2">
-                        <button type="button" class="btn btn-secondary" onclick="document.getElementById('modal-ajout-tarif').style.display='none'">Annuler</button>
-                        <button type="submit" class="btn btn-success">Ajouter</button>
+                        <button type="button" class="btn btn-secondary" onclick="closeTarifModal()">Annuler</button>
+                        <button type="submit" class="btn btn-success" id="modal-tarif-submit">Ajouter</button>
                     </div>
                 </form>
             </div>

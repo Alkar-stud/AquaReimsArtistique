@@ -89,3 +89,44 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 });
+
+
+/*
+ * Modale pour les tarifs
+ */
+function openTarifModal(mode, tarifData = null) {
+    const modal = document.getElementById('modal-tarif');
+    const form = document.getElementById('tarif-form');
+    const title = document.getElementById('modal-tarif-title');
+    const submitBtn = document.getElementById('modal-tarif-submit');
+
+    if (mode === 'add') {
+        title.textContent = 'Ajouter un tarif';
+        form.action = '/gestion/tarifs/add';
+        submitBtn.textContent = 'Ajouter';
+        form.reset();
+    } else if (mode === 'edit' && tarifData) {
+        title.textContent = 'Modifier un tarif';
+        form.action = '/gestion/tarifs/update/' + tarifData.id;
+        submitBtn.textContent = 'Enregistrer';
+        // Remplir les champs avec tarifData
+        for (const key in tarifData) {
+            if (form[key]) {
+                if (form[key].type === 'checkbox') {
+                    form[key].checked = tarifData[key] === '1';
+                } else {
+                    form[key].value = tarifData[key];
+                }
+            }
+        }
+    }
+    modal.style.display = 'block';
+}
+
+function closeTarifModal() {
+    const modal = document.getElementById('modal-tarif');
+    const form = document.getElementById('tarif-form');
+    form.reset();
+    modal.style.display = 'none';
+}
+

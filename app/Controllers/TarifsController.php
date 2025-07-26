@@ -69,6 +69,7 @@ class TarifsController extends AbstractController
                     ->setAccessCode($_POST['access_code'] ?? null)
                     ->setIsActive(isset($_POST['is_active']));
                 $this->repository->update($tarif);
+                $_SESSION['onglet_tarif'] = $tarif->getNbPlace() !== null ? 'places' : 'autres';
                 $_SESSION['flash_message'] = ['type' => 'success', 'message' => 'Tarif modifié'];
             }
             header('Location: /gestion/tarifs');

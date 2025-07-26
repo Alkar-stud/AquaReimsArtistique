@@ -47,7 +47,7 @@
                             <a class="nav-link" href="/gestion/events">Évènements</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="/gestion/nageuses">Nageuses</a>
+                            <a class="nav-link" href="/gestion/groupes-nageuses">Nageuses</a>
                         </li>
                         <li class="nav-item">
                             <a class="nav-link" href="/gestion/mails">Mails</a>

@@ -1,5 +1,5 @@
 -- Ajout des mails_templates
-CREATE TABLE `mails_templates` (
+CREATE TABLE IF NOT EXISTS `mails_templates` (
     `id` bigint NOT NULL AUTO_INCREMENT PRIMARY KEY,
     `code` char(64)  NOT NULL UNIQUE,
     `subject` varchar(255) NOT NULL,

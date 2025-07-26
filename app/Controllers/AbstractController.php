@@ -29,9 +29,16 @@ abstract class AbstractController
         require __DIR__ . '/../views/base.html.php';
     }
 
-
     public function checkUserSession(bool $isPublicRoute = false): void
     {
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+
+        // Si la route est publique, on ne vérifie pas la session
+        if ($isPublicRoute) {
+            return;
+        }
         //Si n'existe pas, c'est peut-être que pas encore connecté
         if (!isset($_SESSION['user']) && !$isPublicRoute) {
             header('Location: /login');

@@ -1,5 +1,5 @@
 -- Création de la table config
-CREATE TABLE `config` (
+CREATE TABLE IF NOT EXISTS `config` (
     `id` bigint NOT NULL AUTO_INCREMENT PRIMARY KEY,
     `libelle` varchar(255) NOT NULL,
     `config_key` char(32) NOT NULL UNIQUE,

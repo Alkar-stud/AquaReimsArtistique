@@ -23,21 +23,21 @@ class TarifsRepository extends AbstractRepository
         } else {
             $orderby = 'ORDER BY nb_place DESC';
         }
-        $sql = "SELECT * FROM {$this->tableName} $where $orderby;";
+        $sql = "SELECT * FROM $this->tableName $where $orderby;";
         $results = $this->query($sql);
         return array_map([$this, 'hydrate'], $results);
     }
 
     public function findById(int $id): ?Tarifs
     {
-        $sql = "SELECT * FROM {$this->tableName} WHERE id = :id;";
+        $sql = "SELECT * FROM $this->tableName WHERE id = :id;";
         $result = $this->query($sql, ['id' => $id]);
         return $result ? $this->hydrate($result[0]) : null;
     }
 
     public function insert(Tarifs $tarif): void
     {
-        $sql = "INSERT INTO {$this->tableName} 
+        $sql = "INSERT INTO $this->tableName 
             (id, libelle, description, nb_place, age_min, age_max, max_tickets, price, is_program_show_include, is_proof_required, access_code, is_active, created_at) 
             VALUES (:id, :libelle, :description, :nb_place, :age_min, :age_max, :max_tickets, :price, :is_program_show_include, :is_proof_required, :access_code, :is_active, :created_at)";
         $this->execute($sql, [
@@ -59,7 +59,7 @@ class TarifsRepository extends AbstractRepository
 
     public function update(Tarifs $tarif): void
     {
-        $sql = "UPDATE {$this->tableName} SET 
+        $sql = "UPDATE $this->tableName SET 
             libelle = :libelle, description = :description, nb_place = :nb_place, age_min = :age_min, age_max = :age_max, 
             max_tickets = :max_tickets, price = :price, is_program_show_include = :is_program_show_include, 
             is_proof_required = :is_proof_required, access_code = :access_code, is_active = :is_active, updated_at = NOW()
@@ -82,7 +82,7 @@ class TarifsRepository extends AbstractRepository
 
     public function delete(int $id): bool
     {
-        $sql = "DELETE FROM {$this->tableName} WHERE id = :id";
+        $sql = "DELETE FROM $this->tableName WHERE id = :id";
         $this->execute($sql, ['id' => $id]);
         return true;
     }

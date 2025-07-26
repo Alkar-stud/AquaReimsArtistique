@@ -21,7 +21,7 @@ class MailTemplateRepository extends AbstractRepository
      */
     public function findByCode(string $code): ?MailTemplate
     {
-        $sql = "SELECT * FROM {$this->tableName} WHERE code = :code";
+        $sql = "SELECT * FROM $this->tableName WHERE code = :code";
         $results = $this->query($sql, ['code' => $code]);
         // On retourne un objet hydraté ou null
         return $results ? $this->hydrate($results[0]) : null;

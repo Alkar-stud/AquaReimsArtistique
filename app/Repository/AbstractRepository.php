@@ -2,8 +2,6 @@
 
 namespace app\Repository;
 
-use app\Core\Database;
-use PDO;
 use PDOStatement;
 use app\Traits\HasPdoConnection;
 
@@ -26,7 +24,7 @@ abstract class AbstractRepository
      */
     public function findAll(): array
     {
-        $stmt = $this->pdo->query("SELECT * FROM {$this->tableName}");
+        $stmt = $this->pdo->query("SELECT * FROM $this->tableName");
         return $stmt->fetchAll();
     }
 
@@ -38,7 +36,7 @@ abstract class AbstractRepository
      */
     public function delete(int $id): bool
     {
-        $stmt = $this->prepare("DELETE FROM {$this->tableName} WHERE id = :id");
+        $stmt = $this->prepare("DELETE FROM $this->tableName WHERE id = :id");
         return $stmt->execute(['id' => $id]);
     }
 

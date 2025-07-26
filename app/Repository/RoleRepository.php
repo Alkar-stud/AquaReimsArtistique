@@ -19,7 +19,7 @@ class RoleRepository extends AbstractRepository
      */
     public function findById(int $id): ?Role
     {
-        $sql = "SELECT * FROM {$this->tableName} WHERE id = :id";
+        $sql = "SELECT * FROM $this->tableName WHERE id = :id";
         $result = $this->query($sql, ['id' => $id]);
         return $result ? $this->hydrate($result[0]) : null;
     }

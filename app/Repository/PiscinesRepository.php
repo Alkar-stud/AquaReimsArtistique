@@ -18,7 +18,7 @@ class PiscinesRepository extends AbstractRepository
      */
     public function findAll(): array
     {
-        $sql = "SELECT * FROM {$this->tableName}";
+        $sql = "SELECT * FROM $this->tableName";
         $results = $this->query($sql);
         return array_map([$this, 'hydrate'], $results);
     }
@@ -31,7 +31,7 @@ class PiscinesRepository extends AbstractRepository
      */
     public function findById(int $id): ?Piscines
     {
-        $sql = "SELECT * FROM {$this->tableName} WHERE id = :id";
+        $sql = "SELECT * FROM $this->tableName WHERE id = :id";
         $result = $this->query($sql, ['id' => $id]);
         return $result ? $this->hydrate($result[0]) : null;
     }
@@ -42,7 +42,7 @@ class PiscinesRepository extends AbstractRepository
      */
     public function insert(Piscines $piscine): void
     {
-        $sql = "INSERT INTO {$this->tableName} (libelle, adresse, max_places, numbered_seats) 
+        $sql = "INSERT INTO $this->tableName (libelle, adresse, max_places, numbered_seats) 
                 VALUES (:libelle, :adresse, :max_places, :numbered_seats)";
         $this->execute($sql, [
             'libelle' => $piscine->getLibelle(),
@@ -58,7 +58,7 @@ class PiscinesRepository extends AbstractRepository
      */
     public function update(Piscines $piscine): void
     {
-        $sql = "UPDATE {$this->tableName} 
+        $sql = "UPDATE $this->tableName 
                 SET libelle = :libelle, adresse = :adresse, max_places = :max_places, numbered_seats = :numbered_seats
                 WHERE id = :id";
         $this->execute($sql, [
@@ -77,7 +77,7 @@ class PiscinesRepository extends AbstractRepository
      */
     public function delete(int $id): bool
     {
-        $sql = "DELETE FROM {$this->tableName} WHERE id = :id";
+        $sql = "DELETE FROM $this->tableName WHERE id = :id";
         $this->execute($sql, ['id' => $id]);
         return true;
     }

@@ -19,14 +19,14 @@ class GroupesNageusesRepository extends AbstractRepository
 
     public function findById(int $id): ?GroupesNageuses
     {
-        $sql = "SELECT * FROM {$this->tableName} WHERE id = :id;";
+        $sql = "SELECT * FROM $this->tableName WHERE id = :id;";
         $result = $this->query($sql, ['id' => $id]);
         return $result ? $this->hydrate($result[0]) : null;
     }
 
     public function insert(GroupesNageuses $groupe): void
     {
-        $sql = "INSERT INTO {$this->tableName} 
+        $sql = "INSERT INTO $this->tableName 
             (libelle, coach, is_active, `order`, created_at) 
             VALUES (:libelle, :coach, :is_active, :order, :created_at)";
         $this->execute($sql, [
@@ -41,7 +41,7 @@ class GroupesNageusesRepository extends AbstractRepository
 
     public function update(GroupesNageuses $groupe): void
     {
-        $sql = "UPDATE {$this->tableName} SET 
+        $sql = "UPDATE $this->tableName SET 
             libelle = :libelle, coach = :coach, is_active = :is_active, `order` = :order, updated_at = NOW()
             WHERE id = :id";
         $this->execute($sql, [
@@ -55,7 +55,9 @@ class GroupesNageusesRepository extends AbstractRepository
 
     public function delete(int $id): bool
     {
-        return parent::delete($id);
+        $sql = "DELETE FROM $this->tableName WHERE id = :id";
+        $this->execute($sql, ['id' => $id]);
+        return true;
     }
 
     private function hydrate(array $data): GroupesNageuses

@@ -59,7 +59,7 @@ if ($uri != '/install') {
 
     // Determine si l'application est en mode maintenance...
     /** @noinspection PhpUndefinedConstantInspection */
-    if (MAINTENANCE && $uri != '/login') {
+    if (MAINTENANCE && $uri != '/login' && !str_starts_with($uri, '/gestion/configuration/configs')) {
         $uri = '/maintenance';
     }
 }

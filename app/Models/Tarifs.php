@@ -2,6 +2,7 @@
 
 namespace app\Models;
 
+use DateMalformedStringException;
 use DateTime;
 use DateTimeInterface;
 
@@ -168,12 +169,18 @@ class Tarifs
         return $this;
     }
 
+    /**
+     * @throws DateMalformedStringException
+     */
     public function setCreatedAt(string $created_at): self
     {
         $this->created_at = new DateTime($created_at);
         return $this;
     }
 
+    /**
+     * @throws DateMalformedStringException
+     */
     public function setUpdatedAt(?string $updated_at): self
     {
         $this->updated_at = $updated_at ? new DateTime($updated_at) : null;

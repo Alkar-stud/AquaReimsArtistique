@@ -64,3 +64,28 @@ function showTab(tab) {
         }
     });
 }
+
+
+/*
+ * Pour le champ 'type' des configs
+ */
+document.addEventListener('DOMContentLoaded', function() {
+    // Pour chaque select de type config
+    document.querySelectorAll('select[data-target]').forEach(function(select) {
+        var input = document.getElementById(select.dataset.target);
+        var types = Array.from(select.options).map(opt => opt.value).filter(v => v !== 'autre');
+        // Quand on change le select
+        select.addEventListener('change', function() {
+            if (this.value !== 'autre') input.value = this.value;
+            else input.focus();
+        });
+        // Quand on saisit dans l’input
+        input.addEventListener('input', function() {
+            if (!types.includes(this.value)) {
+                select.value = 'autre';
+            } else {
+                select.value = this.value;
+            }
+        });
+    });
+});

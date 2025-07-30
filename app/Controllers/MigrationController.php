@@ -61,7 +61,6 @@ class MigrationController
                     $stmt = $this->pdo->prepare("INSERT INTO migrations (name) VALUES (:name)");
                     $stmt->execute(['name' => $file]);
                     echo "Migration appliquée : $file<br>";
-                    echo '<a href="/">Retour à l\'accueil</a>';;
                     $appliedNow[] = $file;
 
                     if (stripos($file, '_create_user') !== false) {
@@ -71,6 +70,7 @@ class MigrationController
                     echo "Erreur lors de la migration $file : " . $e->getMessage() . "<br>";
                 }
             }
+            echo '<a href="/">Retour à l\'accueil</a>';;
             // On stocke la liste pour affichage après l'email
             if ($userMigrationApplied) {
                 $_SESSION['applied_migrations'] = $appliedNow;

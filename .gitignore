@@ -1,0 +1,13 @@
+/.idea/*
+
+/.env
+/.env.local
+/.env.prod
+/var/
+/vendor/
+
+
+/public/storage
+
+*.log
+/backup/

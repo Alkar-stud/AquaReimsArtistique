@@ -1,0 +1,163 @@
+/* Styles globaux pour la navbar */
+.navbar {
+    background: var(--ara-color-darkblue);
+    flex-direction: row;
+    gap: 0.5rem;
+    padding: 0;
+    margin: 0;
+}
+
+@media (max-width: 768px) {
+    header {
+        position: sticky;
+        top: 0;
+        z-index: 100;
+    }
+    .navbar {
+        position: sticky;
+        top: 112px; /* hauteur du header */
+        z-index: 101;
+        width: 100%;
+    }
+}
+
+.navbar .container {
+    justify-content: flex-start !important;
+}
+
+/* Style du brand (logo ou texte) */
+.navbar-brand {
+    margin-right: 0.5rem;
+    margin-left: 0 !important;
+    padding-left: 0 !important;
+    color: var(--ara-color-lightblue) !important;
+    font-weight: bold;
+}
+
+/* Style des liens de navigation */
+.nav-link, .dropdown-item {
+    color: var(--ara-color-white);
+    padding: 0.75rem 1.5rem;
+    font-family: 'Roboto', Arial, sans-serif;
+    transition: background 0.2s, color 0.2s;
+}
+
+.nav-link:hover, .nav-link:focus,
+.dropdown-item:hover, .dropdown-item:focus {
+    background-color: var(--ara-color-purple) !important;
+    color: var(--ara-color-white) !important;
+    box-shadow: 0 2px 8px rgba(92,130,206,0.15);
+}
+
+/* Style pour les liens actifs */
+.active-link, .active-link:focus,
+.dropdown-item.active-link, .dropdown-item.active-link:focus, .dropdown-item.active-link:visited {
+    background: var(--ara-color-purple);
+    color: var(--ara-color-white) !important;
+    border-radius: 0.25rem;
+}
+
+/* Style pour l'en-tête */
+header {
+    background: var(--ara-color-purple);
+    width: 100%;
+    padding: 1rem 0;
+    flex: 0 0 auto;
+    z-index: 100;
+    position: sticky;
+    top: 0;
+}
+
+header .container img {
+    height: 80px;
+}
+
+/* Style pour le bouton du menu mobile */
+.navbar-toggler {
+    border-color: var(--ara-color-lightblue);
+}
+
+.navbar-toggler:focus {
+    outline: none;
+    box-shadow: none;
+}
+
+.navbar-toggler:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 0.15rem var(--ara-color-white);
+}
+
+.navbar-toggler-icon {
+    background-image: url("data:image/svg+xml;charset=utf8,%3Csvg viewBox='0 0 30 30' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath stroke='rgba(232,248,255,1)' stroke-width='2' stroke-linecap='round' stroke-miterlimit='10' d='M4 7h22M4 15h22M4 23h22'/%3E%3C/svg%3E");
+}
+
+/* Style pour les menus déroulants */
+.nav-item.dropdown:hover .dropdown-menu {
+    height: 100%;
+    margin: 0;
+    display: flex;
+    align-items: stretch;
+}
+
+.dropdown-menu {
+    flex-direction: column !important;
+    background-color: var(--ara-color-darkblue) !important;
+    border-radius: 8px;
+    border: none;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    min-width: 200px;
+    padding: 0.5rem 0;
+}
+
+.dropdown-item {
+    color: var(--ara-color-white) !important;
+    background-color: var(--ara-color-darkblue) !important;
+    padding: 0.75rem 1.5rem;
+    font-family: 'Roboto', Arial, sans-serif;
+    transition: background 0.2s, color 0.2s;
+}
+
+.dropdown-item:hover, .dropdown-item:focus {
+    background-color: var(--ara-color-purple) !important;
+    color: var(--ara-color-white) !important;
+}
+
+/* Style des liens importants */
+.nav-link-important {
+    background: var(--ara-color-darkpink) !important;
+    color: var(--ara-color-white) !important;
+    font-size: 1.2rem;
+    font-weight: bold;
+    border-radius: 0.25rem;
+    box-shadow: 0 2px 8px rgba(250,78,154,0.15);
+}
+
+.nav-link-important:hover,
+.nav-link-important:active,
+.nav-link-important:focus {
+    background-color: var(--ara-color-purple) !important;
+    color: var(--ara-color-white) !important;
+    box-shadow: 0 2px 8px rgba(92,130,206,0.15);
+}
+
+/* Styles pour les écrans de petite taille */
+@media (max-width: 768px) {
+    .navbar-nav {
+        flex-direction: column !important;
+        width: 100%;
+        gap: 0;
+    }
+
+    .nav-link {
+        width: 100%;
+        text-align: left;
+        padding: 1rem;
+        border-radius: 0;
+    }
+}
+.dropdown-item:hover, .dropdown-item:focus,
+.dropdown-item.active-link, .dropdown-item.active-link:focus, .dropdown-item.active-link:visited {
+    background-color: var(--ara-color-purple) !important;
+    color: var(--ara-color-white) !important;
+    box-shadow: 0 2px 8px rgba(92,130,206,0.15);
+}

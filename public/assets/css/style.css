@@ -1,0 +1,47 @@
+@import "header.css";
+@import "main.css";
+
+
+html, body {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    overflow: hidden;
+}
+
+
+main#main-page {
+    flex: 1 1 auto;
+    overflow-y: auto;
+    min-height: 0;
+}
+
+footer {
+    flex: 0 0 auto;
+    margin-top: 0;
+    position: sticky;
+    bottom: 0;
+    z-index: 100;
+}
+
+@media (max-width: 768px) {
+    body {
+        display: block !important;
+        min-height: auto !important;
+        height: auto !important;
+        overflow: auto !important;
+    }
+
+    footer {
+        position: static !important;
+        bottom: auto !important;
+        z-index: auto !important;
+    }
+}

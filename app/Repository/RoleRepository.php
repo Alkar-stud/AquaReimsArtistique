@@ -11,11 +11,18 @@ class RoleRepository extends AbstractRepository
         parent::__construct('roles');
     }
 
+    /*
+     * Retourne les rôles triés par level
+     */
+    public function findAllByLevel(): array
+    {
+        $sql = "SELECT * FROM $this->tableName ORDER BY `level`;";
+        $results = $this->query($sql);
+        return array_map([$this, 'hydrate'], $results);
+    }
+
     /**
      * Trouve un rôle par son ID.
-     *
-     * @param int $id
-     * @return Role|null
      */
     public function findById(int $id): ?Role
     {
@@ -35,7 +42,6 @@ class RoleRepository extends AbstractRepository
             ->setLevel($data['level'])
             ->setCreatedAt($data['created_at'])
             ->setUpdatedAt($data['updated_at']);
-
         return $role;
     }
 }

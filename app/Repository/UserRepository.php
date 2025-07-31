@@ -12,6 +12,28 @@ class UserRepository extends AbstractRepository
         parent::__construct('user');
     }
 
+
+    /*
+     * Insère un nouvel utilisateur dans la base de données.
+     */
+    public function insert(User $user): bool
+    {
+        $sql = "INSERT INTO $this->tableName 
+        (username, password, email, display_name, roles, created_at, password_reset_token, password_reset_expires_at)
+        VALUES (:username, :password, :email, :display_name, :roles, :created_at, :token, :expires_at)";
+        return $this->execute($sql, [
+            'username' => $user->getUsername(),
+            'password' => $user->getPassword(),
+            'email' => $user->getEmail(),
+            'display_name' => $user->getDisplayName(),
+            'roles' => $user->getRole() ? $user->getRole()->getId() : null,
+            'created_at' => $user->getCreatedAt()->format('Y-m-d H:i:s'),
+            'token' => $user->getPasswordResetToken(),
+            'expires_at' => $user->getPasswordResetExpiresAt() ? $user->getPasswordResetExpiresAt()->format('Y-m-d H:i:s') : null,
+        ]);
+    }
+
+
     /**
      * Trouve un utilisateur par son nom d'utilisateur.
      *

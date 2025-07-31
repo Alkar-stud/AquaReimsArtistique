@@ -5,6 +5,8 @@ use app\Attributes\Route;
 use app\Repository\UserRepository;
 use app\Services\MailService;
 use DateMalformedStringException;
+use DateTime;
+use Exception;
 use Random\RandomException;
 
 class PasswordResetController extends AbstractController
@@ -37,8 +39,8 @@ class PasswordResetController extends AbstractController
                 // Générer un token sécurisé
                 $token = bin2hex(random_bytes(32));
 
-                // Définir une date d'expiration (ex: 1 heure)
-                $date = new \DateTime();
+                // Définir une date d'expiration (ex : 1 heure)
+                $date = new DateTime();
                 $date->modify('+1 hour');
                 $expiresAt = $date->format('Y-m-d H:i:s');
 
@@ -56,7 +58,7 @@ class PasswordResetController extends AbstractController
                         $user->getDisplayName(),
                         $resetLink
                     );
-                } catch (\Exception $e) {
+                } catch (Exception $e) {
                     error_log('Erreur critique du service Mail: ' . $e->getMessage());
                 }
             }
@@ -74,6 +76,7 @@ class PasswordResetController extends AbstractController
 
     /**
      * Gère l'affichage (GET) et le traitement (POST) du formulaire de réinitialisation.
+     * @throws DateMalformedStringException
      */
     #[Route('/reset-password', name: 'app_reset_password')]
     public function resetPassword(): void

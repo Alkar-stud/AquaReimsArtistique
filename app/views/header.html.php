@@ -52,7 +52,7 @@
                             <a class="nav-link <?= $uri === '/gestion/groupes-nageuses' ? 'active-link' : '' ?>" href="/gestion/groupes-nageuses">Nageuses</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link <?= $uri === '/gestion/mails' ? 'active-link' : '' ?>" href="/gestion/mails">Mails</a>
+                            <a class="nav-link <?= $uri === '/gestion/mail_templates' ? 'active-link' : '' ?>" href="/gestion/mail_templates">Mails</a>
                         </li>
                     <?php endif; ?>
                     <?php if (isset($_SESSION['user']['role']) && $_SESSION['user']['role']['level'] <= 1 && str_starts_with($_SERVER['REQUEST_URI'], '/gestion')): ?>

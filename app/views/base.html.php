@@ -13,6 +13,10 @@
     <link rel="stylesheet" href="/assets/css/generic.css">
     <?php if (str_starts_with($_SERVER['REQUEST_URI'], '/gestion')): ?><link rel="stylesheet" href="/assets/css/admin.css">
     <?php endif; ?>
+    <?php if (str_starts_with($_SERVER['REQUEST_URI'], '/gestion/mail_templates')): ?>
+        <link rel="stylesheet" href="/assets/css/ckeditor.css">
+        <link rel="stylesheet" href="/assets/ckeditor5/ckeditor5.css">
+    <?php endif; ?>
 
     <script type="text/javascript" src="/assets/js/scripts.js" charset="UTF8"></script>
 
@@ -31,6 +35,18 @@
     <?php include __DIR__ . '/footer.html.php'; ?>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/js/bootstrap.bundle.min.js" integrity="sha384-ndDqU0Gzau9qJ1lfW4pNLlhNTkCfHzAVBReH9diLvGRem5+R9g2FzA8ZGN954O5Q" crossorigin="anonymous"></script>
+
+    <?php if (str_starts_with($_SERVER['REQUEST_URI'], '/gestion/mail_templates')): ?>
+    <script type="importmap">
+        {
+            "imports": {
+                "ckeditor5": "/assets/ckeditor5/ckeditor5.js",
+                "ckeditor5/": "/assets/ckeditor5/"
+            }
+        }
+    </script>
+    <script type="module" src="/assets/js/ckeditor.js"></script>
+    <?php endif; ?>
 </body>
 </html>
 

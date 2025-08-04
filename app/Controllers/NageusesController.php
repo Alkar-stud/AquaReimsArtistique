@@ -30,7 +30,12 @@ class NageusesController extends AbstractController
             $_SESSION['flash_message'] = ['type' => 'success', 'message' => 'Nageuse ajoutée'];
             header('Location: /gestion/nageuses/' . $nageuse->getGroupe());
             exit;
-        }
+        } else {
+            $_SESSION['flash_message'] = [
+                'type' => 'danger',
+                'message' => 'Erreur lors de l\'ajout.'
+            ];
+		}
     }
 
     #[Route('/gestion/nageuses/update/{id}', name: 'app_gestion_nageuses_update')]

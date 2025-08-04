@@ -1,0 +1,31 @@
+.ckeditor-textarea,
+.ck-editor__editable_inline {
+	min-height: 200px;
+	max-height: 50vh;
+	max-width: 100%;
+	box-sizing: border-box;
+}
+.ck-editor__editable_inline {
+	overflow-y: auto;
+}
+@media (max-width: 576px) {
+	.ck-editor__editable_inline {
+		min-height: 120px;
+		max-height: 40vh;
+	}
+}
+.ck-editor {
+	width: 100% !important;
+	max-width: 100% !important;
+}
+
+/* Fixe la toolbar à l'intérieur de la modale */
+.ck.ck-toolbar {
+	position: sticky !important;
+	top: 0 !important;
+	z-index: 1056 !important; /* supérieur à la modale Bootstrap */
+	background: #fff;
+}
+.ck-editor__editable_inline {
+	scroll-margin-top: 48px; /* espace pour la toolbar sticky */
+}

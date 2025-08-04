@@ -1,3 +1,4 @@
+@import "ckeditor.css";
 /*
  * Pour des tableaux transposés
  */
@@ -85,4 +86,18 @@
     background-color: var(--ara-color-red);
     color: var(--ara-color-white);
     border-color: var(--ara-color-red);
+}
+
+@media (max-width: 576px) {
+    .modal-dialog {
+        max-width: 98vw;
+        margin: 0.5rem auto;
+    }
+    .modal-content {
+        border-radius: 0.5rem;
+    }
+    .modal-footer {
+        flex-direction: column !important;
+        gap: 0.5rem;
+    }
 }

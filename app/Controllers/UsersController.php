@@ -29,13 +29,14 @@ class UsersController extends AbstractController
      */
     public function index(): void
     {
-        $users = $this->userRepository->findAll();
+        $users = $this->userRepository->findAllByLevel();
         $roles = $this->roleRepository->findAllByLevel();
         $currentUser = $_SESSION['user'] ?? null;
         if (is_array($currentUser)) {
             $userRepository = new UserRepository();
             $currentUser = $userRepository->findById($currentUser['id']);
         }
+
         $this->render('/gestion/users', [
             'users' => $users,
             'roles' => $roles,
@@ -111,6 +112,7 @@ class UsersController extends AbstractController
                     $email,
                     'new_account',
                     [
+                        'display_name' => $displayName,
                         'username' => $username,
                         'app_name' => $_ENV['APP_NAME'],
                         'timeout_token_new_account' => '1 heure',
@@ -132,4 +134,79 @@ class UsersController extends AbstractController
             'currentUser' => $currentUser
         ], 'Créer un utilisateur');
     }
+
+    /**
+     * @throws \DateMalformedStringException
+     */
+    #[Route('/gestion/users/edit', name: 'app_gestion_users_edit')]
+    public function edit(): void
+    {
+        $currentUser = $_SESSION['user'] ?? null;
+        if (!$currentUser || !in_array($currentUser['role']['level'], [0, 1])) {
+            $_SESSION['flash_message'] = ['type' => 'danger', 'message' => 'Accès refusé.'];
+            header('Location: /gestion/users');
+            exit;
+        }
+
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $id = (int)($_POST['id'] ?? 0);
+            $username = trim($_POST['username'] ?? '');
+            $email = trim($_POST['email'] ?? '');
+            $displayName = trim($_POST['display_name'] ?? '');
+            $roleId = (int)($_POST['role'] ?? 0);
+
+            $user = $this->userRepository->findById($id);
+            if (!$user) {
+                $_SESSION['flash_message'] = ['type' => 'danger', 'message' => 'Utilisateur introuvable.'];
+                header('Location: /gestion/users');
+                exit;
+            }
+
+            $role = $this->roleRepository->findById($roleId);
+            if (!$role || $role->getLevel() <= $currentUser['role']['level']) {
+                $_SESSION['flash_message'] = ['type' => 'danger', 'message' => 'Rôle non autorisé.'];
+                header('Location: /gestion/users');
+                exit;
+            }
+
+            $user->setUsername($username)
+                ->setEmail($email)
+                ->setDisplayName($displayName ?: null)
+                ->setRole($role);
+
+            $this->userRepository->update($user);
+
+            $_SESSION['flash_message'] = ['type' => 'success', 'message' => 'Utilisateur modifié.'];
+            header('Location: /gestion/users');
+            exit;
+        }
+
+        header('Location: /gestion/users');
+        exit;
+    }
+
+    /**
+     * @throws \DateMalformedStringException
+     */
+    #[Route('/gestion/users/delete', name: 'app_gestion_users_delete')]
+    public function delete(): void
+    {
+        $currentUser = $_SESSION['user'] ?? null;
+        if (!$currentUser || !in_array($currentUser['role']['level'], [0, 1])) {
+            $_SESSION['flash_message'] = ['type' => 'danger', 'message' => 'Accès refusé.'];
+            header('Location: /gestion/users');
+            exit;
+        }
+
+        $id = (int)($_GET['id'] ?? 0);
+        if ($id > 0) {
+            $this->userRepository->delete($id);
+            $_SESSION['flash_message'] = ['type' => 'success', 'message' => 'Utilisateur supprimé.'];
+        } else {
+            $_SESSION['flash_message'] = ['type' => 'danger', 'message' => 'Utilisateur introuvable.'];
+        }
+        header('Location: /gestion/users');
+        exit;
+    }
+
 }

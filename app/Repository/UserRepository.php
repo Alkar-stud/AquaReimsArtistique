@@ -98,6 +98,24 @@ class UserRepository extends AbstractRepository
         return $this->execute($sql, ['display_name' => $newDisplayName, 'email' => $newEmail, 'id' => $userId]);
     }
 
+    /*
+     * Récupère tous les utilisateurs de la table qui ont un role plus bas.
+     */
+    public function findAllByLevel(): array
+    {
+        $currentUser = $_SESSION['user'] ?? null;
+        $level = 5;
+        if ($currentUser && isset($currentUser['role']['level'])) {
+            $level = $currentUser['role']['level'];
+        }
+        $sql = "SELECT u.* FROM {$this->tableName} u
+            INNER JOIN roles r ON u.roles = r.id
+            WHERE r.level > :level
+            ORDER BY r.level, u.username";
+        $results = $this->query($sql, ['level' => $level]);
+        return array_map([$this, 'hydrate'], $results);
+    }
+
     /**
      * Met à jour le mot de passe d'un utilisateur.
      */
@@ -169,6 +187,33 @@ class UserRepository extends AbstractRepository
     {
         $sql = "UPDATE $this->tableName SET session_id = NULL WHERE id = :id OR session_id = :sessionId";
         return $this->execute($sql, ['id' => $userId, 'sessionId' => $sessionId]);
+    }
+
+    // Met à jour les informations principales d'un utilisateur
+    public function update(User $user): bool
+    {
+        $sql = "UPDATE $this->tableName SET 
+        username = :username,
+        email = :email,
+        display_name = :display_name,
+        roles = :roles,
+        updated_at = :updated_at
+        WHERE id = :id";
+        return $this->execute($sql, [
+            'username' => $user->getUsername(),
+            'email' => $user->getEmail(),
+            'display_name' => $user->getDisplayName(),
+            'roles' => $user->getRole()?->getId(),
+            'updated_at' => date('Y-m-d H:i:s'),
+            'id' => $user->getId()
+        ]);
+    }
+
+    // Supprime un utilisateur par son id
+    public function delete(int $id): bool
+    {
+        $sql = "DELETE FROM $this->tableName WHERE id = :id";
+        return $this->execute($sql, ['id' => $id]);
     }
 
 }

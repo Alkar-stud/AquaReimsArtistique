@@ -46,7 +46,7 @@
     .d-md-block { display: none !important; }
     .d-md-none { display: block !important; }
 }
-@media (min-width: 769px) {
+@media (min-width: 768px) {
     .d-md-block { display: block !important; }
     .d-md-none { display: none !important; }
 }
@@ -88,7 +88,7 @@
     border-color: var(--ara-color-red);
 }
 
-@media (max-width: 576px) {
+@media (max-width: 768px) {
     .modal-dialog {
         max-width: 98vw;
         margin: 0.5rem auto;

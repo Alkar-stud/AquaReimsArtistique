@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS `config` (
 );
 
 -- Ajout de la config de base
-INSERT INTO `config` (`libelle`, `config_key`, `config_value`, `config_type`) VALUES
+INSERT IGNORE INTO `config` (`libelle`, `config_key`, `config_value`, `config_type`) VALUES
     ('Maintenance', 'MAINTENANCE', '0', 'bool'),
     ('Aqua Reims Artistique', 'EMAIL_CLUB', 'aquareimsartistique@gmail.com', 'email'),
     ('Aqua Reims Artistique gala', 'EMAIL_GALA', 'gala@aquareimsartistique.fr', 'email'),

@@ -182,4 +182,34 @@ abstract class AbstractController
         }
     }
 
+    protected function validateCsrf(string $token): bool
+    {
+        return \app\Utils\CsrfHelper::validateToken($token);
+    }
+
+    protected function validateCsrfAndLog(string $submittedToken, string $action = 'unknown'): bool
+    {
+        $sessionToken = $_SESSION['csrf_token'] ?? '';
+
+        if (empty($submittedToken) || empty($sessionToken) || !hash_equals($sessionToken, $submittedToken)) {
+            $this->logService->log(LogType::ACCESS, "Tentative CSRF invalide sur action: $action", [
+                'submitted_token_length' => strlen($submittedToken),
+                'session_token_exists' => !empty($sessionToken),
+                'ip' => $_SERVER['REMOTE_ADDR'] ?? '',
+                'user_agent' => $_SERVER['HTTP_USER_AGENT'] ?? '',
+                'action' => $action
+            ], 'DANGER');
+
+            return false;
+        }
+
+        unset($_SESSION['csrf_token']);
+        return true;
+    }
+
+    protected function getCsrfToken(): string
+    {
+        return \app\Utils\CsrfHelper::getToken();
+    }
+
 }

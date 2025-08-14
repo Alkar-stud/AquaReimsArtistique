@@ -8,6 +8,7 @@ use DateMalformedStringException;
 use DateTime;
 use Exception;
 use Random\RandomException;
+use app\Enums\LogType;
 
 class PasswordResetController extends AbstractController
 {
@@ -25,6 +26,29 @@ class PasswordResetController extends AbstractController
     {
         // On vérifie la méthode de la requête
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            // Vérifier le token CSRF
+            $submittedToken = $_POST['csrf_token'] ?? '';
+            $sessionToken = $_SESSION['csrf_token'] ?? '';
+
+            if (empty($submittedToken) || empty($sessionToken) || !hash_equals($sessionToken, $submittedToken)) {
+                $this->logService->log(LogType::ACCESS, 'Tentative de soumission forgot-password avec token CSRF invalide', [
+                    'email' => $_POST['email'] ?? '',
+                    'submitted_token_length' => strlen($submittedToken),
+                    'session_token_exists' => !empty($sessionToken),
+                    'ip' => $_SERVER['REMOTE_ADDR'] ?? '',
+                    'user_agent' => $_SERVER['HTTP_USER_AGENT'] ?? ''
+                ], 'DANGER');
+
+                $_SESSION['flash_message'] = [
+                    'type' => 'danger',
+                    'message' => 'Token de sécurité invalide. Veuillez réessayer.'
+                ];
+                header('Location: /forgot-password');
+                exit;
+            }
+
+            unset($_SESSION['csrf_token']);
+
             $email = trim($_POST['email'] ?? '');
             if (empty($email) || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
                 $_SESSION['flash_message'] = ['type' => 'danger', 'message' => 'Veuillez fournir une adresse email valide.'];
@@ -69,8 +93,14 @@ class PasswordResetController extends AbstractController
             exit;
 
         } else {
-            // --- Logique GET ---
-            $this->render('password/forgot', [], 'Mot de passe oublié');
+            // Générer token CSRF pour GET
+            if (!isset($_SESSION['csrf_token'])) {
+                $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+            }
+
+            $this->render('password/forgot', [
+                'csrf_token' => $_SESSION['csrf_token']
+            ], 'Mot de passe oublié');
         }
     }
 
@@ -85,6 +115,31 @@ class PasswordResetController extends AbstractController
 
         // --- Logique pour la requête POST (soumission du formulaire) ---
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            // Vérifier le token CSRF
+            $submittedToken = $_POST['csrf_token'] ?? '';
+            $sessionToken = $_SESSION['csrf_token'] ?? '';
+
+            if (empty($submittedToken) || empty($sessionToken) || !hash_equals($sessionToken, $submittedToken)) {
+                $token = $_POST['token'] ?? '';
+
+                $this->logService->log(LogType::ACCESS, 'Tentative de soumission reset-password avec token CSRF invalide', [
+                    'reset_token' => substr($token, 0, 8) . '...',
+                    'submitted_token_length' => strlen($submittedToken),
+                    'session_token_exists' => !empty($sessionToken),
+                    'ip' => $_SERVER['REMOTE_ADDR'] ?? '',
+                    'user_agent' => $_SERVER['HTTP_USER_AGENT'] ?? ''
+                ], 'DANGER');
+
+                $_SESSION['flash_message'] = [
+                    'type' => 'danger',
+                    'message' => 'Token de sécurité invalide. Veuillez réessayer.'
+                ];
+                header('Location: /reset-password?token=' . $token);
+                exit;
+            }
+
+            unset($_SESSION['csrf_token']);
+
             $token = $_POST['token'] ?? '';
             $password = $_POST['password'] ?? '';
             $passwordConfirm = $_POST['password_confirm'] ?? '';
@@ -118,6 +173,25 @@ class PasswordResetController extends AbstractController
             $_SESSION['flash_message'] = ['type' => 'success', 'message' => 'Votre mot de passe a été réinitialisé avec succès. Vous pouvez maintenant vous connecter.'];
             header('Location: /login');
             exit;
+        } else {
+            // Générer token CSRF pour GET
+            if (!isset($_SESSION['csrf_token'])) {
+                $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+            }
+
+            $token = $_GET['token'] ?? '';
+            $user = $userRepository->findByValidResetToken($token);
+
+            if (!$user) {
+                $_SESSION['flash_message'] = ['type' => 'danger', 'message' => 'Ce lien de réinitialisation est invalide ou a expiré.'];
+                header('Location: /forgot-password');
+                exit;
+            }
+
+            $this->render('password/reset', [
+                'token' => $token,
+                'csrf_token' => $_SESSION['csrf_token']
+            ], 'Réinitialiser le mot de passe');
         }
 
         // --- Logique pour la requête GET (affichage de la page) ---

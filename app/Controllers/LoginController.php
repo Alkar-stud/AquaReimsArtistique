@@ -4,6 +4,7 @@ namespace app\Controllers;
 use app\Attributes\Route;
 use app\Repository\UserRepository;
 use DateMalformedStringException;
+use app\Enums\LogType;
 
 #[Route('/login', name: 'app_login')]
 class LoginController extends AbstractController
@@ -18,7 +19,14 @@ class LoginController extends AbstractController
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $this->login();
         } else {
-            $this->render('login', [], 'Connexion');
+            // Générer un token CSRF pour le formulaire
+            if (!isset($_SESSION['csrf_token'])) {
+                $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+            }
+
+            $this->render('login', [
+                'csrf_token' => $_SESSION['csrf_token']
+            ], 'Connexion');
         }
     }
 
@@ -27,6 +35,30 @@ class LoginController extends AbstractController
      */
     private function login(): void
     {
+        // Vérifier le token CSRF avec protection contre null
+        $submittedToken = $_POST['csrf_token'] ?? '';
+        $sessionToken = $_SESSION['csrf_token'] ?? '';
+
+        if (empty($submittedToken) || empty($sessionToken) || !hash_equals($sessionToken, $submittedToken)) {
+            $this->logService->log(LogType::ACCESS, 'Tentative de connexion avec token CSRF invalide', [
+                'username' => $_POST['username'] ?? '',
+                'submitted_token_length' => strlen($submittedToken),
+                'session_token_exists' => !empty($sessionToken),
+                'ip' => $_SERVER['REMOTE_ADDR'] ?? '',
+                'user_agent' => $_SERVER['HTTP_USER_AGENT'] ?? ''
+            ], 'DANGER');
+
+            $_SESSION['flash_message'] = [
+                'type' => 'danger',
+                'message' => 'Token de sécurité invalide. Veuillez réessayer.'
+            ];
+            header('Location: /login');
+            exit;
+        }
+
+        // Supprimer le token après utilisation
+        unset($_SESSION['csrf_token']);
+
         $username = trim($_POST['username'] ?? '');
         $password = $_POST['password'] ?? '';
 

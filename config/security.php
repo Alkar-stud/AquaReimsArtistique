@@ -16,7 +16,6 @@ return [
         'password',
         'token',
         'secret',
-        'key',
         'session_id',
         'confirm_password',
         'current_password',

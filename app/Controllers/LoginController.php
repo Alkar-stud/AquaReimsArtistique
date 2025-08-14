@@ -48,12 +48,6 @@ class LoginController extends AbstractController
 
             unset($_SESSION['flash_message']);
 
-            $this->logService->logAccess('LOGIN_SUCCESS', [
-                'user_id' => $user->getId(),
-                'username' => $username,
-                'session_regenerated' => true
-            ]);
-
             // Régénérer l'ID de session après connexion réussie
             session_regenerate_id(true);
 
@@ -73,6 +67,12 @@ class LoginController extends AbstractController
 
             // Une seule fois l'ajout de session
             $userRepository->addSessionId($user->getId(), session_id());
+
+            $this->logService->logAccess('LOGIN_SUCCESS', [
+                'user_id' => $user->getId(),
+                'username' => $user->getUsername(),
+                'session_regenerated' => true
+            ]);
 
             header('Location: /');
             exit;

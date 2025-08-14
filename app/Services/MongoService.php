@@ -22,10 +22,10 @@ class MongoService
         return (string)$result->getInsertedId();
     }
 
-    public function find(array $filter = [], array $options = [], ?string $subType = null): array
+    public function find(array $filter = [], array $options = [], ?string $subType = null)
     {
         $collection = $this->getCollection($subType);
-        return $collection->find($filter, $options)->toArray();
+        return $collection->find($filter, $options); // Retourne le cursor directement
     }
 
     public function findOne(array $filter = [], array $options = [], ?string $subType = null): ?array
@@ -58,5 +58,11 @@ class MongoService
         }
 
         return DatabaseMongoDB::getDatabase()->selectCollection($collectionName);
+    }
+
+    public function countDocuments(array $filter = [], ?string $subType = null): int
+    {
+        $collection = $this->getCollection($subType);
+        return $collection->countDocuments($filter);
     }
 }

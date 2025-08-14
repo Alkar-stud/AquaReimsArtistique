@@ -8,4 +8,5 @@ enum LogType: string
     case DATABASE = 'database';  // INSERT, UPDATE, DELETE
     case URL = 'url';           // URLs demandées
     case ROUTE = 'route';       // Routes appelées
+    case URL_ERROR = 'url_error'; //URLs qui donnent 404
 }

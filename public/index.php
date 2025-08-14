@@ -2,6 +2,7 @@
 
 use Dotenv\Dotenv;
 use app\Core\Router;
+use app\Services\LogService;
 use Dotenv\Exception\InvalidPathException;
 
 ini_set('display_errors', 1);
@@ -71,6 +72,18 @@ try {
 } catch (\Exception $e) {
     if ($e->getMessage() === '404') {
         http_response_code(404);
+
+        $logService = new LogService();
+        $logService->logUrlError(
+            $_SERVER['REQUEST_URI'] ?? 'unknown',
+            $_SERVER['REQUEST_METHOD'] ?? 'GET',
+            404,
+            [
+                'query_string' => $_SERVER['QUERY_STRING'] ?? null,
+                'http_accept' => $_SERVER['HTTP_ACCEPT'] ?? null
+            ]
+        );
+
         $title = '404';
         ob_start();
         require __DIR__ . '/../app/views/404.html.php';

@@ -13,12 +13,13 @@ abstract class AbstractRepository
 
     protected string $tableName;
     protected LogService $logService;
+    private ?PDOStatement $lastStatement = null;
 
     public function __construct(string $tableName)
     {
+        $this->tableName = $tableName;
         $this->logService = new LogService();
         $this->initPdo();
-        $this->tableName = $tableName;
     }
 
     /**
@@ -27,8 +28,8 @@ abstract class AbstractRepository
      */
     public function findAll(): array
     {
-        $stmt = $this->pdo->query("SELECT * FROM $this->tableName");
-        return $stmt->fetchAll();
+        $sql = "SELECT * FROM $this->tableName";
+        return $this->query($sql);
     }
 
     /**
@@ -38,8 +39,8 @@ abstract class AbstractRepository
      */
     public function delete(int $id): bool
     {
-        $stmt = $this->prepare("DELETE FROM $this->tableName WHERE id = :id");
-        return $stmt->execute(['id' => $id]);
+        $sql = "DELETE FROM $this->tableName WHERE id = :id";
+        return $this->execute($sql, ['id' => $id]);
     }
 
     /**
@@ -51,9 +52,16 @@ abstract class AbstractRepository
      */
     protected function query(string $sql, array $params = []): array
     {
-        $stmt = $this->prepare($sql);
+        $startTime = microtime(true);
+
+        $stmt = $this->pdo->prepare($sql);
         $stmt->execute($params);
-        return $stmt->fetchAll();
+        $result = $stmt->fetchAll();
+
+        $this->lastStatement = $stmt;
+        $this->logQuery('SELECT', $sql, $params, $startTime, count($result));
+
+        return $result;
     }
 
     /**
@@ -65,19 +73,18 @@ abstract class AbstractRepository
      */
     protected function execute(string $sql, array $params = []): bool
     {
-        try {
-            $start = microtime(true);
-            $stmt = $this->pdo->prepare($sql);
-            $result = $stmt->execute($params);
+        $startTime = microtime(true);
 
-            $operation = $this->detectSqlOperation($sql);
-            $this->logDatabaseOperation($sql, $params, $operation);
+        $stmt = $this->pdo->prepare($sql);
+        $result = $stmt->execute($params);
 
-            return $result;
-        } catch (\PDOException $e) {
-            $this->logDatabaseOperation($sql, $params, 'ERROR');
-            throw $e;
-        }
+        $this->lastStatement = $stmt;
+        $operation = $this->getOperationType($sql);
+        $affectedRows = $stmt->rowCount();
+
+        $this->logQuery($operation, $sql, $params, $startTime, $affectedRows);
+
+        return $result;
     }
 
     /**
@@ -93,33 +100,9 @@ abstract class AbstractRepository
 
     protected function fetchAll(string $sql, array $params = []): array
     {
-        try {
-            $stmt = $this->pdo->prepare($sql);
-            $stmt->execute($params);
-
-            // Log de la lecture (optionnel - peut être désactivé si trop verbeux)
-            $this->logService->logDatabase(
-                'SELECT',
-                $this->tableName,
-                [
-                    'sql' => $this->sanitizeSql($sql),
-                    'params_count' => count($params)
-                ]
-            );
-
-            return $stmt->fetchAll();
-        } catch (\PDOException $e) {
-            $this->logService->logDatabase(
-                'SELECT_ERROR',
-                $this->tableName,
-                [
-                    'sql' => $sql,
-                    'error' => $e->getMessage()
-                ]
-            );
-            throw $e;
-        }
+        return $this->query($sql, $params);
     }
+
     private function logDatabaseOperation(string $sql, array $params, string $operation): void
     {
         $context = [
@@ -160,6 +143,30 @@ abstract class AbstractRepository
             }
         }
         return $sanitized;
+    }
+    // UNE SEULE méthode de logging - celle qui utilise logDatabase
+    private function logQuery(string $operation, string $sql, array $params, float $startTime, int $affectedRows): void
+    {
+        $context = [
+            'query' => $sql,
+            'params' => $params,
+            'execution_time' => round((microtime(true) - $startTime) * 1000, 2) . 'ms',
+            'affected_rows' => $affectedRows
+        ];
+
+        $this->logService->logDatabase($operation, $this->tableName, $context);
+    }
+
+    private function getOperationType(string $sql): string
+    {
+        $sql = trim(strtoupper($sql));
+
+        if (str_starts_with($sql, 'SELECT')) return 'SELECT';
+        if (str_starts_with($sql, 'INSERT')) return 'INSERT';
+        if (str_starts_with($sql, 'UPDATE')) return 'UPDATE';
+        if (str_starts_with($sql, 'DELETE')) return 'DELETE';
+
+        return 'UNKNOWN';
     }
 
 

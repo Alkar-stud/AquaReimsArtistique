@@ -13,7 +13,7 @@
         <div class="container-fluid">
             <div class="d-flex align-items-center justify-content-start">
                 <a class="navbar-brand nav-link" href="/">Accueil</a>
-                <a class="nav-link d-lg-none" href="/reservation">Réservation</a>
+                <a class="nav-link d-lg-none" href="/reservation">Réservations</a>
             </div>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
@@ -22,7 +22,7 @@
                 <ul class="navbar-nav">
                     <?php if (!str_starts_with($_SERVER['REQUEST_URI'], '/gestion')): ?>
                         <li class="nav-item">
-                            <a class="nav-link <?= $uri === '/reservation' ? 'active-link' : '' ?>" href="/reservation">Réservation</a>
+                            <a class="nav-link <?= $uri === '/reservation' ? 'active-link' : '' ?>" href="/reservation">Réservations</a>
                         </li>
                     <?php endif; ?>
                     <?php if (isset($_SESSION['user']['role']) && $_SESSION['user']['role']['level'] <= 2 && !str_starts_with($_SERVER['REQUEST_URI'], '/gestion')): ?>

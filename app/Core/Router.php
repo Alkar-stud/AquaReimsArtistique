@@ -1,6 +1,7 @@
 <?php
 namespace app\Core;
 
+
 class Router
 {
     private array $routes;
@@ -12,6 +13,7 @@ class Router
 
     public function dispatch(string $uri)
     {
+
         $found = false;
 
         foreach ($this->routes as $routePath => $routeInfo) {
@@ -47,12 +49,7 @@ class Router
         }
 
         if (!$found) {
-            http_response_code(404);
-            $title = 'Erreur 404 - Page non trouvée';
-            ob_start();
-            require_once __DIR__ . '/../views/404.html.php';
-            $content = ob_get_clean();
-            require_once __DIR__ . '/../views/base.html.php';
+            throw new \Exception('404');
         }
     }
 }

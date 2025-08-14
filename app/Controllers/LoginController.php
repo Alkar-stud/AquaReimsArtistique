@@ -3,6 +3,7 @@ namespace app\Controllers;
 
 use app\Attributes\Route;
 use app\Repository\UserRepository;
+use DateMalformedStringException;
 
 #[Route('/login', name: 'app_login')]
 class LoginController extends AbstractController
@@ -15,21 +16,25 @@ class LoginController extends AbstractController
     public function index(): void
     {
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $this->handleLogin();
+            $this->login();
         } else {
             $this->render('login', [], 'Connexion');
         }
     }
 
-    private function handleLogin(): void
+    /**
+     * @throws DateMalformedStringException
+     */
+    private function login(): void
     {
         $username = trim($_POST['username'] ?? '');
         $password = $_POST['password'] ?? '';
 
         if (empty($username) || empty($password)) {
+            $this->logService->logAccess('LOGIN_ATTEMPT_EMPTY_FIELDS', ['username' => $username]);
             $_SESSION['flash_message'] = ['type' => 'danger', 'message' => 'Veuillez remplir tous les champs.'];
             header('Location: /login');
-            exit;
+            exit; // MANQUAIT - tout le code après n'était jamais exécuté
         }
 
         $userRepository = new UserRepository();
@@ -43,29 +48,40 @@ class LoginController extends AbstractController
 
             unset($_SESSION['flash_message']);
 
+            $this->logService->logAccess('LOGIN_SUCCESS', [
+                'user_id' => $user->getId(),
+                'username' => $username,
+                'session_regenerated' => true
+            ]);
+
+            // Régénérer l'ID de session après connexion réussie
+            session_regenerate_id(true);
+
             // On stocke les informations de l'utilisateur en session
             $_SESSION['user'] = [
                 'id' => $user->getId(),
-                'LAST_ACTIVITY' => time(),
                 'username' => $user->getUsername(),
-                'displayname' => $user->getDisplayName(),
                 'email' => $user->getEmail(),
-            ];
-            // On ajoute les informations du rôle s'il existe
-            if ($user->getRole()) {
-                $_SESSION['user']['role'] = [
+                'role' => [
                     'id' => $user->getRole()->getId(),
                     'name' => $user->getRole()->getLibelle(),
                     'level' => $user->getRole()->getLevel()
-                ];
-            }
-            session_start();
-            //et on ajoute l'identifiant de session en BDD
+                ],
+                'LAST_ACTIVITY' => time(),
+                'LAST_REGENERATION' => time()
+            ];
+
+            // Une seule fois l'ajout de session
             $userRepository->addSessionId($user->getId(), session_id());
 
             header('Location: /');
             exit;
         }
+
+        $this->logService->logAccess('LOGIN_FAILED', [
+            'username' => $username,
+            'user_exists' => $user !== null
+        ]);
 
         $_SESSION['flash_message'] = ['type' => 'danger', 'message' => 'Identifiants incorrects.'];
         header('Location: /login');
@@ -78,12 +94,15 @@ class LoginController extends AbstractController
         if (session_status() === PHP_SESSION_NONE) {
             session_start();
         }
-        //On récupère le sessionID pour le supprimer en BDD
 
         // Si l'utilisateur avait un token de session, on le supprime
         if (isset($_SESSION['user']['id'])) {
             $userRepository = new UserRepository();
             $userRepository->removeSessionId($_SESSION['user']['id'], session_id());
+            $this->logService->logAccess('LOGOUT', [
+                'user_id' => $_SESSION['user']['id'] ?? null,
+                'session_destroyed' => true
+            ]);
         }
         $_SESSION = [];
         session_destroy();

@@ -4,16 +4,19 @@ namespace app\Repository;
 
 use PDOStatement;
 use app\Traits\HasPdoConnection;
-
+use app\Services\LogService;
+use app\Enums\LogType;
 
 abstract class AbstractRepository
 {
     use HasPdoConnection;
 
     protected string $tableName;
+    protected LogService $logService;
 
     public function __construct(string $tableName)
     {
+        $this->logService = new LogService();
         $this->initPdo();
         $this->tableName = $tableName;
     }
@@ -27,7 +30,6 @@ abstract class AbstractRepository
         $stmt = $this->pdo->query("SELECT * FROM $this->tableName");
         return $stmt->fetchAll();
     }
-
 
     /**
      * Supprime un enregistrement par son ID.
@@ -63,7 +65,19 @@ abstract class AbstractRepository
      */
     protected function execute(string $sql, array $params = []): bool
     {
-        return $this->prepare($sql)->execute($params);
+        try {
+            $start = microtime(true);
+            $stmt = $this->pdo->prepare($sql);
+            $result = $stmt->execute($params);
+
+            $operation = $this->detectSqlOperation($sql);
+            $this->logDatabaseOperation($sql, $params, $operation);
+
+            return $result;
+        } catch (\PDOException $e) {
+            $this->logDatabaseOperation($sql, $params, 'ERROR');
+            throw $e;
+        }
     }
 
     /**
@@ -76,4 +90,77 @@ abstract class AbstractRepository
     {
         return $this->pdo->prepare($sql);
     }
+
+    protected function fetchAll(string $sql, array $params = []): array
+    {
+        try {
+            $stmt = $this->pdo->prepare($sql);
+            $stmt->execute($params);
+
+            // Log de la lecture (optionnel - peut être désactivé si trop verbeux)
+            $this->logService->logDatabase(
+                'SELECT',
+                $this->tableName,
+                [
+                    'sql' => $this->sanitizeSql($sql),
+                    'params_count' => count($params)
+                ]
+            );
+
+            return $stmt->fetchAll();
+        } catch (\PDOException $e) {
+            $this->logService->logDatabase(
+                'SELECT_ERROR',
+                $this->tableName,
+                [
+                    'sql' => $sql,
+                    'error' => $e->getMessage()
+                ]
+            );
+            throw $e;
+        }
+    }
+    private function logDatabaseOperation(string $sql, array $params, string $operation): void
+    {
+        $context = [
+            'sql' => $this->sanitizeSql($sql),
+            'params' => $this->sanitizeParams($params),
+            'affected_table' => $this->tableName
+        ];
+
+        $this->logService->logDatabase($operation, $this->tableName, $context);
+    }
+
+    private function detectSqlOperation(string $sql): string
+    {
+        $sql = trim(strtoupper($sql));
+        if (strpos($sql, 'INSERT') === 0) return 'INSERT';
+        if (strpos($sql, 'UPDATE') === 0) return 'UPDATE';
+        if (strpos($sql, 'DELETE') === 0) return 'DELETE';
+        if (strpos($sql, 'SELECT') === 0) return 'SELECT';
+        return 'UNKNOWN';
+    }
+
+    private function sanitizeSql(string $sql): string
+    {
+        // Remplacer les valeurs sensibles par des placeholders
+        return preg_replace('/\s+/', ' ', trim($sql));
+    }
+
+    private function sanitizeParams(array $params): array
+    {
+        // Masquer les mots de passe et données sensibles
+        $sanitized = [];
+        foreach ($params as $key => $value) {
+            if (in_array(strtolower($key), ['password', 'token', 'secret'])) {
+                $sanitized[$key] = '[MASKED]';
+            } else {
+                $sanitized[$key] = is_string($value) && strlen($value) > 100 ?
+                    substr($value, 0, 100) . '...' : $value;
+            }
+        }
+        return $sanitized;
+    }
+
+
 }

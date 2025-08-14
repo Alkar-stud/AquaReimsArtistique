@@ -7,6 +7,7 @@ CREATE TABLE IF NOT EXISTS `user` (
     `display_name` varchar(128) DEFAULT NULL,
     `roles` bigint DEFAULT NULL,
     FOREIGN KEY (`roles`) REFERENCES `roles`(`id`),
+    `is_actif` tinyint(1) NOT NULL DEFAULT '1',
     `password_reset_token` varchar(255) DEFAULT NULL,
     `password_reset_expires_at` datetime DEFAULT NULL,
     `session_id` varchar(255)DEFAULT NULL,

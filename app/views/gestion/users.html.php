@@ -32,6 +32,7 @@ if (isset($_SESSION['flash_message'])): ?>
                 <th>Email</th>
                 <th>Nom d'affichage</th>
                 <th>Rôle</th>
+                <th>Actif</th>
                 <th>Actions</th>
             </tr>
             </thead>
@@ -44,6 +45,9 @@ if (isset($_SESSION['flash_message'])): ?>
                     <td><input type="text" name="display_name" class="form-control"></td>
                     <td>
 						<?= renderRoleSelect($roles, $_SESSION['user']['role']['level']) ?>
+                    </td>
+                    <td class="text-center">
+                        <input type="checkbox" id="is_actif" name="is_actif" class="form-check-input" CHECKED>
                     </td>
                     <td>
                         <button type="submit" class="btn btn-success btn-sm w-100 mb-1">Ajouter</button>
@@ -64,6 +68,9 @@ if (isset($_SESSION['flash_message'])): ?>
                         <td><input type="text" name="display_name" class="form-control" value="<?= htmlspecialchars($user->getDisplayName()) ?>"></td>
                         <td>
 							<?= renderRoleSelect($roles, $_SESSION['user']['role']['level'], $user->getRole()?->getId() ?? null) ?>
+                        </td>
+                        <td class="text-center">
+                            <input type="checkbox" name="is_actif" id="is_actif" class="form-check-input" <?= $user->getIsActif() ? 'checked' : '' ?>>
                         </td>
                         <td class="d-flex flex-column gap-1">
                             <button type="submit" class="btn btn-primary btn-sm w-100">Modifier</button>
@@ -97,6 +104,10 @@ if (isset($_SESSION['flash_message'])): ?>
                     <div class="mb-2">
 						<?= renderRoleSelect($roles, $_SESSION['user']['role']['level']) ?>
                     </div>
+                    <div class="mb-2">
+                        <label for="is_actif">Actif : </label>
+                        <input type="checkbox" id="is_actif" name="is_actif" class="form-check-input" CHECKED>
+                    </div>
                     <button type="submit" class="btn btn-success w-100">Ajouter</button>
                 </form>
             </div>
@@ -109,6 +120,10 @@ if (isset($_SESSION['flash_message'])): ?>
                     <p class="card-text mb-1"><strong>Email :</strong> <?= htmlspecialchars($user->getEmail()) ?></p>
                     <p class="card-text mb-1"><strong>Nom d'affichage :</strong> <?= htmlspecialchars($user->getDisplayName()) ?></p>
                     <p class="card-text mb-2"><strong>Rôle :</strong> <?= $user->getRole() ? htmlspecialchars($user->getRole()->getLibelle()) : '' ?></p>
+                    <p class="card-text mb-2">
+                        <strong>Actif :</strong>
+                        <input type="checkbox" name="is_actif" id="is_actif" class="form-check-input" <?= $user->getIsActif() ? 'checked' : '' ?>>
+                    </p>
                     <div class="d-flex flex-column gap-2">
                         <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#editUserModal-<?= $user->getId() ?>">Modifier</button>
                         <button class="btn btn-danger btn-sm"

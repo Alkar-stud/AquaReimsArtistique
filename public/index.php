@@ -28,11 +28,11 @@ try {
 
     // ENSUITE, on charge le fichier de base .env.
     //    La méthode load() ne remplacera PAS les variables déjà chargées depuis .env.local.
-    //    Elle lèvera une exception si. Env est manquant, ce qui est le comportement attendu.
+    //    Elle lèvera une exception si .env est manquant
     Dotenv::createImmutable(__DIR__ . '/../', '.env')->load();
 
 } catch (InvalidPathException $e) {
-    // Cette erreur ne se déclenchera que si le. Env de base est manquant.
+    // Cette erreur ne se déclenchera que si le .env de base est manquant.
     http_response_code(503);
     die(
         '<div style="font-family: sans-serif; padding: 2em; border: 2px solid #d00; background: #fee; color: #333;">' .

@@ -97,6 +97,7 @@ class UsersController extends AbstractController
                 ->setEmail($email)
                 ->setDisplayName($displayName ?: null)
                 ->setRole($role)
+                ->setIsActif(true)
                 ->setCreatedAt(date('Y-m-d H:i:s'))
                 ->setPasswordResetToken($token)
                 ->setPasswordResetExpiresAt($expiresAt);
@@ -154,6 +155,11 @@ class UsersController extends AbstractController
             $email = trim($_POST['email'] ?? '');
             $displayName = trim($_POST['display_name'] ?? '');
             $roleId = (int)($_POST['role'] ?? 0);
+            $isActif = false;
+            if (isset($_POST['is_actif']) && $_POST['is_actif'] === 'on') {
+                $isActif = true;
+            }
+            $isActif = isset($_POST['is_actif']) && $_POST['is_actif'] === 'on' ? 1 : 0;
 
             $user = $this->userRepository->findById($id);
             if (!$user) {
@@ -172,7 +178,8 @@ class UsersController extends AbstractController
             $user->setUsername($username)
                 ->setEmail($email)
                 ->setDisplayName($displayName ?: null)
-                ->setRole($role);
+                ->setRole($role)
+                ->setIsActif($isActif);
 
             $this->userRepository->update($user);
 
@@ -181,6 +188,31 @@ class UsersController extends AbstractController
             exit;
         }
 
+        header('Location: /gestion/users');
+        exit;
+    }
+
+    /**
+     * @throws \DateMalformedStringException
+     */
+    #[Route('/gestion/users/suspend', name: 'app_gestion_users_suspend')]
+    public function suspendOnOff(): void
+    {
+        $currentUser = $_SESSION['user'] ?? null;
+        if (!$currentUser || !in_array($currentUser['role']['level'], [0, 1])) {
+            $_SESSION['flash_message'] = ['type' => 'danger', 'message' => 'Accès refusé.'];
+            header('Location: /gestion/users');
+            exit;
+        }
+
+        $id = (int)($_GET['id'] ?? 0);
+        if ($id > 0) {
+            $is_actif = (bool)($_GET['actif'] ?? false);
+            $this->userRepository->suspendOnOff($id, $is_actif);
+            $_SESSION['flash_message'] = ['type' => 'success', 'message' => 'Utilisateur ' . ($is_actif === true ? 'activé' : 'désactivé') . '.'];
+        } else {
+            $_SESSION['flash_message'] = ['type' => 'danger', 'message' => 'Utilisateur introuvable.'];
+        }
         header('Location: /gestion/users');
         exit;
     }

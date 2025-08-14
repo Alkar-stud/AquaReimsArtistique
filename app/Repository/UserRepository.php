@@ -9,7 +9,7 @@ class UserRepository extends AbstractRepository
 {
     public function __construct()
     {
-        parent::__construct('user');
+        parent::__construct('users');
     }
 
 
@@ -19,14 +19,15 @@ class UserRepository extends AbstractRepository
     public function insert(User $user): bool
     {
         $sql = "INSERT INTO $this->tableName 
-        (username, password, email, display_name, roles, created_at, password_reset_token, password_reset_expires_at)
-        VALUES (:username, :password, :email, :display_name, :roles, :created_at, :token, :expires_at)";
+        (username, password, email, display_name, roles, is_actif, created_at, password_reset_token, password_reset_expires_at)
+        VALUES (:username, :password, :email, :display_name, :roles, :is_actif, :created_at, :token, :expires_at)";
         return $this->execute($sql, [
             'username' => $user->getUsername(),
             'password' => $user->getPassword(),
             'email' => $user->getEmail(),
             'display_name' => $user->getDisplayName(),
             'roles' => $user->getRole() ? $user->getRole()->getId() : null,
+            'is_actif' => $user->getIsActif(),
             'created_at' => $user->getCreatedAt()->format('Y-m-d H:i:s'),
             'token' => $user->getPasswordResetToken(),
             'expires_at' => $user->getPasswordResetExpiresAt() ? $user->getPasswordResetExpiresAt()->format('Y-m-d H:i:s') : null,
@@ -77,14 +78,14 @@ class UserRepository extends AbstractRepository
     }
 
     /**
-     * Trouve un utilisateur par son token de réinitialisation valide.
+     * Trouve un utilisateur par son token de réinitialisation valide si actif.
      * @param string $token
      * @return User|false
      * @throws DateMalformedStringException
      */
     public function findByValidResetToken(string $token): User|false
     {
-        $sql = "SELECT * FROM $this->tableName WHERE password_reset_token = :token AND password_reset_expires_at > NOW()";
+        $sql = "SELECT * FROM $this->tableName WHERE password_reset_token = :token AND password_reset_expires_at > NOW() AND is_actif = 1;";
         $result = $this->query($sql, ['token' => $token]);
         return $result ? $this->hydrate($result[0]) : false;
     }
@@ -94,7 +95,7 @@ class UserRepository extends AbstractRepository
      */
     public function updateData(int $userId, string $newDisplayName, string $newEmail): bool
     {
-        $sql = "UPDATE $this->tableName SET display_name = :display_name, email = :email WHERE id = :id";
+        $sql = "UPDATE $this->tableName SET display_name = :display_name, email = :email WHERE id = :id;";
         return $this->execute($sql, ['display_name' => $newDisplayName, 'email' => $newEmail, 'id' => $userId]);
     }
 
@@ -111,7 +112,7 @@ class UserRepository extends AbstractRepository
         $sql = "SELECT u.* FROM {$this->tableName} u
             INNER JOIN roles r ON u.roles = r.id
             WHERE r.level > :level
-            ORDER BY r.level, u.username";
+            ORDER BY r.level, u.username;";
         $results = $this->query($sql, ['level' => $level]);
         return array_map([$this, 'hydrate'], $results);
     }
@@ -121,7 +122,7 @@ class UserRepository extends AbstractRepository
      */
     public function updatePassword(int $userId, string $newHashedPassword): bool
     {
-        $sql = "UPDATE $this->tableName SET password = :password WHERE id = :id";
+        $sql = "UPDATE $this->tableName SET password = :password WHERE id = :id;";
         return $this->execute($sql, ['password' => $newHashedPassword, 'id' => $userId]);
     }
 
@@ -130,7 +131,7 @@ class UserRepository extends AbstractRepository
      */
     public function savePasswordResetToken(int $userId, string $token, string $expiresAt): bool
     {
-        $sql = "UPDATE $this->tableName SET password_reset_token = :token, password_reset_expires_at = :expires_at WHERE id = :id";
+        $sql = "UPDATE $this->tableName SET password_reset_token = :token, password_reset_expires_at = :expires_at WHERE id = :id;";
         return $this->execute($sql, ['token' => $token, 'expires_at' => $expiresAt, 'id' => $userId]);
     }
 
@@ -139,7 +140,7 @@ class UserRepository extends AbstractRepository
      */
     public function clearResetToken(int $userId): bool
     {
-        $sql = "UPDATE $this->tableName SET password_reset_token = NULL, password_reset_expires_at = NULL WHERE id = :id";
+        $sql = "UPDATE $this->tableName SET password_reset_token = NULL, password_reset_expires_at = NULL WHERE id = :id;";
         return $this->execute($sql, ['id' => $userId]);
     }
 
@@ -155,6 +156,7 @@ class UserRepository extends AbstractRepository
             ->setPassword($data['password'])
             ->setEmail($data['email'])
             ->setDisplayName($data['display_name'])
+            ->setIsActif($data['is_actif'])
             ->setCreatedAt($data['created_at'])
             ->setUpdatedAt($data['updated_at'])
             ->setPasswordResetToken($data['password_reset_token'])
@@ -176,7 +178,7 @@ class UserRepository extends AbstractRepository
      */
     public function addSessionId(int $userId, string $sessionId): bool
     {
-        $sql = "UPDATE $this->tableName SET session_id = :sessionId WHERE id = :id";
+        $sql = "UPDATE $this->tableName SET session_id = :sessionId WHERE id = :id;";
         return $this->execute($sql, ['sessionId' => $sessionId, 'id' => $userId]);
     }
 
@@ -185,7 +187,7 @@ class UserRepository extends AbstractRepository
      */
     public function removeSessionId(int $userId, string $sessionId): bool
     {
-        $sql = "UPDATE $this->tableName SET session_id = NULL WHERE id = :id OR session_id = :sessionId";
+        $sql = "UPDATE $this->tableName SET session_id = NULL WHERE id = :id OR session_id = :sessionId;";
         return $this->execute($sql, ['id' => $userId, 'sessionId' => $sessionId]);
     }
 
@@ -197,22 +199,31 @@ class UserRepository extends AbstractRepository
         email = :email,
         display_name = :display_name,
         roles = :roles,
+        is_actif = :is_actif,
         updated_at = :updated_at
-        WHERE id = :id";
+        WHERE id = :id;";
         return $this->execute($sql, [
             'username' => $user->getUsername(),
             'email' => $user->getEmail(),
             'display_name' => $user->getDisplayName(),
             'roles' => $user->getRole()?->getId(),
+            'is_actif' => (int)$user->getIsActif(), //forcer passage en int pour éviter erreur SQL General error: 1366 Incorrect integer value: '' for column 'is_actif' lors de la désactivation
             'updated_at' => date('Y-m-d H:i:s'),
             'id' => $user->getId()
         ]);
     }
 
+    // Suspend ou réactive un utilisateur par son id
+    public function suspendOnOff(int $id, bool $isActif): bool
+    {
+        $sql = "UPDATE $this->tableName SET is_actif = :is_actif WHERE id = :id;";
+        return $this->execute($sql, ['id' => $id, 'is_actif' => $isActif]);
+    }
+
     // Supprime un utilisateur par son id
     public function delete(int $id): bool
     {
-        $sql = "DELETE FROM $this->tableName WHERE id = :id";
+        $sql = "DELETE FROM $this->tableName WHERE id = :id;";
         return $this->execute($sql, ['id' => $id]);
     }
 

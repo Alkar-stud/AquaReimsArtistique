@@ -14,6 +14,7 @@ class User
     private string $email;
     private ?string $display_name = null;
     private ?Role $role = null;
+    private ?bool $isActif = true; //actif par défaut
     private DateTimeInterface $created_at;
     private ?DateTimeInterface $updated_at = null;
     private ?string $password_reset_token = null;
@@ -51,6 +52,11 @@ class User
     public function getRole(): ?Role
     {
         return $this->role;
+    }
+
+    public function getIsActif(): bool
+    {
+        return (bool)$this->isActif;
     }
 
     public function getCreatedAt(): DateTimeInterface
@@ -113,6 +119,12 @@ class User
     public function setRole(?Role $role): self
     {
         $this->role = $role;
+        return $this;
+    }
+
+    public function setIsActif($isActif): self
+    {
+        $this->isActif = (bool)$isActif;
         return $this;
     }
 

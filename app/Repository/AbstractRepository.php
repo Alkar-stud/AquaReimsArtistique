@@ -169,5 +169,14 @@ abstract class AbstractRepository
         return 'UNKNOWN';
     }
 
+    /**
+     * Récupère l'ID de la dernière insertion en base de données
+     * @return int
+     */
+    protected function getLastInsertId(): int
+    {
+        return (int)$this->pdo->lastInsertId();
+    }
+
 
 }

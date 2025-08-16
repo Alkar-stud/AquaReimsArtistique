@@ -3,6 +3,7 @@
 namespace app\Repository;
 
 use app\Models\Tarifs;
+use DateMalformedStringException;
 
 class TarifsRepository extends AbstractRepository
 {
@@ -11,7 +12,10 @@ class TarifsRepository extends AbstractRepository
         parent::__construct('tarifs');
     }
 
-    public function findAll(string $filter = 'all'): array
+    /*
+     * $IsActiveSearch peut être null = on cherche tout, true ou false
+     */
+    public function findAll(string $filter = 'all', ?bool $IsActiveSearch = null): array
     {
         $where = '';
         $orderby = '';
@@ -23,6 +27,14 @@ class TarifsRepository extends AbstractRepository
         } else {
             $orderby = 'ORDER BY nb_place DESC';
         }
+        if ($IsActiveSearch === true) {
+            $where == '' ? $where .= 'WHERE ':$where .= ' AND ';
+            $where .= 'is_active = 1';
+        } else if ($IsActiveSearch === false) {
+            $where == '' ? $where .= 'WHERE ':$where .= ' AND ';
+            $where .= 'is_active = 0';
+        }
+
         $sql = "SELECT * FROM $this->tableName $where $orderby;";
         $results = $this->query($sql);
         return array_map([$this, 'hydrate'], $results);
@@ -87,7 +99,10 @@ class TarifsRepository extends AbstractRepository
         return true;
     }
 
-    private function hydrate(array $data): Tarifs
+    /**
+     * @throws DateMalformedStringException
+     */
+    public function hydrate(array $data): Tarifs
     {
         $tarif = new Tarifs();
         $tarif->setId($data['id'])

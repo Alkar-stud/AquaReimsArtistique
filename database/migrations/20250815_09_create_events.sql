@@ -6,6 +6,7 @@ CREATE TABLE IF NOT EXISTS `events` (
     FOREIGN KEY (`lieu`) REFERENCES `piscines`(`id`),
     `opening_doors_at` DATETIME NOT NULL,
     `event_start_at` DATETIME NOT NULL,
+    `limitation_per_swimmer` INT NULL,
     `associate_event` bigint NULL,
     FOREIGN KEY (`associate_event`) REFERENCES `events`(`id`),
     `created_at` DATETIME NOT NULL,

@@ -1,5 +1,5 @@
--- Création de la table user
-CREATE TABLE IF NOT EXISTS `user` (
+-- Création de la table users
+CREATE TABLE IF NOT EXISTS `users` (
     `id` bigint NOT NULL AUTO_INCREMENT PRIMARY KEY,
     `username` varchar(255) NOT NULL UNIQUE,
     `password` varchar(255) NOT NULL,

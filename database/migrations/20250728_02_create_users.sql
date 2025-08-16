@@ -17,5 +17,5 @@ CREATE TABLE IF NOT EXISTS `users` (
 );
 
 -- Ajout du super admin
-INSERT IGNORE INTO `user` (`id`, `username`, `password`, `email`, `roles`) VALUES
+INSERT IGNORE INTO `users` (`id`, `username`, `password`, `email`, `roles`) VALUES
 (1, 'Aradmin', 'MdpBidonAChangerAlInstall', 'example@email.com', 1);

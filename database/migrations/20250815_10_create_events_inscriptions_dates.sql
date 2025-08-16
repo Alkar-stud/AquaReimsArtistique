@@ -1,6 +1,5 @@
 -- Création de la table events_inscriptions_dates.
-CREATE TABLE IF NOT EXISTS `events_inscriptions_dates`
-(
+CREATE TABLE IF NOT EXISTS `events_inscriptions_dates` (
     `id` bigint NOT NULL AUTO_INCREMENT PRIMARY KEY,
     `event` bigint NOT NULL,
     FOREIGN KEY (`event`) REFERENCES `events`(`id`),

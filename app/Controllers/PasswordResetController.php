@@ -194,19 +194,6 @@ class PasswordResetController extends AbstractController
             ], 'Réinitialiser le mot de passe');
         }
 
-        // --- Logique pour la requête GET (affichage de la page) ---
-        $token = $_GET['token'] ?? '';
-        $user = $userRepository->findByValidResetToken($token);
-
-        if (!$user) {
-            // Le lien est invalide ou a expiré
-            $_SESSION['flash_message'] = ['type' => 'danger', 'message' => 'Ce lien de réinitialisation est invalide ou a expiré.'];
-            header('Location: /forgot-password');
-            exit;
-        }
-
-        // Le token est valide, on affiche le formulaire en lui passant le token
-        $this->render('password/reset', ['token' => $token], 'Réinitialiser le mot de passe');
     }
 
 }

@@ -40,11 +40,31 @@ class TarifsRepository extends AbstractRepository
         return array_map([$this, 'hydrate'], $results);
     }
 
+    /**
+     * @throws DateMalformedStringException
+     */
     public function findById(int $id): ?Tarifs
     {
         $sql = "SELECT * FROM $this->tableName WHERE id = :id;";
         $result = $this->query($sql, ['id' => $id]);
         return $result ? $this->hydrate($result[0]) : null;
+    }
+
+    /**
+     * Récupère tous les tarifs associés à un événement spécifique
+     *
+     * @param int $eventId ID de l'événement
+     * @return Tarifs[] Tableau d'objets Tarifs
+     */
+    public function findByEventId(int $eventId): array
+    {
+        $sql = "SELECT t.* FROM $this->tableName t
+            INNER JOIN events_tarifs et ON t.id = et.tarif
+            WHERE et.event = :event_id
+            ORDER BY t.nb_place DESC, t.libelle";
+
+        $results = $this->query($sql, ['event_id' => $eventId]);
+        return array_map([$this, 'hydrate'], $results);
     }
 
     public function insert(Tarifs $tarif): void
@@ -67,6 +87,19 @@ class TarifsRepository extends AbstractRepository
             'is_active' => $tarif->getIsActive() ? 1 : 0,
             'created_at' => $tarif->getCreatedAt()->format('Y-m-d H:i:s'),
         ]);
+    }
+
+    /**
+     * Ajoute une relation entre un événement et un tarif
+     *
+     * @param int $eventId ID de l'événement
+     * @param int $tarifId ID du tarif
+     * @return bool Succès de l'opération
+     */
+    public function addEventTarif(int $eventId, int $tarifId): bool
+    {
+        $sql = "INSERT INTO events_tarifs (event, tarif) VALUES (:event_id, :tarif_id)";
+        return $this->execute($sql, ['event_id' => $eventId, 'tarif_id' => $tarifId]);
     }
 
     public function update(Tarifs $tarif): void
@@ -97,6 +130,18 @@ class TarifsRepository extends AbstractRepository
         $sql = "DELETE FROM $this->tableName WHERE id = :id";
         $this->execute($sql, ['id' => $id]);
         return true;
+    }
+
+    /**
+     * Supprime toutes les relations entre un événement et ses tarifs
+     *
+     * @param int $eventId ID de l'événement
+     * @return bool Succès de l'opération
+     */
+    public function deleteEventTarifs(int $eventId): bool
+    {
+        $sql = "DELETE FROM events_tarifs WHERE event = :event_id";
+        return $this->execute($sql, ['event_id' => $eventId]);
     }
 
     /**

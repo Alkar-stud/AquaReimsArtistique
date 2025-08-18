@@ -4,7 +4,7 @@ CREATE TABLE IF NOT EXISTS `nageuses` (
     `name` char(64) NOT NULL,
     `groupe` bigint NULL,
     FOREIGN KEY (`groupe`) REFERENCES `nageuses_groupes`(`id`),
-    `created_at` DATETIME NOT NULL,
-    `updated_at` DATETIME NULL
+    `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `updated_at` datetime DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP
 );
 

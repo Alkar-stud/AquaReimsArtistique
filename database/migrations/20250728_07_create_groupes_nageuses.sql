@@ -5,7 +5,7 @@ CREATE TABLE IF NOT EXISTS `nageuses_groupes` (
     `coach` varchar(255) NULL,
     `is_active` BOOLEAN NOT NULL,
     `order` int NOT NULL,
-    `created_at` DATETIME NOT NULL,
-    `updated_at` DATETIME NULL
+    `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `updated_at` datetime DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP
 );
 

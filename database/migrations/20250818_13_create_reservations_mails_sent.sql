@@ -6,5 +6,5 @@ CREATE TABLE IF NOT EXISTS `reservations_mails_sent`
     FOREIGN KEY (`reservation`) REFERENCES `reservations`(`id`),
     `mail_template` bigint NOT NULL,
     FOREIGN KEY (`mail_template`) REFERENCES `mails_templates`(`id`),
-    `sent_at` DATETIME NOT NULL
+    `sent_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );

@@ -7,6 +7,6 @@ CREATE TABLE IF NOT EXISTS `events_inscriptions_dates` (
     `start_registration_at` DATETIME NOT NULL,
     `close_registration_at` DATETIME NOT NULL,
     `access_code` char(24) NULL,
-    `created_at` DATETIME NOT NULL,
-    `updated_at` DATETIME NULL
+    `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `updated_at` datetime DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP
 );

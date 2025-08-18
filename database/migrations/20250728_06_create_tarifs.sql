@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS `tarifs` (
     `is_proof_required` BOOLEAN  NOT NULL,
     `access_code` CHAR(32) NULL,
     `is_active` BOOLEAN NOT NULL ,
-    `created_at` DATETIME NOT NULL,
-    `updated_at` DATETIME NULL
+    `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `updated_at` datetime DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP
 );
 

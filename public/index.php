@@ -69,7 +69,7 @@ if ($uri != '/install') {
 $router = new Router($routes);
 try {
     $router->dispatch($uri);
-} catch (\Exception $e) {
+} catch (Exception $e) {
     if ($e->getMessage() === '404') {
         http_response_code(404);
 

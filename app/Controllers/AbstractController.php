@@ -5,6 +5,8 @@ namespace app\Controllers;
 use app\Repository\UserRepository;
 use app\Services\LogService;
 use app\Enums\LogType;
+use DateMalformedStringException;
+use RuntimeException;
 
 abstract class AbstractController
 {
@@ -31,7 +33,7 @@ abstract class AbstractController
 
         if (!file_exists($page)) {
             ob_end_clean();
-            throw new \RuntimeException("La vue '$page' n'existe pas.");
+            throw new RuntimeException("La vue '$page' n'existe pas.");
         }
 
         include $page;
@@ -39,6 +41,9 @@ abstract class AbstractController
         require __DIR__ . '/../views/base.html.php';
     }
 
+    /**
+     * @throws DateMalformedStringException
+     */
     public function checkUserSession(bool $isPublicRoute = false): void
     {
         // Démarrer la session seulement après configuration
@@ -50,19 +55,17 @@ abstract class AbstractController
             return;
         }
 
-        if (!isset($_SESSION['user']) && !$isPublicRoute) {
+        if (!isset($_SESSION['user'])) {
             header('Location: /login');
             exit;
         }
-
-        $timeout = 1800;
 
         if (!isset($_SESSION['user']['id'])) {
             $this->redirectToLogin('Votre session a expiré ou vous devez vous reconnecter.');
             return;
         }
 
-        if (isset($_SESSION['user']['LAST_ACTIVITY']) && (time() - $_SESSION['user']['LAST_ACTIVITY'] > $timeout)) {
+        if (isset($_SESSION['user']['LAST_ACTIVITY']) && (time() - $_SESSION['user']['LAST_ACTIVITY'] > TIMEOUT_SESSION)) {
             $this->redirectToLogin('Votre session a expiré pour cause d\'inactivité. Veuillez vous reconnecter.');
             return;
         }

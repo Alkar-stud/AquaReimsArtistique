@@ -5,6 +5,7 @@ use app\Attributes\Route;
 use app\Repository\UserRepository;
 use DateMalformedStringException;
 use app\Enums\LogType;
+use Random\RandomException;
 
 #[Route('/login', name: 'app_login')]
 class LoginController extends AbstractController
@@ -14,6 +15,10 @@ class LoginController extends AbstractController
         parent::__construct(true); // true = route publique, pas de vérif session pour éviter le TOO_MANY_REDIRECT
     }
 
+    /**
+     * @throws DateMalformedStringException
+     * @throws RandomException
+     */
     public function index(): void
     {
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -66,7 +71,7 @@ class LoginController extends AbstractController
             $this->logService->logAccess('LOGIN_ATTEMPT_EMPTY_FIELDS', ['username' => $username]);
             $_SESSION['flash_message'] = ['type' => 'danger', 'message' => 'Veuillez remplir tous les champs.'];
             header('Location: /login');
-            exit; // MANQUAIT - tout le code après n'était jamais exécuté
+            exit;
         }
 
         $userRepository = new UserRepository();
@@ -132,7 +137,7 @@ class LoginController extends AbstractController
             $userRepository = new UserRepository();
             $userRepository->removeSessionId($_SESSION['user']['id'], session_id());
             $this->logService->logAccess('LOGOUT', [
-                'user_id' => $_SESSION['user']['id'] ?? null,
+                'user_id' => $_SESSION['user']['id'],
                 'session_destroyed' => true
             ]);
         }

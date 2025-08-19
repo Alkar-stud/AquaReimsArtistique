@@ -1,8 +1,9 @@
 <?php
 
-namespace app\Repository;
+namespace app\Repository\Piscine;
 
-use app\Models\Piscines;
+use app\Models\Piscine\Piscines;
+use app\Repository\AbstractRepository;
 use DateMalformedStringException;
 
 class PiscinesRepository extends AbstractRepository

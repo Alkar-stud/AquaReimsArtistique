@@ -1,6 +1,6 @@
 <?php
 
-namespace app\Models;
+namespace app\Models\Piscine;
 
 use DateMalformedStringException;
 use DateTime;

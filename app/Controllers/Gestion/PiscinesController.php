@@ -1,10 +1,11 @@
 <?php
 
-namespace app\Controllers;
+namespace app\Controllers\Gestion;
 
 use app\Attributes\Route;
-use app\Repository\PiscinesRepository;
-use app\Models\Piscines;
+use app\Controllers\AbstractController;
+use app\Models\Piscine\Piscines;
+use app\Repository\Piscine\PiscinesRepository;
 use DateMalformedStringException;
 
 #[Route('/gestion/piscines', name: 'app_gestion_piscines')]

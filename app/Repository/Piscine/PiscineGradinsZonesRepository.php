@@ -1,8 +1,9 @@
 <?php
 
-namespace app\Repository;
+namespace app\Repository\Piscine;
 
-use app\Models\PiscineGradinsZones;
+use app\Models\Piscine\PiscineGradinsZones;
+use app\Repository\AbstractRepository;
 use DateMalformedStringException;
 
 class PiscineGradinsZonesRepository extends AbstractRepository

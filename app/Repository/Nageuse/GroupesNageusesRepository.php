@@ -12,9 +12,9 @@ class GroupesNageusesRepository extends AbstractRepository
         parent::__construct('nageuses_groupes');
     }
 
-    public function findAll(): array
+    public function findAll(bool $isActive = true): array
     {
-        $sql = "SELECT * FROM $this->tableName ORDER BY `order`;";
+        $sql = "SELECT * FROM $this->tableName" . ($isActive === true ? " WHERE is_active = 1" : "") . " ORDER BY `order`;";
         $results = $this->query($sql);
         return array_map([$this, 'hydrate'], $results);
     }

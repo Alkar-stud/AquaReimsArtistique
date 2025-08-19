@@ -2,6 +2,9 @@
 
 namespace app\Models;
 
+
+use app\Models\Event\Events;
+use app\Models\Nageuse\Nageuses;
 use DateMalformedStringException;
 use DateTime;
 use DateTimeInterface;

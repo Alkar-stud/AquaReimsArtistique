@@ -3,9 +3,11 @@ namespace app\Controllers\Reservation;
 
 use app\Attributes\Route;
 use app\Controllers\AbstractController;
-use app\Models\Reservation\ReservationSession;
+use app\Repository\Nageuse\GroupesNageusesRepository;
+use app\Repository\Nageuse\NageusesRepository;
 use app\Services\ReservationSessionService;
 use app\Repository\Event\EventsRepository;
+use DateMalformedStringException;
 
 #[Route('/reservation', name: 'app_reservation')]
 class ReservationController extends AbstractController
@@ -21,21 +23,29 @@ class ReservationController extends AbstractController
     }
 
     // Page d'accueil du processus de réservation
-    public function index()
+    public function index(): void
     {
         // Réinitialiser toute session de réservation existante
         $this->sessionService->clearSession();
 
         // Charger tous les événements à venir
         $events = $this->eventsRepository->findUpcoming();
+
+echo '<pre>';
+print_r($events);
+echo '</pre>';
         // Afficher la première étape
         $this->render('reservation/home', [
             'events' => $events,
             'csrf_token' => $this->getCsrfToken()
-        ], 'Réservation');
+        ], 'Réservations');
     }
 
     // Traitement du formulaire de l'étape 1
+
+    /**
+     * @throws DateMalformedStringException
+     */
     public function processStep1()
     {
         // Créer une nouvelle session de réservation
@@ -87,7 +97,7 @@ class ReservationController extends AbstractController
         $eventId = (int) $_GET['event_id'];
 
         $groupesRepository = new GroupesNageusesRepository();
-        $groups = $groupesRepository->findAllActive();
+        $groups = $groupesRepository->findAll();
 
         echo json_encode($groups);
     }

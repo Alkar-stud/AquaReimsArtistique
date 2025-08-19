@@ -68,7 +68,7 @@ class EventsRepository extends AbstractRepository
 
         $sql = "SELECT * FROM $this->tableName 
             WHERE event_start_at >= :today 
-            ORDER BY event_start_at ASC";
+            ORDER BY event_start_at";
 
         $results = $this->query($sql, ['today' => $today]);
         return array_map([$this, 'hydrate'], $results);
@@ -179,6 +179,16 @@ class EventsRepository extends AbstractRepository
                 $event->setPiscine($piscine);
             }
         }
+
+        // Charger les tarifs associés
+        $tarifsRepository = new \app\Repository\TarifsRepository();
+        $tarifs = $tarifsRepository->findByEventId($data['id']);
+        $event->setTarifs($tarifs);
+
+        // Charger les dates d'inscription associées
+        $inscriptionDatesRepository = new EventInscriptionDatesRepository();
+        $inscriptionDates = $inscriptionDatesRepository->findByEventId($data['id']);
+        $event->setInscriptionDates($inscriptionDates);
 
         return $event;
     }

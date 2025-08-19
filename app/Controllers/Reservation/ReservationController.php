@@ -80,4 +80,30 @@ class ReservationController extends AbstractController
         $this->json(['limiteAtteinte' => $count >= $limite]);
     }
 
+    #[Route('/reservation/etape1', methods: ['POST'])]
+    public function etape1(): void
+    {
+        $input = json_decode(file_get_contents('php://input'), true);
+        $eventId = (int)($input['event_id'] ?? 0);
+        $sessionId = (int)($input['session_id'] ?? 0);
+        $nageuseId = isset($input['nageuse_id']) ? (int)$input['nageuse_id'] : null;
+
+        // Contrôles...
+
+        $_SESSION['reservation'][session_id()]['event_id'] = $eventId;
+        $_SESSION['reservation'][session_id()]['session_id'] = $sessionId;
+        $_SESSION['reservation'][session_id()]['nageuse_id'] = $nageuseId;
+
+        $this->json(['success' => true]);
+    }
+
+    #[Route('/reservation/etape2', methods: ['GET'])]
+    public function etape2(): void
+    {
+        $this->render('reservation/etape2', [
+
+        ], 'Réservations');
+    }
+
+
 }

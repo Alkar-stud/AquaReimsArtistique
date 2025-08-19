@@ -21,7 +21,7 @@
                             <p><strong>Lieu :</strong> <?= htmlspecialchars($event->getPiscine()->getLibelle() ?? 'Non défini') ?></p>
                             <?php if ($event->getLimitationPerSwimmer() !== null): ?>
                                 <p>
-                                    <strong>Je choisis la nageuse que je viens applaudir :</strong>
+                                    <strong>Je choisis la nageuse que je viens surtout voir (mais aussi les autres ^^) :</strong>
                                     <select id="groupe_nageuses_<?= $event->getId() ?>" class="form-select d-inline w-auto ms-2" onchange="updateNageuses(this.value, <?= $event->getId() ?>)">
                                         <option value="">Sélectionner un groupe</option>
                                         <?php foreach ($groupes as $groupe): ?>

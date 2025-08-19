@@ -57,37 +57,36 @@ function validerFormulaireReservation(eventId) {
                 if (data.limiteAtteinte) {
                     alert("Le quota de spectateurs pour cette nageuse est atteint.");
                 } else {
-                    afficherStep2(eventId);
+                    step1Valid(eventId, sessionChoisie, nageuseId);
                 }
             });
     } else {
-        afficherStep2(eventId);
+        step1Valid(eventId, sessionChoisie, nageuseId);
     }
 
 }
 
-function afficherStep2(eventId) {
-    const eventCard = document.getElementById('formulaire_reservation_' + eventId);
-    eventCard.innerHTML = `
-        <div class="card card-body">
-            <div class="mb-2">
-                <label>Nom :</label>
-                <input type="text" class="form-control" id="nom_${eventId}">
-            </div>
-            <div class="mb-2">
-                <label>Prénom :</label>
-                <input type="text" class="form-control" id="prenom_${eventId}">
-            </div>
-            <div class="mb-2">
-                <label>Email :</label>
-                <input type="email" class="form-control" id="email_${eventId}">
-            </div>
-            <div class="mb-2">
-                <label>Téléphone :</label>
-                <input type="text" class="form-control" id="telephone_${eventId}">
-            </div>
-            <button class="btn btn-primary" onclick="envoyerReservation(${eventId})">Valider la réservation</button>
-        </div>
-    `;
-    eventCard.style.display = '';
+function step1Valid(eventId, sessionChoisie, nageuseId) {
+    sessionChoisie = parseInt(sessionChoisie);
+    nageuseId != null ? nageuseId = parseInt(nageuseId) : nageuseId = null;
+
+    // Envoi au serveur (POST)
+    fetch('/reservation/etape1', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            event_id: eventId,
+            session_id: sessionChoisie,
+            nageuse_id: nageuseId || null
+        })
+    })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                // Rediriger ou afficher l’étape suivante
+                window.location.href = '/reservation/etape2';
+            } else {
+                alert(data.error || 'Erreur');
+            }
+        });
 }

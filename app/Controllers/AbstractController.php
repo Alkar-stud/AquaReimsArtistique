@@ -221,4 +221,11 @@ abstract class AbstractController
         return \app\Utils\CsrfHelper::getToken();
     }
 
+    protected function json(array $data): void
+    {
+        header('Content-Type: application/json');
+        echo json_encode($data);
+        exit;
+    }
+
 }

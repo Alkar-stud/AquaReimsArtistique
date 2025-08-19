@@ -188,14 +188,17 @@ class ReservationsRepository extends AbstractRepository
     }
 
     /**
-     * Compte le nombre de réservations actives pour un événement
+     * Compte le nombre de réservations par nageuse pour un événement
      * @param int $eventId
      * @return int
      */
-    public function countActiveReservationsForEvent(int $eventId): int
+    public function countReservationsForNageuse(int $eventId, int $nageuseId): int
     {
-        $sql = "SELECT COUNT(*) as count FROM $this->tableName WHERE event = :eventId AND is_canceled = 0";
-        $result = $this->query($sql, ['eventId' => $eventId]);
+        $sql = "SELECT COUNT(*) as count
+            FROM reservations_details rd
+            INNER JOIN reservations r ON rd.id = r.id
+            WHERE r.event = :eventId AND rd.id = :nageuseId AND r.is_canceled = 0";
+        $result = $this->query($sql, ['eventId' => $eventId, 'nageuseId' => $nageuseId]);
         return (int)$result[0]['count'];
     }
 

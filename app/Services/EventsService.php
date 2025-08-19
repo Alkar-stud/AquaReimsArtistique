@@ -2,12 +2,12 @@
 
 namespace app\Services;
 
-use app\Models\Events;
-use app\Models\EventInscriptionDates;
-use app\Repository\EventsRepository;
-use app\Repository\PiscinesRepository;
+use app\Models\Event\EventInscriptionDates;
+use app\Models\Event\Events;
+use app\Repository\Event\EventInscriptionDatesRepository;
+use app\Repository\Event\EventsRepository;
+use app\Repository\Piscine\PiscinesRepository;
 use app\Repository\TarifsRepository;
-use app\Repository\EventInscriptionDatesRepository;
 use DateMalformedStringException;
 
 class EventsService

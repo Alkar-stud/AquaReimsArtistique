@@ -2,13 +2,13 @@
 
 namespace app\Controllers;
 
-use app\Repository\UserRepository;
 use app\Attributes\Route;
+use app\Repository\User\UserRepository;
 use app\Services\MailService;
+use app\Traits\HasPdoConnection;
 use DateTime;
 use Exception;
 use PDO;
-use app\Traits\HasPdoConnection;
 use PDOException;
 use Random\RandomException;
 

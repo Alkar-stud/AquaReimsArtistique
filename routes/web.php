@@ -4,30 +4,47 @@ use app\Attributes\Route;
 
 $routes = [];
 
-foreach (glob(__DIR__ . '/../app/Controllers/*.php') as $file) {
+// Fonction récursive pour trouver tous les contrôleurs
+function findControllers($dir, &$controllers) {
+    foreach (glob("$dir/*.php") as $file) {
+        $controllers[] = $file;
+    }
+
+    // Recherche dans les sous-dossiers
+    foreach (glob("$dir/*", GLOB_ONLYDIR) as $subdir) {
+        findControllers($subdir, $controllers);
+    }
+}
+
+$controllers = [];
+findControllers(__DIR__ . '/../app/Controllers', $controllers);
+
+foreach ($controllers as $file) {
     require_once $file;
 
-    $controllerBaseName = basename($file, '.php');
-    $className = 'app\\Controllers\\' . $controllerBaseName;
+    // Extraction du namespace...
+    $relativePath = str_replace(__DIR__ . '/../', '', $file);
+    $relativePath = str_replace('.php', '', $relativePath);
+    $namespace = str_replace('/', '\\', $relativePath);
+    $className = "\\$namespace";
 
     if (class_exists($className)) {
         $reflectionClass = new ReflectionClass($className);
 
-        // On cherche d'abord une route sur la CLASSE elle-même
-        $classAttributes = $reflectionClass->getAttributes(Route::class);
+        // Utilisation du FQCN (Fully Qualified Class Name) pour les attributs
+        $classAttributes = $reflectionClass->getAttributes('app\\Attributes\\Route');
+
         foreach ($classAttributes as $attribute) {
             $instance = $attribute->newInstance();
-            // Par convention, une route sur une classe appelle la méthode 'index'
             $routes[$instance->path] = [
                 'controller' => $className,
                 'method' => 'index'
             ];
         }
 
-        // ENSUITE, on cherche des routes sur les MÉTHODES pour les cas spécifiques
+        // Routes sur les méthodes
         foreach ($reflectionClass->getMethods() as $method) {
-            $attributes = $method->getAttributes(Route::class);
-
+            $attributes = $method->getAttributes('app\\Attributes\\Route');
             foreach ($attributes as $attribute) {
                 $instance = $attribute->newInstance();
                 $routes[$instance->path] = [

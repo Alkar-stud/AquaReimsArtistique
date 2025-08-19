@@ -2,10 +2,12 @@
 
 namespace app\Controllers;
 
-use app\Repository\UserRepository;
-use app\Services\LogService;
 use app\Enums\LogType;
+use app\Repository\User\UserRepository;
+use app\Services\LogService;
+use app\Utils\DurationHelper;
 use DateMalformedStringException;
+use Exception;
 use RuntimeException;
 
 abstract class AbstractController
@@ -43,6 +45,7 @@ abstract class AbstractController
 
     /**
      * @throws DateMalformedStringException
+     * @throws Exception
      */
     public function checkUserSession(bool $isPublicRoute = false): void
     {
@@ -65,14 +68,17 @@ abstract class AbstractController
             return;
         }
 
-        if (isset($_SESSION['user']['LAST_ACTIVITY']) && (time() - $_SESSION['user']['LAST_ACTIVITY'] > TIMEOUT_SESSION)) {
+        // Convertir le format ISO 8601 de TIMEOUT_SESSION en secondes
+        $timeout_seconds = DurationHelper::iso8601ToSeconds(TIMEOUT_SESSION);
+
+        if (isset($_SESSION['user']['LAST_ACTIVITY']) && (time() - $_SESSION['user']['LAST_ACTIVITY'] > $timeout_seconds)) {
             $this->redirectToLogin('Votre session a expiré pour cause d\'inactivité. Veuillez vous reconnecter.');
             return;
         }
 
         // Régénérer l'ID de session périodiquement (toutes les 30 minutes)
         if (!isset($_SESSION['user']['LAST_REGENERATION']) ||
-            (time() - $_SESSION['user']['LAST_REGENERATION'] > 1800)) {
+            (time() - $_SESSION['user']['LAST_REGENERATION'] > $timeout_seconds)) {
             $this->regenerateSessionId();
             $_SESSION['user']['LAST_REGENERATION'] = time();
         }

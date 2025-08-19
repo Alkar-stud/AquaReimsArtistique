@@ -34,7 +34,7 @@
 
                     <?php if (isset($_SESSION['user']['role']) && $_SESSION['user']['role']['level'] <= 2 && str_starts_with($_SERVER['REQUEST_URI'], '/gestion')): ?>
                         <li class="nav-item">
-                            <a class="nav-link <?= $uri === '/gestion/accueil' ? 'active-link' : '' ?>" href="/gestion/accueil">Page d'accueil</a>
+                            <a class="nav-link <?= $uri === '/gestion' ? 'active-link' : '' ?>" href="/gestion">Page d'accueil</a>
                         </li>
                         <li class="nav-item">
                             <a class="nav-link <?= $uri === '/gestion/reservations' ? 'active-link' : '' ?>" href="/gestion/reservations">Réservations</a>

@@ -34,7 +34,18 @@
                         <div>
                             <p>
                                 <strong>Lieu:</strong> <?= $event->getPiscine() ? htmlspecialchars($event->getPiscine()->getLibelle()) : '?' ?><br>
-                                <strong>Date:</strong> <?= $event->getEventStartAt()->format('d/m/Y H:i') ?><br>
+                                <strong>Date:</strong>
+                                <?php
+                                $sessions = $event->getSessions();
+                                if (!empty($sessions)) {
+                                    // On prend la première séance (la plus proche)
+                                    usort($sessions, fn($a, $b) => $a->getEventStartAt() <=> $b->getEventStartAt());
+                                    echo $sessions[0]->getEventStartAt()->format('d/m/Y H:i');
+                                } else {
+                                    echo "Non défini";
+                                }
+                                ?>
+                                <br>
                                 <strong>1ère ouverture inscriptions:</strong>
                                 <?php
                                 $nextDate = null;
@@ -65,7 +76,7 @@
             <tr>
                 <th>Libellé</th>
                 <th>Lieu</th>
-                <th>Date de l'événement</th>
+                <th>1ère date de l'événement</th>
                 <th>1ère ouverture inscriptions</th>
                 <th>Nombre de tarifs</th>
                 <th>Actions</th>
@@ -83,11 +94,11 @@
                             <?php endforeach; ?>
                         </select>
                     </td>
-                    <td><input type="datetime-local" class="form-control" id="quickAdd_event_start_at" required></td>
+                    <td>-</td>
                     <td>-</td>
                     <td>-</td>
                     <td colspan="2" class="text-center">
-                        <button type="button" class="btn btn-success" onclick="openEventModal('add', null)">
+                        <button type="button" class="btn btn-success" onclick="openEventModal('add', null, true)">
                             Continuer l'ajout
                         </button>
                     </td>
@@ -98,9 +109,20 @@
             <?php if (!empty($data['events'])): ?>
                 <?php foreach ($data['events'] as $event): ?>
                     <tr class="event-row" data-id="<?= $event->getId() ?>">
-                    <td><?= htmlspecialchars($event->getLibelle()) ?></td>
+                        <td><?= htmlspecialchars($event->getLibelle()) ?></td>
                         <td><?= $event->getPiscine() ? htmlspecialchars($event->getPiscine()->getLibelle()) : '?' ?></td>
-                        <td><?= $event->getEventStartAt()->format('d/m/Y H:i') ?></td>
+                        <td>
+                            <?php
+                            $sessions = $event->getSessions();
+                            if (!empty($sessions)) {
+                                // On prend la première séance (la plus proche)
+                                usort($sessions, fn($a, $b) => $a->getEventStartAt() <=> $b->getEventStartAt());
+                                echo $sessions[0]->getEventStartAt()->format('d/m/Y H:i');
+                            } else {
+                                echo "Non défini";
+                            }
+                            ?>
+                        </td>
                         <td>
                             <?php
                             $nextDate = null;
@@ -155,6 +177,9 @@
                             <li class="nav-item">
                                 <a class="nav-link" data-bs-toggle="tab" href="#eventInscriptions">Périodes d'inscription</a>
                             </li>
+                            <li class="nav-item">
+                                <a class="nav-link" data-bs-toggle="tab" href="#eventSessions">Séances</a>
+                            </li>
                         </ul>
 
                         <div class="tab-content">
@@ -173,29 +198,10 @@
                                         <?php endforeach; ?>
                                     </select>
                                 </div>
-                                <div class="row">
-                                    <div class="col-md-6 mb-3">
-                                        <label class="form-label">Date de l'événement</label>
-                                        <input type="datetime-local" name="event_start_at" id="event_start_at" class="form-control" required>
-                                    </div>
-                                    <div class="col-md-6 mb-3">
-                                        <label class="form-label">Ouverture des portes</label>
-                                        <input type="datetime-local" name="opening_doors_at" id="event_opening_doors_at" class="form-control" required>
-                                    </div>
-                                </div>
                                 <div class="mb-3">
                                     <label class="form-label" for="event_limitation_per_swimmer">Limitation par nageur</label>
                                     <input type="number" class="form-control" id="event_limitation_per_swimmer" name="limitation_per_swimmer" min="0" placeholder="Laissez vide pour aucune limitation">
                                     <div class="form-text">Nombre maximum de personnes qu'un nageur peut inscrire (0 ou vide = aucune limitation)</div>
-                                </div>
-                                <div class="mb-3">
-                                    <label class="form-label">Événement associé (optionnel)</label>
-                                    <select name="associate_event" id="event_associate_event" class="form-select">
-                                        <option value="">Aucun</option>
-                                        <?php foreach ($data['events'] as $associateEvent): ?>
-                                            <option value="<?= $associateEvent->getId() ?>"><?= htmlspecialchars($associateEvent->getLibelle()) ?></option>
-                                        <?php endforeach; ?>
-                                    </select>
                                 </div>
                             </div>
 
@@ -313,6 +319,42 @@
                                     </div>
                                 </template>
                             </div>
+                            <!-- Gestion des séances -->
+                            <div class="tab-pane fade" id="eventSessions">
+                                <div id="sessions-container"></div>
+                                <button type="button" class="btn btn-outline-primary mt-3" id="add-session-btn">
+                                    <i class="bi bi-plus-circle"></i> Ajouter une séance
+                                </button>
+                                <!-- Template pour une séance -->
+                                <template id="session-template">
+                                    <div class="card mb-3 session-item">
+                                        <div class="card-body">
+                                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                                <h6 class="card-title mb-0">Séance</h6>
+                                                <button type="button" class="btn btn-outline-danger btn-sm remove-session">
+                                                    <i class="bi bi-x-lg"></i>
+                                                </button>
+                                            </div>
+                                            <div class="mb-3">
+                                                <label class="form-label">Libellé de la séance</label>
+                                                <input type="text" class="form-control" name="sessions[__INDEX__][session_name]" data-field="session_name" required>
+                                            </div>
+                                            <div class="row">
+                                                <div class="col-md-6 mb-3">
+                                                    <label class="form-label">Ouverture des portes</label>
+                                                    <input type="datetime-local" class="form-control" name="sessions[__INDEX__][opening_doors_at]" data-field="opening_doors_at" required>
+                                                </div>
+                                                <div class="col-md-6 mb-3">
+                                                    <label class="form-label">Début de la séance</label>
+                                                    <input type="datetime-local" class="form-control" name="sessions[__INDEX__][event_start_at]" data-field="event_start_at" required>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </template>
+                            </div>
+
+
                         </div>
                     </div>
                     <div class="modal-footer">
@@ -325,203 +367,55 @@
     </div>
 </div>
 
+
+<?php
+//Pour le JS
+$eventsArray = array_map(function($e) {
+    $nextDate = null;
+    $now = new DateTime();
+    foreach ($e->getInscriptionDates() as $date) {
+        if ($date->getStartRegistrationAt() > $now) {
+            if (!$nextDate || $date->getStartRegistrationAt() < $nextDate->getStartRegistrationAt()) {
+                $nextDate = $date;
+            }
+        }
+    }
+
+    $sessions = $e->getSessions();
+    usort($sessions, fn($a, $b) => $a->getEventStartAt() <=> $b->getEventStartAt());
+    $firstSession = $sessions[0] ?? null;
+
+    return [
+        'id' => $e->getId(),
+        'libelle' => $e->getLibelle(),
+        'lieu' => $e->getLieu(),
+        'limitation_per_swimmer' => $e->getLimitationPerSwimmer(),
+        'nextOpeningDate' => $nextDate ? $nextDate->getStartRegistrationAt()->format('Y-m-d\TH:i') : null,
+        'tarifCount' => count($e->getTarifs()),
+        'tarifs' => array_map(function($t) {
+            return $t->getId();
+        }, $e->getTarifs()),
+        'inscription_dates' => array_map(function($d) {
+            return [
+                'id' => $d->getId(),
+                'libelle' => $d->getLibelle(),
+                'start_at' => $d->getStartRegistrationAt()->format('Y-m-d\TH:i'),
+                'close_at' => $d->getCloseRegistrationAt()->format('Y-m-d\TH:i'),
+                'access_code' => $d->getAccessCode()
+            ];
+        }, $e->getInscriptionDates()),
+        'sessions' => array_map(function($s) {
+            return [
+                'session_name' => $s->getSessionName(),
+                'opening_doors_at' => $s->getOpeningDoorsAt()->format('Y-m-d\TH:i'),
+                'event_start_at' => $s->getEventStartAt()->format('Y-m-d\TH:i')
+            ];
+        }, $e->getSessions()),
+    ];
+}, $data['events']);
+?>
+
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        // Variables pour la gestion des modales et des formulaires
-        const eventModal = new bootstrap.Modal(document.getElementById('eventModal'));
-        const eventForm = document.getElementById('eventForm');
-        const inscriptionContainer = document.getElementById('inscription-dates-container');
-        const periodTemplate = document.getElementById('inscription-period-template');
-        let periodCount = 0;
-
-        // Gestion des périodes d'inscription
-        document.getElementById('add-inscription-period').addEventListener('click', function() {
-            addInscriptionPeriod();
-        });
-
-        // Délégation d'événement pour supprimer une période
-        inscriptionContainer.addEventListener('click', function(e) {
-            if (e.target.classList.contains('remove-period')) {
-                e.target.closest('.inscription-period').remove();
-            }
-        });
-
-        // Fonction pour ouvrir la modale d'événement (ajout ou édition)
-        window.openEventModal = function(mode, eventId = null) {
-            const isQuickAdd = typeof eventId === 'boolean' && eventId === true;
-
-            // Réinitialiser le formulaire
-            eventForm.reset();
-            inscriptionContainer.innerHTML = '';
-            periodCount = 0;
-
-            if (mode === 'add') {
-                document.getElementById('eventModalTitle').textContent = 'Ajouter un événement';
-                eventForm.action = '/gestion/events/add';
-
-                // Si c'est un ajout rapide, préremplir les champs
-                if (isQuickAdd) {
-                    document.getElementById('event_libelle').value = document.getElementById('quickAdd_libelle').value;
-                    document.getElementById('event_lieu').value = document.getElementById('quickAdd_lieu').value;
-                    document.getElementById('event_start_at').value = document.getElementById('quickAdd_event_start_at').value;
-                    document.getElementById('event_opening_doors_at').value = document.getElementById('quickAdd_opening_doors_at').value;
-                }
-            } else {
-                document.getElementById('eventModalTitle').textContent = 'Modifier l\'événement';
-                eventForm.action = '/gestion/events/update/' + eventId;
-
-                // Charger les données de l'événement
-                fetchEventData(eventId);
-            }
-
-            eventModal.show();
-        };
-
-        // Fonction pour ajouter une période d'inscription
-        function addInscriptionPeriod(data = null) {
-            const template = periodTemplate.content.cloneNode(true);
-            const inputs = template.querySelectorAll('input, select');
-
-            // Remplacer l'index par le nombre actuel
-            inputs.forEach(input => {
-                const name = input.getAttribute('name') || '';
-                input.setAttribute('name', name.replace('__INDEX__', periodCount));
-
-                // Remplir les données si disponibles
-                if (data) {
-                    const fieldName = input.getAttribute('data-field');
-                    if (fieldName && data[fieldName] !== undefined) {
-                        input.value = data[fieldName];
-                    }
-                }
-            });
-
-            inscriptionContainer.appendChild(template);
-            periodCount++;
-        }
-
-        // Fonction pour récupérer les données d'un événement pour édition
-        async function fetchEventData(eventId) {
-            const events = <?= json_encode(array_map(function($e) {
-                $nextDate = null;
-                $now = new DateTime();
-                foreach ($e->getInscriptionDates() as $date) {
-                    if ($date->getStartRegistrationAt() > $now) {
-                        if (!$nextDate || $date->getStartRegistrationAt() < $nextDate->getStartRegistrationAt()) {
-                            $nextDate = $date;
-                        }
-                    }
-                }
-
-                return [
-                    'id' => $e->getId(),
-                    'libelle' => $e->getLibelle(),
-                    'lieu' => $e->getLieu(),
-                    'event_start_at' => $e->getEventStartAt()->format('Y-m-d\TH:i'),
-                    'opening_doors_at' => $e->getOpeningDoorsAt()->format('Y-m-d\TH:i'),
-                    'limitation_per_swimmer' => $e->getLimitationPerSwimmer(),
-                    'associate_event' => $e->getAssociateEvent(),
-                    'nextOpeningDate' => $nextDate ? $nextDate->getStartRegistrationAt()->format('Y-m-d\TH:i') : null,
-                    'tarifCount' => count($e->getTarifs()),
-                    'tarifs' => array_map(function($t) {
-                        return $t->getId();
-                    }, $e->getTarifs()),
-                    'inscription_dates' => array_map(function($d) {
-                        return [
-                            'id' => $d->getId(),
-                            'libelle' => $d->getLibelle(),
-                            'start_at' => $d->getStartRegistrationAt()->format('Y-m-d\TH:i'),
-                            'close_at' => $d->getCloseRegistrationAt()->format('Y-m-d\TH:i'),
-                            'access_code' => $d->getAccessCode()
-                        ];
-                    }, $e->getInscriptionDates())
-                ];
-            }, $data['events'])) ?>;
-
-            const event = events.find(e => e.id === eventId);
-
-            if (event) {
-                document.getElementById('event_libelle').value = event.libelle;
-                document.getElementById('event_lieu').value = event.lieu;
-                document.getElementById('event_start_at').value = event.event_start_at;
-                document.getElementById('event_opening_doors_at').value = event.opening_doors_at;
-                // Gérer la checkbox limitation_per_swimmer
-                document.getElementById('event_limitation_per_swimmer').value = event.limitation_per_swimmer !== null ? event.limitation_per_swimmer : '';
-
-                // Gestion des événements associés : filtrer la liste
-                const associateEventSelect = document.getElementById('event_associate_event');
-
-                // D'abord vider les options existantes
-                while (associateEventSelect.options.length > 1) { // Garder l'option "Aucun"
-                    associateEventSelect.remove(1);
-                }
-
-                // Ajouter toutes les options d'événements sauf l'événement en cours
-                events.forEach(e => {
-                    if (e.id !== eventId) {
-                        const option = new Option(e.libelle, e.id);
-                        associateEventSelect.add(option);
-                    }
-                });
-
-                // Sélectionner l'événement associé si existant
-                if (event.associate_event) {
-                    associateEventSelect.value = event.associate_event;
-                }
-
-                // Cocher les tarifs associés
-                event.tarifs.forEach(tarifId => {
-                    const checkbox = document.getElementById('tarif_' + tarifId);
-                    if (checkbox) checkbox.checked = true;
-                });
-
-                // Ajouter les périodes d'inscription
-                event.inscription_dates.forEach(date => {
-                    addInscriptionPeriod(date);
-                });
-            }
-        }
-    });
-
-    document.addEventListener('DOMContentLoaded', function() {
-        // Sélectionner tous les éléments cliquables
-        const eventRows = document.querySelectorAll('.event-row');
-
-        // Variables pour la détection de double tap sur mobile
-        let lastTap = 0;
-        const tapDelay = 300; // délai en ms pour considérer deux taps comme un double tap
-
-        eventRows.forEach(row => {
-            // Conserver le double-clic pour desktop
-            row.addEventListener('dblclick', function() {
-                handleRowAction(this);
-            });
-
-            // Ajouter la gestion du double tap pour mobile
-            row.addEventListener('touchend', function(e) {
-                const currentTime = new Date().getTime();
-                const tapLength = currentTime - lastTap;
-
-                if (tapLength < tapDelay && tapLength > 0) {
-                    // Double tap détecté
-                    e.preventDefault();
-                    handleRowAction(this);
-                }
-
-                lastTap = currentTime;
-            });
-
-            // Style pour indiquer que l'élément est cliquable
-            row.style.cursor = 'pointer';
-        });
-
-        // Fonction commune pour traiter l'action sur la ligne
-        function handleRowAction(row) {
-            const eventId = row.getAttribute('data-id');
-            if (!eventId) return;
-
-            // Ouvrir la modale en mode édition et charger les données
-            window.openEventModal('edit', parseInt(eventId));
-        }
-    });
+    window.eventsArray = <?= json_encode($eventsArray) ?>;
 </script>
+<script src="/assets/js/gestion_events.js"></script>

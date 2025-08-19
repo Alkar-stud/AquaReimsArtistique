@@ -31,9 +31,6 @@ class ReservationController extends AbstractController
         // Charger tous les événements à venir
         $events = $this->eventsRepository->findUpcoming();
 
-echo '<pre>';
-print_r($events);
-echo '</pre>';
         // Afficher la première étape
         $this->render('reservation/home', [
             'events' => $events,

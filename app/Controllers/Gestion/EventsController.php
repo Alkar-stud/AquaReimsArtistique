@@ -42,22 +42,14 @@ class EventsController extends AbstractController
                 $event = new Events();
                 $event->setLibelle($_POST['libelle'] ?? '')
                     ->setLieu((int)($_POST['lieu'] ?? 0))
-                    ->setOpeningDoorsAt($_POST['opening_doors_at'] ?? '')
-                    ->setEventStartAt($_POST['event_start_at'] ?? '')
                     ->setLimitationPerSwimmer(
                         ($_POST['limitation_per_swimmer'] == '' || $_POST['limitation_per_swimmer'] == 0
                             ? null
                             : (int)$_POST['limitation_per_swimmer'])
                     )
-                    ->setAssociateEvent(!empty($_POST['associate_event']) ? (int)$_POST['associate_event'] : null);
+                    ->setCreatedAt(date('Y-m-d H:i:s'));
 
-                // Traitement des tarifs
-                $tarifs = [];
-                if (!empty($_POST['tarifs']) && is_array($_POST['tarifs'])) {
-                    $tarifs = $_POST['tarifs'];
-                }
-
-                // Traitement des dates d'inscription
+                $tarifs = $_POST['tarifs'] ?? [];
                 $inscriptionDates = [];
                 if (!empty($_POST['inscription_dates']) && is_array($_POST['inscription_dates'])) {
                     foreach ($_POST['inscription_dates'] as $dateData) {
@@ -67,14 +59,15 @@ class EventsController extends AbstractController
                                 ->setStartRegistrationAt($dateData['start_at'])
                                 ->setCloseRegistrationAt($dateData['close_at'])
                                 ->setAccessCode($dateData['access_code'] ?? null);
-
                             $inscriptionDates[] = $inscriptionDate;
                         }
                     }
                 }
 
-                // Création de l'événement via le service
-                $this->eventsService->createEvent($event, $tarifs, $inscriptionDates);
+                // Sessions
+                $sessions = $_POST['sessions'] ?? [];
+
+                $this->eventsService->createEvent($event, $tarifs, $inscriptionDates, $sessions);
 
                 $_SESSION['flash_message'] = ['type' => 'success', 'message' => 'Événement ajouté avec succès'];
             } catch (\Exception $e) {
@@ -95,22 +88,13 @@ class EventsController extends AbstractController
                 if ($event) {
                     $event->setLibelle($_POST['libelle'] ?? '')
                         ->setLieu((int)($_POST['lieu'] ?? 0))
-                        ->setOpeningDoorsAt($_POST['opening_doors_at'] ?? '')
-                        ->setEventStartAt($_POST['event_start_at'] ?? '')
                         ->setLimitationPerSwimmer(
                             ($_POST['limitation_per_swimmer'] == '' || $_POST['limitation_per_swimmer'] == 0
                                 ? null
                                 : (int)$_POST['limitation_per_swimmer'])
-                        )
-                        ->setAssociateEvent(!empty($_POST['associate_event']) ? (int)$_POST['associate_event'] : null);
+                        );
 
-                    // Traitement des tarifs
-                    $tarifs = [];
-                    if (!empty($_POST['tarifs']) && is_array($_POST['tarifs'])) {
-                        $tarifs = $_POST['tarifs'];
-                    }
-
-                    // Traitement des dates d'inscription
+                    $tarifs = $_POST['tarifs'] ?? [];
                     $inscriptionDates = [];
                     if (!empty($_POST['inscription_dates']) && is_array($_POST['inscription_dates'])) {
                         foreach ($_POST['inscription_dates'] as $dateData) {
@@ -120,14 +104,15 @@ class EventsController extends AbstractController
                                     ->setStartRegistrationAt($dateData['start_at'])
                                     ->setCloseRegistrationAt($dateData['close_at'])
                                     ->setAccessCode($dateData['access_code'] ?? null);
-
                                 $inscriptionDates[] = $inscriptionDate;
                             }
                         }
                     }
 
-                    // Mise à jour via le service
-                    $this->eventsService->updateEvent($event, $tarifs, $inscriptionDates);
+                    // Sessions
+                    $sessions = $_POST['sessions'] ?? [];
+
+                    $this->eventsService->updateEvent($event, $tarifs, $inscriptionDates, $sessions);
 
                     $_SESSION['flash_message'] = ['type' => 'success', 'message' => 'Événement mis à jour'];
                 } else {

@@ -6,6 +6,8 @@ use app\Models\Event\EventInscriptionDates;
 use app\Models\Event\Events;
 use app\Repository\Event\EventInscriptionDatesRepository;
 use app\Repository\Event\EventsRepository;
+use app\Models\Event\EventSession;
+use app\Repository\Event\EventSessionRepository;
 use app\Repository\Piscine\PiscinesRepository;
 use app\Repository\TarifsRepository;
 use DateMalformedStringException;
@@ -16,6 +18,8 @@ class EventsService
     private PiscinesRepository $piscinesRepository;
     private TarifsRepository $tarifsRepository;
     private EventInscriptionDatesRepository $inscriptionDatesRepository;
+    private EventSessionRepository $eventSessionRepository;
+
 
     /**
      * Constructeur du service avec injection des repositories nécessaires
@@ -24,12 +28,14 @@ class EventsService
         ?EventsRepository $eventsRepository = null,
         ?PiscinesRepository $piscinesRepository = null,
         ?TarifsRepository $tarifsRepository = null,
-        ?EventInscriptionDatesRepository $inscriptionDatesRepository = null
+        ?EventInscriptionDatesRepository $inscriptionDatesRepository = null,
+        ?EventSessionRepository $eventSessionRepository = null
     ) {
         $this->eventsRepository = $eventsRepository ?? new EventsRepository();
         $this->piscinesRepository = $piscinesRepository ?? new PiscinesRepository();
         $this->tarifsRepository = $tarifsRepository ?? new TarifsRepository();
         $this->inscriptionDatesRepository = $inscriptionDatesRepository ?? new EventInscriptionDatesRepository();
+        $this->eventSessionRepository = $eventSessionRepository ?? new EventSessionRepository();
     }
 
     /**
@@ -94,38 +100,30 @@ class EventsService
      * @return int ID de l'événement créé
      * @throws DateMalformedStringException
      */
-    public function createEvent(array $data): int
+    public function createEvent(Events $event, array $tarifs = [], array $inscriptionDates = [], array $sessions = []): int
     {
-        // Hydrater un nouvel objet Events à partir des données
-        $event = $this->hydrateEvent($data);
-
-        // Ajouter les tarifs si présents
-        if (!empty($data['tarifs']) && is_array($data['tarifs'])) {
-            foreach ($data['tarifs'] as $tarifId) {
-                $tarif = $this->tarifsRepository->findById((int)$tarifId);
-                if ($tarif) {
-                    $event->addTarif($tarif);
-                }
-            }
-        }
-
-        // Persister l'événement
         $eventId = $this->eventsRepository->insert($event);
 
-        // Traiter les dates d'inscription si présentes
-        if (!empty($data['inscription_dates']) && is_array($data['inscription_dates'])) {
-            foreach ($data['inscription_dates'] as $dateData) {
-                if (!empty($dateData['libelle']) && !empty($dateData['start_at']) && !empty($dateData['close_at'])) {
-                    $inscriptionDate = new EventInscriptionDates();
-                    $inscriptionDate->setEvent($eventId)
-                        ->setLibelle($dateData['libelle'])
-                        ->setStartRegistrationAt($dateData['start_at'])
-                        ->setCloseRegistrationAt($dateData['close_at'])
-                        ->setAccessCode($dateData['access_code'] ?? null);
+        // Tarifs
+        foreach ($tarifs as $tarifId) {
+            $this->tarifsRepository->addEventTarif($eventId, (int)$tarifId);
+        }
 
-                    $this->inscriptionDatesRepository->insert($inscriptionDate);
-                }
-            }
+        // Dates d'inscription
+        foreach ($inscriptionDates as $inscriptionDate) {
+            $inscriptionDate->setEvent($eventId);
+            $this->inscriptionDatesRepository->insert($inscriptionDate);
+        }
+
+        // Sessions
+        foreach ($sessions as $sessionData) {
+            $session = new EventSession();
+            $session->setEventId($eventId)
+                ->setSessionName($sessionData['session_name'] ?? null)
+                ->setOpeningDoorsAt($sessionData['opening_doors_at'])
+                ->setEventStartAt($sessionData['event_start_at'])
+                ->setCreatedAt(date('Y-m-d H:i:s'));
+            $this->eventSessionRepository->insert($session);
         }
 
         return $eventId;
@@ -139,26 +137,35 @@ class EventsService
      * @param array $inscriptionDates Tableau de dates d'inscription
      * @return bool Succès de la mise à jour
      */
-    public function updateEvent(Events $event, array $tarifs = [], array $inscriptionDates = []): bool
+    public function updateEvent(Events $event, array $tarifs = [], array $inscriptionDates = [], array $sessions = []): bool
     {
-        // Mettre à jour l'événement
         $result = $this->eventsRepository->update($event);
 
-        // Gérer les tarifs
-        $this->tarifsRepository->deleteEventTarifs($event->getId());
+        $eventId = $event->getId();
+
+        // Tarifs
+        $this->tarifsRepository->deleteEventTarifs($eventId);
         foreach ($tarifs as $tarifId) {
-            $tarif = $this->tarifsRepository->findById((int)$tarifId);
-            if ($tarif) {
-                $event->addTarif($tarif);
-                $this->tarifsRepository->addEventTarif($event->getId(), (int)$tarifId);
-            }
+            $this->tarifsRepository->addEventTarif($eventId, (int)$tarifId);
         }
 
-        // Gérer les dates d'inscription
-        $this->inscriptionDatesRepository->deleteByEventId($event->getId());
+        // Dates d'inscription
+        $this->inscriptionDatesRepository->deleteByEventId($eventId);
         foreach ($inscriptionDates as $inscriptionDate) {
-            $inscriptionDate->setEvent($event->getId());
+            $inscriptionDate->setEvent($eventId);
             $this->inscriptionDatesRepository->insert($inscriptionDate);
+        }
+
+        // Sessions
+        $this->eventSessionRepository->delete($eventId);
+        foreach ($sessions as $sessionData) {
+            $session = new EventSession();
+            $session->setEventId($eventId)
+                ->setSessionName($sessionData['session_name'] ?? null)
+                ->setOpeningDoorsAt($sessionData['opening_doors_at'])
+                ->setEventStartAt($sessionData['event_start_at'])
+                ->setCreatedAt(date('Y-m-d H:i:s'));
+            $this->eventSessionRepository->insert($session);
         }
 
         return $result;
@@ -172,6 +179,16 @@ class EventsService
      */
     public function deleteEvent(int $id): bool
     {
+        // Supprimer d'abord les périodes d'inscription liées
+        $this->inscriptionDatesRepository->deleteByEventId($id);
+
+        // Supprimer ensuite les tarifs associés
+        $this->tarifsRepository->deleteEventTarifs($id);
+
+        // Supprimer ensuite les séances (sessions) liées
+        $this->eventSessionRepository->delete($id);
+
+        // Supprimer enfin l'événement
         return $this->eventsRepository->delete($id);
     }
 
@@ -212,7 +229,6 @@ class EventsService
 
         $event->setLibelle($data['libelle'] ?? '')
             ->setLieu((int)($data['lieu'] ?? 0))
-            ->setOpeningDoorsAt($data['opening_doors_at'] ?? date('Y-m-d H:i:s'))
             ->setEventStartAt($data['event_start_at'] ?? date('Y-m-d H:i:s'))
             ->setLimitationPerSwimmer(($data['limitation_per_swimmer'] === '' || $data['limitation_per_swimmer'] === '0')
                 ? null
@@ -235,14 +251,6 @@ class EventsService
         $piscine = $this->piscinesRepository->findById($event->getLieu());
         if ($piscine) {
             $event->setPiscine($piscine);
-        }
-
-        // Charger l'événement associé
-        if ($event->getAssociateEvent()) {
-            $associatedEvent = $this->eventsRepository->findById($event->getAssociateEvent());
-            if ($associatedEvent) {
-                $event->setAssociatedEvent($associatedEvent);
-            }
         }
 
         // Charger les tarifs

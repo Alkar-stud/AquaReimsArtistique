@@ -8,6 +8,10 @@
     <?php else: ?>
         <div class="row">
             <?php foreach ($events as $event): ?>
+                <?php
+                $sessions = $event->getSessions();
+                $nbSessions = count($sessions);
+                ?>
                 <div class="col-md-6 mb-4">
                     <div class="card">
                         <div class="card-header bg-primary text-white">
@@ -15,48 +19,29 @@
                         </div>
                         <div class="card-body">
                             <p><strong>Lieu :</strong> <?= htmlspecialchars($event->getPiscine()->getLibelle() ?? 'Non défini') ?></p>
-                            <p><strong>Date :</strong> <?= $event->getEventStartAt()->format('d/m/Y H:i') ?></p>
+                            <p>
+                                <strong>
+                                    <?= $nbSessions > 1 ? 'Séances' : 'Séance' ?> :
+                                </strong>
+                                <?php
+                                if ($nbSessions > 0) {
+                                    usort($sessions, fn($a, $b) => $a->getEventStartAt() <=> $b->getEventStartAt());
+                                    if ($nbSessions === 1) {
+                                        echo $sessions[0]->getEventStartAt()->format('d/m/Y H:i');
+                                    } else {
+                                        echo '<ul class="mb-0">';
+                                        foreach ($sessions as $session) {
+                                            echo '<li>' . htmlspecialchars($session->getSessionName() ?? '') . ' : ' . $session->getEventStartAt()->format('d/m/Y H:i') . '</li>';
+                                        }
+                                        echo '</ul>';
+                                    }
+                                } else {
+                                    echo "Non défini";
+                                }
+                                ?>
+                            </p>
 
-                            <form action="/reservation/details" method="post" class="reservation-form">
-                                <input type="hidden" name="csrf_token" value="<?= $csrf_token ?>">
-                                <input type="hidden" name="event_id" value="<?= $event->getId() ?>">
 
-                                <?php if (!empty($event->getAssociateEvent())): ?>
-                                    <div class="mb-3">
-                                        <label class="form-label">Choisissez votre date</label>
-                                        <select name="event_id" class="form-select">
-                                            <option value="<?= $event->getId() ?>"><?= $event->getEventStartAt()->format('d/m/Y H:i') ?></option>
-                                            <?php foreach ($event->getAssociateEvent() as $associatedEvent): ?>
-                                                <option value="<?= $associatedEvent->getId() ?>">
-                                                    <?= $associatedEvent->getEventStartAt()->format('d/m/Y H:i') ?>
-                                                </option>
-                                            <?php endforeach; ?>
-                                        </select>
-                                    </div>
-                                <?php endif; ?>
-
-                                <?php if (!empty($event->getLimitationPerSwimmer())): ?>
-                                    <div class="mb-3 swimmer-selection">
-                                        <label class="form-label">Groupe de nageuses</label>
-                                        <select name="groupe_id" class="form-select groupe-select" data-event-id="<?= $event->getId() ?>">
-                                            <option value="">Sélectionnez un groupe</option>
-                                            <?php foreach ($groupes as $groupe): ?>
-                                                <option value="<?= $groupe->getId() ?>"><?= htmlspecialchars($groupe->getLibelle()) ?></option>
-                                            <?php endforeach; ?>
-                                        </select>
-                                    </div>
-
-                                    <div class="mb-3 swimmer-selection">
-                                        <label class="form-label">Nageuse</label>
-                                        <select name="nageuse_id" class="form-select nageuse-select" disabled>
-                                            <option value="">Sélectionnez d'abord un groupe</option>
-                                        </select>
-                                    </div>
-                                <?php endif; ?>
-
-                                <input type="hidden" name="has_limitation" value="<?= !empty($event->getLimitationPerSwimmer()) ? $event->getLimitationPerSwimmer() : '0' ?>">
-                                <button type="submit" class="btn btn-primary">Réserver</button>
-                            </form>
                         </div>
                     </div>
                 </div>

@@ -5,6 +5,7 @@ namespace app\Core;
 use MongoDB\Client;
 use MongoDB\Database;
 use RuntimeException;
+use MongoDB\Driver\Exception\Exception as MongoDBException;
 
 class DatabaseMongoDB
 {
@@ -16,23 +17,29 @@ class DatabaseMongoDB
 
     public static function getClient(): Client
     {
+        $uri = $_ENV['MONGODB_URL'] ?? '';
+        if (!$uri) {
+            throw new RuntimeException('MONGODB_URL non défini.');
+        }
         if (self::$client === null) {
-            $uri = $_ENV['MONGODB_URL'] ?? '';
-            if (!$uri) {
-                throw new RuntimeException('MONGODB_URL non défini.');
+            try {
+                self::$client = new Client($uri);
+                // Teste la connexion
+                self::$client->listDatabases();
+            } catch (MongoDBException $e) {
+                throw new RuntimeException('Erreur de connexion à MongoDB : ' . $e->getMessage(), 0, $e);
             }
-            self::$client = new Client($uri);
         }
         return self::$client;
     }
 
     public static function getDatabase(): Database
     {
+        $dbName = $_ENV['MONGODB_DB'] ?? '';
+        if (!$dbName) {
+            throw new RuntimeException('MONGODB_DB non défini.');
+        }
         if (self::$database === null) {
-            $dbName = $_ENV['MONGODB_DB'] ?? '';
-            if (!$dbName) {
-                throw new RuntimeException('MONGODB_DB non défini.');
-            }
             self::$database = self::getClient()->selectDatabase($dbName);
         }
         return self::$database;

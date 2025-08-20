@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - dev
+  workflow_dispatch:  # Permet de déclencher le workflow manuellement
 
 jobs:
   deploy:

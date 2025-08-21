@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - dev
-  workflow_dispatch:  # Permet de déclencher le workflow manuellement
 
 jobs:
   deploy:
@@ -18,14 +17,17 @@ jobs:
       with:
         ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
-    - name: Copy files via SCP
+    - name: Install rsync
+      run: sudo apt-get update && sudo apt-get install -y rsync
+
+    - name: Copy files with rsync
       run: |
-        scp -r -o StrictHostKeyChecking=no . ${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_HOST }}:${{ secrets.SSH_PATH }}
-        
+        rsync -avz --exclude='storage/logs/' --exclude='storage/app/' -e "ssh -o StrictHostKeyChecking=no" . ${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_HOST }}:/path/to/remote/directory
+
     - name: Run Composer commands
       run: |
         ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_HOST }} << 'EOF'
-          cd ${{ secrets.SSH_PATH }}
+          cd /path/to/remote/directory
           composer install
           composer update
           composer dump-autoload

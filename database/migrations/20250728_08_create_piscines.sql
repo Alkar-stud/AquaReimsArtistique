@@ -9,3 +9,6 @@ CREATE TABLE IF NOT EXISTS `piscines` (
     `updated_at` datetime DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP
 );
 
+INSERT INTO `piscines` (`libelle`, `adresse`, `max_places`, `numbered_seats`) VALUES
+    ('Thiolettes', '77 Avenue de l\'Europe 51100 Reims', 149, 0),
+    ('UCPA Reims', '5 Boulevard Jules César 51100 Reims', 560, 1);

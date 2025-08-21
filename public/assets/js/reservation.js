@@ -19,7 +19,6 @@ function updateNageuses(groupeId, eventId) {
 
 function validerFormulaireReservation(eventId) {
     // Vérification des champs obligatoires
-    const eventCard = document.getElementById('formulaire_reservation_' + eventId);
     let erreur = '';
 
     // Vérif séance
@@ -51,13 +50,22 @@ function validerFormulaireReservation(eventId) {
 
     // Si limitation, contrôle côté serveur avant d'afficher le formulaire
     if (groupeSelect && nageuseId) {
-        fetch(`/reservation/check-nageuse-limit?event_id=${eventId}&nageuse_id=${nageuseId}`)
-            .then(response => response.json())
-            .then(data => {
-                if (data.limiteAtteinte) {
-                    alert("Le quota de spectateurs pour cette nageuse est atteint.");
-                } else {
-                    step1Valid(eventId, sessionChoisie, nageuseId);
+        fetch(`/reservation/check-nageuse-limit?event_id=${eventId}&nageuse_id=${nageuseId}&csrf_token=${window.csrf_token}`)
+            .then(async r => {
+                const text = await r.text();
+                try {
+                    const data = JSON.parse(text);
+                    if (data.success) {
+                        if (data.limiteAtteinte) {
+                            alert("Le quota de spectateurs pour cette nageuse est atteint.");
+                        } else {
+                            step1Valid(eventId, sessionChoisie, nageuseId);
+                        }
+                    } else {
+                        alert(data.error || 'Erreur');
+                    }
+                } catch (e) {
+                    alert("Réponse serveur invalide :\n" + text);
                 }
             });
     } else {
@@ -76,15 +84,16 @@ function step1Valid(eventId, sessionChoisie, nageuseId) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
             event_id: eventId,
-            session_id: sessionChoisie,
-            nageuse_id: nageuseId || null
+            event_session_id: sessionChoisie,
+            nageuse_id: nageuseId || null,
+            csrf_token: window.csrf_token
         })
     })
         .then(r => r.json())
         .then(data => {
             if (data.success) {
                 // Rediriger ou afficher l’étape suivante
-                window.location.href = '/reservation/etape2';
+                window.location.href = '/reservation/etape2Display';
             } else {
                 alert(data.error || 'Erreur');
             }

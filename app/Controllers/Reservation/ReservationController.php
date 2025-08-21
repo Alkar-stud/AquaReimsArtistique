@@ -6,6 +6,7 @@ use app\Controllers\AbstractController;
 use app\Repository\Reservation\ReservationsRepository;
 use app\Repository\Nageuse\GroupesNageusesRepository;
 use app\Repository\Nageuse\NageusesRepository;
+use app\Repository\TarifsRepository;
 use app\Services\ReservationSessionService;
 use app\Repository\Event\EventsRepository;
 
@@ -15,13 +16,15 @@ class ReservationController extends AbstractController
     private ReservationSessionService $sessionService;
     private EventsRepository $eventsRepository;
     private ReservationsRepository $reservationsRepository;
+    private TarifsRepository $tarifsRepository;
 
     public function __construct()
     {
         parent::__construct(true); // route publique
         $this->sessionService = new ReservationSessionService();
         $this->eventsRepository = new EventsRepository();
-        $this->reservationsRepository = new ReservationsRepository(); // Ajout
+        $this->reservationsRepository = new ReservationsRepository();
+        $this->tarifsRepository = new TarifsRepository();
     }
 
     // Page d'accueil du processus de réservation
@@ -99,6 +102,8 @@ class ReservationController extends AbstractController
         }
 
         $limite = $event->getLimitationPerSwimmer();
+        //On enregistre la limite dans $_SESSION
+        $_SESSION['reservation'][session_id()]['limitPerSwimmer'] = $limite;
 
         $count = $this->reservationsRepository->countActiveReservationsForEvent($eventId, $nageuseId);
 
@@ -192,6 +197,13 @@ class ReservationController extends AbstractController
     #[Route('/reservation/etape2Display', methods: ['GET'])]
     public function etape2Display(): void
     {
+        $reservation = $_SESSION['reservation'][session_id()] ?? null;
+        if (!$reservation || empty($reservation['event_id']) || empty($reservation['nageuse_id'])) {
+            // Redirection vers la page de début de réservation avec un message
+            header('Location: /reservation?session_expiree=1');
+            exit;
+        }
+
         $this->render('reservation/etape2', [
             'csrf_token' => $this->getCsrfToken(),
             'reservation' => $_SESSION['reservation'][session_id()] ?? []
@@ -199,7 +211,7 @@ class ReservationController extends AbstractController
     }
 
     #[Route('/reservation/etape2', methods: ['POST'])]
-    public function etape2Post(): void
+    public function etape2(): void
     {
         $input = json_decode(file_get_contents('php://input'), true);
         $csrfToken = $input['csrf_token'] ?? '';
@@ -245,7 +257,194 @@ class ReservationController extends AbstractController
     #[Route('/reservation/etape3Display', methods: ['GET'])]
     public function etape3Display(): void
     {
+        $reservation = $_SESSION['reservation'][session_id()] ?? null;
+        if (!$reservation || empty($reservation['event_id']) || empty($reservation['nageuse_id'])) {
+            // Redirection vers la page de début de réservation avec un message
+            header('Location: /reservation?session_expiree=1');
+            exit;
+        }
+
+        $tarifs = $this->tarifsRepository->findByEventId($_SESSION['reservation'][session_id()]['event_id']);
+        $limitation = $this->reservationsRepository->countReservationsForNageuse($_SESSION['reservation'][session_id()]['event_id'], $_SESSION['reservation'][session_id()]['nageuse_id']);
+        $placesDejaReservees = $reservation['places_deja_reservees'] ?? 0;
+        $placesRestantes = $limitation !== null ? max(0, $limitation - $placesDejaReservees) : null;
+
+        // Pour chercher un tarif spécial déjà enregistré
+        $reservationDetails = $reservation['reservation_detail'] ?? [];
+        $specialTarifSession = null;
+        foreach ($reservationDetails as $detail) {
+            if (isset($detail['tarif_id'])) {
+                foreach ($tarifs as $tarif) {
+                    if ($tarif->getId() == $detail['tarif_id'] && $tarif->getAccessCode()) {
+                        $specialTarifSession = [
+                            'id' => $tarif->getId(),
+                            'libelle' => $tarif->getLibelle(),
+                            'description' => $tarif->getDescription(),
+                            'nb_place' => $tarif->getNbPlace(),
+                            'price' => $tarif->getPrice(),
+                            'code' => $detail['access_code_entered'] ?? ''
+                        ];
+                        break 2;
+                    }
+                }
+            }
+        }
+
+        // Récupérer les quantités déjà sélectionnées
+        $reservationDetails = $reservation['reservation_detail'] ?? [];
+        $tarifQuantities = [];
+        foreach ($reservationDetails as $detail) {
+            if (isset($detail['tarif_id']) && isset($detail['qty'])) {
+                $tarifQuantities[$detail['tarif_id']] = $detail['qty'];
+            }
+        }
+
         $this->render('reservation/etape3', [
+            'csrf_token' => $this->getCsrfToken(),
+            'reservation' => $_SESSION['reservation'][session_id()] ?? [],
+            'tarifs' => $tarifs,
+            'limitation' => $_SESSION['reservation'][session_id()]['limitPerSwimmer'],
+            'placesDejaReservees' => $placesDejaReservees,
+            'placesRestantes' => $placesRestantes,
+            'tarifQuantities' => $tarifQuantities,
+            'specialTarifSession' => $specialTarifSession
+        ], 'Réservations');
+    }
+
+
+    #[Route('/reservation/validate-special-code', methods: ['POST'])]
+    public function validateSpecialCode(): void
+    {
+        $input = json_decode(file_get_contents('php://input'), true);
+        $csrfToken = $input['csrf_token'] ?? '';
+        if (!$this->validateCsrfAndLog($csrfToken, 'validate_special_code', false)) {
+            $this->json(['success' => false, 'error' => 'Token CSRF invalide']);
+            return;
+        }
+        $eventId = (int)($input['event_id'] ?? 0);
+        $code = trim($input['code'] ?? '');
+
+        if (!$eventId || !$code) {
+            $this->json(['success' => false, 'error' => 'Paramètres manquants']);
+            return;
+        }
+
+        $tarifs = $this->tarifsRepository->findByEventId($eventId);
+        foreach ($tarifs as $tarif) {
+            if ($tarif->getAccessCode() && strcasecmp($tarif->getAccessCode(), $code) === 0) {
+                //On enregistre la place dans $_SESSION pour éviter de devoir resaisir le code en cas de retour arrière
+                $_SESSION['reservation'][session_id()]['reservation_detail'][] = [
+                    'tarif_id' => $tarif->getId(),
+                    'access_code_entered' => $code,
+                    'qty' => $tarif->getNbPlace()
+                ];
+                $this->json([
+                    'success' => true,
+                    'tarif' => [
+                        'id' => $tarif->getId(),
+                        'libelle' => $tarif->getLibelle(),
+                        'description' => $tarif->getDescription(),
+                        'nb_place' => $tarif->getNbPlace(),
+                        'price' => $tarif->getPrice()
+                    ]
+                ]);
+                return;
+            }
+        }
+        $this->json(['success' => false, 'error' => 'Code invalide ou non reconnu.']);
+    }
+
+    #[Route('/reservation/remove-special-tarif', methods: ['POST'])]
+    public function removeSpecialTarif(): void
+    {
+        $input = json_decode(file_get_contents('php://input'), true);
+        $csrfToken = $input['csrf_token'] ?? '';
+        if (!$this->validateCsrfAndLog($csrfToken, 'remove_special_tarif', false)) {
+            $this->json(['success' => false, 'error' => 'Token CSRF invalide']);
+            return;
+        }
+        $tarifId = (int)($input['tarif_id'] ?? 0);
+        if (!$tarifId) {
+            $this->json(['success' => false, 'error' => 'Paramètre manquant']);
+            return;
+        }
+        $session = &$_SESSION['reservation'][session_id()]['reservation_detail'];
+        if (is_array($session)) {
+            $_SESSION['reservation'][session_id()]['reservation_detail'] = array_values(
+                array_filter($session, fn($d) => ($d['tarif_id'] ?? null) != $tarifId)
+            );
+        }
+        $this->json(['success' => true]);
+    }
+
+
+    #[Route('/reservation/etape3', methods: ['POST'])]
+    public function etape3(): void
+    {
+        $input = json_decode(file_get_contents('php://input'), true);
+        $csrfToken = $input['csrf_token'] ?? '';
+        if (!$this->validateCsrfAndLog($csrfToken, 'reservation_etape3')) {
+            $this->json(['success' => false, 'error' => 'Token CSRF invalide']);
+            return;
+        }
+
+        $eventId = $_SESSION['reservation'][session_id()]['event_id'] ?? null;
+        if (!$eventId) {
+            $this->json(['success' => false, 'error' => 'Session expirée.']);
+            return;
+        }
+
+        $tarifs = $this->tarifsRepository->findByEventId($eventId);
+        $tarifIds = array_map(fn($t) => $t->getId(), $tarifs);
+
+        $reservationDetails = [];
+
+        // Tarifs classiques
+        foreach ($input['tarifs'] ?? [] as $t) {
+            $id = (int)($t['id'] ?? 0);
+            $qty = (int)($t['qty'] ?? 0);
+            if ($qty > 0 && in_array($id, $tarifIds, true)) {
+                $reservationDetails[] = [
+                    'tarif_id' => $id,
+                    'qty' => $qty
+                ];
+            }
+        }
+
+        // Tarif spécial
+        if (!empty($input['specialTarif']['id'])) {
+            $specialId = (int)$input['specialTarif']['id'];
+            if (in_array($specialId, $tarifIds, true)) {
+                $reservationDetails[] = [
+                    'tarif_id' => $specialId,
+                    'access_code_entered' => $input['specialTarif']['code'] ?? ''
+                ];
+            }
+        }
+
+        if (empty($reservationDetails)) {
+            $this->json(['success' => false, 'error' => 'Aucun tarif sélectionné.']);
+            return;
+        }
+
+        // Enregistrement en session
+        $_SESSION['reservation'][session_id()]['reservation_detail'] = $reservationDetails;
+
+        $this->json(['success' => true]);
+    }
+
+
+    #[Route('/reservation/etape4Display', methods: ['GET'])]
+    public function etape4Display(): void
+    {
+        $reservation = $_SESSION['reservation'][session_id()] ?? null;
+        if (!$reservation || empty($reservation['event_id']) || empty($reservation['nageuse_id'])) {
+            // Redirection vers la page de début de réservation avec un message
+            header('Location: /reservation?session_expiree=1');
+            exit;
+        }
+
+        $this->render('reservation/etape4', [
             'csrf_token' => $this->getCsrfToken(),
             'reservation' => $_SESSION['reservation'][session_id()] ?? []
         ], 'Réservations');

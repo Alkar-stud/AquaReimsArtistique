@@ -79,6 +79,27 @@ class ReservationsDetailsRepository extends AbstractRepository
     }
 
     /**
+     * Compte le nombre de places déjà réservées par nageuse et événement
+     * @param int $eventId
+     * @param int $nageuseId
+     * @return int
+     */
+    public function countPlacesForNageuseAndEvent(int $eventId, int $nageuseId): int
+    {
+        $sql = "SELECT COUNT(rd.id) as count
+            FROM reservations_details rd
+            INNER JOIN reservations r ON rd.reservation = r.id
+            WHERE r.event = :eventId
+              AND r.nageuse_si_limitation = :nageuseId
+              AND r.is_canceled = 0";
+        $result = $this->query($sql, [
+            'eventId' => $eventId,
+            'nageuseId' => $nageuseId
+        ]);
+        return (int)($result[0]['count'] ?? 0);
+    }
+
+    /**
      * Insère un nouveau détail de réservation
      * @param ReservationsDetails $detail
      * @return int ID du détail inséré

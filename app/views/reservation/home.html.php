@@ -25,14 +25,24 @@
                                     <select id="groupe_nageuses_<?= $event->getId() ?>" class="form-select d-inline w-auto ms-2" onchange="updateNageuses(this.value, <?= $event->getId() ?>)">
                                         <option value="">Sélectionner un groupe</option>
                                         <?php foreach ($groupes as $groupe): ?>
-                                            <option value="<?= $groupe->getId() ?>"><?= htmlspecialchars($groupe->getLibelle()) ?></option>
+                                            <option value="<?= $groupe->getId() ?>" <?= ($groupe->getId() == $selectedGroupe) ? 'selected' : '' ?>>
+                                                <?= htmlspecialchars($groupe->getLibelle()) ?>
+                                            </option>
                                         <?php endforeach; ?>
                                     </select>
                                 </p>
-                                <p id="nageuse_container_<?= $event->getId() ?>" style="display: none;">
+                                <p id="nageuse_container_<?= $event->getId() ?>" style="display: <?= ($selectedNageuse ? 'block' : 'none'); ?>">
                                     <strong>Nageuse :</strong>
                                     <select id="nageuse_<?= $event->getId() ?>" class="form-select d-inline w-auto ms-2">
                                         <option value="">Sélectionner une nageuse</option>
+                                        <?php
+                                        if ($selectedGroupe && isset($nageusesParGroupe[$selectedGroupe])) {
+                                            foreach ($nageusesParGroupe[$selectedGroupe] as $nageuse) {
+                                                $isSelected = ($nageuse['id'] == $selectedNageuse) ? 'selected' : '';
+                                                echo "<option value=\"{$nageuse['id']}\" $isSelected>{$nageuse['nom']}</option>";
+                                            }
+                                        }
+                                        ?>
                                     </select>
                                 </p>
                             <?php endif; ?>
@@ -53,7 +63,8 @@
                                                    type="radio"
                                                    name="session_<?= $event->getId() ?>"
                                                    id="session_<?= $event->getId() ?>_<?= $session->getId() ?>"
-                                                   value="<?= $session->getId() ?>">
+                                                   value="<?= $session->getId() ?>"
+                                                <?= ($session->getId() == $selectedSession) ? 'checked' : '' ?>>
                                             <label class="form-check-label" for="session_<?= $event->getId() ?>_<?= $session->getId() ?>">
                                                 <?= htmlspecialchars($session->getSessionName() ?? '') ?> : <?= $session->getEventStartAt()->format('d/m/Y H:i') ?>
                                             </label>
@@ -76,5 +87,6 @@
 </div>
 <script>
     window.nageusesParGroupe = <?= json_encode($nageusesParGroupe) ?>;
+    window.csrf_token = <?= json_encode($csrf_token ?? '') ?>;
 </script>
 <script src="/assets/js/reservation.js" defer></script>

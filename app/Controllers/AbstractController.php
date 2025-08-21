@@ -196,7 +196,7 @@ abstract class AbstractController
         return \app\Utils\CsrfHelper::validateToken($token);
     }
 
-    protected function validateCsrfAndLog(string $submittedToken, string $action = 'unknown'): bool
+    protected function validateCsrfAndLog(string $submittedToken, string $action = 'unknown', bool $unset = true): bool
     {
         $sessionToken = $_SESSION['csrf_token'] ?? '';
 
@@ -212,7 +212,9 @@ abstract class AbstractController
             return false;
         }
 
-        unset($_SESSION['csrf_token']);
+        if ($unset) {
+            unset($_SESSION['csrf_token']);
+        }
         return true;
     }
 

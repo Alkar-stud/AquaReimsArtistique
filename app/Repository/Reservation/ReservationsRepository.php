@@ -85,14 +85,15 @@ class ReservationsRepository extends AbstractRepository
     }
 
     /**
-     * Trouve les réservations par email
-     * @param string $email
-     * @return Reservations[]
+     * Trouve les réservations d'un event donné par email
      */
-    public function findByEmail(string $email): array
+    public function findByEmailAndEvent(string $email, int $eventId): array
     {
-        $sql = "SELECT * FROM $this->tableName WHERE email = :email ORDER BY created_at DESC";
-        $results = $this->query($sql, ['email' => $email]);
+        $sql = "SELECT * FROM $this->tableName WHERE email = :email AND event = :eventId";
+        $results = $this->query($sql, [
+            'email' => $email,
+            'eventId' => $eventId
+        ]);
         return array_map([$this, 'hydrate'], $results);
     }
 
@@ -199,6 +200,18 @@ class ReservationsRepository extends AbstractRepository
             INNER JOIN reservations r ON rd.id = r.id
             WHERE r.event = :eventId AND rd.id = :nageuseId AND r.is_canceled = 0";
         $result = $this->query($sql, ['eventId' => $eventId, 'nageuseId' => $nageuseId]);
+        return (int)$result[0]['count'];
+    }
+
+    /**
+     * Compte le nombre de réservations actives pour un événement
+     * @param int $eventId
+     * @return int
+     */
+    public function countActiveReservationsForEvent(int $eventId): int
+    {
+        $sql = "SELECT COUNT(*) as count FROM $this->tableName WHERE event = :eventId AND is_canceled = 0";
+        $result = $this->query($sql, ['eventId' => $eventId]);
         return (int)$result[0]['count'];
     }
 

@@ -161,7 +161,10 @@ class ReservationController extends AbstractController
 
         $_SESSION['reservation'][session_id()]['event_id'] = $eventId;
         $_SESSION['reservation'][session_id()]['event_session_id'] = $sessionId;
-        $_SESSION['reservation'][session_id()]['nageuse_id'] = $nageuseId;
+        // N'ajouter la nageuse que si elle est requise
+        if ($event->getLimitationPerSwimmer() !== null) {
+            $_SESSION['reservation'][session_id()]['nageuse_id'] = $nageuseId;
+        }
 
         $this->json(['success' => true]);
     }
@@ -198,7 +201,15 @@ class ReservationController extends AbstractController
     public function etape2Display(): void
     {
         $reservation = $_SESSION['reservation'][session_id()] ?? null;
-        if (!$reservation || empty($reservation['event_id']) || empty($reservation['nageuse_id'])) {
+        $event = null;
+        if ($reservation && !empty($reservation['event_id'])) {
+            $event = $this->eventsRepository->findById($reservation['event_id']);
+        }
+        if (
+            !$reservation
+            || empty($reservation['event_id'])
+            || ($event && $event->getLimitationPerSwimmer() !== null && empty($reservation['nageuse_id']))
+        ) {
             // Redirection vers la page de début de réservation avec un message
             header('Location: /reservation?session_expiree=1');
             exit;
@@ -258,7 +269,15 @@ class ReservationController extends AbstractController
     public function etape3Display(): void
     {
         $reservation = $_SESSION['reservation'][session_id()] ?? null;
-        if (!$reservation || empty($reservation['event_id']) || empty($reservation['nageuse_id'])) {
+        $event = null;
+        if ($reservation && !empty($reservation['event_id'])) {
+            $event = $this->eventsRepository->findById($reservation['event_id']);
+        }
+        if (
+            !$reservation
+            || empty($reservation['event_id'])
+            || ($event && $event->getLimitationPerSwimmer() !== null && empty($reservation['nageuse_id']))
+        ) {
             // Redirection vers la page de début de réservation avec un message
             header('Location: /reservation?session_expiree=1');
             exit;

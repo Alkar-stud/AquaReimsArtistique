@@ -74,6 +74,16 @@ class UsersController extends AbstractController
                 exit;
             }
 
+            //On vérifie que l'email n'existe pas déjà
+            if ($this->userRepository->findByEmail($email)) {
+                $_SESSION['flash_message'] = [
+                    'type' => 'danger',
+                    'message' => 'Cette adresse email est déjà utilisée.'
+                ];
+                header('Location: /gestion/users');
+                exit;
+            }
+
             $role = $this->roleRepository->findById($roleId);
             if (!$role || $role->getLevel() <= $currentUser['role']['level']) {
                 $_SESSION['flash_message'] = ['type' => 'danger', 'message' => 'Rôle non autorisé.'];
@@ -161,6 +171,23 @@ class UsersController extends AbstractController
                 $isActif = true;
             }
             $isActif = isset($_POST['is_actif']) && $_POST['is_actif'] === 'on' ? 1 : 0;
+
+            // Validation
+            if (empty($username) || empty($email) || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                $_SESSION['flash_message'] = ['type' => 'danger', 'message' => 'Username et email obligatoires et valides.'];
+                header('Location: /gestion/users/add');
+                exit;
+            }
+
+            //On vérifie que l'email n'existe pas déjà
+            if ($this->userRepository->findByEmail($email)) {
+                $_SESSION['flash_message'] = [
+                    'type' => 'danger',
+                    'message' => 'Cette adresse email est déjà utilisée.'
+                ];
+                header('Location: /gestion/users');
+                exit;
+            }
 
             $user = $this->userRepository->findById($id);
             if (!$user) {

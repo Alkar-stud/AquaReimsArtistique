@@ -1,4 +1,4 @@
-<?php
+<?php include __DIR__ . '/_display_details.html.php';
 $limiteDepassee = $limiteDepassee ?? false;
 $limiteMessage = $limiteMessage ?? '';
 ?>

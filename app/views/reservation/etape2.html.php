@@ -1,3 +1,6 @@
+<?php include __DIR__ . '/_display_details.html.php'; ?>
+<div class="container">
+    <h2 class="mb-4">Informations personnelles</h2>
     <form id="reservationInfosForm" class="mb-4">
         <div class="mb-3">
             <label for="nom" class="form-label">Nom *</label>
@@ -25,6 +28,7 @@
         <button type="submit" class="btn btn-primary">Valider et continuer</button>
     </form>
     <div id="reservationAlert"></div>
+</div>
     <script>
         window.csrf_token = <?= json_encode($csrf_token ?? '') ?>;
         window.reservation = <?= json_encode($reservation ?? []) ?>;

@@ -6,10 +6,12 @@ use app\Controllers\AbstractController;
 use app\Repository\Reservation\ReservationsRepository;
 use app\Repository\Nageuse\GroupesNageusesRepository;
 use app\Repository\Nageuse\NageusesRepository;
-use \app\Repository\Event\EventInscriptionDatesRepository;
+use app\Repository\Event\EventInscriptionDatesRepository;
 use app\Repository\TarifsRepository;
 use app\Services\ReservationSessionService;
 use app\Repository\Event\EventsRepository;
+use app\Utils\ReservationContextHelper;
+
 
 #[Route('/reservation', name: 'app_reservation')]
 class ReservationController extends AbstractController
@@ -237,9 +239,6 @@ class ReservationController extends AbstractController
     {
         $reservation = $_SESSION['reservation'][session_id()] ?? null;
         $event = null;
-        if ($reservation && !empty($reservation['event_id'])) {
-            $event = $this->eventsRepository->findById($reservation['event_id']);
-        }
         if (
             !$reservation
             || empty($reservation['event_id'])
@@ -250,10 +249,15 @@ class ReservationController extends AbstractController
             exit;
         }
 
-        $this->render('reservation/etape2', [
-            'csrf_token' => $this->getCsrfToken(),
-            'reservation' => $_SESSION['reservation'][session_id()] ?? []
-        ], 'Réservations');
+        if ($reservation && !empty($reservation['nageuse_id'])) {
+            $nageusesRepository = new \app\Repository\Nageuse\NageusesRepository();
+            $nageuse = $nageusesRepository->findById($reservation['nageuse_id']);
+        }
+
+        $context = ReservationContextHelper::getContext($this->eventsRepository, $this->tarifsRepository, $_SESSION['reservation'][session_id()] ?? null);
+        $this->render('reservation/etape2', array_merge($context, [
+            'csrf_token' => $this->getCsrfToken()
+        ]), 'Réservations');
     }
 
     #[Route('/reservation/etape2', methods: ['POST'])]
@@ -336,7 +340,7 @@ class ReservationController extends AbstractController
                             'description' => $tarif->getDescription(),
                             'nb_place' => $tarif->getNbPlace(),
                             'price' => $tarif->getPrice(),
-                            'code' => $detail['access_code_entered'] ?? ''
+                            'code' => $detail['access_code'] ?? ''
                         ];
                         break 2;
                     }
@@ -344,16 +348,21 @@ class ReservationController extends AbstractController
             }
         }
 
-        // Récupérer les quantités déjà sélectionnées
+        // Récupérer les quantités déjà sélectionnées, enregistrer le tableau pour la vue
         $reservationDetails = $reservation['reservation_detail'] ?? [];
         $tarifQuantities = [];
         foreach ($reservationDetails as $detail) {
-            if (isset($detail['tarif_id']) && isset($detail['qty'])) {
-                $tarifQuantities[$detail['tarif_id']] = $detail['qty'];
+            if (isset($detail['tarif_id'])) {
+                $tid = $detail['tarif_id'];
+                if (!isset($tarifQuantities[$tid])) {
+                    $tarifQuantities[$tid] = 0;
+                }
+                $tarifQuantities[$tid]++;
             }
         }
 
-        $this->render('reservation/etape3', [
+        $context = ReservationContextHelper::getContext($this->eventsRepository, $this->tarifsRepository, $_SESSION['reservation'][session_id()] ?? null);
+        $this->render('reservation/etape3', array_merge($context, [
             'csrf_token' => $this->getCsrfToken(),
             'reservation' => $_SESSION['reservation'][session_id()] ?? [],
             'tarifs' => $tarifs,
@@ -362,7 +371,7 @@ class ReservationController extends AbstractController
             'placesRestantes' => $placesRestantes,
             'tarifQuantities' => $tarifQuantities,
             'specialTarifSession' => $specialTarifSession
-        ], 'Réservations');
+        ]), 'Réservations');
     }
 
 
@@ -390,8 +399,7 @@ class ReservationController extends AbstractController
                 //On enregistre la place dans $_SESSION pour éviter de devoir resaisir le code en cas de retour arrière
                 $_SESSION['reservation'][session_id()]['reservation_detail'][] = [
                     'tarif_id' => $tarif->getId(),
-                    'access_code_entered' => $code,
-                    'qty' => $tarif->getNbPlace()
+                    'access_code' => $code
                 ];
                 $this->json([
                     'success' => true,
@@ -503,15 +511,30 @@ class ReservationController extends AbstractController
 
         $reservationDetails = [];
 
+        // récupérer l'ancien détail pour conserver nom/prénom si on revient de l'étape suivante pour ajouter un tarif par exemple
+        $oldDetails = $_SESSION['reservation'][session_id()]['reservation_detail'] ?? [];
+        // On crée un index par tarif_id pour retrouver les anciens noms/prénoms
+        $oldByTarif = [];
+        foreach ($oldDetails as $detail) {
+            $tid = $detail['tarif_id'];
+            if (!isset($oldByTarif[$tid])) $oldByTarif[$tid] = [];
+            $oldByTarif[$tid][] = $detail;
+        }
+
         // Tarifs classiques
         foreach ($input['tarifs'] ?? [] as $t) {
             $id = (int)($t['id'] ?? 0);
             $qty = (int)($t['qty'] ?? 0);
             if ($qty > 0 && in_array($id, $tarifIds, true)) {
-                $reservationDetails[] = [
-                    'tarif_id' => $id,
-                    'qty' => $qty
-                ];
+                for ($i = 0; $i < $qty; $i++) {
+                    $detail = ['tarif_id' => $id];
+                    // Si on a un ancien nom/prénom pour ce tarif à cette position, on le recopie
+                    if (!empty($oldByTarif[$id][$i])) {
+                        if (isset($oldByTarif[$id][$i]['nom'])) $detail['nom'] = $oldByTarif[$id][$i]['nom'];
+                        if (isset($oldByTarif[$id][$i]['prenom'])) $detail['prenom'] = $oldByTarif[$id][$i]['prenom'];
+                    }
+                    $reservationDetails[] = $detail;
+                }
             }
         }
 
@@ -519,10 +542,25 @@ class ReservationController extends AbstractController
         if (!empty($input['specialTarif']['id'])) {
             $specialId = (int)$input['specialTarif']['id'];
             if (in_array($specialId, $tarifIds, true)) {
-                $reservationDetails[] = [
-                    'tarif_id' => $specialId,
-                    'access_code_entered' => $input['specialTarif']['code'] ?? ''
-                ];
+                $specialTarifObj = null;
+                foreach ($tarifs as $t) {
+                    if ($t->getId() == $specialId) {
+                        $specialTarifObj = $t;
+                        break;
+                    }
+                }
+                $qty = $specialTarifObj ? (int)$specialTarifObj->getNbPlace() : 1;
+                for ($i = 0; $i < $qty; $i++) {
+                    $detail = [
+                        'tarif_id' => $specialId,
+                        'access_code' => $input['specialTarif']['code'] ?? ''
+                    ];
+                    if (!empty($oldByTarif[$specialId][$i])) {
+                        if (isset($oldByTarif[$specialId][$i]['nom'])) $detail['nom'] = $oldByTarif[$specialId][$i]['nom'];
+                        if (isset($oldByTarif[$specialId][$i]['prenom'])) $detail['prenom'] = $oldByTarif[$specialId][$i]['prenom'];
+                    }
+                    $reservationDetails[] = $detail;
+                }
             }
         }
 
@@ -548,10 +586,180 @@ class ReservationController extends AbstractController
             exit;
         }
 
-        $this->render('reservation/etape4', [
+        $tarifs = $this->tarifsRepository->findByEventId($reservation['event_id']);
+        $event = $this->eventsRepository->findById($reservation['event_id']);
+
+        $context = ReservationContextHelper::getContext($this->eventsRepository, $this->tarifsRepository, $_SESSION['reservation'][session_id()] ?? null);
+        $this->render('reservation/etape4', array_merge($context, [
+            'tarifs' => $tarifs,
+            'numberedSeats' => $event->getPiscine()->getNumberedSeats(),
             'csrf_token' => $this->getCsrfToken(),
             'reservation' => $_SESSION['reservation'][session_id()] ?? []
-        ], 'Réservations');
+        ]), 'Réservations');
     }
+
+    #[Route('/reservation/etape4', methods: ['POST'])]
+    public function etape4(): void
+    {
+        //On fait différemment car il y a peut-être un fichier
+        $csrfToken = $_POST['csrf_token'] ?? '';
+        if (!$this->validateCsrfAndLog($csrfToken, 'reservation_etape4')) {
+            $this->json(['success' => false, 'error' => 'Token CSRF invalide']);
+            return;
+        }
+
+        // Extensions et types MIME autorisés
+        $allowedExtensions = ['pdf', 'jpg', 'jpeg', 'png'];
+        $allowedMimeTypes = [
+            'application/pdf',
+            'image/jpeg',
+            'image/png'
+        ];
+
+        //Récupération des données du formaulaire
+        $noms = $_POST['noms'] ?? [];
+        $prenoms = $_POST['prenoms'] ?? [];
+        $justificatifs = $_FILES['justificatifs'] ?? null;
+        $justifIndex = 0;
+
+        if (count($noms) !== count($prenoms)) {
+            $this->json(['success' => false, 'error' => 'Nombre de noms/prénoms incohérent.']);
+            return;
+        }
+
+        $couples = [];
+        for ($i = 0; $i < count($noms); $i++) {
+            $nom = trim($noms[$i]);
+            $prenom = trim($prenoms[$i]);
+            if ($nom === '' || $prenom === '') {
+                $this->json(['success' => false, 'error' => "Nom ou prénom manquant pour le participant " . ($i+1)]);
+                return;
+            }
+            if (strtolower($nom) === strtolower($prenom)) {
+                $this->json(['success' => false, 'error' => "Le nom et le prénom du participant " . ($i+1) . " doivent être différents."]);
+                return;
+            }
+            $key = strtolower($nom . '|' . $prenom);
+            if (in_array($key, $couples, true)) {
+                $this->json(['success' => false, 'error' => "Le couple nom/prénom du participant " . ($i+1) . " est déjà utilisé."]);
+                return;
+            }
+            $couples[] = $key;
+        }
+
+        // Enregistrement dans chaque reservation_detail
+        $reservation = &$_SESSION['reservation'][session_id()];
+        if (!isset($reservation['reservation_detail']) || count($reservation['reservation_detail']) !== count($noms)) {
+            $this->json(['success' => false, 'error' => 'Incohérence du nombre de participants.']);
+            return;
+        }
+        foreach ($reservation['reservation_detail'] as $i => &$detail) {
+            $detail['nom'] = strtoupper($noms[$i]);
+            $detail['prenom'] = ucwords($prenoms[$i]);
+            // Récupérer le tarif correspondant
+            $tarifs = $this->tarifsRepository->findByEventId($reservation['event_id']);
+            $tarif = null;
+            foreach ($tarifs as $t) {
+                if ($t->getId() == $detail['tarif_id']) {
+                    $tarif = $t;
+                    break;
+                }
+            }
+            // Si justificatif requis
+            if ($tarif && $tarif->getIsProofRequired()) {
+                if (
+                    isset($justificatifs['name'][$justifIndex]) &&
+                    $justificatifs['error'][$justifIndex] === UPLOAD_ERR_OK
+                ) {
+                    if ($justificatifs['size'][$justifIndex] > MAX_UPLOAD_PROOF_SIZE * 1024 * 1024) {
+                        $this->json(['success' => false, 'error' => "Le justificatif du participant " . ($i+1) . " dépasse la taille maximale autorisée (2 Mo)."]);
+                        return;
+                    }
+                    $originalName = $justificatifs['name'][$justifIndex];
+                    $extension = pathinfo($originalName, PATHINFO_EXTENSION);
+                    $mimeType = mime_content_type($justificatifs['tmp_name'][$justifIndex]);
+
+                    if (!in_array($extension, $allowedExtensions) || !in_array($mimeType, $allowedMimeTypes)) {
+                        $this->json(['success' => false, 'error' => "Format de justificatif non autorisé (PDF, JPG, PNG uniquement)."]);
+                        return;
+                    }
+                    $sessionId = session_id();
+                    $tarifId = $detail['tarif_id'];
+                    $nom = strtolower(preg_replace('/[^a-z0-9]/i', '', $noms[$i]));
+                    $prenom = strtolower(preg_replace('/[^a-z0-9]/i', '', $prenoms[$i]));
+                    $extension = strtolower(pathinfo($originalName, PATHINFO_EXTENSION));
+                    $uniqueName = "{$sessionId}_{$tarifId}_{$nom}_{$prenom}.{$extension}";
+                    $uploadPath = __DIR__ . '/../../..' . UPLOAD_PROOF_PATH . 'temp/' . $uniqueName;
+                    move_uploaded_file($justificatifs['tmp_name'][$justifIndex], $uploadPath);
+                    $detail['justificatif_name'] = $uniqueName;
+                    move_uploaded_file($justificatifs['tmp_name'][$justifIndex], __DIR__ . '/../../..' . UPLOAD_PROOF_PATH . 'temp/' . $uniqueName);
+                    $detail['justificatif_name'] = $uniqueName;
+                    unset($reservation['reservation_detail'][$justifIndex]['justificatif_name']);
+                    $justifIndex++;
+                } elseif (!empty($detail['justificatif_name'])) {
+                    // Déjà en session
+                    $justifIndex++;
+                } else {
+                    $this->json(['success' => false, 'error' => "Justificatif manquant pour le participant: " . ($i+1)]);
+                    return;
+                }
+            }
+        }
+
+        $this->json(['success' => true]);
+    }
+
+    #[Route('/reservation/etape5Display', methods: ['GET'])]
+    public function etape5Display(): void
+    {
+        $reservation = $_SESSION['reservation'][session_id()] ?? null;
+        if (!$reservation || empty($reservation['event_id']) || empty($reservation['nageuse_id'])) {
+            // Redirection vers la page de début de réservation avec un message
+            header('Location: /reservation?session_expiree=1');
+            exit;
+        }
+
+
+        $context = ReservationContextHelper::getContext($this->eventsRepository, $this->tarifsRepository, $_SESSION['reservation'][session_id()] ?? null);
+        $this->render('reservation/etape5', array_merge($context, [
+            'csrf_token' => $this->getCsrfToken(),
+            'reservation' => $_SESSION['reservation'][session_id()] ?? []
+        ]), 'Réservations');
+    }
+
+    #[Route('/reservation/etape5', methods: ['POST'])]
+    public function etape5(): void
+    {
+        $input = json_decode(file_get_contents('php://input'), true);
+        $csrfToken = $input['csrf_token'] ?? '';
+        if (!$this->validateCsrfAndLog($csrfToken, 'reservation_etape4')) {
+            $this->json(['success' => false, 'error' => 'Token CSRF invalide']);
+            return;
+        }
+
+    }
+
+
+    #[Route('/reservation/etape6Display', methods: ['GET'])]
+    public function etape6Display(): void
+    {
+        $reservation = $_SESSION['reservation'][session_id()] ?? null;
+        if (!$reservation || empty($reservation['event_id']) || empty($reservation['nageuse_id'])) {
+            // Redirection vers la page de début de réservation avec un message
+            header('Location: /reservation?session_expiree=1');
+            exit;
+        }
+
+
+        $context = ReservationContextHelper::getContext($this->eventsRepository, $this->tarifsRepository, $_SESSION['reservation'][session_id()] ?? null);
+        $this->render('reservation/etape6', array_merge($context, [
+             'csrf_token' => $this->getCsrfToken(),
+            'reservation' => $_SESSION['reservation'][session_id()] ?? []
+        ]), 'Réservations');
+    }
+
+
+
+
 
 }

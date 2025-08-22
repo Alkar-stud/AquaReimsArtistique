@@ -6,6 +6,7 @@ use app\Controllers\AbstractController;
 use app\Repository\Reservation\ReservationsRepository;
 use app\Repository\Nageuse\GroupesNageusesRepository;
 use app\Repository\Nageuse\NageusesRepository;
+use \app\Repository\Event\EventInscriptionDatesRepository;
 use app\Repository\TarifsRepository;
 use app\Services\ReservationSessionService;
 use app\Repository\Event\EventsRepository;
@@ -17,6 +18,7 @@ class ReservationController extends AbstractController
     private EventsRepository $eventsRepository;
     private ReservationsRepository $reservationsRepository;
     private TarifsRepository $tarifsRepository;
+    private EventInscriptionDatesRepository $eventInscriptionDatesRepository;
 
     public function __construct()
     {
@@ -25,6 +27,7 @@ class ReservationController extends AbstractController
         $this->eventsRepository = new EventsRepository();
         $this->reservationsRepository = new ReservationsRepository();
         $this->tarifsRepository = new TarifsRepository();
+        $this->eventInscriptionDatesRepository = new EventInscriptionDatesRepository();
     }
 
     // Page d'accueil du processus de réservation
@@ -52,6 +55,13 @@ class ReservationController extends AbstractController
             ];
         }
 
+        //Récupération des périodes d'ouverture des inscriptions
+        $inscriptionsParEvent = [];
+        foreach ($events as $event) {
+            $inscriptionsParEvent[$event->getId()] = $this->eventInscriptionDatesRepository->findByEventId($event->getId());
+        }
+
+        //Récupération de l'éventuelle session en cours
         $reservation = $_SESSION['reservation'][session_id()] ?? [];
         $selectedSession = $reservation['event_session_id'] ?? null;
         $selectedNageuse = $reservation['nageuse_id'] ?? null;
@@ -66,10 +76,35 @@ class ReservationController extends AbstractController
             }
         }
 
+        //Récupération des périodes d'ouverture des inscriptions
+        $periodesOuvertes = [];
+        $nextPublicOuvertures = [];
+        foreach ($events as $event) {
+            $periodes = $inscriptionsParEvent[$event->getId()] ?? [];
+            $now = new \DateTime();
+            $periodeOuverte = null;
+            $nextPublic = null;
+            foreach ($periodes as $periode) {
+                if ($now >= $periode->getStartRegistrationAt() && $now <= $periode->getCloseRegistrationAt()) {
+                    $periodeOuverte = $periode;
+                }
+                if ($periode->getAccessCode() === null && $periode->getStartRegistrationAt() > $now) {
+                    if ($nextPublic === null || $periode->getStartRegistrationAt() < $nextPublic->getStartRegistrationAt()) {
+                        $nextPublic = $periode;
+                    }
+                }
+            }
+            $periodesOuvertes[$event->getId()] = $periodeOuverte;
+            $nextPublicOuvertures[$event->getId()] = $nextPublic;
+        }
+
         $this->render('reservation/home', [
             'events' => $events,
             'groupes' => $groupes,
             'nageusesParGroupe' => $nageusesParGroupe,
+            'inscriptionsParEvent' => $inscriptionsParEvent,
+            'periodesOuvertes' => $periodesOuvertes,
+            'nextPublicOuvertures' => $nextPublicOuvertures,
             'csrf_token' => $this->getCsrfToken(),
             'selectedSession' => $selectedSession,
             'selectedNageuse' => $selectedNageuse,
@@ -331,6 +366,7 @@ class ReservationController extends AbstractController
     }
 
 
+    //Pour valider les tarifs avec code
     #[Route('/reservation/validate-special-code', methods: ['POST'])]
     public function validateSpecialCode(): void
     {
@@ -396,6 +432,55 @@ class ReservationController extends AbstractController
         $this->json(['success' => true]);
     }
 
+
+    #[Route('/reservation/validate-access-code', methods: ['POST'])]
+    public function validateAccessCode(): void
+    {
+        $input = json_decode(file_get_contents('php://input'), true);
+        $csrfToken = $input['csrf_token'] ?? '';
+        if (!$this->validateCsrfAndLog($csrfToken, 'validate_access_code', false)) {
+            $this->json(['success' => false, 'error' => 'Token CSRF invalide']);
+            return;
+        }
+        $eventId = (int)($input['event_id'] ?? 0);
+        $code = trim($input['code'] ?? '');
+
+        if (!$eventId || !$code) {
+            $this->json(['success' => false, 'error' => 'Paramètres manquants']);
+            return;
+        }
+
+        $periodes = $this->eventInscriptionDatesRepository->findByEventId($eventId);
+        $now = new \DateTime();
+        $codeTrouve = false;
+        foreach ($periodes as $periode) {
+            if ($periode->getAccessCode() && strcmp($periode->getAccessCode(), $code) === 0) {
+                $codeTrouve = true;
+                if ($now < $periode->getStartRegistrationAt()) {
+                    $dateLocale = $periode->getStartRegistrationAt()->format('d/m/Y H:i');
+                    $this->json([
+                        'success' => false,
+                        'error' => "Ce code est valide, mais la période d'inscription n'a pas encore commencé. Ouverture le $dateLocale."
+                    ]);
+                    return;
+                }
+                if ($now > $periode->getCloseRegistrationAt()) {
+                    $this->json([
+                        'success' => false,
+                        'error' => "Ce code est valide, mais la période d'inscription est terminée."
+                    ]);
+                    return;
+                }
+                // Code valide et période ouverte
+                $_SESSION['reservation'][session_id()]['access_code_valid'][$eventId] = true;
+                $this->json(['success' => true]);
+                return;
+            }
+        }
+        if (!$codeTrouve) {
+            $this->json(['success' => false, 'error' => 'Code inconnu pour cet événement.']);
+        }
+    }
 
     #[Route('/reservation/etape3', methods: ['POST'])]
     public function etape3(): void

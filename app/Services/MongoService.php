@@ -32,7 +32,7 @@ class MongoService
     {
         $collection = $this->getCollection($subType);
         $doc = $collection->findOne($filter, $options);
-        return $doc ? $doc->getArrayCopy() : null;
+        return $doc?->getArrayCopy();
     }
 
     public function update(array $filter, array $update, array $options = [], ?string $subType = null): int

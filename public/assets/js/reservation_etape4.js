@@ -38,7 +38,7 @@ document.getElementById('form_etape4').addEventListener('submit', function(e) {
                 if (data.success) {
 
                     if (data.numberedSeats === false) {
-                        //window.location.href = '/reservation/etape6Display';
+                        window.location.href = '/reservation/etape6Display';
                     } else {
                         window.location.href = '/reservation/etape5Display';
                     }

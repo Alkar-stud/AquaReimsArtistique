@@ -28,9 +28,43 @@ class ReservationConfirmationController extends AbstractController
 
     public function index(): void
     {
+        $session = $_SESSION['reservation'][session_id()] ?? [];
+        $eventsRepository = new \app\Repository\Event\EventsRepository();
+        $tarifsRepository = new \app\Repository\TarifsRepository();
+        $nageusesRepository = new \app\Repository\Nageuse\NageusesRepository();
+
+        $event = null;
+        $sessionObj = null;
+        $nageuse = null;
+        $tarifs = [];
+        $tarifsById = [];
+
+        if (!empty($session['event_id'])) {
+            $event = $eventsRepository->findById($session['event_id']);
+            if ($event && !empty($session['event_session_id'])) {
+                foreach ($event->getSessions() as $s) {
+                    if ($s->getId() == $session['event_session_id']) {
+                        $sessionObj = $s;
+                        break;
+                    }
+                }
+            }
+            $tarifs = $tarifsRepository->findByEventId($session['event_id']);
+            foreach ($tarifs as $tarif) {
+                $tarifsById[$tarif->getId()] = $tarif->getLibelle();
+            }
+        }
+        if (!empty($session['nageuse_id'])) {
+            $nageuse = $nageusesRepository->findById($session['nageuse_id']);
+        }
 
         $this->render('reservation/confirmation', [
-            'reservation' => $_SESSION['reservation'][session_id()]
+            'reservation' => $session,
+            'event' => $event,
+            'session' => $sessionObj,
+            'nageuse' => $nageuse,
+            'tarifs' => $tarifs,
+            'tarifsById' => $tarifsById
         ], 'Réservations');
     }
 

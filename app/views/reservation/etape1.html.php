@@ -16,6 +16,8 @@
                 <?php
                 $sessions = $event->getSessions();
                 $nbSessions = count($sessions);
+                $periodeOuverte = $periodesOuvertes[$event->getId()] ?? null;
+                $nextPublic = $nextPublicOuvertures[$event->getId()] ?? null;
                 ?>
                 <div class="col-md-6 mb-4">
                     <div class="card">
@@ -81,8 +83,44 @@
                                 <p><strong>Séance :</strong> Non défini</p>
                             <?php endif; ?>
 
-                            <button class="btn btn-success mt-3" onclick="validerFormulaireReservation(<?= $event->getId() ?>)">Réserver</button>
+                            <?php
+                            $periodeOuverte = $periodesOuvertes[$event->getId()] ?? null;
+                            $nextPublic = $nextPublicOuvertures[$event->getId()] ?? null;
+                            $codeNecessaire = $periodeOuverte && $periodeOuverte->getAccessCode() !== null;
+                            if ($periodeOuverte && !$codeNecessaire): ?>
+                                <!-- Période ouverte sans code : bouton réservation direct -->
+                                <button
+                                        class="btn btn-success mt-3"
+                                        id="btn_reserver_<?= $event->getId() ?>"
+                                        onclick="validerFormulaireReservation(<?= $event->getId() ?>)"
+                                >Réserver</button>
+                            <?php else: ?>
+                                <div class="alert alert-secondary mt-3">
+                                    <?php if ($periodeOuverte && $codeNecessaire): ?>
+                                        <div class="mb-2">
+                                            <label for="access_code_input_<?= $event->getId() ?>"><strong>Code d'accès requis :</strong></label>
+                                            <input type="text" id="access_code_input_<?= $event->getId() ?>" class="form-control d-inline w-auto ms-2" />
+                                            <button class="btn btn-primary ms-2" onclick="validerCodeAcces(<?= $event->getId() ?>)">Valider le code</button>
+                                            <span id="access_code_status_<?= $event->getId() ?>" class="ms-2 text-danger"></span>
+                                        </div>
+                                    <?php else: ?>
+                                        Les inscriptions ne sont pas ouvertes pour cet événement.
+                                    <?php endif; ?>
+                                    <?php if ($nextPublic): ?>
+                                        <br>
+                                        Ouverture à tous :
+                                        <strong><?= $nextPublic->getStartRegistrationAt()->format('d/m/Y H:i') ?></strong>
+                                    <?php endif; ?>
+                                </div>
+                                <button
+                                        class="btn btn-success mt-3"
+                                        id="btn_reserver_<?= $event->getId() ?>"
+                                        onclick="validerFormulaireReservation(<?= $event->getId() ?>)"
+                                    <?= $codeNecessaire || !$periodeOuverte ? 'disabled' : '' ?>
+                                >Réserver</button>
+                            <?php endif; ?>
                             <div id="formulaire_reservation_<?= $event->getId() ?>" style="display:none;" class="mt-3"></div>
+                            <div id="form_error_message_<?= $event->getId() ?>" class="text-danger mt-2"></div>
                         </div>
                     </div>
                 </div>
@@ -94,4 +132,5 @@
     window.nageusesParGroupe = <?= json_encode($nageusesParGroupe) ?>;
     window.csrf_token = <?= json_encode($csrf_token ?? '') ?>;
 </script>
-<script src="/assets/js/reservation.js" defer></script>
+<script src="/assets/js/reservation_common.js" defer></script>
+<script src="/assets/js/reservation_etape1.js" defer></script>

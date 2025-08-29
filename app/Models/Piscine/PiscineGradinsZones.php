@@ -16,6 +16,7 @@ class PiscineGradinsZones
     private int $nb_seats_horizontally;
     private bool $is_open = true;
     private bool $is_stairs_after = true;
+    private string $comments;
     private DateTimeInterface $created_at;
     private ?DateTimeInterface $updated_at = null;
 
@@ -59,6 +60,11 @@ class PiscineGradinsZones
     public function isStairsAfter(): bool
     {
         return $this->is_stairs_after;
+    }
+
+    public function getComments(): string
+    {
+        return $this->comments;
     }
 
     public function getCreatedAt(): DateTimeInterface
@@ -121,6 +127,12 @@ class PiscineGradinsZones
     public function setIsStairsAfter(bool $is_stairs_after): self
     {
         $this->is_stairs_after = $is_stairs_after;
+        return $this;
+    }
+
+    public function setComments(string $comments): self
+    {
+        $this->comments = $comments;
         return $this;
     }
 

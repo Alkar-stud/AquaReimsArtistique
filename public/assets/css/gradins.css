@@ -1,0 +1,143 @@
+/*  CSS pour l'affichage des gradins */
+
+table.zone-plan td,
+table.zone-plan th {
+    border: 1px solid var(--ara-color-black);
+    padding: 5px 0px;
+}
+
+table.zone-plan .seat.btn {
+    border: none;
+    box-shadow: none;
+}
+
+
+/* Place libre : survol et sélection sur la cellule sauf pour les places non réservables */
+table.zone-plan td:not(.tdplaceClosed):not(.tdplacePris):not(.tdplaceVIP):not(.tdplaceBenevole):not(.tdplaceTemp):hover {
+    background: var(--ara-color-pink);
+    color: var(--ara-color-black);
+    cursor: pointer;
+}
+
+/* Pour surcharger le style bootstrap de table table-bordered */
+table.zone-plan td .seat.btn {
+    background: none !important;
+    color: inherit;
+    border: none;
+    box-shadow: none;
+}
+
+/*  Couleur des escaliers */
+table.zone-plan th.thEscaliers {
+    background-color: #808080; /* gris */
+}
+
+/*  Couleur des cases fermées */
+table.zone-plan td.tdplaceClosed {
+    background-color: var(--ara-color-black);
+    color: var(--ara-color-white);
+}
+
+/*  Couleur des cases vide */
+table.zone-plan .tdplaceVide {
+    background: transparent; /* blanc */
+}
+
+/*  Couleur des cases déjà réservées */
+table.zone-plan .tdplacePris {
+    background: var(--ara-color-red); /* rouge */
+    color: var(--ara-color-white); /* blanc */
+}
+
+/*  Couleur des cases PMR non réservées */
+table.zone-plan td.tdplacePMR {
+    background: var(--ara-color-darkblue);
+    color: var(--ara-color-white);
+}
+
+/*  Couleur des cases VIP */
+table.zone-plan td.tdplaceVIP {
+    background-color: var(--ara-color-darkpink);
+}
+
+/*  Couleur des cases Bénévole */
+table.zone-plan .tdplaceBenevole {
+    background: var(--ara-color-purple);
+}
+
+/*  Couleur des cases en cours de réservation par d'autres */
+table.zone-plan .tdplaceTemp {
+    background-color: var(--ara-color-darkgray); /* gris clair */
+}
+
+/*  Couleur des cases en cours de réservation par le visiteur */
+table.zone-plan .tdplaceTempSession {
+    background-color: var(--ara-color-gray); /* gris */
+    color: var(--ara-color-black);
+}
+
+@media (max-width: 768px) {
+    .zone-plan {
+        max-width: 100vw;
+        overflow-x: auto;
+    }
+    table.zone-plan {
+        font-size: 0.65em;
+        min-width: 400px;
+    }
+    table.zone-plan td,
+    table.zone-plan th {
+        padding: 0px;
+    }
+}
+
+
+
+/* Legende */
+.legende .case {
+    align-items: center;
+    display: flex;
+    position: relative;
+}
+
+.legende .case::before {
+    border: 1px solid var(--ara-color-black);
+    content: "";
+    display: inline-block;
+    height: 25px;
+    width: 30px;
+    margin-right: .5rem;
+}
+
+.legende .placeClosed::before {
+    background-color: var(--ara-color-black); /* noir */
+    color: var(--ara-color-white); /* blanc */
+}
+
+.legende .placeVide::before {
+    background: transparent;
+}
+
+.legende .placePMR::before {
+    background: var(--ara-color-darkblue);
+}
+
+.legende .placePris::before {
+    background: var(--ara-color-red);
+}
+
+.legende .placeVIP::before {
+    background-color: var(--ara-color-darkpink);
+}
+
+.legende .placeBenevole::before {
+    background: var(--ara-color-purple);
+}
+
+.legende .placeTemp::before {
+    background: var(--ara-color-darkgray);
+}
+
+.legende .placeTempSession::before {
+    background: var(--ara-color-gray);
+}

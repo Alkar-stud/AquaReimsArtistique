@@ -179,6 +179,32 @@ sessionsContainer.addEventListener('click', function(e) {
 function addSession(data = null) {
     const template = sessionTemplate.content.cloneNode(true);
     const inputs = template.querySelectorAll('input');
+
+    let eventStartInput = template.querySelector('input[data-field="event_start_at"]');
+    let openingDoorsInput = template.querySelector('input[data-field="opening_doors_at"]');
+
+    eventStartInput.addEventListener('change', function() {
+        if (this.value && this.value.length === 16) { // format 'YYYY-MM-DD HH:MM'
+            let date = new Date(this.value);
+            if (!isNaN(date.getTime())) {
+                // Extraire la date (YYYY-MM-DD) de event_start_at
+                let eventDate = this.value.slice(0, 10);
+                // Extraire la date (YYYY-MM-DD) de opening_doors_at si déjà renseigné
+                let openingDate = openingDoorsInput.value ? openingDoorsInput.value.slice(0, 10) : '';
+
+                if (!openingDoorsInput.value || eventDate !== openingDate) {
+                    date.setMinutes(date.getMinutes() - 30);
+                    let pad = n => n.toString().padStart(2, '0');
+                    openingDoorsInput.value = date.getFullYear() + '-' +
+                        pad(date.getMonth() + 1) + '-' +
+                        pad(date.getDate()) + 'T' +
+                        pad(date.getHours()) + ':' +
+                        pad(date.getMinutes());
+                }
+            }
+        }
+    });
+
     inputs.forEach(input => {
         const name = input.getAttribute('name') || '';
         input.setAttribute('name', name.replace('__INDEX__', sessionCount));

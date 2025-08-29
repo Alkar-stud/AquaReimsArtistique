@@ -341,12 +341,12 @@
                                             </div>
                                             <div class="row">
                                                 <div class="col-md-6 mb-3">
-                                                    <label class="form-label">Ouverture des portes</label>
-                                                    <input type="datetime-local" class="form-control" name="sessions[__INDEX__][opening_doors_at]" data-field="opening_doors_at" required>
-                                                </div>
-                                                <div class="col-md-6 mb-3">
                                                     <label class="form-label">Début de la séance</label>
                                                     <input type="datetime-local" class="form-control" name="sessions[__INDEX__][event_start_at]" data-field="event_start_at" required>
+                                                </div>
+                                                <div class="col-md-6 mb-3">
+                                                    <label class="form-label">Ouverture des portes</label>
+                                                    <input type="datetime-local" class="form-control" name="sessions[__INDEX__][opening_doors_at]" data-field="opening_doors_at" required>
                                                 </div>
                                             </div>
                                         </div>

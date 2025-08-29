@@ -44,7 +44,12 @@ function validerFormulaireReservation(eventId) {
     }
 
     if (erreur) {
-        alert("Merci de corriger les points suivants :\n" + erreur);
+        const errorDiv = document.getElementById('form_error_message_' + eventId);
+        if (errorDiv) {
+            errorDiv.innerHTML = "Merci de corriger les points suivants :<br>" + erreur.replace(/\n/g, "<br>");
+        } else {
+            alert("Merci de corriger les points suivants :\n" + erreur);
+        }
         return;
     }
 
@@ -96,6 +101,38 @@ function step1Valid(eventId, sessionChoisie, nageuseId) {
                 window.location.href = '/reservation/etape2Display';
             } else {
                 alert(data.error || 'Erreur');
+            }
+        });
+}
+
+function validerCodeAcces(eventId) {
+    const code = document.getElementById('access_code_input_' + eventId).value.trim();
+    const status = document.getElementById('access_code_status_' + eventId);
+    if (!code) {
+        status.textContent = "Veuillez saisir un code.";
+        return;
+    }
+    fetch('/reservation/validate-access-code', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            event_id: eventId,
+            code: code,
+            csrf_token: window.csrf_token
+        })
+    })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                status.textContent = "Code valide !";
+                status.classList.remove('text-danger');
+                status.classList.add('text-success');
+                document.getElementById('btn_reserver_' + eventId).disabled = false;
+            } else {
+                status.textContent = data.error || "Code invalide.";
+                status.classList.remove('text-success');
+                status.classList.add('text-danger');
+                document.getElementById('btn_reserver_' + eventId).disabled = true;
             }
         });
 }

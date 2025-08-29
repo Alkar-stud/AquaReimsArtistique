@@ -18,7 +18,9 @@ $tarifsById = $tarifsById ?? [];
         <h5 class="card-title">Détail de votre réservation</h5>
         <ul class="list-group list-group-flush">
             <li class="list-group-item"><strong>Événement :</strong> <?= htmlspecialchars($event->getLibelle() ?? '') ?></li>
-            <li class="list-group-item"><strong>Séance :</strong> <?= htmlspecialchars($session->getEventStartAt()->format('d/m/Y H:i')) ?></li>
+            <?php if ($session): ?>
+                <li class="list-group-item"><strong>Séance :</strong> <?= htmlspecialchars($session->getEventStartAt()->format('d/m/Y H:i')) ?></li>
+            <?php endif; ?>
             <?php if ($nageuse): ?>
                 <li class="list-group-item"><strong>Nageuse :</strong> <?= htmlspecialchars($nageuse->getName() ?? '') ?></li>
             <?php endif; ?>
@@ -35,6 +37,19 @@ $tarifsById = $tarifsById ?? [];
                                 <?php if (!empty($detail['tarif_id'])): ?>
                                     (Tarif : <em><?= htmlspecialchars($tarifsById[$detail['tarif_id']] ?? $detail['tarif_id']) ?></em> )
                                 <?php endif; ?>
+                                Place numéro :
+                                <em>
+                                    <?php
+                                    if (!empty($detail['seat_id'])) {
+                                        // Récupérer le nom complet de la place
+                                        $placeRepo = new \app\Repository\Piscine\PiscineGradinsPlacesRepository();
+                                        $place = $placeRepo->findById($detail['seat_id']);
+                                        echo $place ? htmlspecialchars($place->getFullPlaceName()) : htmlspecialchars($detail['seat_id']);
+                                    } else {
+                                        echo 'Non choisie';
+                                    }
+                                    ?>
+                                </em>
                             </li>
                         <?php endforeach; ?>
                     </ul>
@@ -46,16 +61,3 @@ $tarifsById = $tarifsById ?? [];
         </div>
     </div>
 </div>
-<script>
-    const btn = document.getElementById('toggleDetailsBtn');
-    const btnBottom = document.getElementById('toggleDetailsBtnBottom');
-    const details = document.getElementById('reservationDetails');
-    function toggleDetails() {
-        const isVisible = details.style.display === 'block';
-        details.style.display = isVisible ? 'none' : 'block';
-        btn.textContent = isVisible ? 'Détail' : 'Masquer';
-        btnBottom.textContent = isVisible ? 'Détail' : 'Masquer';
-    }
-    btn.onclick = toggleDetails;
-    btnBottom.onclick = toggleDetails;
-</script>

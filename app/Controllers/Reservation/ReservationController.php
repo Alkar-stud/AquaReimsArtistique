@@ -3,14 +3,19 @@ namespace app\Controllers\Reservation;
 
 use app\Attributes\Route;
 use app\Controllers\AbstractController;
+use app\Repository\Reservation\ReservationsPlacesTempRepository;
 use app\Repository\Reservation\ReservationsRepository;
 use app\Repository\Nageuse\GroupesNageusesRepository;
 use app\Repository\Nageuse\NageusesRepository;
 use app\Repository\Event\EventInscriptionDatesRepository;
+use app\Repository\Piscine\PiscineGradinsZonesRepository;
+use app\Repository\Piscine\PiscineGradinsPlacesRepository;
 use app\Repository\TarifsRepository;
 use app\Services\ReservationSessionService;
 use app\Repository\Event\EventsRepository;
 use app\Utils\ReservationContextHelper;
+use DateInterval;
+use DateTime;
 
 
 #[Route('/reservation', name: 'app_reservation')]
@@ -21,6 +26,10 @@ class ReservationController extends AbstractController
     private ReservationsRepository $reservationsRepository;
     private TarifsRepository $tarifsRepository;
     private EventInscriptionDatesRepository $eventInscriptionDatesRepository;
+    private PiscineGradinsZonesRepository $zonesRepository;
+    private PiscineGradinsPlacesRepository $placesRepository;
+    private ReservationsPlacesTempRepository $tempRepo;
+
 
     public function __construct()
     {
@@ -30,6 +39,10 @@ class ReservationController extends AbstractController
         $this->reservationsRepository = new ReservationsRepository();
         $this->tarifsRepository = new TarifsRepository();
         $this->eventInscriptionDatesRepository = new EventInscriptionDatesRepository();
+        $this->zonesRepository = new PiscineGradinsZonesRepository();
+        $this->placesRepository = new PiscineGradinsPlacesRepository();
+        $this->tempRepo = new ReservationsPlacesTempRepository();
+
     }
 
     // Page d'accueil du processus de réservation
@@ -83,7 +96,7 @@ class ReservationController extends AbstractController
         $nextPublicOuvertures = [];
         foreach ($events as $event) {
             $periodes = $inscriptionsParEvent[$event->getId()] ?? [];
-            $now = new \DateTime();
+            $now = new DateTime();
             $periodeOuverte = null;
             $nextPublic = null;
             foreach ($periodes as $periode) {
@@ -100,7 +113,7 @@ class ReservationController extends AbstractController
             $nextPublicOuvertures[$event->getId()] = $nextPublic;
         }
 
-        $this->render('reservation/home', [
+        $this->render('reservation/etape1', [
             'events' => $events,
             'groupes' => $groupes,
             'nageusesParGroupe' => $nageusesParGroupe,
@@ -180,7 +193,7 @@ class ReservationController extends AbstractController
         }
 
         if ($event->getLimitationPerSwimmer() !== null) {
-            $nageusesRepository = new \app\Repository\Nageuse\NageusesRepository();
+            $nageusesRepository = new NageusesRepository();
             $nageuse = $nageusesRepository->findById($nageuseId);
             if (!$nageuse) {
                 $this->json(['success' => false, 'error' => 'Nageuse invalide.']);
@@ -239,6 +252,9 @@ class ReservationController extends AbstractController
     {
         $reservation = $_SESSION['reservation'][session_id()] ?? null;
         $event = null;
+        if ($reservation && !empty($reservation['event_id'])) {
+            $event = $this->eventsRepository->findById($reservation['event_id']);
+        }
         if (
             !$reservation
             || empty($reservation['event_id'])
@@ -250,7 +266,7 @@ class ReservationController extends AbstractController
         }
 
         if ($reservation && !empty($reservation['nageuse_id'])) {
-            $nageusesRepository = new \app\Repository\Nageuse\NageusesRepository();
+            $nageusesRepository = new NageusesRepository();
             $nageuse = $nageusesRepository->findById($reservation['nageuse_id']);
         }
 
@@ -323,9 +339,17 @@ class ReservationController extends AbstractController
         }
 
         $tarifs = $this->tarifsRepository->findByEventId($_SESSION['reservation'][session_id()]['event_id']);
-        $limitation = $this->reservationsRepository->countReservationsForNageuse($_SESSION['reservation'][session_id()]['event_id'], $_SESSION['reservation'][session_id()]['nageuse_id']);
-        $placesDejaReservees = $reservation['places_deja_reservees'] ?? 0;
-        $placesRestantes = $limitation !== null ? max(0, $limitation - $placesDejaReservees) : null;
+
+        //S'il y a limitation des places par nageuse
+        if ($event->getLimitationPerSwimmer() === true) {
+            $limitation = $this->reservationsRepository->countReservationsForNageuse($_SESSION['reservation'][session_id()]['event_id'], $_SESSION['reservation'][session_id()]['nageuse_id']);
+            $placesDejaReservees = $reservation['places_deja_reservees'] ?? 0;
+            $placesRestantes = $limitation !== null ? max(0, $limitation - $placesDejaReservees) : null;
+        } else {
+            $_SESSION['reservation'][session_id()]['limitPerSwimmer'] = null;
+            $placesDejaReservees = null;
+            $placesRestantes = null;
+        }
 
         // Pour chercher un tarif spécial déjà enregistré
         $reservationDetails = $reservation['reservation_detail'] ?? [];
@@ -459,7 +483,7 @@ class ReservationController extends AbstractController
         }
 
         $periodes = $this->eventInscriptionDatesRepository->findByEventId($eventId);
-        $now = new \DateTime();
+        $now = new DateTime();
         $codeTrouve = false;
         foreach ($periodes as $periode) {
             if ($periode->getAccessCode() && strcmp($periode->getAccessCode(), $code) === 0) {
@@ -580,7 +604,15 @@ class ReservationController extends AbstractController
     public function etape4Display(): void
     {
         $reservation = $_SESSION['reservation'][session_id()] ?? null;
-        if (!$reservation || empty($reservation['event_id']) || empty($reservation['nageuse_id'])) {
+        $event = null;
+        if ($reservation && !empty($reservation['event_id'])) {
+            $event = $this->eventsRepository->findById($reservation['event_id']);
+        }
+        if (
+            !$reservation
+            || empty($reservation['event_id'])
+            || ($event && $event->getLimitationPerSwimmer() !== null && empty($reservation['nageuse_id']))
+        ) {
             // Redirection vers la page de début de réservation avec un message
             header('Location: /reservation?session_expiree=1');
             exit;
@@ -601,7 +633,7 @@ class ReservationController extends AbstractController
     #[Route('/reservation/etape4', methods: ['POST'])]
     public function etape4(): void
     {
-        //On fait différemment car il y a peut-être un fichier
+        //On fait différemment, car il y a peut-être un fichier
         $csrfToken = $_POST['csrf_token'] ?? '';
         if (!$this->validateCsrfAndLog($csrfToken, 'reservation_etape4')) {
             $this->json(['success' => false, 'error' => 'Token CSRF invalide']);
@@ -616,7 +648,7 @@ class ReservationController extends AbstractController
             'image/png'
         ];
 
-        //Récupération des données du formaulaire
+        //Récupération des données du formulaire
         $noms = $_POST['noms'] ?? [];
         $prenoms = $_POST['prenoms'] ?? [];
         $justificatifs = $_FILES['justificatifs'] ?? null;
@@ -688,7 +720,7 @@ class ReservationController extends AbstractController
                     $nom = strtolower(preg_replace('/[^a-z0-9]/i', '', $noms[$i]));
                     $prenom = strtolower(preg_replace('/[^a-z0-9]/i', '', $prenoms[$i]));
                     $extension = strtolower(pathinfo($originalName, PATHINFO_EXTENSION));
-                    $uniqueName = "{$sessionId}_{$tarifId}_{$nom}_{$prenom}.{$extension}";
+                    $uniqueName = "{$sessionId}_{$tarifId}_{$nom}_$prenom.$extension";
                     $uploadPath = __DIR__ . '/../../..' . UPLOAD_PROOF_PATH . 'temp/' . $uniqueName;
                     move_uploaded_file($justificatifs['tmp_name'][$justifIndex], $uploadPath);
                     $detail['justificatif_name'] = $uniqueName;
@@ -706,24 +738,94 @@ class ReservationController extends AbstractController
             }
         }
 
-        $this->json(['success' => true]);
+        $event = $this->eventsRepository->findById($reservation['event_id']);
+        $this->json(['success' => true, 'numberedSeats' => $event->getPiscine()->getNumberedSeats()]);
     }
 
     #[Route('/reservation/etape5Display', methods: ['GET'])]
     public function etape5Display(): void
     {
-        $reservation = $_SESSION['reservation'][session_id()] ?? null;
-        if (!$reservation || empty($reservation['event_id']) || empty($reservation['nageuse_id'])) {
+        $sessionId = session_id();
+        //Récupère les éléments de la réservation en cours dans la session $_SESSION
+        $reservation = $_SESSION['reservation'][$sessionId] ?? null;
+        $event = null;
+        if ($reservation && !empty($reservation['event_id'])) {
+            $event = $this->eventsRepository->findById($reservation['event_id']);
+        }
+        if (
+            !$reservation
+            || empty($reservation['event_id'])
+            || ($event && $event->getLimitationPerSwimmer() !== null && empty($reservation['nageuse_id']))
+        ) {
             // Redirection vers la page de début de réservation avec un message
             header('Location: /reservation?session_expiree=1');
             exit;
         }
 
+        //Suppression des réservations en cours dont le timeout est expiré
+        $this->tempRepo->deleteExpired((new \DateTime())->format('Y-m-d H:i:s'));
+        // Récupérer les réservations temporaires de toutes les sessions restantes
+        $tempAllSeats = $this->tempRepo->findAll();
+        // Remet à null seat_id et seat_name pour chaque participant directement dans $_SESSION
+        foreach ($_SESSION['reservation'][$sessionId]['reservation_detail'] as &$detail) {
+            $detail['seat_id'] = null;
+            $detail['seat_name'] = null;
+        }
+        unset($detail);
 
-        $context = ReservationContextHelper::getContext($this->eventsRepository, $this->tarifsRepository, $_SESSION['reservation'][session_id()] ?? null);
+        // Filtrage des places concernées par la session en cours
+        $sessionSeats = array_filter($tempAllSeats, fn($t) => $t->getSession() === $sessionId);
+
+        // Construire un tableau place_id → session pour le JS de la vue
+        $placesSessions = [];
+        foreach ($tempAllSeats as $t) {
+            $placesSessions[$t->getPlaceId()] = $t->getSession();
+            //Si getSession() correspond à la session courante, on met à jour $_SESSION seat_id et seat_name
+            if ($t->getSession() === $sessionId) {
+                $index = $t->getIndex();
+                $placeId = $t->getPlaceId();
+                $place = $this->placesRepository->findById($placeId);
+                $_SESSION['reservation'][$sessionId]['reservation_detail'][$index]['seat_id'] = $placeId;
+                $_SESSION['reservation'][$sessionId]['reservation_detail'][$index]['seat_name'] = $place ? $place->getFullPlaceName() : $placeId;
+            }
+        }
+
+        //Envoyer l'événement
+        $event = $this->eventsRepository->findById($reservation['event_id']);
+        $numberedSeats = $event->getPiscine()->getNumberedSeats();
+
+        //Envoyer les tarifs
+        $tarifs = $this->tarifsRepository->findByEventId($reservation['event_id']);
+        $nbPlacesAssises = 0;
+        foreach ($reservation['reservation_detail'] ?? [] as $detail) {
+            foreach ($tarifs as $tarif) {
+                if ($tarif->getId() == $detail['tarif_id'] && $tarif->getNbPlace() !== null) {
+                    $nbPlacesAssises++;
+                }
+            }
+        }
+
+        //Pour envoyer le nom des places au lieu de seulement leur ID
+        $piscineId = $event->getPiscine()->getId();
+        $zones = $this->zonesRepository->findOpenZonesByPiscine($piscineId);
+
+        $zonesWithPlaces = [];
+        foreach ($zones as $zone) {
+            $zonesWithPlaces[] = [
+                'zone' => $zone,
+                'places' => $this->placesRepository->findByZone($zone->getId())
+            ];
+        }
+
+        //Pour afficher le contexte récapitulatif
+        $context = ReservationContextHelper::getContext($this->eventsRepository, $this->tarifsRepository, $reservation);
         $this->render('reservation/etape5', array_merge($context, [
             'csrf_token' => $this->getCsrfToken(),
-            'reservation' => $_SESSION['reservation'][session_id()] ?? []
+            'reservation' => $reservation,
+            'numberedSeats' => $numberedSeats,
+            'nbPlacesAssises' => $nbPlacesAssises,
+            'zonesWithPlaces' => $zonesWithPlaces,
+            'placesSessions' => $placesSessions
         ]), 'Réservations');
     }
 
@@ -731,34 +833,257 @@ class ReservationController extends AbstractController
     public function etape5(): void
     {
         $input = json_decode(file_get_contents('php://input'), true);
-        $csrfToken = $input['csrf_token'] ?? '';
-        if (!$this->validateCsrfAndLog($csrfToken, 'reservation_etape4')) {
-            $this->json(['success' => false, 'error' => 'Token CSRF invalide']);
+        if (!$this->checkCsrfOrJsonError($input['csrf_token'] ?? '', 'reservation_etape5')) return;
+
+        $sessionId = session_id();
+        $reservation = $_SESSION['reservation'][$sessionId] ?? null;
+        if (!$reservation || empty($reservation['event_id'])) {
+            $this->json(['success' => false, 'error' => 'Session expirée.']);
             return;
         }
 
+        $event = $this->eventsRepository->findById($reservation['event_id']);
+        $tarifs = $this->tarifsRepository->findByEventId($reservation['event_id']);
+        $seats = $input['seats'] ?? [];
+
+        $nbPlacesAssises = $this->countPlacesAssises($reservation['reservation_detail'] ?? [], $tarifs);
+
+        if (count($seats) !== $nbPlacesAssises) {
+            $this->json(['success' => false, 'error' => 'Nombre de places sélectionnées incorrect.']);
+            return;
+        }
+
+        // Vérifier que chaque place est bien réservée temporairement pour cette session
+        $tempSeats = $this->tempRepo->findAllSeatsBySession($sessionId) ?? [];
+        $tempSeatIds = array_map(fn($t) => $t->getPlaceId(), $tempSeats);
+
+        foreach ($seats as $seatId) {
+            if (!in_array($seatId, $tempSeatIds)) {
+                $this->json(['success' => false, 'error' => "La place $seatId n'est pas réservée pour cette session."]);
+                return;
+            }
+        }
+
+        // Mise à jour des détails de réservation
+        foreach ($_SESSION['reservation'][$sessionId]['reservation_detail'] as $i => &$detail) {
+            $seatId = $seats[$i] ?? null;
+            $detail['seat_id'] = $seatId;
+            if ($seatId) {
+                $place = $this->placesRepository->findById($seatId);
+                $detail['seat_name'] = $place ? $place->getFullPlaceName() : $seatId;
+            } else {
+                $detail['seat_name'] = null;
+            }
+        }
+        unset($detail);
+
+        $_SESSION['reservation'][$sessionId]['selected_seats'] = $seats;
+
+        $this->json(['success' => true]);
     }
 
+    #[Route('/reservation/etape5AddSeat', methods: ['POST'])]
+    public function etape5AddSeat(): void
+    {
+        $input = json_decode(file_get_contents('php://input'), true);
+        if (!$this->checkCsrfOrJsonError($input['csrf_token'] ?? '', 'reservation_etape5')) return;
+
+        $sessionId = session_id();
+        $reservation = $_SESSION['reservation'][$sessionId] ?? null;
+        if (!$reservation || empty($reservation['event_id'])) {
+            $this->json(['success' => false, 'error' => 'Session expirée.']);
+            return;
+        }
+
+        $seatId = (int)($input['seat_id'] ?? 0);
+        $index = (int)($input['index'] ?? -1);
+        if ($seatId <= 0 || $index < 0) {
+            $this->json(['success' => false, 'error' => 'Paramètres manquants.']);
+            return;
+        }
+
+        $tarifs = $this->tarifsRepository->findByEventId($reservation['event_id']);
+        $nbPlacesAssises = $this->countPlacesAssises($reservation['reservation_detail'] ?? [], $tarifs);
+        if ($index >= $nbPlacesAssises) {
+            $this->json(['success' => false, 'error' => 'Index de participant invalide.']);
+            return;
+        }
+
+        // Vérifier que la place existe et est ouverte
+        $place = $this->placesRepository->findById($seatId);
+        if (!$place || !$place->isOpen()) {
+            $this->json(['success' => false, 'error' => "Place invalide ou fermée."]);
+            return;
+        }
+
+        // Vérifier qu'elle n'est pas déjà prise (temporaire ou définitive)
+        $tempSeats = $this->tempRepo->findAll();
+        foreach ($tempSeats as $t) {
+            if ($t->getPlaceId() == $seatId && $t->getSession() !== $sessionId) {
+                $this->json(['success' => false, 'error' => "Place déjà en cours de réservation."]);
+                return;
+            }
+        }
+
+        // Insérer la réservation temporaire
+        $now = new \DateTime();
+        $timeout = (clone $now)->add(new \DateInterval(TIMEOUT_PLACE_RESERV));
+        if (!$this->tempRepo->insertTempReservation($sessionId, $seatId, $index, $now, $timeout)) {
+            return;
+        }
+        //Mise à jour de $_SESSION avec la place du participant à l'index donné
+        $_SESSION['reservation'][$sessionId]['reservation_detail'][$index]['seat_id'] = $seatId;
+        $_SESSION['reservation'][$sessionId]['reservation_detail'][$index]['seat_name'] = $place ? $place->getFullPlaceName() : $seatId;
+
+
+        $newToken = $this->getCsrfToken();
+        $this->json([
+            'success' => true,
+            'csrf_token' => $newToken,
+            'session' => $_SESSION['reservation'][$sessionId]
+        ]);
+    }
+
+    #[Route('/reservation/etape5RemoveSeat', methods: ['POST'])]
+    public function etape5RemoveSeat(): void
+    {
+        $input = json_decode(file_get_contents('php://input'), true);
+        if (!$this->checkCsrfOrJsonError($input['csrf_token'] ?? '', 'reservation_etape5')) return;
+
+        $sessionId = session_id();
+        $reservation = $_SESSION['reservation'][$sessionId] ?? null;
+        if (!$reservation || empty($reservation['event_id'])) {
+            $this->json(['success' => false, 'error' => 'Session expirée.']);
+            return;
+        }
+
+        $seatId = (int)($input['seat_id'] ?? 0);
+        if ($seatId <= 0) {
+            $this->json(['success' => false, 'error' => 'Paramètre manquant.']);
+            return;
+        }
+
+        // Supprimer la réservation temporaire pour cette session et cette place
+        $this->tempRepo->deleteBySessionAndPlace($sessionId, $seatId);
+
+        //Mise à jour de $_SESSION avec la place du participant à retirer à l'index donné
+        if (isset($_SESSION['reservation'][$sessionId]['reservation_detail'])) {
+            foreach ($_SESSION['reservation'][$sessionId]['reservation_detail'] as &$detail) {
+                if (($detail['seat_id'] ?? null) == $seatId) {
+                    $detail['seat_id'] = null;
+                    $detail['seat_name'] = null;
+                }
+            }
+            unset($detail);
+        }
+
+        $newToken = $this->getCsrfToken();
+        $this->json([
+            'success' => true,
+            'csrf_token' => $newToken,
+            'session' => $_SESSION['reservation'][$sessionId]
+        ]);
+    }
+
+    /**
+     * Compte le nombre de places assises attendues.
+     */
+    private function countPlacesAssises(array $reservationDetails, array $tarifs): int
+    {
+        $nb = 0;
+        foreach ($reservationDetails as $detail) {
+            foreach ($tarifs as $tarif) {
+                if ($tarif->getId() == $detail['tarif_id'] && $tarif->getNbPlace() !== null) {
+                    $nb++;
+                }
+            }
+        }
+        return $nb;
+    }
+
+    /**
+     * pour rafraichier le contexte avec fetch
+     */
+    #[Route('/reservation/display-details-fragment', methods: ['GET'])]
+    public function displayDetailsFragment(): void
+    {
+        $context = ReservationContextHelper::getContext($this->eventsRepository, $this->tarifsRepository, $_SESSION['reservation'][session_id()] ?? null);
+        $this->render('reservation/_display_details', $context, '', true);
+    }
 
     #[Route('/reservation/etape6Display', methods: ['GET'])]
     public function etape6Display(): void
     {
         $reservation = $_SESSION['reservation'][session_id()] ?? null;
-        if (!$reservation || empty($reservation['event_id']) || empty($reservation['nageuse_id'])) {
+        //Ne sert plus à cette étape
+        unset($_SESSION['reservation'][session_id()]['selected_seats']);
+
+
+        $event = null;
+        if ($reservation && !empty($reservation['event_id'])) {
+            $event = $this->eventsRepository->findById($reservation['event_id']);
+        }
+        if (
+            !$reservation
+            || empty($reservation['event_id'])
+            || ($event && $event->getLimitationPerSwimmer() !== null && empty($reservation['nageuse_id']))
+        ) {
             // Redirection vers la page de début de réservation avec un message
             header('Location: /reservation?session_expiree=1');
             exit;
         }
 
-
+        //Filtre les item sans places assises
         $context = ReservationContextHelper::getContext($this->eventsRepository, $this->tarifsRepository, $_SESSION['reservation'][session_id()] ?? null);
+        $tarifsSansPlaces = array_filter($context['tarifs'], fn($t) => $t->getNbPlace() === null);
+
+        //Récupération des tarifs sans places assises éventuellement déjà saisis pour pré remplissage
+        $reservationComplement = [];
+        if (!empty($reservation['reservation_complement'])) {
+            foreach ($reservation['reservation_complement'] as $item) {
+                $reservationComplement[$item['tarif_id']] = $item['qty'];
+            }
+        }
         $this->render('reservation/etape6', array_merge($context, [
-             'csrf_token' => $this->getCsrfToken(),
-            'reservation' => $_SESSION['reservation'][session_id()] ?? []
+            'tarifsSansPlaces' => $tarifsSansPlaces,
+            'csrf_token' => $this->getCsrfToken(),
+            'reservation' => $reservation,
+            'reservationComplement' => $reservationComplement
         ]), 'Réservations');
     }
 
+    #[Route('/reservation/etape6', methods: ['POST'])]
+    public function etape6(): void
+    {
+        $input = json_decode(file_get_contents('php://input'), true);
+        if (!$this->checkCsrfOrJsonError($input['csrf_token'] ?? '', 'reservation_etape6')) return;
 
+        $sessionId = session_id();
+        $reservation = $_SESSION['reservation'][$sessionId] ?? null;
+        if (!$reservation || empty($reservation['event_id'])) {
+            $this->json(['success' => false, 'error' => 'Session expirée.']);
+            return;
+        }
+
+        $tarifs = $this->tarifsRepository->findByEventId($reservation['event_id']);
+        $tarifsSansPlaces = array_filter($tarifs, fn($t) => $t->getNbPlace() === null);
+        $tarifIdsSansPlaces = array_map(fn($t) => $t->getId(), $tarifsSansPlaces);
+
+        $tarifsInput = $input['tarifs'] ?? [];
+        $reservationComplement = [];
+        foreach ($tarifsInput as $t) {
+            $id = (int)($t['id'] ?? 0);
+            $qty = (int)($t['qty'] ?? 0);
+            if ($qty > 0 && in_array($id, $tarifIdsSansPlaces, true)) {
+                $reservationComplement[] = ['tarif_id' => $id, 'qty' => $qty];
+            }
+        }
+
+        // Enregistrement dans reservation_complement (même si vide)
+        $_SESSION['reservation'][$sessionId]['reservation_complement'] = $reservationComplement;
+
+        $this->json(['success' => true]);
+    }
 
 
 

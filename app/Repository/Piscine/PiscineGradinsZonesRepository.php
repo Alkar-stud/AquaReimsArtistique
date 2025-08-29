@@ -103,6 +103,7 @@ class PiscineGradinsZonesRepository extends AbstractRepository
             'nb_seats_horizontally' => $zone->getNbSeatsHorizontally(),
             'is_open' => $zone->isOpen() ? 1 : 0,
             'is_stairs_after' => $zone->isStairsAfter() ? 1 : 0,
+            'comments' => $zone->getComments(),
             'created_at' => $zone->getCreatedAt()->format('Y-m-d H:i:s')
         ]);
 
@@ -133,7 +134,8 @@ class PiscineGradinsZonesRepository extends AbstractRepository
             'nb_seats_vertically' => $zone->getNbSeatsVertically(),
             'nb_seats_horizontally' => $zone->getNbSeatsHorizontally(),
             'is_open' => $zone->isOpen() ? 1 : 0,
-            'is_stairs_after' => $zone->isStairsAfter() ? 1 : 0
+            'is_stairs_after' => $zone->isStairsAfter() ? 1 : 0,
+            'comments' => $zone->getComments()
         ]);
     }
 
@@ -164,6 +166,7 @@ class PiscineGradinsZonesRepository extends AbstractRepository
             ->setNbSeatsVertically($data['nb_seats_vertically'])
             ->setNbSeatsHorizontally($data['nb_seats_horizontally'])
             ->setIsOpen((bool)$data['is_open'])
+            ->setComments($data['comments'])
             ->setIsStairsAfter((bool)$data['is_stairs_after'])
             ->setCreatedAt($data['created_at']);
 

@@ -54,13 +54,13 @@ $limiteMessage = $limiteMessage ?? '';
             <div class="mb-3">
                 <label for="specialCode" class="form-label">Vous avez un code ?</label>
                 <div class="input-group">
-                    <input type="text" class="form-control" id="specialCode" placeholder="Saisissez votre code">
-                    <button type="button" class="btn btn-outline-primary" id="validateCodeBtn">Valider</button>
+                    <input type="text" class="form-control" id="specialCode" placeholder="Saisissez votre code" style="max-width: 250px;">
+                    <button type="button" class="btn btn-outline-primary" id="validateCodeBtn">Valider le code</button>
                 </div>
                 <div id="specialCodeFeedback" class="form-text text-danger"></div>
             </div>
             <div id="specialTarifContainer"></div>
-
+            <br>
             <a href="/reservation/etape2Display" class="btn btn-secondary ms-2">Modifier mon choix précédent</a>
             <button type="submit" class="btn btn-primary">Valider et continuer</button>
         </form>
@@ -77,6 +77,7 @@ $limiteMessage = $limiteMessage ?? '';
         //Pour transmettre la liste des tarifs spéciaux déjà saisis
         window.specialTarifSession = <?= json_encode($specialTarifSession) ?>;
     </script>
+    <script src="/assets/js/reservation_common.js" defer></script>
     <script src="/assets/js/reservation_etape3.js" defer></script>
 
     Ici pour la suite, on a déjà enregistré ça :

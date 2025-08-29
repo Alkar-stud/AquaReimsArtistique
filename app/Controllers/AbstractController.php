@@ -26,7 +26,7 @@ abstract class AbstractController
 
     }
 
-    protected function render(string $view, array $data = [], string $title = ''): void
+    protected function render(string $view, array $data = [], string $title = '', bool $partial = false): void
     {
         extract($data);
         ob_start();
@@ -40,7 +40,15 @@ abstract class AbstractController
 
         include $page;
         $content = ob_get_clean();
-        require __DIR__ . '/../views/base.html.php';
+
+        if ($partial) {
+            // Affiche juste le fragment demandé
+            echo $content;
+        } else {
+            // Affiche tout avec le layout global
+            require __DIR__ . '/../views/base.html.php';
+        }
+
     }
 
     /**
@@ -194,6 +202,15 @@ abstract class AbstractController
     protected function validateCsrf(string $token): bool
     {
         return \app\Utils\CsrfHelper::validateToken($token);
+    }
+
+    protected function checkCsrfOrJsonError($token, $action)
+    {
+        if (!$this->validateCsrfAndLog($token, $action)) {
+            $this->json(['success' => false, 'error' => 'Token CSRF invalide']);
+            return false;
+        }
+        return true;
     }
 
     protected function validateCsrfAndLog(string $submittedToken, string $action = 'unknown', bool $unset = true): bool

@@ -132,4 +132,5 @@
     window.nageusesParGroupe = <?= json_encode($nageusesParGroupe) ?>;
     window.csrf_token = <?= json_encode($csrf_token ?? '') ?>;
 </script>
-<script src="/assets/js/reservation.js" defer></script>
+<script src="/assets/js/reservation_common.js" defer></script>
+<script src="/assets/js/reservation_etape1.js" defer></script>

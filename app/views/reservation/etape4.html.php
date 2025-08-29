@@ -65,9 +65,9 @@ foreach (($reservation['reservation_detail'] ?? []) as $detail) {
         </form>
     </div>
     <script>
-        window.numberedSeats = <?= isset($numberedSeats) && $numberedSeats === 'true' ? 'true' : 'false' ?>;
         window.csrf_token = <?= json_encode($csrf_token ?? '') ?>;
     </script>
+    <script src="/assets/js/reservation_common.js" defer></script>
     <script src="/assets/js/reservation_etape4.js" defer></script>
 
 Ici pour la suite, on a déjà enregistré ça :

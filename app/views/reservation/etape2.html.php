@@ -33,6 +33,7 @@
         window.csrf_token = <?= json_encode($csrf_token ?? '') ?>;
         window.reservation = <?= json_encode($reservation ?? []) ?>;
     </script>
+    <script src="/assets/js/reservation_common.js" defer></script>
     <script src="/assets/js/reservation_etape2.js" defer></script>
 
 Ici pour la suite, on a déjà enregistré ça :

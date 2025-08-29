@@ -40,7 +40,12 @@ class PiscineGradinsPlacesRepository extends AbstractRepository
             return null;
         }
 
-        return $this->hydrate($result[0]);
+        // Hydrate la zone associée
+        $zoneId = $result[0]['zone'];
+        $zonesRepo = new \app\Repository\Piscine\PiscineGradinsZonesRepository();
+        $zone = $zonesRepo->findById($zoneId);
+
+        return $this->hydrate($result[0], $zone);
     }
 
     /**
@@ -53,7 +58,12 @@ class PiscineGradinsPlacesRepository extends AbstractRepository
     {
         $sql = "SELECT * FROM $this->tableName WHERE zone = :zoneId ORDER BY rankInZone ASC, place_number ASC";
         $results = $this->query($sql, ['zoneId' => $zoneId]);
-        return array_map([$this, 'hydrate'], $results);
+        // Récupère la zone une seule fois
+        $zonesRepo = new \app\Repository\Piscine\PiscineGradinsZonesRepository();
+        $zone = $zonesRepo->findById($zoneId);
+        return array_map(function($data) use ($zone) {
+            return $this->hydrate($data, $zone);
+        }, $results);
     }
 
     /**
@@ -227,7 +237,7 @@ class PiscineGradinsPlacesRepository extends AbstractRepository
      * @return PiscineGradinsPlaces
      * @throws DateMalformedStringException
      */
-    protected function hydrate(array $data): PiscineGradinsPlaces
+    protected function hydrate(array $data, $zoneObject = null): PiscineGradinsPlaces
     {
         $place = new PiscineGradinsPlaces();
         $place->setId($data['id'])
@@ -242,6 +252,11 @@ class PiscineGradinsPlacesRepository extends AbstractRepository
 
         if (isset($data['updated_at'])) {
             $place->setUpdatedAt($data['updated_at']);
+        }
+
+        // Hydratation automatique de la zone associée
+        if ($zoneObject) {
+            $place->setZoneObject($zoneObject);
         }
 
         return $place;

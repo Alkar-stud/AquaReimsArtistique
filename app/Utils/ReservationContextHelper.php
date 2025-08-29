@@ -5,6 +5,9 @@ use app\Repository\Event\EventsRepository;
 use app\Repository\Nageuse\NageusesRepository;
 use app\Repository\TarifsRepository;
 
+/*
+ * Pour afficher le petit encart récapitulatif des réservations tout au long du parcours
+ */
 class ReservationContextHelper
 {
     public static function getContext(

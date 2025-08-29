@@ -47,6 +47,15 @@ class PiscineGradinsPlaces
         return $this->place_number;
     }
 
+    /*
+     * Pour récupérer le nom/numéro complet de la place
+     */
+    public function getFullPlaceName(): string
+    {
+        $zoneName = $this->getZoneObject() ? $this->getZoneObject()->getZoneName() : $this->getZone();
+        return sprintf('%s%s%02d', $zoneName, $this->getRankInZone(), $this->getPlaceNumber());
+    }
+
     public function isPmr(): bool
     {
         return $this->is_pmr;

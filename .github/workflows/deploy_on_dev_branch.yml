@@ -20,7 +20,7 @@ jobs:
 
     - name: Copy files with rsync
       run: |
-        rsync -avz --exclude='storage/logs/' --exclude='storage/app/' -e "ssh -o StrictHostKeyChecking=no" . ${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_HOST }}:${{ secrets.SSH_PATH }}
+        rsync -avz --exclude='storage/logs/' --exclude='storage/app/' --exclude='.git' --exclude='.gitignore' -e "ssh -o StrictHostKeyChecking=no" . ${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_HOST }}:${{ secrets.SSH_PATH }}
 
     - name: Run Composer commands
       run: |

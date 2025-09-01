@@ -1125,7 +1125,7 @@ class ReservationController extends AbstractController
     }
 
     /**
-     * pour rafraichier le contexte avec fetch
+     * pour rafraichir le contexte avec fetch
      */
     #[Route('/reservation/display-details-fragment', name: 'display_details_fragment', methods: ['GET'])]
     public function displayDetailsFragment(): void

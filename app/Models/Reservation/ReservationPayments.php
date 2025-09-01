@@ -11,56 +11,27 @@ class ReservationPayments
     private int $id;
     private int $reservation; // ID de la réservation
     private ?Reservations $reservationObject = null; // Objet Reservations lié
-    private float $amount_paid;
+    private int $amount_paid;
     private int $checkout_id;
+    private int $order_id;
+    private int $payment_id;
     private ?string $status_payment = null;
     private DateTimeInterface $created_at;
     private ?DateTimeInterface $updated_at = null;
 
     // --- GETTERS ---
-
-    public function getId(): int
-    {
-        return $this->id;
-    }
-
-    public function getReservation(): int
-    {
-        return $this->reservation;
-    }
-
-    public function getReservationObject(): ?Reservations
-    {
-        return $this->reservationObject;
-    }
-
-    public function getAmountPaid(): float
-    {
-        return $this->amount_paid;
-    }
-
-    public function getCheckoutId(): int
-    {
-        return $this->checkout_id;
-    }
-
-    public function getStatusPayment(): ?string
-    {
-        return $this->status_payment;
-    }
-
-    public function getCreatedAt(): DateTimeInterface
-    {
-        return $this->created_at;
-    }
-
-    public function getUpdatedAt(): ?DateTimeInterface
-    {
-        return $this->updated_at;
-    }
+    public function getId(): int { return $this->id; }
+    public function getReservation(): int { return $this->reservation; }
+    public function getReservationObject(): ?Reservations { return $this->reservationObject; }
+    public function getAmountPaid(): int { return $this->amount_paid; }
+    public function getCheckoutId(): int { return $this->checkout_id; }
+    public function getOrderId(): int { return $this->order_id; }
+    public function getPaymentId(): int { return $this->payment_id; }
+    public function getStatusPayment(): ?string { return $this->status_payment; }
+    public function getCreatedAt(): DateTimeInterface { return $this->created_at; }
+    public function getUpdatedAt(): ?DateTimeInterface { return $this->updated_at; }
 
     // --- SETTERS ---
-
     public function setId(int $id): self
     {
         $this->id = $id;
@@ -82,7 +53,7 @@ class ReservationPayments
         return $this;
     }
 
-    public function setAmountPaid(float $amount_paid): self
+    public function setAmountPaid(int $amount_paid): self
     {
         $this->amount_paid = $amount_paid;
         return $this;
@@ -91,6 +62,18 @@ class ReservationPayments
     public function setCheckoutId(int $checkout_id): self
     {
         $this->checkout_id = $checkout_id;
+        return $this;
+    }
+
+    public function setOrderId(int $order_id): self
+    {
+        $this->order_id = $order_id;
+        return $this;
+    }
+
+    public function setPaymentId(int $payment_id): self
+    {
+        $this->payment_id = $payment_id;
         return $this;
     }
 

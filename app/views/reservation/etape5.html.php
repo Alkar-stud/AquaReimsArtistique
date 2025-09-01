@@ -53,6 +53,11 @@ $participants = $reservation['reservation_detail'] ?? [];
             ksort($placesByRank); // Rang 0 en haut
             ?>
             <div class="zone-detail" id="zone-detail-<?= $zone->getId() ?>" style="display:none;">
+                <form id="form_etape5">
+                    <input type="hidden" name="selectedSeats" id="selectedSeats">
+                    <a href="/reservation/etape4Display" class="btn btn-secondary ms-2">Modifier mon choix précédent</a>
+                    <button type="submit" class="btn btn-primary" disabled id="submitBtn">Valider et continuer</button>
+                </form>
                 <div class="d-flex justify-content-between align-items-center mb-2">
                     <strong>Zone <?= htmlspecialchars($zone->getZoneName()) ?></strong>
                     <button type="button" class="btn btn-secondary btn-sm retour-zones">Retour aux zones</button>
@@ -98,8 +103,8 @@ $participants = $reservation['reservation_detail'] ?? [];
                                     }
                                     //Vérification si les places sont en cours de réservation
                                     if (array_key_exists($place->getId(), $placesSessions)) {
-                                        //Si la session est la session courante, case cliquable on change la couleur
-                                        //Sinon c'est la session de quelqu'un d'autre, case non cliquable on met une couleur différente avec en $reason en cours de réservation
+                                        //Si la session est la session courante, case cliquable, on change la couleur
+                                        //Sinon c'est la session de quelqu'un d'autre, case non cliquable, on met une couleur différente avec en $reason en cours de réservation.
                                         if ($placesSessions[$place->getId()] == session_id()) {
                                             $classes[] = 'tdplaceTempSession';
                                             $reason = 'En cours pour vous';

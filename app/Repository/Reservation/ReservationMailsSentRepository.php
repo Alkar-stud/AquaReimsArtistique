@@ -93,6 +93,24 @@ class ReservationMailsSentRepository extends AbstractRepository
     }
 
     /**
+     * Compte le nombre de mails envoyés pour une réservation et un template donnés.
+     * @param int $reservationId
+     * @param int $templateId
+     * @return int
+     */
+    public function countSentMails(int $reservationId, int $templateId): int
+    {
+        $sql = "SELECT COUNT(*) as count FROM $this->tableName 
+                 WHERE reservation = :reservationId AND mail_template = :templateId";
+        $result = $this->query($sql, [
+            'reservationId' => $reservationId,
+            'templateId' => $templateId
+        ]);
+
+        return (int)($result[0]['count'] ?? 0);
+    }
+
+    /**
      * Hydrate un objet ReservationMailsSent à partir d'un tableau de données
      * @param array $data
      * @return ReservationMailsSent

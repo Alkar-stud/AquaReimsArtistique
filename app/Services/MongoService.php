@@ -38,7 +38,7 @@ class MongoService
     public function update(array $filter, array $update, array $options = [], ?string $subType = null): int
     {
         $collection = $this->getCollection($subType);
-        $result = $collection->updateMany($filter, ['$set' => $update], $options);
+        $result = $collection->updateOne($filter, $update);
         return $result->getModifiedCount();
     }
 

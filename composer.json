@@ -5,7 +5,8 @@
       "ext-pdo": "*",
         "mongodb/mongodb": "^2.1",
       "ext-mongodb": "*",
-      "ext-fileinfo": "*"
+      "ext-fileinfo": "*",
+      "ext-curl": "*"
     },
     "autoload": {
         "psr-4": {

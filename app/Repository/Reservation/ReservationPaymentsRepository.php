@@ -55,11 +55,30 @@ class ReservationPaymentsRepository extends AbstractRepository
     }
 
     /**
+     * Trouve un paiement par son checkoutIntentId
+     * @param int $checkoutId
+     * @return ReservationPayments|null
+     * @throws DateMalformedStringException
+     */
+    public function findByCheckoutId(int $checkoutId): ?ReservationPayments
+    {
+        $sql = "SELECT * FROM $this->tableName WHERE checkout_id = :checkoutId LIMIT 1";
+        $result = $this->query($sql, ['checkoutId' => $checkoutId]);
+
+        if (empty($result)) {
+            return null;
+        }
+        return $this->hydrate($result[0]);
+    }
+
+
+
+    /**
      * Somme des paiements pour une réservation
      * @param int $reservationId
-     * @return float
+     * @return int
      */
-    public function getTotalAmountPaidForReservation(int $reservationId): float
+    public function getTotalAmountPaidForReservation(int $reservationId): int
     {
         $sql = "SELECT SUM(amount_paid) as total FROM $this->tableName WHERE reservation = :reservationId";
         $result = $this->query($sql, ['reservationId' => $reservationId]);
@@ -68,7 +87,7 @@ class ReservationPaymentsRepository extends AbstractRepository
             return 0.0;
         }
 
-        return (float)$result[0]['total'];
+        return (int)$result[0]['total'];
     }
 
     /**
@@ -79,13 +98,15 @@ class ReservationPaymentsRepository extends AbstractRepository
     public function insert(ReservationPayments $payment): int
     {
         $sql = "INSERT INTO $this->tableName
-            (reservation, amount_paid, checkout_id, status_payment, created_at)
-            VALUES (:reservation, :amount_paid, :checkout_id, :status_payment, :created_at)";
+            (reservation, amount_paid, checkout_id, order_id, payment_id, status_payment, created_at)
+            VALUES (:reservation, :amount_paid, :checkout_id, :order_id, :payment_id, :status_payment, :created_at)";
 
         $this->execute($sql, [
             'reservation' => $payment->getReservation(),
             'amount_paid' => $payment->getAmountPaid(),
             'checkout_id' => $payment->getCheckoutId(),
+            'order_id' => $payment->getOrderId(),
+            'payment_id' => $payment->getPaymentId(),
             'status_payment' => $payment->getStatusPayment(),
             'created_at' => $payment->getCreatedAt()->format('Y-m-d H:i:s')
         ]);
@@ -104,6 +125,8 @@ class ReservationPaymentsRepository extends AbstractRepository
         reservation = :reservation,
         amount_paid = :amount_paid,
         checkout_id = :checkout_id,
+        order_id = :order_id,
+        payment_id = :payment_id,
         status_payment = :status_payment,
         updated_at = NOW()
         WHERE id = :id";
@@ -113,6 +136,8 @@ class ReservationPaymentsRepository extends AbstractRepository
             'reservation' => $payment->getReservation(),
             'amount_paid' => $payment->getAmountPaid(),
             'checkout_id' => $payment->getCheckoutId(),
+            'order_id' => $payment->getOrderId(),
+            'payment_id' => $payment->getPaymentId(),
             'status_payment' => $payment->getStatusPayment()
         ]);
     }
@@ -140,6 +165,8 @@ class ReservationPaymentsRepository extends AbstractRepository
         $payment = new ReservationPayments();
         $payment->setId($data['id'])
             ->setReservation($data['reservation'])
+            ->setOrderId($data['order_id'])
+            ->setPaymentId($data['payment_id'])
             ->setAmountPaid($data['amount_paid'])
             ->setCheckoutId($data['checkout_id'])
             ->setStatusPayment($data['status_payment'])

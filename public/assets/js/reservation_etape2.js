@@ -70,19 +70,20 @@ document.addEventListener('DOMContentLoaded', function () {
                     const data = JSON.parse(text);
 
                     if (data.exists) {
-                        let html = `<div class="alert alert-warning">Il existe déjà ${data.reservations.length} réservation(s) pour cette adresse mail :<ul>`;
-                        data.reservations.forEach(r => {
-                            html += `<li>${r.nb_places} place(s) pour la séance du ${r.session_date}</li>`;
+                        let html = `<div class="alert alert-warning">
+                             <p>Vous avez déjà réservé <strong>${data.total_places_reserved} place(s)</strong> en <strong>${data.num_reservations} réservation(s)</strong> pour cet événement :</p><ul>`;
+                        data.reservation_summaries.forEach(summary => {
+                            html += `<li>${summary.nb_places} place(s) pour la séance du ${summary.session_date}</li>`;
                         });
-                        html += `</ul>
-                    <button id="continueBtn" class="btn btn-success me-2">Oui, je continue quand même</button>
-                    <button id="checkMailBtn" class="btn btn-secondary me-2">Oups, je vais vérifier dans mes mails</button>
-                    <button id="resendBtn" class="btn btn-info">Renvoyer le(s) mail(s) de confirmation</button>
-                </div>`;
+                        html += `</ul><p>Que souhaitez-vous faire ?</p>
+                        <button id="continueBtn" class="btn btn-success me-2">Continuer ma nouvelle réservation</button>
+                        <button id="resendBtn" class="btn btn-info">Renvoyer le(s) mail(s) de confirmation</button>
+                        <button id="cancelBtn" class="btn btn-secondary">Annuler</button>
+                    </div>`;
                         alertDiv.innerHTML = html;
 
                         document.getElementById('continueBtn').onclick = () => submitEtape2(nom, prenom, email, telephone);
-                        document.getElementById('checkMailBtn').onclick = () => window.location.href = '/';
+                        document.getElementById('cancelBtn').onclick = () => alertDiv.innerHTML = '';
                         document.getElementById('resendBtn').onclick = () => {
                             fetch('/reservation/resend-confirmation', {
                                 method: 'POST',

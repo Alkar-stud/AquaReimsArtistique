@@ -43,6 +43,7 @@ $reservationComplement = $reservationComplement ?? [];
 <script src="/assets/js/reservation_common.js" defer></script>
 <script src="/assets/js/reservation_etape6.js" defer></script>
 
+<hr>
 Ici pour la suite, on a déjà enregistré ça :
 <?php
 echo '<pre>';

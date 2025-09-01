@@ -57,3 +57,4 @@ if (isset($_SESSION['user']) && $_SESSION['user']['role']['level'] <= 1 && $_ENV
     print_r($_SESSION);
     echo '</pre>';
 }
+

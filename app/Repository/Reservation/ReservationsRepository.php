@@ -43,6 +43,42 @@ class ReservationsRepository extends AbstractRepository
     }
 
     /**
+     * Trouve une réservation par son ID MongoDB
+     * @param string $mongoId
+     * @return Reservations|null
+     * @throws DateMalformedStringException
+     */
+    public function findByMongoId(string $mongoId): ?Reservations
+    {
+        $sql = "SELECT * FROM $this->tableName WHERE reservation_mongo_id = :mongoId";
+        $result = $this->query($sql, ['mongoId' => $mongoId]);
+
+        if (!$result) {
+            return null;
+        }
+
+        return $this->hydrate($result[0]);
+    }
+
+    /**
+     * Trouve une réservation par son UUID
+     * @param string $uuid
+     * @return Reservations|null
+     * @throws DateMalformedStringException
+     */
+    public function findByUuid(string $uuid): ?Reservations
+    {
+        $sql = "SELECT * FROM $this->tableName WHERE uuid = :uuid";
+        $result = $this->query($sql, ['uuid' => $uuid]);
+
+        if (!$result) {
+            return null;
+        }
+
+        return $this->hydrate($result[0]);
+    }
+
+    /**
      * Trouve une réservation par son token
      * @param string $token
      * @return Reservations|null
@@ -105,13 +141,16 @@ class ReservationsRepository extends AbstractRepository
     public function insert(Reservations $reservation): int
     {
         $sql = "INSERT INTO $this->tableName 
-            (event, nom, prenom, email, phone, nageuse_si_limitation, total_amount, total_amount_paid, 
+             (event, event_session, reservation_mongo_id, uuid, nom, prenom, email, phone, nageuse_si_limitation, total_amount, total_amount_paid,  
              token, token_expire_at, comments, created_at)
-            VALUES (:event, :nom, :prenom, :email, :phone, :nageuse_si_limitation, :total_amount, :total_amount_paid,
+              VALUES (:event, :event_session, :reservation_mongo_id, :uuid, :nom, :prenom, :email, :phone, :nageuse_si_limitation, :total_amount, :total_amount_paid,
              :token, :token_expire_at, :comments, :created_at)";
 
         $this->execute($sql, [
             'event' => $reservation->getEvent(),
+            'event_session' => $reservation->getEventSession(),
+            'reservation_mongo_id' => $reservation->getReservationMongoId(),
+            'uuid' => $reservation->getUuid(),
             'nom' => $reservation->getNom(),
             'prenom' => $reservation->getPrenom(),
             'email' => $reservation->getEmail(),
@@ -137,6 +176,9 @@ class ReservationsRepository extends AbstractRepository
     {
         $sql = "UPDATE $this->tableName SET 
         event = :event,
+        event_session = :event_session,
+        reservation_mongo_id = :reservation_mongo_id,
+        uuid = :uuid,
         nom = :nom,
         prenom = :prenom,
         email = :email,
@@ -153,6 +195,9 @@ class ReservationsRepository extends AbstractRepository
         return $this->execute($sql, [
             'id' => $reservation->getId(),
             'event' => $reservation->getEvent(),
+            'event_session' => $reservation->getEventSession(),
+            'reservation_mongo_id' => $reservation->getReservationMongoId(),
+            'uuid' => $reservation->getUuid(),
             'nom' => $reservation->getNom(),
             'prenom' => $reservation->getPrenom(),
             'email' => $reservation->getEmail(),
@@ -225,7 +270,10 @@ class ReservationsRepository extends AbstractRepository
     {
         $reservation = new Reservations();
         $reservation->setId($data['id'])
+            ->setUuid($data['uuid'])
             ->setEvent($data['event'])
+            ->setEventSession($data['event_session'])
+            ->setReservationMongoId($data['reservation_mongo_id'])
             ->setNom($data['nom'])
             ->setPrenom($data['prenom'])
             ->setEmail($data['email'])

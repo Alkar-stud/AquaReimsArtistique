@@ -11,16 +11,20 @@ use DateTimeInterface;
 class Reservations
 {
     private int $id;
+    private ?string $uuid = null;
     private int $event; // ID de l'événement
     private ?Events $eventObject = null; // Objet Events lié
+    private int $event_session; // ID de la session de l'événement
+    private ?Events $eventSessionObject = null; // Objet EventSession lié
+    private string $reservation_mongo_id;
     private string $nom;
     private string $prenom;
     private string $email;
     private string $phone;
     private ?int $nageuse_si_limitation = null; // ID de la nageuse (si limitation)
     private ?Nageuses $nageuse = null; // Objet Nageuses lié
-    private float $total_amount;
-    private float $total_amount_paid;
+    private int $total_amount;
+    private int $total_amount_paid;
     private string $token;
     private DateTimeInterface $token_expire_at;
     private bool $is_canceled = false;
@@ -30,96 +34,40 @@ class Reservations
 
     // --- GETTERS ---
 
-    public function getId(): int
-    {
-        return $this->id;
-    }
+    public function getId(): int { return $this->id; }
+    public function getUuid(): ?string { return $this->uuid; }
+    public function getEvent(): int { return $this->event; }
+    public function getEventObject(): ?Events { return $this->eventObject; }
+    public function getEventSession(): int { return $this->event_session; }
+    public function getEventSessionObject(): ?Events { return $this->eventSessionObject; }
+    public function getReservationMongoId(): string { return $this->reservation_mongo_id; }
+    public function getNom(): string { return $this->nom; }
+    public function getPrenom(): string { return $this->prenom; }
+    public function getEmail(): string { return $this->email; }
+    public function getPhone(): string { return $this->phone; }
+    public function getNageuseId(): ?int { return $this->nageuse_si_limitation; }
+    public function getNageuse(): ?Nageuses { return $this->nageuse; }
+    public function getTotalAmount(): int { return $this->total_amount; }
 
-    public function getEvent(): int
-    {
-        return $this->event;
-    }
-
-    public function getEventObject(): ?Events
-    {
-        return $this->eventObject;
-    }
-
-    public function getNom(): string
-    {
-        return $this->nom;
-    }
-
-    public function getPrenom(): string
-    {
-        return $this->prenom;
-    }
-
-    public function getEmail(): string
-    {
-        return $this->email;
-    }
-
-    public function getPhone(): string
-    {
-        return $this->phone;
-    }
-
-    public function getNageuseId(): ?int
-    {
-        return $this->nageuse_si_limitation;
-    }
-
-    public function getNageuse(): ?Nageuses
-    {
-        return $this->nageuse;
-    }
-
-    public function getTotalAmount(): float
-    {
-        return $this->total_amount;
-    }
-
-    public function getTotalAmountPaid(): float
-    {
-        return $this->total_amount_paid;
-    }
-
-    public function getToken(): string
-    {
-        return $this->token;
-    }
-
-    public function getTokenExpireAt(): DateTimeInterface
-    {
-        return $this->token_expire_at;
-    }
-
-    public function isCanceled(): bool
-    {
-        return $this->is_canceled;
-    }
-
-    public function getComments(): ?string
-    {
-        return $this->comments;
-    }
-
-    public function getCreatedAt(): DateTimeInterface
-    {
-        return $this->created_at;
-    }
-
-    public function getUpdatedAt(): ?DateTimeInterface
-    {
-        return $this->updated_at;
-    }
+    public function getTotalAmountPaid(): int { return $this->total_amount_paid; }
+    public function getToken(): string { return $this->token; }
+    public function getTokenExpireAt(): DateTimeInterface { return $this->token_expire_at; }
+    public function isCanceled(): bool { return $this->is_canceled; }
+    public function getComments(): ?string { return $this->comments; }
+    public function getCreatedAt(): DateTimeInterface { return $this->created_at; }
+    public function getUpdatedAt(): ?DateTimeInterface { return $this->updated_at; }
 
     // --- SETTERS ---
 
     public function setId(int $id): self
     {
         $this->id = $id;
+        return $this;
+    }
+
+    public function setUuid(string $uuid): self
+    {
+        $this->uuid = $uuid;
         return $this;
     }
 
@@ -135,6 +83,27 @@ class Reservations
         if ($eventObject) {
             $this->event = $eventObject->getId();
         }
+        return $this;
+    }
+
+    public function setEventSession(int $event_session): self
+    {
+        $this->event_session = $event_session;
+        return $this;
+    }
+
+    public function setEventSessionObject(?Events $eventSessionObject): self
+    {
+        $this->eventSessionObject = $eventSessionObject;
+        if ($eventSessionObject) {
+            $this->event = $eventSessionObject->getId();
+        }
+        return $this;
+    }
+
+    public function setReservationMongoId(string $reservation_mongo_id): self
+    {
+        $this->reservation_mongo_id = $reservation_mongo_id;
         return $this;
     }
 
@@ -177,13 +146,13 @@ class Reservations
         return $this;
     }
 
-    public function setTotalAmount(float $total_amount): self
+    public function setTotalAmount(int $total_amount): self
     {
         $this->total_amount = $total_amount;
         return $this;
     }
 
-    public function setTotalAmountPaid(float $total_amount_paid): self
+    public function setTotalAmountPaid(int $total_amount_paid): self
     {
         $this->total_amount_paid = $total_amount_paid;
         return $this;

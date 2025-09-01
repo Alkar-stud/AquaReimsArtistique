@@ -41,18 +41,20 @@ $total = 0;
                 $prix = $tarifObj ? $tarifObj->getPrice() : 0;
                 $total += $prix;
                 ?>
-                <li class="list-group-item">
-                    <?= htmlspecialchars(($detail['prenom'] ?? '') . ' ' . ($detail['nom'] ?? '')) ?>
-                    <?php if ($tarifObj): ?>
-                        (Tarif : <em><?= htmlspecialchars($tarifObj->getLibelle()) ?></em>
-                        — <strong><?= number_format($prix, 2, ',', ' ') ?> €</strong>)
-                    <?php endif; ?>
-                    <?php if (!empty($detail['seat_name'])): ?>
-                        — Place : <em><?= htmlspecialchars($detail['seat_name']) ?></em>
-                    <?php endif; ?>
-                    <?php if (!empty($detail['access_code'])): ?>
-                        — Code : <em><?= htmlspecialchars($detail['access_code']) ?></em>
-                    <?php endif; ?>
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                    <div>
+                        <?= htmlspecialchars(($detail['prenom'] ?? '') . ' ' . ($detail['nom'] ?? '')) ?>
+                        <?php if ($tarifObj): ?>
+                            (Tarif : <em><?= htmlspecialchars($tarifObj->getLibelle()) ?></em>)
+                        <?php endif; ?>
+                        <?php if (!empty($detail['seat_name'])): ?>
+                            — Place : <em><?= htmlspecialchars($detail['seat_name']) ?></em>
+                        <?php endif; ?>
+                        <?php if (!empty($detail['access_code'])): ?>
+                            — Code : <em><?= htmlspecialchars($detail['access_code']) ?></em>
+                        <?php endif; ?>
+                    </div>
+                    <span class="float-end fw-bold"><?= number_format($prix, 2, ',', ' ') ?> €</span>
                 </li>
             <?php endforeach; ?>
         </ul>
@@ -74,7 +76,7 @@ $total = 0;
                     — Quantité : <strong><?= $qty ?></strong>
                     <?php if ($tarif): ?>
                         — Prix unitaire : <strong><?= number_format($unit, 2, ',', ' ') ?> €</strong>
-                        — Sous-total : <strong><?= number_format($subtotal, 2, ',', ' ') ?> €</strong>
+                        <span class="float-end fw-bold"><?= number_format($subtotal, 2, ',', ' ') ?> €</span>
                     <?php endif; ?>
                     <?php if ($tarif && $tarif->getDescription()): ?>
                         <br><span class="text-muted small"><?= nl2br(htmlspecialchars($tarif->getDescription())) ?></span>
@@ -92,8 +94,13 @@ $total = 0;
         Merci de vérifier vos informations avant validation finale.
     </div>
     <a href="/reservation/etape6Display" class="btn btn-secondary ms-2">Modifier mon choix précédent</a>
-    <button type="button" class="btn btn-primary" onclick="alert('Direct sur HelloAsso ou page intermédiaire ?');">Valider et payer</button>
+    <button type="submit" class="btn btn-primary">Valider et payer</button>
 </div>
+
+<script>
+    window.csrf_token = <?= json_encode($csrf_token ?? '') ?>;
+</script>
+<script src="/assets/js/reservation_confirmation.js" defer></script>
 
 <hr>
 Ici pour la suite, on a déjà enregistré ça :

@@ -1,19 +1,20 @@
 <?php
 
-namespace app\Models;
+namespace app\Models\Reservation;
 
 use DateMalformedStringException;
 use DateTime;
 use DateTimeInterface;
 
-class ReservationPayments
+class ReservationsComplements
 {
     private int $id;
-    private int $reservation; // ID de la réservation
-    private ?Reservations $reservationObject = null; // Objet Reservations lié
-    private float $amount_paid;
-    private int $checkout_id;
-    private ?string $status_payment = null;
+    private int $reservation;
+    private ?Reservations $reservationObject = null;
+    private int $tarif;
+    private ?object $tarifObject = null; // Could be a Tarifs model object
+    private ?string $tarif_access_code = null;
+    private int $qty;
     private DateTimeInterface $created_at;
     private ?DateTimeInterface $updated_at = null;
 
@@ -34,19 +35,24 @@ class ReservationPayments
         return $this->reservationObject;
     }
 
-    public function getAmountPaid(): float
+    public function getTarif(): int
     {
-        return $this->amount_paid;
+        return $this->tarif;
     }
 
-    public function getCheckoutId(): int
+    public function getTarifObject(): ?object
     {
-        return $this->checkout_id;
+        return $this->tarifObject;
     }
 
-    public function getStatusPayment(): ?string
+    public function getTarifAccessCode(): ?string
     {
-        return $this->status_payment;
+        return $this->tarif_access_code;
+    }
+
+    public function getQty(): int
+    {
+        return $this->qty;
     }
 
     public function getCreatedAt(): DateTimeInterface
@@ -82,21 +88,27 @@ class ReservationPayments
         return $this;
     }
 
-    public function setAmountPaid(float $amount_paid): self
+    public function setTarif(int $tarif): self
     {
-        $this->amount_paid = $amount_paid;
+        $this->tarif = $tarif;
         return $this;
     }
 
-    public function setCheckoutId(int $checkout_id): self
+    public function setTarifObject(?object $tarifObject): self
     {
-        $this->checkout_id = $checkout_id;
+        $this->tarifObject = $tarifObject;
         return $this;
     }
 
-    public function setStatusPayment(?string $status_payment): self
+    public function setTarifAccessCode(?string $tarif_access_code): self
     {
-        $this->status_payment = $status_payment;
+        $this->tarif_access_code = $tarif_access_code;
+        return $this;
+    }
+
+    public function setQty(int $qty): self
+    {
+        $this->qty = $qty;
         return $this;
     }
 

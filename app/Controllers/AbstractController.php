@@ -235,6 +235,30 @@ abstract class AbstractController
         return true;
     }
 
+
+    /**
+     * Valide le token CSRF. Si invalide, arrête l'exécution et renvoie une réponse JSON
+     * avec un nouveau token et un statut HTTP 419.
+     * @param string $token Le token reçu du client.
+     * @param string $key La clé de session pour le token.
+     * @return bool True si le token est valide, sinon la méthode termine le script.
+     */
+    protected function handleCsrfOrDie(string $token, string $key): bool
+    {
+        if ($this->validateCsrf($token, $key)) {
+            return true;
+        }
+
+        // Le token est invalide, on en génère un nouveau et on le renvoie.
+        http_response_code(419); // Statut spécifique pour l'expiration de token
+        $this->json([
+            'success' => false,
+            'error' => 'Token de sécurité expiré. La requête a été automatiquement relancée.',
+            'new_csrf_token' => $this->getCsrfToken($key)
+        ]);
+        exit; // Arrête l'exécution
+    }
+
     protected function getCsrfToken(): string
     {
         return \app\Utils\CsrfHelper::getToken();

@@ -3,6 +3,9 @@ namespace app\Controllers\Reservation;
 
 use app\Attributes\Route;
 use app\Controllers\AbstractController;
+use app\Models\Reservation\ReservationMailsSent;
+use app\Repository\MailTemplateRepository;
+use app\Repository\Reservation\ReservationMailsSentRepository;
 use app\Repository\Reservation\ReservationsPlacesTempRepository;
 use app\Repository\Reservation\ReservationsRepository;
 use app\Repository\Nageuse\GroupesNageusesRepository;
@@ -10,11 +13,11 @@ use app\Repository\Nageuse\NageusesRepository;
 use app\Repository\Event\EventInscriptionDatesRepository;
 use app\Repository\Piscine\PiscineGradinsZonesRepository;
 use app\Repository\Piscine\PiscineGradinsPlacesRepository;
+use app\Repository\Reservation\ReservationsDetailsRepository;
 use app\Repository\TarifsRepository;
 use app\Services\ReservationSessionService;
 use app\Repository\Event\EventsRepository;
 use app\Utils\ReservationContextHelper;
-use DateInterval;
 use DateTime;
 
 
@@ -28,6 +31,9 @@ class ReservationController extends AbstractController
     private EventInscriptionDatesRepository $eventInscriptionDatesRepository;
     private PiscineGradinsZonesRepository $zonesRepository;
     private PiscineGradinsPlacesRepository $placesRepository;
+    private ReservationMailsSentRepository $reservationMailsSentRepository;
+    private MailTemplateRepository $mailTemplateRepository;
+    private ReservationsDetailsRepository $reservationsDetailsRepository;
     private ReservationsPlacesTempRepository $tempRepo;
 
 
@@ -41,6 +47,9 @@ class ReservationController extends AbstractController
         $this->eventInscriptionDatesRepository = new EventInscriptionDatesRepository();
         $this->zonesRepository = new PiscineGradinsZonesRepository();
         $this->placesRepository = new PiscineGradinsPlacesRepository();
+        $this->reservationMailsSentRepository = new ReservationMailsSentRepository();
+        $this->mailTemplateRepository = new MailTemplateRepository();
+        $this->reservationsDetailsRepository = new ReservationsDetailsRepository();
         $this->tempRepo = new ReservationsPlacesTempRepository();
 
     }
@@ -164,7 +173,7 @@ class ReservationController extends AbstractController
      * Pour valider et enregistrer en $_SESSION les valeurs de l'étape 1
      *
      */
-    #[Route('/reservation/etape1', methods: ['POST'])]
+    #[Route('/reservation/etape1', name: 'etape1', methods: ['POST'])]
     public function etape1(): void
     {
         $input = json_decode(file_get_contents('php://input'), true);
@@ -219,35 +228,130 @@ class ReservationController extends AbstractController
         $this->json(['success' => true]);
     }
 
-    #[Route('/reservation/check-email', methods: ['POST'])]
+    /*
+     * Pour vérifier si un email a déjà été utilisé pour une réservation
+     */
+    #[Route('/reservation/check-email', name: 'check-email', methods: ['POST'])]
     public function checkEmail(): void
     {
         $input = json_decode(file_get_contents('php://input'), true);
         $csrfToken = $input['csrf_token'] ?? '';
         if (!$this->validateCsrfAndLog($csrfToken, 'check_email', false)) {
-            $this->json(['exists' => false, 'error' => 'Token CSRF invalide']);
+            $this->json(['success' => false, 'error' => 'Token CSRF invalide', 'csrf_token' => $this->getCsrfToken()]);
             return;
         }
+
         $email = trim($input['email'] ?? '');
         $eventId = (int)($input['event_id'] ?? 0);
+
+        // Fetch event and tarifs, needed for place counting and session details
+        $event = $this->eventsRepository->findById($eventId);
+        if (!$event) {
+            $this->json(['exists' => false, 'error' => 'Événement invalide.']);
+            return;
+        }
+        $tarifs = $this->tarifsRepository->findByEventId($eventId);
 
         // Recherche des réservations existantes
         $reservations = $this->reservationsRepository->findByEmailAndEvent($email, $eventId);
         if ($reservations) {
-            $result = [];
+            $totalPlacesReserved = 0;
+            $reservationSummaries = [];
             foreach ($reservations as $r) {
-                $result[] = [
-                    'nb_places' => $r->getNbPlaces(),
-                    'session_date' => $r->getSession()->getEventStartAt()->format('d/m/Y H:i')
+                // Récupérer l'objet de la session pour cette réservation
+                $sessionObj = null;
+                foreach ($event->getSessions() as $s) {
+                    if ($s->getId() == $r->getEventSession()) {
+                        $sessionObj = $s;
+                        break;
+                    }
+                }
+
+                // Récupérer le détail de cette réservation
+                $details = $this->reservationsDetailsRepository->findByReservation($r->getId());
+                $nbPlacesForThisReservation = $this->countPlacesAssises($details, $tarifs);
+
+                $totalPlacesReserved += $nbPlacesForThisReservation;
+
+                $reservationSummaries[] = [
+                    'reservation_id' => $r->getId(), // Add reservation ID for potential re-sending email
+                    'nb_places' => $nbPlacesForThisReservation,
+                    'session_date' => $sessionObj ? $sessionObj->getEventStartAt()->format('d/m/Y H:i') : 'N/A'
                 ];
             }
-            $this->json(['exists' => true, 'reservations' => $result]);
+            $this->json([
+                'exists' => true,
+                'csrf_token' => $this->getCsrfToken(),
+                'total_places_reserved' => $totalPlacesReserved,
+                'num_reservations' => count($reservations),
+                'reservation_summaries' => $reservationSummaries
+            ]);
         } else {
             $this->json(['exists' => false]);
         }
     }
 
-    #[Route('/reservation/etape2Display', methods: ['GET'])]
+    #[Route('/reservation/resend-confirmation', name: 'app_reservation_resend_confirmation', methods: ['POST'])]
+    public function resendConfirmation(): void
+    {
+        $input = json_decode(file_get_contents('php://input'), true);
+        $csrfToken = $input['csrf_token'] ?? '';
+        if (!$this->validateCsrfAndLog($csrfToken, 'resend_confirmation', false)) {
+            $this->json(['success' => false, 'error' => 'Token CSRF invalide', 'csrf_token' => $this->getCsrfToken()]);
+            return;
+        }
+
+        $email = trim($input['email'] ?? '');
+        $eventId = (int)($input['event_id'] ?? 0);
+
+        if (empty($email) || empty($eventId)) {
+            $this->json(['success' => false, 'error' => 'Paramètres manquants.']);
+            return;
+        }
+
+        $reservations = $this->reservationsRepository->findByEmailAndEvent($email, $eventId);
+        if (empty($reservations)) {
+            $this->json(['success' => false, 'error' => 'Aucune réservation trouvée pour cet email et cet événement.']);
+            return;
+        }
+
+        $mailService = new \app\Services\MailService();
+        $template = $this->mailTemplateRepository->findByCode('paiement_confirme');
+        if (!$template) {
+            $this->json(['success' => false, 'error' => 'Template de mail introuvable.']);
+            return;
+        }
+
+        $sentCount = 0;
+        $limitReachedCount = 0;
+
+        foreach ($reservations as $reservation) {
+            // Vérifier la limite d'envoi en utilisant une méthode dédiée du repository
+            $confirmationSentCount = $this->reservationMailsSentRepository->countSentMails($reservation->getId(), $template->getId());
+
+            if ($confirmationSentCount >= 2) { // Original + 1 renvoi
+                $limitReachedCount++;
+                continue; // Limite atteinte, on passe au suivant
+            }
+
+            // Hydrater l'objet event pour le service mail
+            $event = $this->eventsRepository->findById($reservation->getEvent());
+            $reservation->setEventObject($event);
+
+            if ($mailService->sendReservationConfirmationEmail($reservation)) {
+                $mailSentRecord = new ReservationMailsSent();
+                $mailSentRecord->setReservation($reservation->getId())->setMailTemplate($template->getId())->setSentAt(date('Y-m-d H:i:s'));
+                $this->reservationMailsSentRepository->insert($mailSentRecord);
+                $sentCount++;
+            }
+        }
+
+        $this->json(['success' => true, 'message' => "$sentCount mail(s) de confirmation renvoyé(s). $limitReachedCount réservation(s) avaient déjà atteint la limite de renvoi."]);
+    }
+
+
+
+    #[Route('/reservation/etape2Display', name: 'etape2Display', methods: ['GET'])]
     public function etape2Display(): void
     {
         $reservation = $_SESSION['reservation'][session_id()] ?? null;
@@ -276,7 +380,7 @@ class ReservationController extends AbstractController
         ]), 'Réservations');
     }
 
-    #[Route('/reservation/etape2', methods: ['POST'])]
+    #[Route('/reservation/etape2', name: 'etape2', methods: ['POST'])]
     public function etape2(): void
     {
         $input = json_decode(file_get_contents('php://input'), true);
@@ -320,7 +424,7 @@ class ReservationController extends AbstractController
         $this->json(['success' => true]);
     }
 
-    #[Route('/reservation/etape3Display', methods: ['GET'])]
+    #[Route('/reservation/etape3Display', name: 'etape3Display', methods: ['GET'])]
     public function etape3Display(): void
     {
         $reservation = $_SESSION['reservation'][session_id()] ?? null;
@@ -400,7 +504,7 @@ class ReservationController extends AbstractController
 
 
     //Pour valider les tarifs avec code
-    #[Route('/reservation/validate-special-code', methods: ['POST'])]
+    #[Route('/reservation/validate-special-code', name: 'validate_special_code', methods: ['POST'])]
     public function validateSpecialCode(): void
     {
         $input = json_decode(file_get_contents('php://input'), true);
@@ -441,7 +545,7 @@ class ReservationController extends AbstractController
         $this->json(['success' => false, 'error' => 'Code invalide ou non reconnu.']);
     }
 
-    #[Route('/reservation/remove-special-tarif', methods: ['POST'])]
+    #[Route('/reservation/remove-special-tarif', name: 'remove_special_tarif', methods: ['POST'])]
     public function removeSpecialTarif(): void
     {
         $input = json_decode(file_get_contents('php://input'), true);
@@ -465,7 +569,7 @@ class ReservationController extends AbstractController
     }
 
 
-    #[Route('/reservation/validate-access-code', methods: ['POST'])]
+    #[Route('/reservation/validate-access-code', name: 'validate_access_code', methods: ['POST'])]
     public function validateAccessCode(): void
     {
         $input = json_decode(file_get_contents('php://input'), true);
@@ -514,7 +618,7 @@ class ReservationController extends AbstractController
         }
     }
 
-    #[Route('/reservation/etape3', methods: ['POST'])]
+    #[Route('/reservation/etape3', name: 'etape3', methods: ['POST'])]
     public function etape3(): void
     {
         $input = json_decode(file_get_contents('php://input'), true);
@@ -600,7 +704,7 @@ class ReservationController extends AbstractController
     }
 
 
-    #[Route('/reservation/etape4Display', methods: ['GET'])]
+    #[Route('/reservation/etape4Display', name: 'etape4Display', methods: ['GET'])]
     public function etape4Display(): void
     {
         $reservation = $_SESSION['reservation'][session_id()] ?? null;
@@ -630,7 +734,7 @@ class ReservationController extends AbstractController
         ]), 'Réservations');
     }
 
-    #[Route('/reservation/etape4', methods: ['POST'])]
+    #[Route('/reservation/etape4', name: 'etape4',methods: ['POST'])]
     public function etape4(): void
     {
         //On fait différemment, car il y a peut-être un fichier
@@ -742,7 +846,7 @@ class ReservationController extends AbstractController
         $this->json(['success' => true, 'numberedSeats' => $event->getPiscine()->getNumberedSeats()]);
     }
 
-    #[Route('/reservation/etape5Display', methods: ['GET'])]
+    #[Route('/reservation/etape5Display', name: 'etape5Display', methods: ['GET'])]
     public function etape5Display(): void
     {
         $sessionId = session_id();
@@ -767,14 +871,20 @@ class ReservationController extends AbstractController
         // Récupérer les réservations temporaires de toutes les sessions restantes
         $tempAllSeats = $this->tempRepo->findAll();
         // Remet à null seat_id et seat_name pour chaque participant directement dans $_SESSION
-        foreach ($_SESSION['reservation'][$sessionId]['reservation_detail'] as &$detail) {
-            $detail['seat_id'] = null;
-            $detail['seat_name'] = null;
+        if (isset($_SESSION['reservation'][$sessionId]['reservation_detail']) && is_array($_SESSION['reservation'][$sessionId]['reservation_detail'])) {
+            foreach ($_SESSION['reservation'][$sessionId]['reservation_detail'] as &$detail) {
+                $detail['seat_id'] = null;
+                $detail['seat_name'] = null;
+            }
+            unset($detail);
         }
-        unset($detail);
 
         // Filtrage des places concernées par la session en cours
-        $sessionSeats = array_filter($tempAllSeats, fn($t) => $t->getSession() === $sessionId);
+        // Récupérer les places déjà réservées de manière définitive pour cette session
+        $placesReservees = $this->reservationsDetailsRepository->findReservedSeatsForSession(
+            $reservation['event_id'],
+            $reservation['event_session_id']
+        );
 
         // Construire un tableau place_id → session pour le JS de la vue
         $placesSessions = [];
@@ -825,11 +935,12 @@ class ReservationController extends AbstractController
             'numberedSeats' => $numberedSeats,
             'nbPlacesAssises' => $nbPlacesAssises,
             'zonesWithPlaces' => $zonesWithPlaces,
+            'placesReservees' => $placesReservees,
             'placesSessions' => $placesSessions
         ]), 'Réservations');
     }
 
-    #[Route('/reservation/etape5', methods: ['POST'])]
+    #[Route('/reservation/etape5', name: 'etape5', methods: ['POST'])]
     public function etape5(): void
     {
         $input = json_decode(file_get_contents('php://input'), true);
@@ -882,7 +993,7 @@ class ReservationController extends AbstractController
         $this->json(['success' => true]);
     }
 
-    #[Route('/reservation/etape5AddSeat', methods: ['POST'])]
+    #[Route('/reservation/etape5AddSeat', name: 'etape5AddSeat', methods: ['POST'])]
     public function etape5AddSeat(): void
     {
         $input = json_decode(file_get_contents('php://input'), true);
@@ -944,7 +1055,7 @@ class ReservationController extends AbstractController
         ]);
     }
 
-    #[Route('/reservation/etape5RemoveSeat', methods: ['POST'])]
+    #[Route('/reservation/etape5RemoveSeat', name: 'etape5RemoveSeat', methods: ['POST'])]
     public function etape5RemoveSeat(): void
     {
         $input = json_decode(file_get_contents('php://input'), true);
@@ -991,9 +1102,21 @@ class ReservationController extends AbstractController
     private function countPlacesAssises(array $reservationDetails, array $tarifs): int
     {
         $nb = 0;
+        // Création d'une carte pour une recherche rapide des tarifs par ID
+        $tarifsById = [];
+        foreach ($tarifs as $tarif) {
+            $tarifsById[$tarif->getId()] = $tarif;
+        }
         foreach ($reservationDetails as $detail) {
-            foreach ($tarifs as $tarif) {
-                if ($tarif->getId() == $detail['tarif_id'] && $tarif->getNbPlace() !== null) {
+            $tarifId = null;
+            if (is_object($detail) && $detail instanceof \app\Models\Reservation\ReservationsDetails) {
+                $tarifId = $detail->getTarif();
+            } elseif (is_array($detail) && isset($detail['tarif_id'])) {
+                $tarifId = $detail['tarif_id'];
+            }
+            if ($tarifId !== null) {
+                $tarif = $tarifsById[$tarifId] ?? null;
+                if ($tarif && $tarif->getNbPlace() !== null) {
                     $nb++;
                 }
             }
@@ -1004,20 +1127,19 @@ class ReservationController extends AbstractController
     /**
      * pour rafraichier le contexte avec fetch
      */
-    #[Route('/reservation/display-details-fragment', methods: ['GET'])]
+    #[Route('/reservation/display-details-fragment', name: 'display_details_fragment', methods: ['GET'])]
     public function displayDetailsFragment(): void
     {
         $context = ReservationContextHelper::getContext($this->eventsRepository, $this->tarifsRepository, $_SESSION['reservation'][session_id()] ?? null);
         $this->render('reservation/_display_details', $context, '', true);
     }
 
-    #[Route('/reservation/etape6Display', methods: ['GET'])]
+    #[Route('/reservation/etape6Display', name: 'etape6Display', methods: ['GET'])]
     public function etape6Display(): void
     {
         $reservation = $_SESSION['reservation'][session_id()] ?? null;
         //Ne sert plus à cette étape
         unset($_SESSION['reservation'][session_id()]['selected_seats']);
-
 
         $event = null;
         if ($reservation && !empty($reservation['event_id'])) {
@@ -1052,7 +1174,7 @@ class ReservationController extends AbstractController
         ]), 'Réservations');
     }
 
-    #[Route('/reservation/etape6', methods: ['POST'])]
+    #[Route('/reservation/etape6', name: 'etape6', methods: ['POST'])]
     public function etape6(): void
     {
         $input = json_decode(file_get_contents('php://input'), true);

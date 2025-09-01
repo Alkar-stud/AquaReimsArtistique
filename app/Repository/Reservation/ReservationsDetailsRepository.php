@@ -67,6 +67,26 @@ class ReservationsDetailsRepository extends AbstractRepository
     }
 
     /**
+     * Trouve tous les IDs de places déjà réservées pour une session d'un événement.
+     * @param int $eventId
+     * @param int $sessionId
+     * @return array Un tableau plat d'IDs de places.
+     */
+    public function findReservedSeatsForSession(int $eventId, int $sessionId): array
+    {
+        $sql = "SELECT rd.place_number
+                 FROM reservations_details rd
+                 INNER JOIN reservations r ON rd.reservation = r.id
+                 WHERE r.event = :eventId
+                   AND r.event_session = :sessionId
+                   AND r.is_canceled = 0
+                   AND rd.place_number IS NOT NULL";
+        $results = $this->query($sql, ['eventId' => $eventId, 'sessionId' => $sessionId]);
+
+        return array_column($results, 'place_number');
+    }
+
+    /**
      * Compte le nombre de détails pour une réservation
      * @param int $reservationId
      * @return int

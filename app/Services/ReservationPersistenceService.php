@@ -179,7 +179,15 @@ class ReservationPersistenceService
 
         // --- Nettoyage mongoDB et la table reservations_places_temp ---
         $this->reservationStorage->deleteReservation($tempReservation['_id']->__toString());
-        $this->reservationsPlacesTempRepository->deleteBySession(session_id());
+        // L'identifiant de session de l'utilisateur a été stocké dans la réservation temporaire
+        $userSessionId = $tempReservation['php_session_id'] ?? null;
+        if ($userSessionId) {
+            $this->reservationsPlacesTempRepository->deleteBySession($userSessionId);
+        } else {
+            // Log d'une erreur si l'ID de session n'est pas trouvé, ce qui serait anormal.
+            error_log("Impossible de nettoyer les places temporaires pour la réservation mongo {$tempReservation['_id']}: php_session_id manquant.");
+        }
+
 
         return $reservation;
     }

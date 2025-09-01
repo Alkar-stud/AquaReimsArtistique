@@ -10,6 +10,7 @@ use app\Repository\Reservation\ReservationsComplementsRepository;
 use app\Repository\Reservation\ReservationsDetailsRepository;
 use app\Repository\Reservation\ReservationsRepository;
 use app\Repository\TarifsRepository;
+use app\Repository\Reservation\ReservationsPlacesTempRepository;
 use app\Services\HelloAssoService;
 use app\dto\HelloAssoCart;
 use app\Utils\ReservationHelper;
@@ -24,6 +25,7 @@ class ReservationConfirmationController extends AbstractController
     private HelloAssoCart $helloAssoCart;
     private ReservationHelper $reservationHelper;
     private ReservationStorageInterface $reservationStorage;
+    private ReservationsPlacesTempRepository $reservationsPlacesTempRepository;
     private ReservationPersistenceService $persistenceService;
 
     public function __construct()
@@ -34,8 +36,12 @@ class ReservationConfirmationController extends AbstractController
         $this->reservationHelper = new ReservationHelper;
         // Pour MongoDB, à changer si autre BDD
         $this->reservationStorage = new MongoReservationStorage('ReservationTemp');
-        $this->persistenceService = new ReservationPersistenceService($this->reservationStorage, $this->reservationHelper);
-
+        $this->reservationsPlacesTempRepository = new ReservationsPlacesTempRepository();
+        $this->persistenceService = new ReservationPersistenceService(
+            $this->reservationStorage,
+            $this->reservationHelper,
+            $this->reservationsPlacesTempRepository
+        );
     }
 
     #[Route('/reservation/confirmation', name: 'app_reservation_confirmation')]
@@ -163,6 +169,7 @@ class ReservationConfirmationController extends AbstractController
             $total = ReservationHelper::calculerTotal($reservation, $tarifs);
             $_SESSION['reservation'][$sessionId]['total'] = $total;
             $reservation['total'] = $total;
+            $reservation['php_session_id'] = $sessionId; // Pour retrouver la session dans reservations_places_temp car suppression en callback
 
             // S'assure qu'une réservation temporaire existe et la met à jour, ou la crée si besoin.
             $reservationId = $reservation['reservationId'] ?? null;

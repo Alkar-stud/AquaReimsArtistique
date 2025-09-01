@@ -239,6 +239,7 @@ class MailService
             'IDreservation' => $reservation->getId(),
             'EventLibelle' => $event ? $event->getLibelle() : '',
             'DateEvent' => $session ? $session->getEventStartAt()->format('d/m/Y H:i') : '',
+            'OpenDoorsAt' => $session ? $session->getOpenDoorsAt()->format('d/m/Y H:i') : '',
             'Piscine' => $event && $event->getPiscine() ? $event->getPiscine()->getLibelle() . '(' . $event->getPiscine()->getAdresse() . ')' : '',
             'ReservationNomPrenom' => $reservation->getPrenom() . ' ' . $reservation->getNom(),
             'Reservationmail' => $reservation->getEmail(),

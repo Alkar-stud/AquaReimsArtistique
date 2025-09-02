@@ -112,7 +112,7 @@ class ReservationPersistenceService
             ->setToken($tokenGenerated[0])
             ->setTokenExpireAt($tokenGenerated[1])
             ->setComments($tempReservation['comments'] ?? null)
-            ->setCreatedAt(new DateTime()->format('Y-m-d H:i:s'));
+            ->setCreatedAt((new DateTime())->format('Y-m-d H:i:s'));
 
         $reservationsRepository = new ReservationsRepository();
         $newReservationId = $reservationsRepository->insert($reservation);
@@ -128,7 +128,7 @@ class ReservationPersistenceService
                 ->setTarif($detailData['tarif_id'])
                 ->setTarifAccessCode($detailData['access_code'] ?? null)
                 ->setPlaceNumber($detailData['seat_id'])
-                ->setCreatedAt(new DateTime()->format('Y-m-d H:i:s'));
+                ->setCreatedAt((new DateTime())->format('Y-m-d H:i:s'));
             $reservationsDetailsRepository->insert($reservationDetail);
         }
 
@@ -140,7 +140,7 @@ class ReservationPersistenceService
                 ->setTarif($complementData['tarif_id'])
                 ->setTarifAccessCode($complementData['access_code'] ?? null)
                 ->setQty((int)$complementData['qty'])
-                ->setCreatedAt(new DateTime()->format('Y-m-d H:i:s'));
+                ->setCreatedAt((new DateTime())->format('Y-m-d H:i:s'));
             $reservationsComplementsRepository->insert($reservationComplement);
         }
 
@@ -153,7 +153,7 @@ class ReservationPersistenceService
             ->setOrderId($paymentData->id)
             ->setPaymentId($paymentInfo->id)
             ->setStatusPayment($paymentInfo->state)
-            ->setCreatedAt(new DateTime()->format('Y-m-d H:i:s'));
+            ->setCreatedAt((new DateTime())->format('Y-m-d H:i:s'));
         $reservationPaymentsRepository = new ReservationPaymentsRepository();
         $reservationPaymentsRepository->insert($reservationPayment);
 
@@ -178,14 +178,14 @@ class ReservationPersistenceService
 
 
         // --- Nettoyage mongoDB et la table reservations_places_temp ---
-        $this->reservationStorage->deleteReservation($tempReservation['_id']->__toString());
+        $this->reservationStorage->deleteReservation((string) $tempReservation['_id']);
         // L'identifiant de session de l'utilisateur a été stocké dans la réservation temporaire
         $userSessionId = $tempReservation['php_session_id'] ?? null;
         if ($userSessionId) {
             $this->reservationsPlacesTempRepository->deleteBySession($userSessionId);
         } else {
             // Log d'une erreur si l'ID de session n'est pas trouvé, ce qui serait anormal.
-            error_log("Impossible de nettoyer les places temporaires pour la réservation mongo {$tempReservation['_id']}: php_session_id manquant.");
+            error_log("Impossible de nettoyer les places temporaires pour la réservation mongo " . $tempReservation['_id'] . ": php_session_id manquant.");
         }
 
 

@@ -49,6 +49,13 @@ class MongoService
         return $result->getDeletedCount();
     }
 
+    public function deleteOne(array $filter, array $options = [], ?string $subType = null): int
+    {
+        $collection = $this->getCollection($subType);
+        $result = $collection->deleteOne($filter, $options);
+        return $result->getDeletedCount();
+    }
+
     private function getCollection(?string $subType = null): Collection
     {
         $collectionName = $this->baseCollectionName;

@@ -23,66 +23,19 @@ class User
 
     // --- GETTERS ---
 
-    public function getId(): int
-    {
-        return $this->id;
-    }
-
-    public function getUsername(): string
-    {
-        return $this->username;
-    }
-
-    public function getPassword(): string
-    {
-        return $this->password;
-    }
-
-    public function getEmail(): string
-    {
-        return $this->email;
-    }
-
-    public function getDisplayName(): string
-    {
-        //S'il n'y a pas de nom d'affichage, on retourne le nom d'utilisateur
-        return $this->display_name ?: $this->getUsername();
-    }
-
-    public function getRole(): ?Role
-    {
-        return $this->role;
-    }
-
-    public function getIsActif(): bool
-    {
-        return (bool)$this->isActif;
-    }
-
-    public function getCreatedAt(): DateTimeInterface
-    {
-        return $this->created_at;
-    }
-
-    public function getUpdatedAt(): ?DateTimeInterface
-    {
-        return $this->updated_at;
-    }
-
-    public function getPasswordResetToken(): ?string
-    {
-        return $this->password_reset_token;
-    }
-
-    public function getPasswordResetExpiresAt(): ?DateTimeInterface
-    {
-        return $this->password_reset_expires_at;
-    }
-
-    public function getSessionId(): ?string
-    {
-        return $this->session_id;
-    }
+    public function getId(): int { return $this->id; }
+    public function getUsername(): string { return $this->username; }
+    public function getPassword(): string { return $this->password; }
+    public function getEmail(): string { return $this->email; }
+    //S'il n'y a pas de nom d'affichage renseigné, on retourne le nom d'utilisateur
+    public function getDisplayName(): string { return $this->display_name ?: $this->getUsername(); }
+    public function getRole(): ?Role { return $this->role; }
+    public function getIsActif(): bool { return (bool)$this->isActif; }
+    public function getCreatedAt(): DateTimeInterface { return $this->created_at; }
+    public function getUpdatedAt(): ?DateTimeInterface { return $this->updated_at; }
+    public function getPasswordResetToken(): ?string { return $this->password_reset_token; }
+    public function getPasswordResetExpiresAt(): ?DateTimeInterface { return $this->password_reset_expires_at; }
+    public function getSessionId(): ?string { return $this->session_id; }
 
     // --- SETTERS
 

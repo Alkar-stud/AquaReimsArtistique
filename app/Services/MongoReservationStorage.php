@@ -33,6 +33,6 @@ class MongoReservationStorage implements ReservationStorageInterface
     public function deleteReservation(string $id): int
     {
         // Supprime une réservation par son ID MongoDB
-        return $this->mongo->delete(['_id' => new \MongoDB\BSON\ObjectId($id)]);
+        return $this->mongo->deleteOne(['_id' => new \MongoDB\BSON\ObjectId($id)]);
     }
 }

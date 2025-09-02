@@ -32,8 +32,7 @@ class Database
     public static function getInstance(): PDO
     {
         if (self::$instance === null) {
-            // Vos constantes sont déjà chargées par un require dans vos fichiers de config
-            // Il n'est donc pas nécessaire de les recharger ici.
+            // Les constantes sont déjà chargées par un require dans les fichiers de config
             $dsn = 'mysql:host=' . $_ENV['DB_HOST'] . ';dbname=' . $_ENV['DB_NAME'] . ';charset=' . $_ENV['DB_CHARSET'];
 
             $options = [

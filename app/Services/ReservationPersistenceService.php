@@ -101,7 +101,7 @@ class ReservationPersistenceService
         $reservation->setEvent($tempReservation['event_id'])
             ->setUuid(bin2hex(random_bytes(16))) // Génération d'un UUID simple
             ->setEventSession($tempReservation['event_session_id'])
-            ->setReservationMongoId($tempReservation['_id']->__toString())
+            ->setReservationMongoId((string) $tempReservation['_id'])
             ->setNom($tempReservation['user']['nom'])
             ->setPrenom($tempReservation['user']['prenom'])
             ->setEmail($tempReservation['user']['email'])

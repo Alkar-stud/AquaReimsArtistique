@@ -275,7 +275,7 @@ class ReservationConfirmationController extends AbstractController
         }
 
         // Si APP_DEBUG est à true, on enregistre le payload pour le débogage
-        if (isset($_ENV['APP_DEBUG']) && $_ENV['APP_DEBUG'] === 'false') {
+        if (isset($_ENV['APP_DEBUG']) && $_ENV['APP_DEBUG'] === 'true') {
             $dir = __DIR__ . '/../../../storage/app/private/';
             if (!is_dir($dir)) {
                 mkdir($dir, 0770, true);

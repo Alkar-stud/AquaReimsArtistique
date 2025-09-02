@@ -1207,6 +1207,4 @@ class ReservationController extends AbstractController
         $this->json(['success' => true]);
     }
 
-
-
 }

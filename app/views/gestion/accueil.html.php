@@ -9,5 +9,12 @@
 
 <div class="container-fluid">
     <h2 class="mb-4">Gestion de la page d'accueil</h2>
-
+    <div class="mb-4">
+        <button type="button" class="btn btn-success btn-sm mb-3 w-100 d-md-none" onclick="openEventModal('add')">
+            Ajouter une nouvelle page d'accueil
+        </button>
+        <button type="button" class="btn btn-success btn-sm mb-3 d-none d-md-inline-block" onclick="openEventModal('add')">
+            Ajouter une nouvelle page d'accueil
+        </button>
+    </div>
 </div>

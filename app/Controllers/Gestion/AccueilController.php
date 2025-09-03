@@ -18,9 +18,39 @@ class AccueilController extends AbstractController
     }
 
     #[Route('/gestion/accueil', name: 'app_gestion_accueil')]
-    public function index(): void
+    public function index(?string $search = null): void
     {
         $accueil = $this->repository->findDisplayed();
+
+        $this->render('/gestion/accueil', $accueil, "Gestion de la page d'accueil");
+    }
+
+    #[Route('/gestion/accueil/list/{search}', name: 'app_gestion_accueil_list')]
+    public function list(?string $search = null): void
+    {
+        if ($search === null || $search === "" || !ctype_digit($search)) {
+            echo 'Displayed';
+            $accueil = $this->repository->findDisplayed();
+        } else {
+            $searchValue = (int)$search;
+            if ($searchValue == 0) {
+                echo 'all';
+                $accueil = $this->repository->findAll();
+            } else {
+                echo 'id';
+                $accueil = $this->repository->findById($searchValue);
+            }
+        }
+        print_r($accueil);
+
+        $this->render('/gestion/accueil', $accueil, "Gestion de la page d'accueil");
+    }
+
+    #[Route('/gestion/edit/{id}', name: 'app_gestion_accueil_edit')]
+    public function edit(?int $id = null): void
+    {
+        $accueil = $this->repository->findDisplayed();
+
         $this->render('/gestion/accueil', $accueil, "Gestion de la page d'accueil");
     }
 

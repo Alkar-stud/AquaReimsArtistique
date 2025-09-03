@@ -7,7 +7,7 @@ use DateTimeInterface;
 class Accueil
 {
     private int $id;
-    private bool $is_displayed;
+    private bool $is_displayed = false;
     private DateTimeInterface $display_until;
     private ?string $content;
     private DateTimeInterface $created_at;

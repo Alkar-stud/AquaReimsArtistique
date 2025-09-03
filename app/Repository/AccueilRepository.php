@@ -15,7 +15,7 @@ class AccueilRepository extends AbstractRepository
     {
         $sql = "SELECT * FROM $this->tableName WHERE id = :id;";
         $result = $this->query($sql, ['id' => $id]);
-        return array_map([$this, 'hydrate'], $results);
+        return array_map([$this, 'hydrate'], $result);
     }
 
     public function findAll(): array

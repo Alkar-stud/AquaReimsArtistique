@@ -6,7 +6,9 @@
         "mongodb/mongodb": "^2.1",
       "ext-mongodb": "*",
       "ext-fileinfo": "*",
-      "ext-curl": "*"
+      "ext-curl": "*",
+      "ext-dom": "*",
+      "ext-libxml": "*"
     },
     "autoload": {
         "psr-4": {

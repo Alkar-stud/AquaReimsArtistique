@@ -22,7 +22,7 @@ class AccueilController extends AbstractController
     #[Route('/gestion/accueil', name: 'app_gestion_accueil')]
     public function index(?string $search = null): void
     {
-        $accueil = $this->repository->findDisplayed();;
+        $accueil = $this->repository->findDisplayed(false);
         $this->render('/gestion/accueil', [
             'accueil' => $accueil,
             'searchParam' => 'displayed'
@@ -37,7 +37,7 @@ class AccueilController extends AbstractController
         if ($search === '0') {
             $accueil = $this->repository->findAll();
         } else {
-            $accueil = $this->repository->findDisplayed();
+            $accueil = $this->repository->findDisplayed(false);
         }
 
         $this->render('/gestion/accueil', [

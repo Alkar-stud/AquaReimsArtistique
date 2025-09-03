@@ -26,9 +26,9 @@ class AccueilRepository extends AbstractRepository
         return array_map([$this, 'hydrate'], $results);
     }
 
-    public function findDisplayed(): array
+    public function findDisplayed($isDisplayed = true): array
     {
-        $sql = "SELECT * FROM $this->tableName WHERE display_until >= NOW() ORDER BY display_until;";
+        $sql = "SELECT * FROM $this->tableName WHERE display_until >= NOW() " . ($isDisplayed ? 'AND is_displayed = 1 ' : '') . "ORDER BY display_until;";
         $results = $this->query($sql);
         return array_map([$this, 'hydrate'], $results);
     }

@@ -5,9 +5,6 @@ use app\Core\Router;
 use app\Services\LogService;
 use Dotenv\Exception\InvalidPathException;
 
-ini_set('display_errors', 1);
-ini_set('display_startup_errors', 1);
-error_reporting(E_ALL);
 date_default_timezone_set('Europe/Paris');
 session_start();
 $session_id = session_id();
@@ -42,6 +39,24 @@ try {
         '</div>'
     );
 }
+
+// --- Configuration de la gestion des erreurs en fonction de l'environnement ---
+$appEnv = $_ENV['APP_ENV'] ?? 'local';
+
+if ($appEnv === 'prod') {
+    // En production : on n'affiche JAMAIS les erreurs à l'utilisateur.
+    ini_set('display_errors', 0);
+    ini_set('display_startup_errors', 0);
+    error_reporting(E_ALL);
+    // On s'assure que les erreurs sont bien enregistrées dans un fichier de log.
+    ini_set('log_errors', 1);
+} else {
+    // En développement : on affiche tout pour faciliter le débogage.
+    ini_set('display_errors', 1);
+    ini_set('display_startup_errors', 1);
+    error_reporting(E_ALL);
+}
+
 
 //On récupère la route courante
 $uri = strtok($_SERVER['REQUEST_URI'], '?');

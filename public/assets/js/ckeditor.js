@@ -8,6 +8,13 @@ import {
 	Essentials,
 	GeneralHtmlSupport,
 	Heading,
+	Image,
+	ImageCaption,
+	ImageResize,
+	ImageStyle,
+	ImageToolbar,
+	ImageInsert,
+	ImageUpload,
 	Indent,
 	IndentBlock,
 	Italic,
@@ -15,6 +22,7 @@ import {
 	List,
 	Paragraph,
 	PasteFromOffice,
+	SimpleUploadAdapter,
 	SourceEditing,	
 	Underline
 } from 'ckeditor5';
@@ -42,6 +50,7 @@ const editorConfig = {
 			'underline',
 			'|',
 			'link',
+			'insertImage',
 			'blockQuote',
 			'|',
 			'alignment',
@@ -62,6 +71,13 @@ const editorConfig = {
 		Essentials,
 		GeneralHtmlSupport,
 		Heading,
+		Image,
+		ImageCaption,
+		ImageResize,
+		ImageStyle,
+		ImageToolbar,
+		ImageInsert,
+		ImageUpload,
 		Indent,
 		IndentBlock,
 		Italic,
@@ -69,6 +85,7 @@ const editorConfig = {
 		List,
 		Paragraph,
 		PasteFromOffice,
+		SimpleUploadAdapter,
 		SourceEditing,
 		Underline
 	],
@@ -141,6 +158,19 @@ const editorConfig = {
 			}
 		}
 	},
+	image: {
+		toolbar: [
+			'imageTextAlternative',
+			'toggleImageCaption',
+			'|',
+			'imageStyle:inline',
+			'imageStyle:block',
+			'imageStyle:side',
+			'|',
+			'linkImage'
+		],
+		resizeUnit: 'px'
+	},
 	placeholder: 'Type or paste your content here!',
 	translations: [translations]
 };
@@ -148,13 +178,72 @@ const editorConfig = {
 const editors = {};
 
 function initCKEditorForModal(modal) {
-    const textarea = modal.querySelector('.ckeditor');
+	const textarea = modal.querySelector('.ckeditor, .ckeditor-textarea');
     if (!textarea || editors[textarea.id]) return;
-    ClassicEditor.create(textarea, editorConfig)
-        .then(editor => {
+
+	// Crée une nouvelle configuration pour cette instance de l'éditeur.
+	// L'utilisation de `...editorConfig` permet de copier les propriétés
+	// sans perdre les références aux classes des plugins, contrairement à JSON.parse(JSON.stringify()).
+	const specificEditorConfig = {
+		...editorConfig,
+		extraPlugins: []
+	};
+
+	// Ajout d'un adaptateur d'upload personnalisé
+	specificEditorConfig.extraPlugins.push(
+		function(editor) {
+			editor.plugins.get('FileRepository').createUploadAdapter = (loader) => new CustomUploadAdapter(loader, editor);
+		}
+	);
+
+	ClassicEditor.create(textarea, specificEditorConfig)
+		.then(editor => {
             editors[textarea.id] = editor;
         })
         .catch(console.error);
+}
+
+/**
+ * Classe d'adaptateur d'upload personnalisée pour CKEditor.
+ * Elle gère l'envoi du fichier au serveur en ajoutant des données dynamiques (comme displayUntil) à l'URL.
+ */
+class CustomUploadAdapter {
+	constructor(loader, editor) {
+		this.loader = loader;
+		this.editor = editor;
+	}
+
+	upload() {
+		return this.loader.file.then(file => new Promise((resolve, reject) => {
+			const form = this.editor.sourceElement.closest('form');
+			const displayUntilInput = form.querySelector('[name="display_until"]');
+			const displayUntilValue = displayUntilInput ? displayUntilInput.value : '';
+
+			const data = new FormData();
+			data.append('upload', file);
+
+			const xhr = new XMLHttpRequest();
+			xhr.open('POST', `/gestion/accueil/upload?displayUntil=${encodeURIComponent(displayUntilValue)}`, true);
+			xhr.responseType = 'json';
+
+			xhr.addEventListener('load', () => {
+				if (xhr.status === 200 && xhr.response && xhr.response.url) {
+					resolve({ default: xhr.response.url });
+				} else {
+					reject(xhr.response.error?.message || 'Upload failed');
+				}
+			});
+
+			xhr.addEventListener('error', () => reject('Network Error'));
+			xhr.addEventListener('abort', () => reject('Upload aborted'));
+
+			xhr.send(data);
+		}));
+	}
+
+	abort() {
+		// Cette méthode peut être implémentée pour gérer l'annulation de l'upload.
+	}
 }
 
 document.addEventListener('DOMContentLoaded', () => {

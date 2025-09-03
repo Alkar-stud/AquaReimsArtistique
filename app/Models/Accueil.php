@@ -2,6 +2,7 @@
 
 namespace app\Models;
 
+use DateTime;
 use DateTimeInterface;
 
 class Accueil
@@ -22,6 +23,7 @@ class Accueil
 
     public function setId(int $id): self { $this->id = $id; return $this; }
     public function setIsdisplayed(bool $is_displayed): self { $this->is_displayed = $is_displayed; return $this; }
+    public function setDisplayUntil(string $display_until): self { $this->display_until = new DateTime($display_until); return $this; }
     public function setContent(string $content): self { $this->content = $content; return $this; }
     public function setCreatedAt(string $created_at): self { $this->created_at = new DateTime($created_at); return $this; }
     public function setUpdatedAt(?string $updated_at): self { $this->updated_at = $updated_at ? new DateTime($updated_at) : null; return $this; }

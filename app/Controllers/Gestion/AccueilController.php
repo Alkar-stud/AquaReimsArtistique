@@ -4,8 +4,10 @@ namespace app\Controllers\Gestion;
 
 use app\Attributes\Route;
 use app\Controllers\AbstractController;
+use app\Models\Accueil;
 use app\Repository\AccueilRepository;
-use app\Repository\ConfigRepository;
+use app\Services\UploadService;
+use Exception;
 
 class AccueilController extends AbstractController
 {
@@ -20,38 +22,143 @@ class AccueilController extends AbstractController
     #[Route('/gestion/accueil', name: 'app_gestion_accueil')]
     public function index(?string $search = null): void
     {
-        $accueil = $this->repository->findDisplayed();
-
-        $this->render('/gestion/accueil', $accueil, "Gestion de la page d'accueil");
+        $accueil = $this->repository->findDisplayed();;
+        $this->render('/gestion/accueil', [
+            'accueil' => $accueil,
+            'searchParam' => 'displayed'
+        ], "Gestion de la page d'accueil");
     }
 
     #[Route('/gestion/accueil/list/{search}', name: 'app_gestion_accueil_list')]
     public function list(?string $search = null): void
     {
-        if ($search === null || $search === "" || !ctype_digit($search)) {
-            echo 'Displayed';
-            $accueil = $this->repository->findDisplayed();
+        // Si le paramètre est 'displayed' (ou manquant), on affiche les contenus actifs.
+        // Sinon, si c'est '0', on affiche tout.
+        if ($search === '0') {
+            $accueil = $this->repository->findAll();
         } else {
-            $searchValue = (int)$search;
-            if ($searchValue == 0) {
-                echo 'all';
-                $accueil = $this->repository->findAll();
-            } else {
-                echo 'id';
-                $accueil = $this->repository->findById($searchValue);
-            }
+            $accueil = $this->repository->findDisplayed();
         }
-        print_r($accueil);
 
-        $this->render('/gestion/accueil', $accueil, "Gestion de la page d'accueil");
+        $this->render('/gestion/accueil', [
+            'accueil' => $accueil,
+            'searchParam' => $search
+        ], "Gestion de la page d'accueil");
     }
 
-    #[Route('/gestion/edit/{id}', name: 'app_gestion_accueil_edit')]
-    public function edit(?int $id = null): void
+    #[Route('/gestion/accueil/add', name: 'app_gestion_accueil_add', methods: ['POST'])]
+    public function add(): void
     {
-        $accueil = $this->repository->findDisplayed();
+        if (isset($_POST['display_until'], $_POST['content'])) {
+            $accueil = new Accueil();
+            $accueil->setDisplayUntil($_POST['display_until'])
+                ->setContent($_POST['content'])
+                ->setIsdisplayed(isset($_POST['is_displayed']))
+                ->setCreatedAt(date('Y-m-d H:i:s'));
 
-        $this->render('/gestion/accueil', $accueil, "Gestion de la page d'accueil");
+            $this->repository->insert($accueil);
+            $_SESSION['flash_message'] = ['type' => 'success', 'message' => 'Le contenu a été ajouté avec succès.'];
+        } else {
+            $_SESSION['flash_message'] = ['type' => 'danger', 'message' => 'Données manquantes pour l\'ajout.'];
+        }
+        header('Location: /gestion/accueil');
+        exit();
+    }
+
+    #[Route('/gestion/accueil/toggle-status', name: 'app_gestion_accueil_toggle_status', methods: ['POST'])]
+    public function toggleStatus(): void
+    {
+        // On s'attend à recevoir du JSON
+        $data = json_decode(file_get_contents('php://input'), true);
+
+        if (!isset($data['id'], $data['status'])) {
+            $this->json(['success' => false, 'message' => 'Données invalides.'], 400);
+            return;
+        }
+
+        try {
+            $this->repository->updateStatus((int)$data['id'], (bool)$data['status']);
+            $_SESSION['flash_message'] = ['type' => 'success', 'message' => 'Le statut a été mis à jour avec succès.'];
+            $this->json(['success' => true]);
+        } catch (Exception $e) {
+            error_log("Erreur lors de la mise à jour du statut : " . $e->getMessage());
+            $_SESSION['flash_message'] = ['type' => 'danger', 'message' => 'Une erreur est survenue lors de la mise à jour du statut.'];
+            $this->json(['success' => false, 'message' => 'Erreur serveur.'], 500);
+        }
+    }
+
+    #[Route('/gestion/accueil/edit', name: 'app_gestion_accueil_edit', methods: ['POST'])]
+    public function edit(): void
+    {
+        if (isset($_POST['id'], $_POST['display_until'], $_POST['content'])) {
+            $id = (int)$_POST['id'];
+            $accueil = $this->repository->findById($id);
+
+            if (!$accueil) {
+                $_SESSION['flash_message'] = ['type' => 'danger', 'message' => 'Le contenu à modifier n\'a pas été trouvé.'];
+            } else {
+                $accueil->setDisplayUntil($_POST['display_until'])
+                    ->setContent($_POST['content'])
+                    ->setIsdisplayed(isset($_POST['is_displayed']));
+
+                $this->repository->update($accueil);
+                $_SESSION['flash_message'] = ['type' => 'success', 'message' => 'Le contenu a été modifié avec succès.'];
+            }
+        } else {
+            $_SESSION['flash_message'] = ['type' => 'danger', 'message' => 'Données manquantes pour la modification.'];
+        }
+        header('Location: /gestion/accueil');
+        exit();
+    }
+
+
+    #[Route('/gestion/accueil/upload', name: 'app_gestion_accueil_upload')]
+    public function uploadImage(): void
+    {
+        header('Content-Type: application/json');
+
+        // Sécurité : Vérifier que l'utilisateur est connecté et a les droits
+        if (!isset($_SESSION['user']['role']) || $_SESSION['user']['role']['level'] > 2) {
+            http_response_code(403);
+            echo json_encode(['error' => ['message' => 'Accès non autorisé.']]);
+            return;
+        }
+
+        if (!isset($_FILES['upload'])) {
+            http_response_code(400);
+            echo json_encode(['error' => ['message' => 'Aucun fichier envoyé.']]);
+            return;
+        }
+
+        $uploadService = new UploadService();
+        try {
+            $displayUntil = $_GET['displayUntil'] ?? null;
+            $url = $uploadService->handleImageUpload($_FILES['upload'], $displayUntil);
+            echo json_encode(['url' => $url]);
+        } catch (Exception $e) {
+            http_response_code(500);
+            error_log('CKEditor Upload Error: ' . $e->getMessage()); // Log pour le debug
+            echo json_encode(['error' => ['message' => $e->getMessage()]]);
+        }
+    }
+
+    #[Route('/gestion/accueil/delete/{id}', name: 'app_gestion_accueil_delete', methods: ['POST'])]
+    public function delete(?int $id): void
+    {
+        if (isset($id)) {
+            $accueil = $this->repository->findById($id);
+
+            if (!$accueil) {
+                $_SESSION['flash_message'] = ['type' => 'danger', 'message' => 'Ce contenu à supprimer n\'a pas été trouvé.'];
+            } else {
+                $this->repository->delete($id);
+                $_SESSION['flash_message'] = ['type' => 'success', 'message' => 'Le contenu a été supprimé avec succès.'];
+            }
+        } else {
+            $_SESSION['flash_message'] = ['type' => 'danger', 'message' => 'Données manquantes pour la suppression.'];
+        }
+        header('Location: /gestion/accueil');
+        exit();
     }
 
 }

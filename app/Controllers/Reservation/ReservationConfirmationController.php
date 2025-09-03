@@ -3,6 +3,8 @@ namespace app\Controllers\Reservation;
 
 use app\Attributes\Route;
 use app\Controllers\AbstractController;
+use app\Models\Reservation\ReservationPayments;
+use app\Models\Reservation\Reservations;
 use app\Repository\Reservation\ReservationPaymentsRepository;
 use app\Repository\Event\EventsRepository;
 use app\Repository\Nageuse\NageusesRepository;
@@ -146,25 +148,23 @@ class ReservationConfirmationController extends AbstractController
             $tarifsRepository = new TarifsRepository();
 
             $event = null;
-            $sessionObj = null;
             $tarifs = [];
             $tarifsById = [];
 
-            if (!empty($reservation['event_id'])) {
-                $event = $eventsRepository->findById($reservation['event_id']);
-                if ($event && !empty($reservation['event_session_id'])) {
-                    foreach ($event->getSessions() as $s) {
-                        if ($s->getId() == $reservation['event_session_id']) {
-                            $sessionObj = $s;
-                            break;
-                        }
+
+            $event = $eventsRepository->findById($reservation['event_id']);
+            if ($event && !empty($reservation['event_session_id'])) {
+                foreach ($event->getSessions() as $s) {
+                    if ($s->getId() == $reservation['event_session_id']) {
+                        break;
                     }
                 }
-                $tarifs = $tarifsRepository->findByEventId($reservation['event_id']);
-                foreach ($tarifs as $tarif) {
-                    $tarifsById[$tarif->getId()] = $tarif->getLibelle();
-                }
             }
+            $tarifs = $tarifsRepository->findByEventId($reservation['event_id']);
+            foreach ($tarifs as $tarif) {
+                $tarifsById[$tarif->getId()] = $tarif->getLibelle();
+            }
+
 
             $total = ReservationHelper::calculerTotal($reservation, $tarifs);
             $_SESSION['reservation'][$sessionId]['total'] = $total;
@@ -304,7 +304,7 @@ class ReservationConfirmationController extends AbstractController
     }
 
     #[Route('/reservation/forceCheckPayment', name: 'app_reservation_forceCheckPayment', methods: ['POST'])]
-    public function forceCheckPayment()
+    public function forceCheckPayment(): void
     {
         $input = json_decode(file_get_contents('php://input'), true);
         $checkoutIntentId = $input['checkoutIntentId'] ?? null;
@@ -363,9 +363,9 @@ class ReservationConfirmationController extends AbstractController
 
     /**
      * Gère la réponse JSON pour une vérification de paiement réussie.
-     * @param \app\Models\Reservation\ReservationPayments $payment
+     * @param ReservationPayments $payment
      */
-    private function handleSuccessfulCheck(\app\Models\Reservation\ReservationPayments $payment): void
+    private function handleSuccessfulCheck(ReservationPayments $payment): void
     {
         $reservationsRepository = new ReservationsRepository();
         $reservation = $reservationsRepository->findById($payment->getReservation());
@@ -374,7 +374,7 @@ class ReservationConfirmationController extends AbstractController
             unset($_SESSION['reservation'][session_id()]);
             $this->json(['success' => true, 'reservationUuid' => $reservation->getUuid()]);
         } else {
-            // Cas peu probable où le paiement existe mais pas la réservation associée
+            // Cas peu probable où le paiement existe, mais pas la réservation associée
             $this->json(['success' => false, 'error' => 'Paiement trouvé mais réservation introuvable.']);
         }
     }
@@ -383,9 +383,9 @@ class ReservationConfirmationController extends AbstractController
      * Logique centrale pour traiter et persister une réservation après un paiement réussi.
      * @param object $paymentData Données de la commande/paiement.
      * @param string $reservationIdMongo ID de la réservation temporaire.
-     * @return \app\Models\Reservation\Reservations|null
+     * @return Reservations|null
      */
-    private function processAndPersistReservation(object $paymentData, string $reservationIdMongo): ?\app\Models\Reservation\Reservations
+    private function processAndPersistReservation(object $paymentData, string $reservationIdMongo): ?Reservations
     {
         $reservationsRepository = new ReservationsRepository();
         // Vérifie si cette réservation a déjà été persistée pour éviter les doublons

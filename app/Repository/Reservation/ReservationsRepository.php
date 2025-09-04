@@ -242,8 +242,8 @@ class ReservationsRepository extends AbstractRepository
     {
         $sql = "SELECT COUNT(*) as count
             FROM reservations_details rd
-            INNER JOIN reservations r ON rd.id = r.id
-            WHERE r.event = :eventId AND rd.id = :nageuseId AND r.is_canceled = 0";
+            INNER JOIN reservations r ON rd.reservation = r.id
+            WHERE r.event = :eventId AND r.nageuse_si_limitation = :nageuseId AND r.is_canceled = 0";
         $result = $this->query($sql, ['eventId' => $eventId, 'nageuseId' => $nageuseId]);
         return (int)$result[0]['count'];
     }

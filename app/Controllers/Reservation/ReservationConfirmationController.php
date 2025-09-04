@@ -174,8 +174,10 @@ class ReservationConfirmationController extends AbstractController
             // S'assure qu'une réservation temporaire existe et la met à jour, ou la crée si besoin.
             $reservationId = $reservation['reservationId'] ?? null;
             if ($reservationId) {
+                $reservation['updatedAt'] = new \MongoDB\BSON\UTCDateTime(time() * 1000);
                 $this->reservationStorage->updateReservation($reservationId, $reservation);
             } else {
+                $reservation['createdAt'] = new \MongoDB\BSON\UTCDateTime(time() * 1000);
                 $reservationId = $this->reservationStorage->saveReservation($reservation);
                 $_SESSION['reservation'][$sessionId]['reservationId'] = $reservationId;
             }

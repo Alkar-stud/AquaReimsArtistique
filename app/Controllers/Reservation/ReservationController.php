@@ -164,7 +164,7 @@ class ReservationController extends AbstractController
         //On enregistre la limite dans $_SESSION
         $_SESSION['reservation'][session_id()]['limitPerSwimmer'] = $limite;
 
-        $count = $this->reservationsRepository->countActiveReservationsForEvent($eventId, $nageuseId);
+        $count = $this->reservationsRepository->countActiveReservationsForEvent($eventId);
 
         $this->json(['success' => true, 'limiteAtteinte' => $count >= $limite]);
     }
@@ -445,10 +445,16 @@ class ReservationController extends AbstractController
         $tarifs = $this->tarifsRepository->findByEventId($_SESSION['reservation'][session_id()]['event_id']);
 
         //S'il y a limitation des places par nageuse
-        if ($event->getLimitationPerSwimmer() === true) {
-            $limitation = $this->reservationsRepository->countReservationsForNageuse($_SESSION['reservation'][session_id()]['event_id'], $_SESSION['reservation'][session_id()]['nageuse_id']);
-            $placesDejaReservees = $reservation['places_deja_reservees'] ?? 0;
-            $placesRestantes = $limitation !== null ? max(0, $limitation - $placesDejaReservees) : null;
+        if ($event->getLimitationPerSwimmer() !== null) {
+            // Limite maximale autorisée par nageuse
+            $limiteMaxParNageuse = $event->getLimitationPerSwimmer();
+
+            $placesDejaReservees = $this->reservationsRepository->countReservationsForNageuse(
+                $_SESSION['reservation'][session_id()]['event_id'],
+                $_SESSION['reservation'][session_id()]['nageuse_id']
+            );
+            // Calculer les places encore disponibles
+            $placesRestantes = max(0, $limiteMaxParNageuse - $placesDejaReservees);
         } else {
             $_SESSION['reservation'][session_id()]['limitPerSwimmer'] = null;
             $placesDejaReservees = null;

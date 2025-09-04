@@ -46,7 +46,7 @@
                         setTimeout(check, 5000);
                     } else if (data && data.status === 'pending' && attempts >= maxAttempts) {
                         // Les tentatives sont épuisées, on lance une vérification manuelle
-                        message.textContent = 'Le webhook tarde à arriver, nous vérifions directement auprès du service de paiement...';
+                        message.textContent = 'La réponse tarde à arriver, nous vérifions directement auprès du service de paiement...';
                         fetch('/reservation/forceCheckPayment', {
                             method: 'POST',
                             headers: {'Content-Type': 'application/json'},

@@ -28,7 +28,7 @@ class MailService
         foreach ($requiredKeys as $key) {
             if (empty($_ENV[$key])) {
                 // On lance une exception claire si une variable manque.
-                throw new Exception("Configuration MailService manquante : la variable d'environnement {$key} n'est pas définie.");
+                throw new Exception("Configuration MailService manquante : la variable d'environnement $key n'est pas définie.");
             }
         }
 
@@ -68,7 +68,7 @@ class MailService
         $template = $this->templateRepository->findByCode($templateCode);
 
         if (!$template) {
-            error_log("MailService Error: Template '{$templateCode}' not found.");
+            error_log("MailService Error: Template '$templateCode' not found.");
             return false;
         }
 
@@ -98,7 +98,7 @@ class MailService
             $this->mailer->send();
             return true;
         } catch (Exception $e) {
-            error_log("Mailer Error: {$this->mailer->ErrorInfo}");
+            error_log("Mailer Error: {$this->mailer->ErrorInfo} - $e");
             return false;
         }
     }
@@ -212,9 +212,7 @@ class MailService
         // Logique pour le total à payer
         $totalAmount = $reservation->getTotalAmount();
         $totalAmountPaid = $reservation->getTotalAmountPaid();
-        $totalAPayerLabel = '';
-        $totalAPayerColor = 'black';
-        $montantAAfficher = 0;
+
 
         if ($totalAmountPaid >= $totalAmount) {
             $totalAPayerLabel = 'Total payé :';
@@ -229,7 +227,7 @@ class MailService
             $totalAPayerColor = 'red';
             $montantAAfficher = $totalAmount;
         }
-        $totalAPayerHtml = "<strong style=\"color: {$totalAPayerColor};\">{$totalAPayerLabel}</strong>";
+        $totalAPayerHtml = "<strong style=\"color: $totalAPayerColor;\">$totalAPayerLabel</strong>";
 
         // On appelle la méthode générique avec les bons paramètres
         return $this->send($reservation->getEmail(), 'paiement_confirme', [
@@ -239,7 +237,7 @@ class MailService
             'IDreservation' => $reservation->getId(),
             'EventLibelle' => $event ? $event->getLibelle() : '',
             'DateEvent' => $session ? $session->getEventStartAt()->format('d/m/Y H:i') : '',
-            'OpenDoorsAt' => $session ? $session->getOpenDoorsAt()->format('d/m/Y H:i') : '',
+            'OpenDoorsAt' => $session ? $session->getOpeningDoorsAt()->format('d/m/Y H:i') : '',
             'Piscine' => $event && $event->getPiscine() ? $event->getPiscine()->getLibelle() . '(' . $event->getPiscine()->getAdresse() . ')' : '',
             'ReservationNomPrenom' => $reservation->getPrenom() . ' ' . $reservation->getNom(),
             'Reservationmail' => $reservation->getEmail(),

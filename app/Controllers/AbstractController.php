@@ -5,9 +5,12 @@ namespace app\Controllers;
 use app\Enums\LogType;
 use app\Repository\User\UserRepository;
 use app\Services\LogService;
+use app\Utils\CsrfHelper;
 use app\Utils\DurationHelper;
 use DateMalformedStringException;
 use Exception;
+use JetBrains\PhpStorm\NoReturn;
+use ReflectionClass;
 use RuntimeException;
 
 abstract class AbstractController
@@ -57,52 +60,49 @@ abstract class AbstractController
      */
     public function checkUserSession(bool $isPublicRoute = false): void
     {
-        // Démarrer la session seulement après configuration
-        if (session_status() === PHP_SESSION_NONE) {
-            session_start();
-        }
-
         if ($isPublicRoute) {
             return;
         }
 
-        if (!isset($_SESSION['user'])) {
-            header('Location: /login');
-            exit;
-        }
-
-        if (!isset($_SESSION['user']['id'])) {
-            $this->redirectToLogin('Votre session a expiré ou vous devez vous reconnecter.');
+        // Si la session utilisateur n'existe pas ou est incomplète, on déconnecte.
+        if (!isset($_SESSION['user']['id']) || !isset($_SESSION['user']['LAST_ACTIVITY'])) {
+            $this->logoutAndRedirect('Votre session est invalide ou a expiré. Veuillez vous reconnecter.');
             return;
         }
 
         // Convertir le format ISO 8601 de TIMEOUT_SESSION en secondes
         $timeout_seconds = DurationHelper::iso8601ToSeconds(TIMEOUT_SESSION);
 
-        if (isset($_SESSION['user']['LAST_ACTIVITY']) && (time() - $_SESSION['user']['LAST_ACTIVITY'] > $timeout_seconds)) {
-            $this->redirectToLogin('Votre session a expiré pour cause d\'inactivité. Veuillez vous reconnecter.');
+        // Vérifier le timeout d'inactivité
+        if ((time() - $_SESSION['user']['LAST_ACTIVITY'] > $timeout_seconds)) {
+            $this->logoutAndRedirect('Votre session a expiré pour cause d\'inactivité. Veuillez vous reconnecter.');
             return;
         }
 
         // Régénérer l'ID de session périodiquement (toutes les 30 minutes)
-        if (!isset($_SESSION['user']['LAST_REGENERATION']) ||
-            (time() - $_SESSION['user']['LAST_REGENERATION'] > $timeout_seconds)) {
-            $this->regenerateSessionId();
+        if (!isset($_SESSION['user']['LAST_REGENERATION']) || (time() - $_SESSION['user']['LAST_REGENERATION'] > 1800)) { // 30 minutes
+            $this->regenerateSessionId(true); // true pour détruire l'ancienne session
             $_SESSION['user']['LAST_REGENERATION'] = time();
         }
 
+        // Mettre à jour le timestamp de la dernière activité
         $_SESSION['user']['LAST_ACTIVITY'] = time();
 
+        // Vérifier que l'ID de session correspond à celui en base de données
         $userRepository = new UserRepository();
         $user = $userRepository->findById($_SESSION['user']['id']);
 
         if (!$user || $user->getSessionId() !== session_id()) {
-            $this->redirectToLogin('Votre session n\'est plus valide. Veuillez vous reconnecter.');
-            return;
+            $this->logoutAndRedirect('Votre session n\'est plus valide (connexion depuis un autre appareil ?). Veuillez vous reconnecter.');
         }
     }
 
-    private function redirectToLogin(string $message): void
+    /**
+     * Centralise la logique de déconnexion de l'utilisateur.
+     * Nettoie la session, définit un message flash et redirige vers la page de connexion.
+     * @param string $message Le message à afficher à l'utilisateur.
+     */
+    #[NoReturn] private function logoutAndRedirect(string $message): void
     {
         $flash = ['type' => 'warning', 'message' => $message];
         $_SESSION = [];
@@ -144,7 +144,7 @@ abstract class AbstractController
     private function getCurrentRoute(): string
     {
         // Récupérer la route actuelle depuis le router ou les attributs
-        $reflection = new \ReflectionClass($this);
+        $reflection = new ReflectionClass($this);
         $attributes = $reflection->getAttributes();
 
         foreach ($attributes as $attribute) {
@@ -192,19 +192,19 @@ abstract class AbstractController
         }
     }
 
-    protected function regenerateSessionId(): void
+    protected function regenerateSessionId(bool $destroyOldSession = false): void
     {
         if (session_status() === PHP_SESSION_ACTIVE) {
-            session_regenerate_id(true); // true = supprime l'ancien fichier de session
+            session_regenerate_id($destroyOldSession);
         }
     }
 
     protected function validateCsrf(string $token): bool
     {
-        return \app\Utils\CsrfHelper::validateToken($token);
+        return CsrfHelper::validateToken($token);
     }
 
-    protected function checkCsrfOrJsonError($token, $action)
+    protected function checkCsrfOrJsonError($token, $action): bool
     {
         if (!$this->validateCsrfAndLog($token, $action)) {
             $this->json(['success' => false, 'error' => 'Token CSRF invalide']);
@@ -236,32 +236,10 @@ abstract class AbstractController
     }
 
 
-    /**
-     * Valide le token CSRF. Si invalide, arrête l'exécution et renvoie une réponse JSON
-     * avec un nouveau token et un statut HTTP 419.
-     * @param string $token Le token reçu du client.
-     * @param string $key La clé de session pour le token.
-     * @return bool True si le token est valide, sinon la méthode termine le script.
-     */
-    protected function handleCsrfOrDie(string $token, string $key): bool
-    {
-        if ($this->validateCsrf($token, $key)) {
-            return true;
-        }
-
-        // Le token est invalide, on en génère un nouveau et on le renvoie.
-        http_response_code(419); // Statut spécifique pour l'expiration de token
-        $this->json([
-            'success' => false,
-            'error' => 'Token de sécurité expiré. La requête a été automatiquement relancée.',
-            'new_csrf_token' => $this->getCsrfToken($key)
-        ]);
-        exit; // Arrête l'exécution
-    }
 
     protected function getCsrfToken(): string
     {
-        return \app\Utils\CsrfHelper::getToken();
+        return CsrfHelper::getToken();
     }
 
     protected function json(array $data): void

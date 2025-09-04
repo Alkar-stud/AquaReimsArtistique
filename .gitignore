@@ -6,9 +6,7 @@
 /var/
 /vendor/
 
-
-/public/storage
-/storage/
+storage/*
+ !storage/.gitkeep
 
 *.log
-/backup/

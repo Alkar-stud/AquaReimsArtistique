@@ -214,32 +214,39 @@ class CustomUploadAdapter {
 	}
 
 	upload() {
-		return this.loader.file.then(file => new Promise((resolve, reject) => {
+		return this.loader.file.then(file => {
 			const form = this.editor.sourceElement.closest('form');
 			const displayUntilInput = form.querySelector('[name="display_until"]');
 			const displayUntilValue = displayUntilInput ? displayUntilInput.value : '';
 
-			const data = new FormData();
-			data.append('upload', file);
+			const formData = new FormData();
+			formData.append('upload', file);
 
-			const xhr = new XMLHttpRequest();
-			xhr.open('POST', `/gestion/accueil/upload?displayUntil=${encodeURIComponent(displayUntilValue)}`, true);
-			xhr.responseType = 'json';
+			const url = `/gestion/accueil/upload?displayUntil=${encodeURIComponent(displayUntilValue)}`;
 
-			xhr.addEventListener('load', () => {
-				if (xhr.status === 200 && xhr.response && xhr.response.url) {
-					resolve({ default: xhr.response.url });
-				} else {
-					reject(xhr.response.error?.message || 'Upload failed');
-				}
-			});
-
-			xhr.addEventListener('error', () => reject('Network Error'));
-			xhr.addEventListener('abort', () => reject('Upload aborted'));
-
-			xhr.send(data);
-		}));
+			return fetch(url, {
+				method: 'POST',
+				body: formData
+			})
+				.then(response => {
+					if (!response.ok) {
+						throw new Error(`Erreur HTTP: ${response.status}`);
+					}
+					return response.json();
+				})
+				.then(data => {
+					if (data.url) {
+						return { default: data.url };
+					} else if (data.error) {
+						console.error('Erreur d\'upload:', data.error);
+						throw new Error(data.error.message || 'Détails d\'erreur non disponibles');
+					} else {
+						throw new Error('Format de réponse inattendu');
+					}
+				});
+		});
 	}
+
 
 	abort() {
 		// Cette méthode peut être implémentée pour gérer l'annulation de l'upload.

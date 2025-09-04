@@ -10,6 +10,7 @@ use app\Repository\Event\EventsRepository;
 use app\Repository\Event\EventSessionRepository;
 use app\Services\UploadService;
 use Exception;
+use JetBrains\PhpStorm\NoReturn;
 
 class AccueilController extends AbstractController
 {
@@ -167,6 +168,29 @@ class AccueilController extends AbstractController
             return;
         }
 
+        // Vérification des erreurs de téléchargement PHP
+        if ($_FILES['upload']['error'] !== UPLOAD_ERR_OK) {
+            $uploadErrors = [
+                UPLOAD_ERR_INI_SIZE => 'Le fichier dépasse la taille maximale autorisée par PHP (upload_max_filesize).',
+                UPLOAD_ERR_FORM_SIZE => 'Le fichier dépasse la taille maximale autorisée par le formulaire.',
+                UPLOAD_ERR_PARTIAL => 'Le fichier n\'a été que partiellement téléchargé.',
+                UPLOAD_ERR_NO_FILE => 'Aucun fichier n\'a été téléchargé.',
+                UPLOAD_ERR_NO_TMP_DIR => 'Dossier temporaire manquant sur le serveur.',
+                UPLOAD_ERR_CANT_WRITE => 'Impossible d\'écrire le fichier sur le disque.',
+                UPLOAD_ERR_EXTENSION => 'Une extension PHP a arrêté le téléchargement.'
+            ];
+
+            $errorMessage = $uploadErrors[$_FILES['upload']['error']] ?? 'Erreur inconnue lors du téléchargement.';
+            http_response_code(500);
+            echo json_encode(['error' => [
+                'message' => $errorMessage,
+                'code' => $_FILES['upload']['error'],
+                'file_info' => $_FILES['upload']
+            ]]);
+            return;
+        }
+
+
         $uploadService = new UploadService();
         try {
             $displayUntil = $_GET['displayUntil'] ?? null;
@@ -179,7 +203,7 @@ class AccueilController extends AbstractController
         }
     }
 
-    #[Route('/gestion/accueil/delete/{id}', name: 'app_gestion_accueil_delete', methods: ['POST'])]
+    #[NoReturn] #[Route('/gestion/accueil/delete/{id}', name: 'app_gestion_accueil_delete', methods: ['POST'])]
     public function delete(?int $id): void
     {
         if (isset($id)) {

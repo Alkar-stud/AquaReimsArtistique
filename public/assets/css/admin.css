@@ -26,7 +26,7 @@
         border-bottom: 1px solid #eee;
     }
     .table-responsive td::before {
-        content: attr(data-label) " : ";
+        content: attr(data-label);
         position: absolute;
         left: 0;
         top: 0;

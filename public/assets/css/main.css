@@ -7,3 +7,27 @@
 .form-group label { display: block; margin-bottom: 5px; }
 .form-group input { width: 100%; padding: 8px; box-sizing: border-box; }
 .error-message { color: #e74c3c; text-align: center; margin-bottom: 15px; }
+
+
+/**
+ * Accueil
+ */
+.homepage-content {
+    text-align: center; /* Centre tout le contenu (texte, images) */
+}
+/* Cible tous les enfants directs (paragraphes, figures, etc.)
+   pour les centrer horizontalement. */
+.homepage-content > * {
+    margin-left: auto;
+    margin-right: auto;
+}
+.homepage-content img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 0.5rem;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    transition: transform 0.3s ease-in-out;
+}
+.homepage-content a:hover img {
+    transform: scale(1.03);
+}

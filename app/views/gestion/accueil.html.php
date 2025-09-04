@@ -9,41 +9,6 @@ $delaiToDisplay = 4; // délai par défaut en jour pour la fin d'affichage de la
     <?php unset($_SESSION['flash_message']); ?>
 <?php endif; ?>
 
-<style>
-    /* Styles pour rendre le tableau responsive sur mobile */
-    @media screen and (max-width: 768px) {
-        .responsive-table thead {
-            display: none; /* On cache les en-têtes classiques */
-        }
-        .responsive-table tr {
-            display: flex;
-            flex-direction: column;
-            margin-bottom: 1rem;
-            border: 1px solid #dee2e6;
-            border-radius: .25rem;
-            padding: .5rem;
-        }
-        .responsive-table td {
-            display: block; /* Chaque cellule prend toute la largeur */
-            text-align: right; /* Aligne la donnée à droite */
-            padding: .5rem;
-            border: none;
-            border-bottom: 1px solid #dee2e6;
-            position: relative;
-        }
-        .responsive-table td:last-child {
-            border-bottom: none;
-        }
-        .responsive-table td:before {
-            content: attr(data-label); /* Affiche le label */
-            position: absolute;
-            left: .5rem;
-            text-align: left;
-            font-weight: bold;
-        }
-    }
-</style>
-
 <div class="container my-4">
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h2>Gestion de la page d'accueil</h2>
@@ -61,8 +26,8 @@ $delaiToDisplay = 4; // délai par défaut en jour pour la fin d'affichage de la
         </a>
     </div>
 
-    <div class="table-responsive">
-        <table class="table table-bordered align-middle responsive-table">
+    <div class="responsive-table">
+        <table class="table table-bordered align-middle table-responsive">
             <thead class="table-light">
             <tr>
                 <th scope="col">Gala associé</th>
@@ -83,7 +48,7 @@ $delaiToDisplay = 4; // délai par défaut en jour pour la fin d'affichage de la
                             <?= $item->getEventObject() ? $item->getEventObject()->getLibelle() : 'Aucun gala associé' ?>
                         </td>
                         <td data-label="Fin d'affichage"><?= $item->getDisplayUntil()->format('d/m/Y H:i') ?></td>
-                        <td data-label="Affiché :">
+                        <td data-label="Affiché ?">
                             <div class="form-check form-switch d-flex justify-content-center">
                                 <input class="form-check-input status-toggle"
                                        type="checkbox"

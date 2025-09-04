@@ -19,6 +19,28 @@ class EventSessionRepository extends AbstractRepository
         return array_map([$this, 'hydrate'], $results);
     }
 
+    /**
+     * Trouve la dernière session d'un événement
+     * @param int $eventId
+     * @return array|null Tableau contenant les informations de la dernière session ou null
+     */
+    public function findLastSessionByEventId(int $eventId): ?array
+    {
+        $sql = "SELECT * FROM $this->tableName 
+            WHERE event_id = :event_id 
+            ORDER BY event_start_at DESC 
+            LIMIT 1";
+
+        $result = $this->query($sql, ['event_id' => $eventId]);
+
+        if (empty($result)) {
+            return null;
+        }
+
+        return $result[0];
+    }
+
+
     public function insert(EventSession $session): int
     {
         $sql = "INSERT INTO $this->tableName 

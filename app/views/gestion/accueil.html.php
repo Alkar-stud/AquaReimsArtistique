@@ -1,3 +1,6 @@
+<?php
+$delaiToDisplay = 4; // délai par défaut en jour pour la fin d'affichage de la page d'accueil
+?>
 <?php if (isset($_SESSION['flash_message'])): ?>
     <?php $flash = $_SESSION['flash_message']; ?>
     <div class="alert alert-<?= htmlspecialchars($flash['type'] ?? 'danger'); ?>">
@@ -50,10 +53,10 @@
     </div>
 
     <div class="btn-group mb-4" role="group">
-        <a href="/gestion/accueil" class="btn <?= $searchParam === 'displayed' ? 'btn-primary' : 'btn-outline-primary' ?>">
+        <a href="/gestion/accueil" class="btn <?= ($searchParam ?? 'displayed') === 'displayed' ? 'btn-primary' : 'btn-outline-primary' ?>">
             Contenus à venir
         </a>
-        <a href="/gestion/accueil/list/0" class="btn <?= $searchParam === '0' ? 'btn-primary' : 'btn-outline-primary' ?>">
+        <a href="/gestion/accueil/list/0" class="btn <?= ($searchParam ?? '') === '0' ? 'btn-primary' : 'btn-outline-primary' ?>">
             Tous les contenus (y compris passés)
         </a>
     </div>
@@ -62,8 +65,9 @@
         <table class="table table-bordered align-middle responsive-table">
             <thead class="table-light">
             <tr>
+                <th scope="col">Gala associé</th>
                 <th scope="col">Fin d'affichage</th>
-                <th scope="col" class="text-center" style="width: 100px;">Statut</th>
+                <th scope="col" class="text-center" style="width: 100px;">Affiché ?</th>
                 <th scope="col" style="width: 130px;">Actions</th>
             </tr>
             </thead>
@@ -75,8 +79,11 @@
             <?php else: ?>
                 <?php foreach ($accueil as $item): ?>
                     <tr>
+                        <td data-label="Gala associé">
+                            <?= $item->getEventObject() ? $item->getEventObject()->getLibelle() : 'Aucun gala associé' ?>
+                        </td>
                         <td data-label="Fin d'affichage"><?= $item->getDisplayUntil()->format('d/m/Y H:i') ?></td>
-                        <td data-label="Statut :">
+                        <td data-label="Affiché :">
                             <div class="form-check form-switch d-flex justify-content-center">
                                 <input class="form-check-input status-toggle"
                                        type="checkbox"
@@ -109,22 +116,35 @@
             <form method="POST" action="/gestion/accueil/add">
                 <div class="modal-header">
                     <h5 class="modal-title" id="addModalLabel">Ajouter un nouveau contenu</h5>
-                    <br>
-                    Il faut mettre une date de fin avant d'aller chercher l'image (pour le nom de(s) fichier(s) image).
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
                 </div>
                 <div class="modal-body">
                     <div class="row mb-3">
-                        <div class="col-md-6">
-                            <label for="add_display_until" class="form-label">Afficher jusqu'au</label>
-                            <input type="datetime-local" id="add_display_until" name="display_until" class="form-control" required>
-                        </div>
-                        <div class="col-md-6 d-flex align-items-end">
-                            <div class="form-check form-switch">
-                                <input class="form-check-input" type="checkbox" role="switch" id="add_is_displayed" name="is_displayed" value="1" checked>
-                                <label class="form-check-label" for="add_is_displayed">Afficher ce contenu sur le site public</label>
+                        <div class="row mb-3">
+                            <div class="col-md-4">
+                                <label for="add_event" class="form-label">Gala associé</label>
+                                <select name="event" id="add_event" class="form-select" required>
+                                    <option value="0">Aucun gala associé</option>
+                                    <?php foreach ($events as $event): ?>
+                                        <option value="<?= $event->getId() ?>" data-event-id="<?= $event->getId() ?>">
+                                            <?= htmlspecialchars($event->getLibelle()) ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label for="add_display_until" class="form-label">Afficher jusqu'au</label>
+                                <input type="datetime-local" id="add_display_until" name="display_until" class="form-control" required>
+                            </div>
+
+                            <div class="col-md-4 d-flex align-items-end">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" role="switch" id="add_is_displayed" name="is_displayed" value="1" checked>
+                                    <label class="form-check-label" for="add_is_displayed">Afficher ce contenu sur la page d'accueil</label>
+                                </div>
                             </div>
                         </div>
+
                     </div>
                     <div class="mb-3">
                         <label for="add_content" class="form-label">Contenu</label>
@@ -154,14 +174,25 @@
                     </div>
                     <div class="modal-body">
                         <div class="row mb-3">
-                            <div class="col-md-6">
+                            <div class="col-md-4">
+                                <label for="event-<?= $item->getId() ?>" class="form-label">Gala associé</label>
+                                <select name="event" id="event-<?= $item->getId() ?>" class="form-select" required>
+                                    <option value="0">Aucun gala associé</option>
+                                    <?php foreach ($events as $event): ?>
+                                        <option value="<?= $event->getId() ?>" <?= $item->getEvent() == $event->getId() ? 'selected' : '' ?>>
+                                            <?= htmlspecialchars($event->getLibelle()) ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
                                 <label for="display_until-<?= $item->getId() ?>" class="form-label">Afficher jusqu'au</label>
                                 <input type="datetime-local" id="display_until-<?= $item->getId() ?>" name="display_until" class="form-control" value="<?= $item->getDisplayUntil()->format('Y-m-d\TH:i') ?>" required>
                             </div>
-                            <div class="col-md-6 d-flex align-items-end">
+                            <div class="col-md-4 d-flex align-items-end">
                                 <div class="form-check form-switch">
                                     <input class="form-check-input" type="checkbox" role="switch" id="is_displayed-<?= $item->getId() ?>" name="is_displayed" value="1" <?= $item->isDisplayed() ? 'checked' : '' ?>>
-                                    <label class="form-check-label" for="is_displayed-<?= $item->getId() ?>">Afficher ce contenu sur le site public</label>
+                                    <label class="form-check-label" for="is_displayed-<?= $item->getId() ?>">Afficher ce contenu sur le page d'accueil</label>
                                 </div>
                             </div>
                         </div>
@@ -186,6 +217,7 @@
 <script>
     document.addEventListener('DOMContentLoaded', function () {
 
+        //Pour gérer le siwtch pour le statut d'affichage
         document.querySelectorAll('.status-toggle').forEach(toggle => {
             toggle.addEventListener('change', function () {
                 const itemId = this.dataset.id;
@@ -213,6 +245,70 @@
                         this.disabled = false;
                         alert('Une erreur de communication est survenue. Veuillez réessayer.');
                     });
+            });
+        });
+
+
+        // Récupération des données de sessions préchargées et du délai configuré pour préremplir display_until
+        const eventSessions = <?= json_encode($eventSessions ?? []); ?>;
+        const delaiToDisplay = <?= $delaiToDisplay ?>;
+
+        // Fonction pour calculer la date d'affichage à partir d'une date de session
+        function calculateDisplayDate(sessionDate) {
+            // Convertir la date de la dernière session en objet Date
+            const lastSessionDate = new Date(sessionDate);
+
+            // Ajouter le délai configuré en jours
+            lastSessionDate.setDate(lastSessionDate.getDate() + delaiToDisplay);
+
+            // Formatter la date au format attendu par l'input datetime-local
+            const year = lastSessionDate.getFullYear();
+            const month = String(lastSessionDate.getMonth() + 1).padStart(2, '0');
+            const day = String(lastSessionDate.getDate()).padStart(2, '0');
+            const hours = String(lastSessionDate.getHours()).padStart(2, '0');
+            const minutes = String(lastSessionDate.getMinutes()).padStart(2, '0');
+
+            return `${year}-${month}-${day}T${hours}:${minutes}`;
+        }
+
+        // Gestion du formulaire d'ajout
+        const addEventSelect = document.getElementById('add_event');
+        const addDisplayUntilInput = document.getElementById('add_display_until');
+
+        if (addEventSelect && addDisplayUntilInput) {
+            addEventSelect.addEventListener('change', function() {
+                const eventId = this.value;
+
+                // Si "Aucun gala associé" est sélectionné, on ne fait rien
+                if (eventId === 0) {
+                    return;
+                }
+
+                // Utiliser les données préchargées pour mettre à jour la date
+                if (eventSessions[eventId]) {
+                    addDisplayUntilInput.value = calculateDisplayDate(eventSessions[eventId]);
+                }
+            });
+        }
+
+        // Gestion des formulaires de modification
+        document.querySelectorAll('[id^="event-"]').forEach(select => {
+            select.addEventListener('change', function() {
+                const eventId = this.value;
+
+                // Si "Aucun gala associé" est sélectionné, on ne fait rien
+                if (eventId === 0) {
+                    return;
+                }
+
+                // Extraire l'ID de l'élément à partir de l'ID du select (format: "event-123")
+                const itemId = this.id.split('-')[1];
+                const displayUntilInput = document.getElementById(`display_until-${itemId}`);
+
+                // Mettre à jour la date d'affichage si on a les données nécessaires
+                if (displayUntilInput && eventSessions[eventId]) {
+                    displayUntilInput.value = calculateDisplayDate(eventSessions[eventId]);
+                }
             });
         });
     });

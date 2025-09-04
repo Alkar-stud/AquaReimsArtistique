@@ -2,12 +2,15 @@
 
 namespace app\Models;
 
+use app\Models\Event\Events;
 use DateTime;
 use DateTimeInterface;
 
 class Accueil
 {
     private int $id;
+    private int $event;
+    private ?Events $eventObject = null; // Objet Event lié
     private bool $is_displayed = false;
     private DateTimeInterface $display_until;
     private ?string $content;
@@ -15,6 +18,8 @@ class Accueil
     private ?DateTimeInterface $updated_at = null;
 
     public function getId(): int { return $this->id; }
+    public function getEvent(): int { return $this->event; }
+    public function getEventObject(): ?Events { return $this->eventObject; }
     public function isDisplayed(): bool { return $this->is_displayed; }
     public function getDisplayUntil(): DateTimeInterface { return $this->display_until; }
     public function getContent(): string { return $this->content; }
@@ -22,6 +27,14 @@ class Accueil
     public function getUpdatedAt(): ?DateTimeInterface { return $this->updated_at; }
 
     public function setId(int $id): self { $this->id = $id; return $this; }
+    public function setEvent(int $event): self { $this->event = $event; return $this; }
+    public function setEventObject(?Events $eventObject): self {
+        $this->eventObject = $eventObject;
+        if ($eventObject) {
+            $this->event = $eventObject->getId();
+        }
+        return $this;
+    }
     public function setIsdisplayed(bool $is_displayed): self { $this->is_displayed = $is_displayed; return $this; }
     public function setDisplayUntil(string $display_until): self { $this->display_until = new DateTime($display_until); return $this; }
     public function setContent(string $content): self { $this->content = $content; return $this; }

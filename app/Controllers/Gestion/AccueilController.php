@@ -6,25 +6,46 @@ use app\Attributes\Route;
 use app\Controllers\AbstractController;
 use app\Models\Accueil;
 use app\Repository\AccueilRepository;
+use app\Repository\Event\EventsRepository;
+use app\Repository\Event\EventSessionRepository;
 use app\Services\UploadService;
 use Exception;
 
 class AccueilController extends AbstractController
 {
     private AccueilRepository $repository;
+    private EventsRepository $eventsRepository;
+    private EventSessionRepository $eventSessionRepository;
 
-    public function __construct()
+    function __construct()
     {
         parent::__construct(false);
         $this->repository = new AccueilRepository();
+        $this->eventsRepository = new EventsRepository();
+        $this->eventSessionRepository = new EventSessionRepository();
     }
 
     #[Route('/gestion/accueil', name: 'app_gestion_accueil')]
     public function index(?string $search = null): void
     {
         $accueil = $this->repository->findDisplayed(false);
+        //Récupération de la liste des events à venir pour la liste déroulante
+        $events = $this->eventsRepository->findUpcoming();
+
+        // Récupération des dernières sessions pour chaque événement
+        $eventSessions = [];
+        $eventSessionRepository = new EventSessionRepository();
+        foreach ($events as $event) {
+            $lastSession = $eventSessionRepository->findLastSessionByEventId($event->getId());
+            if ($lastSession) {
+                $eventSessions[$event->getId()] = $lastSession['event_start_at'];
+            }
+        }
+
         $this->render('/gestion/accueil', [
             'accueil' => $accueil,
+            'events' => $events,
+            'eventSessions' => $eventSessions,
             'searchParam' => 'displayed'
         ], "Gestion de la page d'accueil");
     }
@@ -39,9 +60,23 @@ class AccueilController extends AbstractController
         } else {
             $accueil = $this->repository->findDisplayed(false);
         }
+        // Récupération de la liste des events à venir pour la liste déroulante
+        $events = $this->eventsRepository->findUpcoming();
+
+        // Récupération des dernières sessions pour chaque événement
+        $eventSessions = [];
+        $eventSessionRepository = new EventSessionRepository();
+        foreach ($events as $event) {
+            $lastSession = $eventSessionRepository->findLastSessionByEventId($event->getId());
+            if ($lastSession) {
+                $eventSessions[$event->getId()] = $lastSession['event_start_at'];
+            }
+        }
 
         $this->render('/gestion/accueil', [
             'accueil' => $accueil,
+            'events' => $events,
+            'eventSessions' => $eventSessions,
             'searchParam' => $search
         ], "Gestion de la page d'accueil");
     }
@@ -49,9 +84,10 @@ class AccueilController extends AbstractController
     #[Route('/gestion/accueil/add', name: 'app_gestion_accueil_add', methods: ['POST'])]
     public function add(): void
     {
-        if (isset($_POST['display_until'], $_POST['content'])) {
+        if (isset($_POST['display_until'], $_POST['content'], $_POST['event'])) {
             $accueil = new Accueil();
-            $accueil->setDisplayUntil($_POST['display_until'])
+            $accueil->setEvent((int)$_POST['event'])
+                ->setDisplayUntil($_POST['display_until'])
                 ->setContent($_POST['content'])
                 ->setIsdisplayed(isset($_POST['is_displayed']))
                 ->setCreatedAt(date('Y-m-d H:i:s'));
@@ -97,7 +133,8 @@ class AccueilController extends AbstractController
             if (!$accueil) {
                 $_SESSION['flash_message'] = ['type' => 'danger', 'message' => 'Le contenu à modifier n\'a pas été trouvé.'];
             } else {
-                $accueil->setDisplayUntil($_POST['display_until'])
+                $accueil->setEvent($_POST['event'])
+                    ->setDisplayUntil($_POST['display_until'])
                     ->setContent($_POST['content'])
                     ->setIsdisplayed(isset($_POST['is_displayed']));
 

@@ -1,9 +1,8 @@
 <?php
-//Excécuté à l'affichage de la page d'accueil de Gestion : gestion.html.php
+//Execute à l'affichage de la page d'accueil de Gestion : gestion.html.php
 namespace app\Services;
 
 use app\Enums\LogType;
-use app\Core\DatabaseMongoDB;
 use DateTime;
 use Exception;
 

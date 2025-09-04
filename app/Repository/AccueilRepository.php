@@ -3,6 +3,7 @@
 namespace app\Repository;
 
 use app\Models\Accueil;
+use app\Repository\Event\EventsRepository;
 
 class AccueilRepository extends AbstractRepository
 {
@@ -33,12 +34,19 @@ class AccueilRepository extends AbstractRepository
         return array_map([$this, 'hydrate'], $results);
     }
 
+    public function findByEvent(Events $events): array
+    {
+        $sql = "SELECT * FROM $this->tableName WHERE event = :event_id;";
+        $result = $this->query($sql, ['event_id' => $events->getId()]);
+        return array_map([$this, 'hydrate'], $results);
+    }
+
      public function insert(Accueil $accueil): int
     {
-        $sql = "INSERT INTO $this->tableName (is_displayed, display_until, content, created_at) 
-            VALUES (:is_displayed, :display_until, :content, :created_at)";
+        $sql = "INSERT INTO $this->tableName (event, is_displayed, display_until, content, created_at) 
+            VALUES (:event, :is_displayed, :display_until, :content, :created_at)";
         $this->execute($sql, [
-            //'is_displayed' => $accueil->isDisplayed(),
+            'event' => $accueil->getEvent(),
             'is_displayed' => (int)$accueil->isDisplayed(),
             'display_until' => $accueil->getDisplayUntil()->format('Y-m-d H:i:s'),
             'content' => $accueil->getContent(),
@@ -50,11 +58,11 @@ class AccueilRepository extends AbstractRepository
     public function update(Accueil $accueil): void
     {
         $sql = "UPDATE $this->tableName SET 
-            is_displayed = :is_displayed, display_until = :display_until, content = :content, updated_at = NOW()
+            event = :event, is_displayed = :is_displayed, display_until = :display_until, content = :content, updated_at = NOW()
             WHERE id = :id";
         $this->execute($sql, [
             'id' => $accueil->getId(),
-            //'is_displayed' => $accueil->isDisplayed(),
+            'event' => $accueil->getEvent(),
             'is_displayed' => (int)$accueil->isDisplayed(),
             'display_until' => $accueil->getDisplayUntil()->format('Y-m-d H:i:s'),
             'content' => $accueil->getContent(),
@@ -81,11 +89,21 @@ class AccueilRepository extends AbstractRepository
     {
         $accueil = new Accueil();
         $accueil->setId($data['id'])
+            ->setEvent($data['event'])
             ->setIsdisplayed($data['is_displayed'])
             ->setDisplayUntil($data['display_until'])
             ->setContent($data['content'])
             ->setCreatedAt($data['created_at'])
             ->setUpdatedAt($data['updated_at']);
+
+        // Charger l'objet Events associé
+        if ($data['event']) {
+            $eventsRepository = new EventsRepository();
+            $event = $eventsRepository->findById($data['event']);
+            if ($event) {
+                $accueil->setEventObject($event);
+            }
+        }
         return $accueil;
     }
 

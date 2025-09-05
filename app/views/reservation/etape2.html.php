@@ -24,8 +24,15 @@
                    value="<?= htmlspecialchars($reservation['user']['telephone'] ?? '') ?>">
             <div id="telFeedback" class="invalid-feedback"></div>
         </div>
-        <a href="/reservation" class="btn btn-secondary ms-2">Modifier mon choix précédent</a>
-        <button type="submit" class="btn btn-primary">Valider et continuer</button>
+        <div class="row">
+            <div class="col-12 col-md-6 mb-2 mb-md-0">
+                <a href="/reservation" class="btn btn-secondary w-100 w-md-auto">Modifier mon choix précédent</a>
+            </div>
+            <div class="col-12 col-md-6">
+                <button type="submit" class="btn btn-primary w-100 w-md-auto">Valider et continuer</button>
+            </div>
+        </div>
+
     </form>
     <div id="reservationAlert"></div>
 </div>

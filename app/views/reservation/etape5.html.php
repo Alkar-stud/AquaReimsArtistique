@@ -55,9 +55,16 @@ $participants = $reservation['reservation_detail'] ?? [];
             <div class="zone-detail" id="zone-detail-<?= $zone->getId() ?>" style="display:none;">
                 <form id="form_etape5">
                     <input type="hidden" name="selectedSeats" id="selectedSeats">
-                    <a href="/reservation/etape4Display" class="btn btn-secondary ms-2">Modifier mon choix précédent</a>
-                    <button type="submit" class="btn btn-primary" disabled id="submitBtn">Valider et continuer</button>
+                    <div class="row">
+                        <div class="col-12 col-md-6 mb-2 mb-md-0">
+                            <a href="/reservation/etape4Display" class="btn btn-secondary w-100 w-md-auto">Modifier mon choix précédent</a>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <button type="submit" class="btn btn-primary w-100 w-md-auto">Valider et continuer</button>
+                        </div>
+                    </div>
                 </form>
+                <br>
                 <div class="d-flex justify-content-between align-items-center mb-2">
                     <strong>Zone <?= htmlspecialchars($zone->getZoneName()) ?></strong>
                     <button type="button" class="btn btn-secondary btn-sm retour-zones">Retour aux zones</button>
@@ -150,8 +157,14 @@ $participants = $reservation['reservation_detail'] ?? [];
 
         <form id="form_etape5">
             <input type="hidden" name="selectedSeats" id="selectedSeats">
-            <a href="/reservation/etape4Display" class="btn btn-secondary ms-2">Modifier mon choix précédent</a>
-            <button type="submit" class="btn btn-primary" disabled id="submitBtn">Valider et continuer</button>
+            <div class="row">
+                <div class="col-12 col-md-6 mb-2 mb-md-0">
+                    <a href="/reservation/etape4Display" class="btn btn-secondary w-100 w-md-auto">Modifier mon choix précédent</a>
+                </div>
+                <div class="col-12 col-md-6">
+                    <button type="submit" class="btn btn-primary w-100 w-md-auto">Valider et continuer</button>
+                </div>
+            </div>
         </form>
     </div>
 

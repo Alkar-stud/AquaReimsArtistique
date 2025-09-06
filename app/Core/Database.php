@@ -33,7 +33,12 @@ class Database
     {
         if (self::$instance === null) {
             // Les constantes sont déjà chargées par un require dans les fichiers de config
-            $dsn = 'mysql:host=' . $_ENV['DB_HOST'] . ';dbname=' . $_ENV['DB_NAME'] . ';charset=' . $_ENV['DB_CHARSET'];
+            $dsn = 'mysql:host=' . $_ENV['DB_HOST'] . ';port=' . $_ENV['DB_PORT'] . ';charset=' . $_ENV['DB_CHARSET'];
+            $dbName = $_ENV['DB_NAME'];
+
+            if (!empty($dbName)) {
+                $dsn .= ';dbname=' . $dbName;
+            }
 
             $options = [
                 PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION, // Lance des exceptions en cas d'erreur
@@ -50,5 +55,30 @@ class Database
         }
 
         return self::$instance;
+    }
+
+
+    /**
+     * Vérifie si l'application est installée en testant l'existence de la table 'migrations'.
+     * @return bool
+     */
+    public static function isInstalled(): bool
+    {
+        try {
+            $pdo = self::getInstance();
+            // On essaie d'exécuter une requête simple sur une table qui doit exister après l'installation.
+            // La table 'migrations' est un excellent candidat.
+            $pdo->query("SELECT 1 FROM migrations LIMIT 1");
+            return true;
+        } catch (PDOException $e) {
+            // Si la requête échoue parce que la table n'existe pas (SQLSTATE[42S02]),
+            // alors l'application n'est pas installée.
+            if ($e->getCode() === '42S02') {
+                return false;
+            }
+            // Pour toute autre erreur (ex: problème de connexion), on laisse l'exception se propager
+            // pour être gérée plus haut.
+            throw $e;
+        }
     }
 }

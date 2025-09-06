@@ -133,13 +133,13 @@ class MigrationController
             </form>
             <?php
             return;
-        } else {
-            echo '<a href="/">Retour à l\'accueil</a>';
         }
 
         // Si aucune migration à faire et pas besoin d'email
         if (empty($toApply)) {
             throw new Exception('404');
+        } else {
+            echo '<a href="/">Retour à l\'accueil</a>';
         }
     }
 }

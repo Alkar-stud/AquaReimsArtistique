@@ -38,13 +38,13 @@ COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 # Définit le répertoire de travail
 WORKDIR /var/www/html
 
+RUN pecl install mongodb && docker-php-ext-enable mongodb
+
 # Copie les fichiers de l'application mais ignore les fichiers inutiles
 COPY . .
 
 # Donne les permissions finales
 RUN chown -R www-data:www-data /var/www/html
-
-RUN pecl install mongodb && docker-php-ext-enable mongodb
 
 USER www-data
 

@@ -6,10 +6,19 @@ Billetterie du club sportif Aqua Reims Artistique, pour la vente des places des 
 
 ## Installation
 
-1. Cloner le dépôt
-2. Exécuter `composer install`
-3. Exécuter `composer dump-autoload`
-4. Vérifier que PHP version 8.2 minimum soit installé, un serveur web type Apache et votre serveur MySQL lancés.
-5. Créer un fichier .env sur le modèle du .env.example et le renseigner avec vos informations, nom de l’application, paramètres BDD et Mailer.
-6. Aller sur l’url de l’app et `/install`. Les tables s’installent dans la base de données.
-7. Saisir son email lors de l'installation pour recevoir un lien de réinitialisation de mot de passe pour le compte SuperAdmin qui pourra créer les autres comptes utilisateurs.
+### 1. Installation locale
+
+- Installez PHP 8.2+, Composer, Apache, et MySQL.
+- Clonez le dépôt.
+- Copiez `.env.example` en `.env` et configurez-le.
+- Exécutez `composer install` puis `composer dump-autoload`.
+- Configurez le vhost Apache pour pointer sur `/public`.
+- Lancez le serveur et accédez à `/install`.
+
+### 2. Installation avec Docker (recommandé)
+
+- Installez Docker et Docker Compose.
+- Clonez le dépôt.
+- Copiez `.env.example` en `.env.docker` et configurez-le.
+- Lancez `docker-compose up --build`.
+- Accédez à `https://localhost:8000/install`.

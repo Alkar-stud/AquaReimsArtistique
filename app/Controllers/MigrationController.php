@@ -70,7 +70,6 @@ class MigrationController
                     echo "Erreur lors de la migration $file : " . $e->getMessage() . "<br>";
                 }
             }
-            echo '<a href="/">Retour à l\'accueil</a>';;
             // On stocke la liste pour affichage après l'email
             if ($userMigrationApplied) {
                 $_SESSION['applied_migrations'] = $appliedNow;
@@ -115,6 +114,7 @@ class MigrationController
                             echo "<li>" . htmlspecialchars($file) . "</li>";
                         }
                         echo "</ul>";
+                        echo '<a href="/">Retour à l\'accueil</a>';;
                         unset($_SESSION['applied_migrations']);
                     }
                     return;
@@ -133,6 +133,8 @@ class MigrationController
             </form>
             <?php
             return;
+        } else {
+            echo '<a href="/">Retour à l\'accueil</a>';
         }
 
         // Si aucune migration à faire et pas besoin d'email

@@ -8,7 +8,8 @@
       "ext-fileinfo": "*",
       "ext-curl": "*",
       "ext-dom": "*",
-      "ext-libxml": "*"
+      "ext-libxml": "*",
+        "rakibtg/sleekdb": "^2.15"
     },
     "autoload": {
         "psr-4": {

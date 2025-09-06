@@ -20,10 +20,10 @@ class LogService
 
     public function log(LogType $type, string $message, array $context = [], string $level = 'INFO'): void
     {
-        // 1. Récupérer TOUTES les données une seule fois
+        // Récupérer toutes les données une seule fois
         $logData = $this->collectLogData($type, $message, $context, $level);
 
-        // 2. Envoyer aux différents supports avec leurs formatages spécifiques
+        // Envoyer aux différents supports avec leurs formatages spécifiques
         $this->logToFile($type, $logData);
         $this->logToMongoDB($type, $logData);
     }

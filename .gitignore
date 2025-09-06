@@ -3,6 +3,7 @@
 /.env
 /.env.local
 /.env.prod
+/.env.docker
 /var/
 /vendor/
 
@@ -10,3 +11,4 @@ storage/*
  !storage/.gitkeep
 
 *.log
+/.dockerignore

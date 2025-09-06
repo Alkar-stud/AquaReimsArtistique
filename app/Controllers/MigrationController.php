@@ -126,7 +126,7 @@ class MigrationController
             // Affiche le formulaire HTML
             ?>
             <form method="post">
-                <label for="email">Nouvelle adresse email pour l'utilisateur super admin, un lien de réinitialisation y sera envoyé :</label>
+                <label for="email">Nouvelle adresse email pour l'utilisateur super admin, un lien de réinitialisation y sera envoyé :</label>
                 <input type="email" name="email" id="email" required>
                 <button type="submit">Mettre à jour</button>
                 <?php if (isset($error)) echo "<p style='color:red;'>$error</p>"; ?>

@@ -1,3 +1,20 @@
+
+@font-face {
+    font-family: 'Track';
+    src: url('../fonts/Track.otf') format('opentype');
+    font-weight: normal;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Selima';
+    src: url('../fonts/Selima.otf') format('opentype');
+    font-weight: normal;
+    font-style: normal;
+    font-display: swap;
+}
+
 :root {
 
     /* colors */
@@ -28,6 +45,10 @@
 
     --bs-secondary: var(--ara-color-purple);
     --bs-secondary-rgb: 92, 130, 206; /* La version RGB pour le secondaire */
+
+    /* Fonts */
+    --font-family-base: 'Track', 'Roboto', sans-serif;
+    --font-family-handwriting: 'Selima', cursive;
 
 }
 
@@ -60,4 +81,3 @@
 #content {
     padding: 2rem;
 }
-

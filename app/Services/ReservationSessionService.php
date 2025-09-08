@@ -6,21 +6,18 @@ use app\Models\Reservation\ReservationSession;
 
 class ReservationSessionService
 {
-    public function createSession(): ReservationSession
+    public function createReservationSession(): ReservationSession
     {
-        $session = new ReservationSession();
-        $_SESSION['reservation_token'] = $session->getToken();
-        $_SESSION['reservation_session'] = $session->serialize();
-        return $session;
+        return $_SESSION['reservation'][session_id()] = [];
     }
 
-    public function getSession(): ?ReservationSession
+    public function getReservationSession(): ?ReservationSession
     {
-        if (!isset($_SESSION['reservation_session'])) {
+        if (!isset($_SESSION['reservation'])) {
             return null;
         }
 
-        $session = ReservationSession::deserialize($_SESSION['reservation_session']);
+        $session = ReservationSession::deserialize($_SESSION['reservation']);
 
         if ($session->isExpired()) {
             $this->clearSession();
@@ -30,13 +27,18 @@ class ReservationSessionService
         return $session;
     }
 
-    public function updateSession(ReservationSession $session): void
+    public function updateReservationSession(ReservationSession $session): void
     {
-        $_SESSION['reservation_session'] = $session->serialize();
+        $_SESSION['reservation'] = $session->serialize();
     }
 
-    public function clearSession(): void
+    public function clearReservationSession(): void
     {
-        unset($_SESSION['reservation_token'], $_SESSION['reservation_session']);
+        unset($_SESSION['reservation']);
+    }
+
+    public function getReservationFromSession() {
+        $session = $this->getReservationSession();
+        return $session ? $session->getReservation() : null;
     }
 }

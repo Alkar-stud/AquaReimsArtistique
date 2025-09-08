@@ -52,8 +52,8 @@
 
 <?php
 
-if (isset($_SESSION['user']) && $_SESSION['user']['role']['level'] <= 1 && $_ENV['APP_DEBUG'] === "true") {
-    echo '<pre>';
+if ($_ENV['APP_DEBUG'] === "true") {
+    echo '<pre>$_SESSION : ';
     print_r($_SESSION);
     echo '</pre>';
 }

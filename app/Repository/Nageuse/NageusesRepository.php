@@ -37,7 +37,7 @@ class NageusesRepository extends AbstractRepository
      * Retourne les nageuses d'un groupe spécifique.
      */
 
-    public function findByGroupId(int $groupId): array
+    public function findByGroupeId(int $groupId): array
     {
         $sql = "SELECT n.*, g.libelle AS groupe_libelle
             FROM nageuses n

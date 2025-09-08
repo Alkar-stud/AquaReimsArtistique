@@ -6,11 +6,26 @@ use app\Enums\LogType;
 
 class CsrfHelper
 {
+    private static LogService $logService;
+
+    /**
+     * Génère un nouveau token CSRF et le stocke en session
+     * @return string Le token généré
+     */
     public static function generateToken(): string
     {
         $token = bin2hex(random_bytes(32));
         $_SESSION['csrf_token'] = $token;
         return $token;
+    }
+
+    /**
+     * Récupère le token CSRF existant ou en génère un nouveau
+     * @return string Le token CSRF
+     */
+    public static function getToken(): string
+    {
+        return $_SESSION['csrf_token'] ?? self::generateToken();
     }
 
     public static function validateToken(string $token, bool $logFailure = true): bool
@@ -32,11 +47,6 @@ class CsrfHelper
         unset($_SESSION['csrf_token']);
 
         return $isValid;
-    }
-
-    public static function getToken(): string
-    {
-        return $_SESSION['csrf_token'] ?? self::generateToken();
     }
 
     private static function logInvalidCsrf(string $reason, string $submittedToken): void

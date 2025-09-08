@@ -94,7 +94,7 @@ class ReservationPersistenceService
 
         // On récupère la date de fin. En cas d'échec, on prend la date de l'événement par sécurité.
         $closeRegistrationDate = $inscriptionDateToUse ? $inscriptionDateToUse->getCloseRegistrationAt() : $sessionObj->getEventStartAt();
-        $tokenGenerated = $this->reservationHelper->genereToken(32, $sessionObj->getEventStartAt(), $closeRegistrationDate);
+        $tokenGenerated = $this->reservationHelper->genereReservationToken(32, $sessionObj->getEventStartAt(), $closeRegistrationDate);
 
         // --- Création de l'objet Reservation principal ---
         $reservation = new Reservations();

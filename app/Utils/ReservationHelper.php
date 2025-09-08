@@ -1,6 +1,8 @@
 <?php
 namespace app\Utils;
 
+use DateTimeInterface;
+
 class ReservationHelper
 {
     /**
@@ -33,7 +35,7 @@ class ReservationHelper
     /*
      * Pour générer un token avec date de validité au jour de l'event
      */
-    public static function genereToken(int $nbCaractereToken, \DateTimeInterface $dateEvent, ?\DateTimeInterface $dateFinInscriptionsEvent = null): array
+    public static function genereReservationToken(int $nbCaractereToken, DateTimeInterface $dateEvent, ?DateTimeInterface $dateFinInscriptionsEvent = null): array
     {
         if ($dateFinInscriptionsEvent === null) {
             $dateFinInscriptionsEvent = $dateEvent;

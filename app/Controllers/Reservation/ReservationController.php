@@ -8,15 +8,16 @@ use app\Repository\MailTemplateRepository;
 use app\Repository\Reservation\ReservationMailsSentRepository;
 use app\Repository\Reservation\ReservationsPlacesTempRepository;
 use app\Repository\Reservation\ReservationsRepository;
-use app\Repository\Nageuse\GroupesNageusesRepository;
 use app\Repository\Nageuse\NageusesRepository;
 use app\Repository\Event\EventInscriptionDatesRepository;
 use app\Repository\Piscine\PiscineGradinsZonesRepository;
 use app\Repository\Piscine\PiscineGradinsPlacesRepository;
 use app\Repository\Reservation\ReservationsDetailsRepository;
 use app\Repository\TarifsRepository;
-use app\Services\ReservationSessionService;
 use app\Repository\Event\EventsRepository;
+use app\Services\ReservationSessionService;
+use app\Services\NageuseService;
+use app\Utils\CsrfHelper;
 use app\Utils\ReservationContextHelper;
 use DateTime;
 
@@ -35,6 +36,7 @@ class ReservationController extends AbstractController
     private MailTemplateRepository $mailTemplateRepository;
     private ReservationsDetailsRepository $reservationsDetailsRepository;
     private ReservationsPlacesTempRepository $tempRepo;
+    private NageuseService $nageuseService;
 
 
     public function __construct()
@@ -51,35 +53,23 @@ class ReservationController extends AbstractController
         $this->mailTemplateRepository = new MailTemplateRepository();
         $this->reservationsDetailsRepository = new ReservationsDetailsRepository();
         $this->tempRepo = new ReservationsPlacesTempRepository();
+        $this->nageuseService = new NageuseService();
 
     }
 
     // Page d'accueil du processus de réservation
     public function index(): void
     {
-        $this->sessionService->clearSession();
+        //On supprime tout ce qu'il y a dans $_SESSION['reservation']
+        $this->sessionService->clearReservationSession();
+        //On récupère tous les events à venir
         $events = $this->eventsRepository->findUpcoming();
+        //On récupère tous les groupes de nageuses
+        $groupes = $this->nageuseService->getAllGroupesNageuses();
+        //On récupère toutes les nageuses triées par groupes
+        $nageusesParGroupe = $this->nageuseService->getNageusesByGroupe();
 
-        // Récupérer tous les groupes
-        $groupesRepository = new GroupesNageusesRepository();
-        $groupes = $groupesRepository->findAll();
-
-        // Récupérer les nageuses par groupe
-        $nageusesRepository = new NageusesRepository();
-        $nageuses = $nageusesRepository->findAll();
-        $nageusesParGroupe = [];
-        foreach ($nageuses as $nageuse) {
-            $groupeId = $nageuse->getGroupe();
-            if (!isset($nageusesParGroupe[$groupeId])) {
-                $nageusesParGroupe[$groupeId] = [];
-            }
-            $nageusesParGroupe[$groupeId][] = [
-                'id' => $nageuse->getId(),
-                'nom' => $nageuse->getName()
-            ];
-        }
-
-        //Récupération des périodes d'ouverture des inscriptions
+        //Récupération des périodes d'ouverture des inscriptions pour chaque event
         $inscriptionsParEvent = [];
         foreach ($events as $event) {
             $inscriptionsParEvent[$event->getId()] = $this->eventInscriptionDatesRepository->findByEventId($event->getId());
@@ -129,7 +119,7 @@ class ReservationController extends AbstractController
             'inscriptionsParEvent' => $inscriptionsParEvent,
             'periodesOuvertes' => $periodesOuvertes,
             'nextPublicOuvertures' => $nextPublicOuvertures,
-            'csrf_token' => $this->getCsrfToken(),
+            'csrf_token' => CsrfHelper::getToken(),
             'selectedSession' => $selectedSession,
             'selectedNageuse' => $selectedNageuse,
             'selectedGroupe' => $selectedGroupe
@@ -467,7 +457,7 @@ class ReservationController extends AbstractController
         foreach ($reservationDetails as $detail) {
             if (isset($detail['tarif_id'])) {
                 foreach ($tarifs as $tarif) {
-                    if ($tarif->getId() == $detail['tarif_id'] && $tarif->getAccessCode()) {
+                    if ($tarif->getId() === $detail['tarif_id'] && $tarif->getAccessCode()) {
                         $specialTarifSession = [
                             'id' => $tarif->getId(),
                             'libelle' => $tarif->getLibelle(),

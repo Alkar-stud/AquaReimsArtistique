@@ -74,7 +74,7 @@ class NageusesController extends AbstractController
             $titre = 'Toutes les nageuses';
             $groupeLibelle = null;
         } elseif (is_numeric($groupId)) {
-            $nageuses = $this->repository->findByGroupId((int)$groupId);
+            $nageuses = $this->repository->findByGroupeId((int)$groupId);
             $groupe = (new GroupesNageusesRepository())->findById((int)$groupId);
             $groupeLibelle = $groupe?->getLibelle();
             $titre = $groupeLibelle ? "Nageuses du groupe « $groupeLibelle »" : "Nageuses du groupe";

@@ -32,7 +32,7 @@
                                     <select id="groupe_nageuses_<?= $event->getId() ?>" class="form-select d-inline w-auto ms-2" onchange="updateNageuses(this.value, <?= $event->getId() ?>)">
                                         <option value="">Sélectionner un groupe</option>
                                         <?php foreach ($groupes as $groupe): ?>
-                                            <option value="<?= $groupe->getId() ?>" <?= ($groupe->getId() == $selectedGroupe) ? 'selected' : '' ?>>
+                                            <option value="<?= $groupe->getId() ?>">
                                                 <?= htmlspecialchars($groupe->getLibelle()) ?>
                                             </option>
                                         <?php endforeach; ?>
@@ -45,8 +45,7 @@
                                         <?php
                                         if ($selectedGroupe && isset($nageusesParGroupe[$selectedGroupe])) {
                                             foreach ($nageusesParGroupe[$selectedGroupe] as $nageuse) {
-                                                $isSelected = ($nageuse['id'] == $selectedNageuse) ? 'selected' : '';
-                                                echo "<option value=\"{$nageuse['id']}\" $isSelected>{$nageuse['nom']}</option>";
+                                                echo "<option value=\"{$nageuse['id']}\">{$nageuse['nom']}</option>";
                                             }
                                         }
                                         ?>

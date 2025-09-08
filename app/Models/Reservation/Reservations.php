@@ -28,6 +28,7 @@ class Reservations
     private string $token;
     private DateTimeInterface $token_expire_at;
     private bool $is_canceled = false;
+    private bool $is_checked = false;
     private ?string $comments = null;
     private DateTimeInterface $created_at;
     private ?DateTimeInterface $updated_at = null;
@@ -48,11 +49,11 @@ class Reservations
     public function getNageuseId(): ?int { return $this->nageuse_si_limitation; }
     public function getNageuse(): ?Nageuses { return $this->nageuse; }
     public function getTotalAmount(): int { return $this->total_amount; }
-
     public function getTotalAmountPaid(): int { return $this->total_amount_paid; }
     public function getToken(): string { return $this->token; }
     public function getTokenExpireAt(): DateTimeInterface { return $this->token_expire_at; }
     public function isCanceled(): bool { return $this->is_canceled; }
+    public function isChecked(): bool { return $this->is_checked; }
     public function getComments(): ?string { return $this->comments; }
     public function getCreatedAt(): DateTimeInterface { return $this->created_at; }
     public function getUpdatedAt(): ?DateTimeInterface { return $this->updated_at; }
@@ -176,6 +177,12 @@ class Reservations
     public function setIsCanceled(bool $is_canceled): self
     {
         $this->is_canceled = $is_canceled;
+        return $this;
+    }
+
+    public function setIsChecked(bool $is_checked): self
+    {
+        $this->is_checked = $is_checked;
         return $this;
     }
 

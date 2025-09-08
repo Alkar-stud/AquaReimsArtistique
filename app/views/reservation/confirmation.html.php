@@ -33,7 +33,7 @@ $total = 0;
     </ul>
 
     <?php if (!empty($reservation['reservation_detail'])): ?>
-        <h5>Participants avec places assises</h5>
+        <h5>Participants</h5>
         <ul class="list-group mb-3">
             <?php foreach ($reservation['reservation_detail'] as $i => $detail): ?>
                 <?php

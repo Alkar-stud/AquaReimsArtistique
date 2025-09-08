@@ -214,11 +214,24 @@ class ReservationsRepository extends AbstractRepository
     /**
      * Annule une réservation
      * @param int $id
+     * @param bool $is_canceled
      * @return bool
      */
-    public function cancel(int $id): bool
+    public function cancel(int $id, bool $is_canceled = true): bool
     {
-        $sql = "UPDATE $this->tableName SET is_canceled = 1, updated_at = NOW() WHERE id = :id";
+        $sql = "UPDATE $this->tableName SET is_canceled = ($is_canceled == false ? 0 : 1), updated_at = NOW() WHERE id = :id";
+        return $this->execute($sql, ['id' => $id]);
+    }
+
+    /**
+     * Marque une réservation comme vérifiée / ou non
+     * @param int $id
+     * @param bool $is_checked
+     * @return bool
+     */
+    public function check(int $id, bool $is_checked = true): bool
+    {
+        $sql = "UPDATE $this->tableName SET is_checked = ($is_checked == false ? 0 : 1), updated_at = NOW() WHERE id = :id";
         return $this->execute($sql, ['id' => $id]);
     }
 

@@ -49,9 +49,6 @@
     <?php endif; ?>
 <?php
 if ($_ENV['APP_DEBUG'] === "true") {
-    echo '<pre>$_SESSION : ';
-    print_r($_SESSION);
-    echo '</pre>';
 ?>
 
 <!-- Outil de débogage pour afficher les dimensions de la fenêtre -->
@@ -78,7 +75,10 @@ if ($_ENV['APP_DEBUG'] === "true") {
 			window.addEventListener('resize', updateDimensions);
 		});
 	</script>
-<?php
+	<?php
+    echo '<pre>$_SESSION : ';
+    print_r($_SESSION);
+    echo '</pre>';
 }
 ?>
 </body>

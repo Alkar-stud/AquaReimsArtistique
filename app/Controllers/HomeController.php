@@ -40,12 +40,23 @@ class HomeController extends AbstractController
                         // On ajoute des classes Bootstrap pour un affichage responsive
                         $currentClass = $figure->getAttribute('class');
                         $figure->setAttribute('class', $currentClass . ' mx-auto');
-                    }
+
+                        // Ajout de la figcaption si un événement est associé
+                        if ($content->getEventObject()) {
+                            $figcaption = $doc->createElement('figcaption', 'Vous pouvez cliquer sur l\'image pour réserver pour : ' . htmlspecialchars($content->getEventObject()->getLibelle()));
+                             $figure->appendChild($figcaption);
+                         }
+                     }
                 }
                 $images = $doc->getElementsByTagName('img');
                 foreach ($images as $image) {
                     $link = $doc->createElement('a');
                     $link->setAttribute('href', '/reservation');
+
+                    // Ajout du alt à l'image
+                    if ($content->getEventObject()) {
+                        $image->setAttribute('alt', 'Réserver pour ' . htmlspecialchars($content->getEventObject()->getLibelle()));
+                    }
 
                     // On remplace l'image par le lien, et on met l'image à l'intérieur du lien
                     $image->parentNode->replaceChild($link, $image);

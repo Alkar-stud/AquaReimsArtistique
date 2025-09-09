@@ -3,6 +3,7 @@
 namespace app\Repository;
 
 use app\Models\Accueil;
+use app\Models\Event\Events;
 use app\Repository\Event\EventsRepository;
 
 class AccueilRepository extends AbstractRepository
@@ -38,7 +39,7 @@ class AccueilRepository extends AbstractRepository
     {
         $sql = "SELECT * FROM $this->tableName WHERE event = :event_id;";
         $result = $this->query($sql, ['event_id' => $events->getId()]);
-        return array_map([$this, 'hydrate'], $results);
+        return array_map([$this, 'hydrate'], $result);
     }
 
      public function insert(Accueil $accueil): int

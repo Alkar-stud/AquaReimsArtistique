@@ -38,17 +38,10 @@
                                         <?php endforeach; ?>
                                     </select>
                                 </p>
-                                <p id="nageuse_container_<?= $event->getId() ?>" style="display: <?= ($selectedNageuse ? 'block' : 'none'); ?>">
+                                <p id="nageuse_container_<?= $event->getId() ?>" style="display:none;">
                                     <strong>Nageuse :</strong>
                                     <select id="nageuse_<?= $event->getId() ?>" class="form-select d-inline w-auto ms-2">
                                         <option value="">Sélectionner une nageuse</option>
-                                        <?php
-                                        if ($selectedGroupe && isset($nageusesParGroupe[$selectedGroupe])) {
-                                            foreach ($nageusesParGroupe[$selectedGroupe] as $nageuse) {
-                                                echo "<option value=\"{$nageuse['id']}\">{$nageuse['nom']}</option>";
-                                            }
-                                        }
-                                        ?>
                                     </select>
                                 </p>
                             <?php endif; ?>
@@ -69,8 +62,7 @@
                                                    type="radio"
                                                    name="session_<?= $event->getId() ?>"
                                                    id="session_<?= $event->getId() ?>_<?= $session->getId() ?>"
-                                                   value="<?= $session->getId() ?>"
-                                                <?= ($session->getId() == $selectedSession) ? 'checked' : '' ?>>
+                                                   value="<?= $session->getId() ?>">
                                             <label class="form-check-label" for="session_<?= $event->getId() ?>_<?= $session->getId() ?>">
                                                 <?= htmlspecialchars($session->getSessionName() ?? '') ?> : <?= $session->getEventStartAt()->format('d/m/Y H:i') ?>
                                             </label>

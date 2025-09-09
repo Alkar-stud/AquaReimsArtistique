@@ -199,42 +199,43 @@ abstract class AbstractController
         }
     }
 
-    protected function validateCsrf(string $token): bool
+    /**
+     * Récupère le token CSRF soumis, quelle que soit la méthode (POST, JSON, GET).
+     * @return string|null Le token trouvé, ou null.
+     */
+    private function getSubmittedCsrfToken(): ?string
     {
-        return CsrfHelper::validateToken($token);
-    }
-
-    protected function checkCsrfOrJsonError($token, $action): bool
-    {
-        if (!$this->validateCsrfAndLog($token, $action)) {
-            $this->json(['success' => false, 'error' => 'Token CSRF invalide']);
-            return false;
-        }
-        return true;
-    }
-
-    protected function validateCsrfAndLog(string $submittedToken, string $action = 'unknown', bool $unset = true): bool
-    {
-        $sessionToken = $_SESSION['csrf_token'] ?? '';
-
-        if (empty($submittedToken) || empty($sessionToken) || !hash_equals($sessionToken, $submittedToken)) {
-            $this->logService->log(LogType::ACCESS, "Tentative CSRF invalide sur action: $action", [
-                'submitted_token_length' => strlen($submittedToken),
-                'session_token_exists' => !empty($sessionToken),
-                'ip' => $_SERVER['REMOTE_ADDR'] ?? '',
-                'user_agent' => $_SERVER['HTTP_USER_AGENT'] ?? '',
-                'action' => $action
-            ], 'DANGER');
-
-            return false;
+        if (!empty($_POST['csrf_token'])) {
+            return $_POST['csrf_token'];
         }
 
-        if ($unset) {
-            unset($_SESSION['csrf_token']);
+        // Le flux ne peut être lu qu'une fois. On le met en cache si besoin.
+        static $json_input = null;
+        if ($json_input === null) {
+            $json_input = json_decode(file_get_contents('php://input'), true);
         }
-        return true;
+
+        if (is_array($json_input) && !empty($json_input['csrf_token'])) {
+            return $json_input['csrf_token'];
+        }
+
+        return $_GET['csrf_token'] ?? null;
     }
 
+    /**
+     * Vérifie le token CSRF de la requête et arrête l'exécution avec une erreur JSON si invalide.
+     * @param string $action L'action en cours pour le logging.
+     * @param bool $consume Indique si le token doit être consommé (usage unique).
+     */
+    protected function checkCsrfOrExit(string $action, bool $consume = true): void
+    {
+        $token = $this->getSubmittedCsrfToken();
+
+        if ($token === null || !CsrfHelper::validateToken($token, $action, $consume)) {
+            // La méthode json() contient un exit.
+            $this->json(['success' => false, 'error' => 'La session a expiré ou la requête est invalide. Veuillez rafraîchir la page.']);
+        }
+    }
 
 
     protected function getCsrfToken(): string

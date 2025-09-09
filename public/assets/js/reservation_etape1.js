@@ -55,7 +55,15 @@ function validerFormulaireReservation(eventId) {
 
     // Si limitation, contrôle côté serveur avant d'afficher le formulaire
     if (groupeSelect && nageuseId) {
-        fetch(`/reservation/check-nageuse-limit?event_id=${eventId}&nageuse_id=${nageuseId}&csrf_token=${window.csrf_token}`)
+        fetch('/reservation/check-nageuse-limit', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                event_id: eventId,
+                nageuse_id: nageuseId,
+                csrf_token: window.csrf_token
+            })
+        })
             .then(async r => {
                 const text = await r.text();
                 try {

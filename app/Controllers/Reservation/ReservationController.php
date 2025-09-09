@@ -9,27 +9,24 @@ use app\Repository\Reservation\ReservationMailsSentRepository;
 use app\Repository\Reservation\ReservationsPlacesTempRepository;
 use app\Repository\Reservation\ReservationsRepository;
 use app\Repository\Nageuse\NageusesRepository;
-use app\Repository\Event\EventInscriptionDatesRepository;
 use app\Repository\Piscine\PiscineGradinsZonesRepository;
 use app\Repository\Piscine\PiscineGradinsPlacesRepository;
 use app\Repository\Reservation\ReservationsDetailsRepository;
 use app\Repository\TarifsRepository;
 use app\Repository\Event\EventsRepository;
+use app\Services\EventsService;
 use app\Services\ReservationSessionService;
 use app\Services\NageuseService;
 use app\Utils\CsrfHelper;
 use app\Utils\ReservationContextHelper;
-use DateTime;
 
 
-#[Route('/reservation', name: 'app_reservation')]
 class ReservationController extends AbstractController
 {
-    private ReservationSessionService $sessionService;
+    private ReservationSessionService $reservationSessionService;
     private EventsRepository $eventsRepository;
     private ReservationsRepository $reservationsRepository;
     private TarifsRepository $tarifsRepository;
-    private EventInscriptionDatesRepository $eventInscriptionDatesRepository;
     private PiscineGradinsZonesRepository $zonesRepository;
     private PiscineGradinsPlacesRepository $placesRepository;
     private ReservationMailsSentRepository $reservationMailsSentRepository;
@@ -37,16 +34,16 @@ class ReservationController extends AbstractController
     private ReservationsDetailsRepository $reservationsDetailsRepository;
     private ReservationsPlacesTempRepository $tempRepo;
     private NageuseService $nageuseService;
+    private EventsService $eventsService;
 
 
     public function __construct()
     {
         parent::__construct(true); // route publique
-        $this->sessionService = new ReservationSessionService();
+        $this->reservationSessionService = new ReservationSessionService();
         $this->eventsRepository = new EventsRepository();
         $this->reservationsRepository = new ReservationsRepository();
         $this->tarifsRepository = new TarifsRepository();
-        $this->eventInscriptionDatesRepository = new EventInscriptionDatesRepository();
         $this->zonesRepository = new PiscineGradinsZonesRepository();
         $this->placesRepository = new PiscineGradinsPlacesRepository();
         $this->reservationMailsSentRepository = new ReservationMailsSentRepository();
@@ -54,168 +51,39 @@ class ReservationController extends AbstractController
         $this->reservationsDetailsRepository = new ReservationsDetailsRepository();
         $this->tempRepo = new ReservationsPlacesTempRepository();
         $this->nageuseService = new NageuseService();
-
+        $this->eventsService = new EventsService();
     }
 
     // Page d'accueil du processus de réservation
+    #[Route('/reservation', name: 'app_reservation')]
     public function index(): void
     {
-        //On supprime tout ce qu'il y a dans $_SESSION['reservation']
-        $this->sessionService->clearReservationSession();
+        //On supprime tout ce qu'il y a dans $_SESSION['reservation'].
+        $this->reservationSessionService->clearReservationSession();
         //On récupère tous les events à venir
-        $events = $this->eventsRepository->findUpcoming();
+        $events = $this->eventsService->getUpcomingEvents();
         //On récupère tous les groupes de nageuses
         $groupes = $this->nageuseService->getAllGroupesNageuses();
         //On récupère toutes les nageuses triées par groupes
         $nageusesParGroupe = $this->nageuseService->getNageusesByGroupe();
 
-        //Récupération des périodes d'ouverture des inscriptions pour chaque event
-        $inscriptionsParEvent = [];
-        foreach ($events as $event) {
-            $inscriptionsParEvent[$event->getId()] = $this->eventInscriptionDatesRepository->findByEventId($event->getId());
-        }
-
-        //Récupération de l'éventuelle session en cours
-        $reservation = $_SESSION['reservation'][session_id()] ?? [];
-        $selectedSession = $reservation['event_session_id'] ?? null;
-        $selectedNageuse = $reservation['nageuse_id'] ?? null;
-        $selectedGroupe = null;
-
-        if ($selectedNageuse) {
-            foreach ($nageuses as $nageuse) {
-                if ($nageuse->getId() == $selectedNageuse) {
-                    $selectedGroupe = $nageuse->getGroupe();
-                    break;
-                }
-            }
-        }
-
         //Récupération des périodes d'ouverture des inscriptions
         $periodesOuvertes = [];
         $nextPublicOuvertures = [];
         foreach ($events as $event) {
-            $periodes = $inscriptionsParEvent[$event->getId()] ?? [];
-            $now = new DateTime();
-            $periodeOuverte = null;
-            $nextPublic = null;
-            foreach ($periodes as $periode) {
-                if ($now >= $periode->getStartRegistrationAt() && $now <= $periode->getCloseRegistrationAt()) {
-                    $periodeOuverte = $periode;
-                }
-                if ($periode->getAccessCode() === null && $periode->getStartRegistrationAt() > $now) {
-                    if ($nextPublic === null || $periode->getStartRegistrationAt() < $nextPublic->getStartRegistrationAt()) {
-                        $nextPublic = $periode;
-                    }
-                }
-            }
-            $periodesOuvertes[$event->getId()] = $periodeOuverte;
-            $nextPublicOuvertures[$event->getId()] = $nextPublic;
+            $status = $this->eventsService->getRegistrationStatus($event);
+            $periodesOuvertes[$event->getId()] = $status['openPeriod'];
+            $nextPublicOuvertures[$event->getId()] = $status['nextPublicOpening'];
         }
 
         $this->render('reservation/etape1', [
             'events' => $events,
             'groupes' => $groupes,
             'nageusesParGroupe' => $nageusesParGroupe,
-            'inscriptionsParEvent' => $inscriptionsParEvent,
             'periodesOuvertes' => $periodesOuvertes,
             'nextPublicOuvertures' => $nextPublicOuvertures,
-            'csrf_token' => CsrfHelper::getToken(),
-            'selectedSession' => $selectedSession,
-            'selectedNageuse' => $selectedNageuse,
-            'selectedGroupe' => $selectedGroupe
+            'csrf_token' => CsrfHelper::getToken()
         ], 'Réservations');
-    }
-
-    #[Route('/reservation/check-nageuse-limit', name: 'check_nageuse_limit', methods: ['GET'])]
-    public function checkNageuseLimit(): void
-    {
-        $csrfToken = $_GET['csrf_token'] ?? '';
-        if (!$this->validateCsrfAndLog($csrfToken, 'check-nageuse-limit', false)) {
-            $this->json(['success' => false, 'error' => 'Token CSRF invalide : ' . $csrfToken]);
-            return;
-        }
-
-        $eventId = (int)($_GET['event_id'] ?? 0);
-        $nageuseId = (int)($_GET['nageuse_id'] ?? 0);
-
-        if (!$eventId || !$nageuseId) {
-            $this->json(['success' => true, 'limiteAtteinte' => true, 'error' => 'Paramètres manquants']);
-            return;
-        }
-
-        $event = $this->eventsRepository->findById($eventId);
-        //S'il n'y a pas de limite pour cet event.
-        if (!$event || $event->getLimitationPerSwimmer() === null) {
-            $this->json(['success' => true, 'limiteAtteinte' => false]);
-            return;
-        }
-
-        $limite = $event->getLimitationPerSwimmer();
-        //On enregistre la limite dans $_SESSION
-        $_SESSION['reservation'][session_id()]['limitPerSwimmer'] = $limite;
-
-        $count = $this->reservationsRepository->countActiveReservationsForEvent($eventId);
-
-        $this->json(['success' => true, 'limiteAtteinte' => $count >= $limite]);
-    }
-
-    /*
-     * Pour valider et enregistrer en $_SESSION les valeurs de l'étape 1
-     *
-     */
-    #[Route('/reservation/etape1', name: 'etape1', methods: ['POST'])]
-    public function etape1(): void
-    {
-        $input = json_decode(file_get_contents('php://input'), true);
-        $csrfToken = $input['csrf_token'] ?? '';
-        if (!$this->validateCsrfAndLog($csrfToken, 'reservation_etape1')) {
-            $this->json(['success' => false, 'error' => 'Token CSRF invalide : ' . $csrfToken]);
-            return;
-        }
-
-        $eventId = (int)($input['event_id'] ?? 0);
-        $sessionId = (int)($input['event_session_id'] ?? 0);
-        $nageuseId = isset($input['nageuse_id']) ? (int)$input['nageuse_id'] : null;
-
-        // Contrôles
-        $event = $this->eventsRepository->findById($eventId);
-        if (!$event) {
-            $this->json(['success' => false, 'error' => 'Événement invalide.']);
-            return;
-        }
-
-        $sessions = $event->getSessions();
-        $sessionIds = array_map(fn($s) => $s->getId(), $sessions);
-        if (!in_array($sessionId, $sessionIds, true)) {
-            $this->json(['success' => false, 'error' => 'Séance invalide.']);
-            return;
-        }
-
-        if ($event->getLimitationPerSwimmer() !== null) {
-            $nageusesRepository = new NageusesRepository();
-            $nageuse = $nageusesRepository->findById($nageuseId);
-            if (!$nageuse) {
-                $this->json(['success' => false, 'error' => 'Nageuse invalide.']);
-                return;
-            }
-            // Vérifier la limite de spectateurs
-            $limite = $event->getLimitationPerSwimmer();
-            $count = $this->reservationsRepository->countActiveReservationsForEvent($eventId, $nageuseId);
-
-            if ($count >= $limite) {
-                $this->json(['success' => false, 'error' => 'Le quota de spectateurs pour cette nageuse est atteint.']);
-                return;
-            }
-        }
-
-        $_SESSION['reservation'][session_id()]['event_id'] = $eventId;
-        $_SESSION['reservation'][session_id()]['event_session_id'] = $sessionId;
-        // N'ajouter la nageuse que si elle est requise
-        if ($event->getLimitationPerSwimmer() !== null) {
-            $_SESSION['reservation'][session_id()]['nageuse_id'] = $nageuseId;
-        }
-
-        $this->json(['success' => true]);
     }
 
     /*
@@ -225,8 +93,7 @@ class ReservationController extends AbstractController
     public function checkEmail(): void
     {
         $input = json_decode(file_get_contents('php://input'), true);
-        $csrfToken = $input['csrf_token'] ?? '';
-        if (!$this->validateCsrfAndLog($csrfToken, 'check_email', false)) {
+        if (!CsrfHelper::validateToken($input['csrf_token'] ?? '', 'check_email', false)) {
             $this->json(['success' => false, 'error' => 'Token CSRF invalide', 'csrf_token' => $this->getCsrfToken()]);
             return;
         }
@@ -285,8 +152,7 @@ class ReservationController extends AbstractController
     public function resendConfirmation(): void
     {
         $input = json_decode(file_get_contents('php://input'), true);
-        $csrfToken = $input['csrf_token'] ?? '';
-        if (!$this->validateCsrfAndLog($csrfToken, 'resend_confirmation', false)) {
+        if (!CsrfHelper::validateToken($input['csrf_token'] ?? '', 'resend_confirmation', false)) {
             $this->json(['success' => false, 'error' => 'Token CSRF invalide', 'csrf_token' => $this->getCsrfToken()]);
             return;
         }
@@ -344,7 +210,7 @@ class ReservationController extends AbstractController
     #[Route('/reservation/etape2Display', name: 'etape2Display', methods: ['GET'])]
     public function etape2Display(): void
     {
-        $reservation = $_SESSION['reservation'][session_id()] ?? null;
+        $reservation = $this->reservationSessionService->getReservationSession();
         $event = null;
         if ($reservation && !empty($reservation['event_id'])) {
             $event = $this->eventsRepository->findById($reservation['event_id']);
@@ -374,8 +240,7 @@ class ReservationController extends AbstractController
     public function etape2(): void
     {
         $input = json_decode(file_get_contents('php://input'), true);
-        $csrfToken = $input['csrf_token'] ?? '';
-        if (!$this->validateCsrfAndLog($csrfToken, 'reservation_etape2')) {
+        if (!CsrfHelper::validateToken($input['csrf_token'] ?? '', 'resend_confirmation', false)) {
             $this->json(['success' => false, 'error' => 'Token CSRF invalide']);
             return;
         }
@@ -504,8 +369,7 @@ class ReservationController extends AbstractController
     public function validateSpecialCode(): void
     {
         $input = json_decode(file_get_contents('php://input'), true);
-        $csrfToken = $input['csrf_token'] ?? '';
-        if (!$this->validateCsrfAndLog($csrfToken, 'validate_special_code', false)) {
+        if (!CsrfHelper::validateToken($input['csrf_token'] ?? '', 'validate_special_code', false)) {
             $this->json(['success' => false, 'error' => 'Token CSRF invalide']);
             return;
         }
@@ -545,8 +409,7 @@ class ReservationController extends AbstractController
     public function removeSpecialTarif(): void
     {
         $input = json_decode(file_get_contents('php://input'), true);
-        $csrfToken = $input['csrf_token'] ?? '';
-        if (!$this->validateCsrfAndLog($csrfToken, 'remove_special_tarif', false)) {
+        if (!CsrfHelper::validateToken($input['csrf_token'] ?? '', 'remove_special_tarif', false)) {
             $this->json(['success' => false, 'error' => 'Token CSRF invalide']);
             return;
         }
@@ -564,62 +427,11 @@ class ReservationController extends AbstractController
         $this->json(['success' => true]);
     }
 
-
-    #[Route('/reservation/validate-access-code', name: 'validate_access_code', methods: ['POST'])]
-    public function validateAccessCode(): void
-    {
-        $input = json_decode(file_get_contents('php://input'), true);
-        $csrfToken = $input['csrf_token'] ?? '';
-        if (!$this->validateCsrfAndLog($csrfToken, 'validate_access_code', false)) {
-            $this->json(['success' => false, 'error' => 'Token CSRF invalide']);
-            return;
-        }
-        $eventId = (int)($input['event_id'] ?? 0);
-        $code = trim($input['code'] ?? '');
-
-        if (!$eventId || !$code) {
-            $this->json(['success' => false, 'error' => 'Paramètres manquants']);
-            return;
-        }
-
-        $periodes = $this->eventInscriptionDatesRepository->findByEventId($eventId);
-        $now = new DateTime();
-        $codeTrouve = false;
-        foreach ($periodes as $periode) {
-            if ($periode->getAccessCode() && strcmp($periode->getAccessCode(), $code) === 0) {
-                $codeTrouve = true;
-                if ($now < $periode->getStartRegistrationAt()) {
-                    $dateLocale = $periode->getStartRegistrationAt()->format('d/m/Y H:i');
-                    $this->json([
-                        'success' => false,
-                        'error' => "Ce code est valide, mais la période d'inscription n'a pas encore commencé. Ouverture le $dateLocale."
-                    ]);
-                    return;
-                }
-                if ($now > $periode->getCloseRegistrationAt()) {
-                    $this->json([
-                        'success' => false,
-                        'error' => "Ce code est valide, mais la période d'inscription est terminée."
-                    ]);
-                    return;
-                }
-                // Code valide et période ouverte
-                $_SESSION['reservation'][session_id()]['access_code_valid'][$eventId] = true;
-                $this->json(['success' => true]);
-                return;
-            }
-        }
-        if (!$codeTrouve) {
-            $this->json(['success' => false, 'error' => 'Code inconnu pour cet événement.']);
-        }
-    }
-
     #[Route('/reservation/etape3', name: 'etape3', methods: ['POST'])]
     public function etape3(): void
     {
         $input = json_decode(file_get_contents('php://input'), true);
-        $csrfToken = $input['csrf_token'] ?? '';
-        if (!$this->validateCsrfAndLog($csrfToken, 'reservation_etape3')) {
+        if (!CsrfHelper::validateToken($input['csrf_token'] ?? '', 'reservation_etape3')) {
             $this->json(['success' => false, 'error' => 'Token CSRF invalide']);
             return;
         }
@@ -734,8 +546,7 @@ class ReservationController extends AbstractController
     public function etape4(): void
     {
         //On fait différemment, car il y a peut-être un fichier
-        $csrfToken = $_POST['csrf_token'] ?? '';
-        if (!$this->validateCsrfAndLog($csrfToken, 'reservation_etape4')) {
+        if (!CsrfHelper::validateToken($_POST['csrf_token'] ?? '', 'reservation_etape4')) {
             $this->json(['success' => false, 'error' => 'Token CSRF invalide']);
             return;
         }
@@ -939,8 +750,7 @@ class ReservationController extends AbstractController
     #[Route('/reservation/etape5', name: 'etape5', methods: ['POST'])]
     public function etape5(): void
     {
-        $input = json_decode(file_get_contents('php://input'), true);
-        if (!$this->checkCsrfOrJsonError($input['csrf_token'] ?? '', 'reservation_etape5')) return;
+        $this->checkCsrfOrExit('reservation_etape5');
 
         $sessionId = session_id();
         $reservation = $_SESSION['reservation'][$sessionId] ?? null;
@@ -949,6 +759,7 @@ class ReservationController extends AbstractController
             return;
         }
 
+        $input = json_decode(file_get_contents('php://input'), true);
         $event = $this->eventsRepository->findById($reservation['event_id']);
         $tarifs = $this->tarifsRepository->findByEventId($reservation['event_id']);
         $seats = $input['seats'] ?? [];
@@ -992,8 +803,7 @@ class ReservationController extends AbstractController
     #[Route('/reservation/etape5AddSeat', name: 'etape5AddSeat', methods: ['POST'])]
     public function etape5AddSeat(): void
     {
-        $input = json_decode(file_get_contents('php://input'), true);
-        if (!$this->checkCsrfOrJsonError($input['csrf_token'] ?? '', 'reservation_etape5')) return;
+        $this->checkCsrfOrExit('reservation_etape5');
 
         $sessionId = session_id();
         $reservation = $_SESSION['reservation'][$sessionId] ?? null;
@@ -1002,6 +812,7 @@ class ReservationController extends AbstractController
             return;
         }
 
+        $input = json_decode(file_get_contents('php://input'), true);
         $seatId = (int)($input['seat_id'] ?? 0);
         $index = (int)($input['index'] ?? -1);
         if ($seatId <= 0 || $index < 0) {
@@ -1054,8 +865,7 @@ class ReservationController extends AbstractController
     #[Route('/reservation/etape5RemoveSeat', name: 'etape5RemoveSeat', methods: ['POST'])]
     public function etape5RemoveSeat(): void
     {
-        $input = json_decode(file_get_contents('php://input'), true);
-        if (!$this->checkCsrfOrJsonError($input['csrf_token'] ?? '', 'reservation_etape5')) return;
+        $this->checkCsrfOrExit('reservation_etape5');
 
         $sessionId = session_id();
         $reservation = $_SESSION['reservation'][$sessionId] ?? null;
@@ -1064,6 +874,7 @@ class ReservationController extends AbstractController
             return;
         }
 
+        $input = json_decode(file_get_contents('php://input'), true);
         $seatId = (int)($input['seat_id'] ?? 0);
         if ($seatId <= 0) {
             $this->json(['success' => false, 'error' => 'Paramètre manquant.']);
@@ -1173,8 +984,7 @@ class ReservationController extends AbstractController
     #[Route('/reservation/etape6', name: 'etape6', methods: ['POST'])]
     public function etape6(): void
     {
-        $input = json_decode(file_get_contents('php://input'), true);
-        if (!$this->checkCsrfOrJsonError($input['csrf_token'] ?? '', 'reservation_etape6')) return;
+        $this->checkCsrfOrExit('reservation_etape6');
 
         $sessionId = session_id();
         $reservation = $_SESSION['reservation'][$sessionId] ?? null;
@@ -1183,6 +993,7 @@ class ReservationController extends AbstractController
             return;
         }
 
+        $input = json_decode(file_get_contents('php://input'), true);
         $tarifs = $this->tarifsRepository->findByEventId($reservation['event_id']);
         $tarifsSansPlaces = array_filter($tarifs, fn($t) => $t->getNbPlace() === null);
         $tarifIdsSansPlaces = array_map(fn($t) => $t->getId(), $tarifsSansPlaces);

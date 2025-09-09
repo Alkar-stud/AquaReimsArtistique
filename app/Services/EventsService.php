@@ -2,7 +2,6 @@
 
 namespace app\Services;
 
-use app\Models\Event\EventInscriptionDates;
 use app\Models\Event\Events;
 use app\Repository\Event\EventInscriptionDatesRepository;
 use app\Repository\Event\EventsRepository;
@@ -11,6 +10,8 @@ use app\Repository\Event\EventSessionRepository;
 use app\Repository\Piscine\PiscinesRepository;
 use app\Repository\TarifsRepository;
 use DateMalformedStringException;
+use DateTime;
+use Exception;
 
 class EventsService
 {
@@ -96,9 +97,11 @@ class EventsService
     /**
      * Crée un nouvel événement
      *
-     * @param array $data Données de l'événement
+     * @param Events $event
+     * @param array $tarifs
+     * @param array $inscriptionDates
+     * @param array $sessions
      * @return int ID de l'événement créé
-     * @throws DateMalformedStringException
      */
     public function createEvent(Events $event, array $tarifs = [], array $inscriptionDates = [], array $sessions = []): int
     {
@@ -213,32 +216,6 @@ class EventsService
     }
 
     /**
-     * Hydrate un objet Events à partir d'un tableau de données
-     *
-     * @param array $data Données pour hydrater l'événement
-     * @return Events L'événement hydraté
-     * @throws DateMalformedStringException
-     */
-    private function hydrateEvent(array $data): Events
-    {
-        $event = new Events();
-
-        if (isset($data['id'])) {
-            $event->setId((int)$data['id']);
-        }
-
-        $event->setLibelle($data['libelle'] ?? '')
-            ->setLieu((int)($data['lieu'] ?? 0))
-            ->setEventStartAt($data['event_start_at'] ?? date('Y-m-d H:i:s'))
-            ->setLimitationPerSwimmer(($data['limitation_per_swimmer'] === '' || $data['limitation_per_swimmer'] === '0')
-                ? null
-                : (int)($data['limitation_per_swimmer'] ?? null))
-            ->setAssociateEvent(!empty($data['associate_event']) ? (int)$data['associate_event'] : null);
-
-        return $event;
-    }
-
-    /**
      * Charge les relations d'un événement (piscine, événement associé, tarifs, dates d'inscription)
      *
      * @param Events $event L'événement à compléter
@@ -266,4 +243,78 @@ class EventsService
             $event->addInscriptionDate($date);
         }
     }
+
+
+    /**
+     * Détermine le statut d'inscription pour un événement donné.
+     *
+     * @param Events $event L'événement pour lequel vérifier le statut.
+     * @return array Contient 'openPeriod' (la période actuellement ouverte, ou null)
+     *               et 'nextPublicOpening' (la prochaine période publique, ou null).
+     * @throws Exception
+     */
+    public function getRegistrationStatus(Events $event): array
+    {
+        $now = new DateTime();
+        $openPeriod = null;
+        $nextPublicOpening = null;
+
+        foreach ($event->getInscriptionDates() as $period) {
+            // Vérifie si la période est actuellement ouverte
+            if ($now >= $period->getStartRegistrationAt() && $now <= $period->getCloseRegistrationAt()) {
+                $openPeriod = $period;
+            }
+            // Trouve la prochaine période d'inscription publique (sans code d'accès)
+            if ($period->getAccessCode() === null && $period->getStartRegistrationAt() > $now) {
+                if ($nextPublicOpening === null || $period->getStartRegistrationAt() < $nextPublicOpening->getStartRegistrationAt()) {
+                    $nextPublicOpening = $period;
+                }
+            }
+        }
+
+        return [
+            'openPeriod' => $openPeriod,
+            'nextPublicOpening' => $nextPublicOpening,
+        ];
+    }
+
+    /**
+     * Valide un code d'accès pour un événement et vérifie si la période d'inscription est active.
+     *
+     * @param int $eventId L'ID de l'événement.
+     * @param string $code Le code d'accès à valider.
+     * @return array ['success' => bool, 'error' => ?string]
+     * @throws \Exception
+     */
+    public function validateAccessCode(int $eventId, string $code): array
+    {
+        $periods = $this->inscriptionDatesRepository->findByEventId($eventId);
+        $now = new \DateTime();
+
+        foreach ($periods as $period) {
+            // Utiliser strcasecmp pour une comparaison insensible à la casse
+            if ($period->getAccessCode() && strcasecmp($period->getAccessCode(), $code) === 0) {
+                if ($now < $period->getStartRegistrationAt()) {
+                    $dateLocale = $period->getStartRegistrationAt()->format('d/m/Y à H\hi');
+                    return [
+                        'success' => false,
+                        'error' => "Ce code est valide, mais la période d'inscription n'a pas encore commencé. Ouverture le $dateLocale."
+                    ];
+                }
+
+                if ($now > $period->getCloseRegistrationAt()) {
+                    return [
+                        'success' => false,
+                        'error' => "Ce code est valide, mais la période d'inscription est terminée."
+                    ];
+                }
+
+                // Le code est valide et la période est ouverte
+                return ['success' => true, 'error' => null];
+            }
+        }
+
+        return ['success' => false, 'error' => 'Code inconnu pour cet événement.'];
+    }
+
 }

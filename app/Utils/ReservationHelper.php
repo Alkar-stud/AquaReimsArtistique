@@ -35,7 +35,7 @@ class ReservationHelper
     /*
      * Pour générer un token avec date de validité au jour de l'event
      */
-    public static function genereReservationToken(int $nbCaractereToken, DateTimeInterface $dateEvent, ?DateTimeInterface $dateFinInscriptionsEvent = null): array
+    public static function createReservationToken(int $nbCaractereToken, DateTimeInterface $dateEvent, ?DateTimeInterface $dateFinInscriptionsEvent = null): array
     {
         if ($dateFinInscriptionsEvent === null) {
             $dateFinInscriptionsEvent = $dateEvent;

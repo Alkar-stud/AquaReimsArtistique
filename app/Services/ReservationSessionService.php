@@ -2,43 +2,42 @@
 
 namespace app\Services;
 
-use app\Models\Reservation\ReservationSession;
-
 class ReservationSessionService
 {
-    public function createReservationSession(): ReservationSession
-    {
-        return $_SESSION['reservation'][session_id()] = [];
-    }
+    private string $sessionId;
 
-    public function getReservationSession(): ?ReservationSession
+    public function __construct()
     {
-        if (!isset($_SESSION['reservation'])) {
-            return null;
+        $this->sessionId = session_id();
+        if (!isset($_SESSION['reservation'][$this->sessionId])) {
+            $_SESSION['reservation'][$this->sessionId] = [];
         }
-
-        $session = ReservationSession::deserialize($_SESSION['reservation']);
-
-        if ($session->isExpired()) {
-            $this->clearSession();
-            return null;
-        }
-
-        return $session;
     }
 
-    public function updateReservationSession(ReservationSession $session): void
+    /**
+     * Récupère les données de la session de réservation en cours.
+     * @return array|null
+     */
+    public function getReservationSession(): ?array
     {
-        $_SESSION['reservation'] = $session->serialize();
+        return $_SESSION['reservation'][$this->sessionId] ?? null;
     }
 
+    /**
+     * Met à jour une valeur spécifique dans la session de réservation.
+     * @param string $key
+     * @param mixed $value
+     */
+    public function setReservationSession(string $key, mixed $value): void
+    {
+        $_SESSION['reservation'][$this->sessionId][$key] = $value;
+    }
+
+    /**
+     * Efface complètement la session de réservation en cours.
+     */
     public function clearReservationSession(): void
     {
-        unset($_SESSION['reservation']);
-    }
-
-    public function getReservationFromSession() {
-        $session = $this->getReservationSession();
-        return $session ? $session->getReservation() : null;
+        unset($_SESSION['reservation'][$this->sessionId]);
     }
 }

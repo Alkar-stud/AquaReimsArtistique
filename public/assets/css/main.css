@@ -21,6 +21,12 @@
     margin-left: auto;
     margin-right: auto;
 }
+/* Sur les écrans de bureau (768px et plus), on limite la largeur de la figure */
+@media (min-width: 768px) {
+    .homepage-content img {
+        width: 50%
+    }
+}
 .homepage-content img {
     max-width: 100%;
     height: auto;

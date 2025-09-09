@@ -32,7 +32,7 @@ footer {
     z-index: 100;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 1024px) {
     body {
         display: block !important;
         min-height: auto !important;
@@ -41,7 +41,7 @@ footer {
     }
 
     footer {
-        position: static !important;
+        position: static;
         bottom: auto !important;
         z-index: auto !important;
     }

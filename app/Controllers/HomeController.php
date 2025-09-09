@@ -16,8 +16,8 @@ class HomeController extends AbstractController
     }
     public function index(): void
     {
-        $repository = new AccueilRepository();
-        $contents = $repository->findDisplayed();
+        $accueilRepository = new AccueilRepository();
+        $contents = $accueilRepository->findDisplayed();
 
         // On traite chaque contenu pour transformer les images en liens
         foreach ($contents as $content) {
@@ -31,6 +31,17 @@ class HomeController extends AbstractController
                 // On charge le HTML en supprimant les erreurs de parsing et sans ajouter de balises <html> ou <body>
                 @$doc->loadHTML('<?xml encoding="utf-8" ?>' . $html, LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD);
 
+                // On supprime le style en ligne 'width' ajouté par CKEditor sur les figures pour permettre le responsive
+                $figures = $doc->getElementsByTagName('figure');
+                foreach ($figures as $figure) {
+                    if (str_contains($figure->getAttribute('class'), 'image_resized')) {
+                        // On supprime le style en ligne qui fixe la largeur
+                        $figure->removeAttribute('style');
+                        // On ajoute des classes Bootstrap pour un affichage responsive
+                        $currentClass = $figure->getAttribute('class');
+                        $figure->setAttribute('class', $currentClass . ' mx-auto');
+                    }
+                }
                 $images = $doc->getElementsByTagName('img');
                 foreach ($images as $image) {
                     $link = $doc->createElement('a');

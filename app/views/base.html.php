@@ -47,14 +47,44 @@
     </script>
     <script type="module" src="/assets/js/ckeditor.js"></script>
     <?php endif; ?>
+<?php
+if ($_ENV['APP_DEBUG'] === "true") {
+    echo '<pre>$_SESSION : ';
+    print_r($_SESSION);
+    echo '</pre>';
+?>
+
+<!-- Outil de débogage pour afficher les dimensions de la fenêtre -->
+<div id="screen-dimensions-display" style="position: fixed; bottom: 10px; right: 10px; background-color: rgba(0,0,0,0.7); color: white; padding: 5px 10px; border-radius: 5px; font-family: monospace; z-index: 9999; font-size: 14px;"></div>
+
+	<script>
+		// Attend que le DOM soit entièrement chargé avant d'exécuter le script
+		document.addEventListener('DOMContentLoaded', function() {
+			// Sélectionne l'élément où afficher les dimensions
+			const dimensionsDisplay = document.getElementById('screen-dimensions-display');
+
+			// Fonction pour récupérer et afficher les dimensions
+			function updateDimensions() {
+				const width = window.innerWidth;
+				const height = window.innerHeight;
+				// Met à jour le texte dans notre élément
+				dimensionsDisplay.textContent = `Viewport: ${width}px x ${height}px`;
+			}
+
+			// Affiche les dimensions une première fois au chargement
+			updateDimensions();
+
+			// Ajoute un écouteur d'événement pour mettre à jour les dimensions à chaque redimensionnement
+			window.addEventListener('resize', updateDimensions);
+		});
+	</script>
+<?php
+}
+?>
 </body>
 </html>
 
 <?php
 
-if ($_ENV['APP_DEBUG'] === "true") {
-    echo '<pre>$_SESSION : ';
-    print_r($_SESSION);
-    echo '</pre>';
-}
+
 

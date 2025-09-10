@@ -12,7 +12,6 @@ use app\Repository\Reservation\ReservationsDetailsRepository;
 use app\Repository\Reservation\ReservationMailsSentRepository;
 use app\Repository\Reservation\ReservationsRepository;
 use app\Repository\TarifsRepository;
-use app\Utils\UploadHelper;
 use DateMalformedStringException;
 use DateTime;
 use Exception;
@@ -32,6 +31,7 @@ class ReservationService
     private SessionValidationService $sessionValidationService;
     private LogService $logService;
     private ReservationSessionService $reservationSessionService;
+    private UploadService $uploadService;
 
 
     public function __construct()
@@ -49,6 +49,7 @@ class ReservationService
         $this->sessionValidationService = new SessionValidationService();
         $this->logService = new LogService();
         $this->reservationSessionService = new ReservationSessionService();
+        $this->uploadService = new UploadService();
     }
 
     /**
@@ -509,13 +510,13 @@ class ReservationService
             $qty = (int)($t['qty'] ?? 0);
             if ($qty > 0 && in_array($id, $validTarifIds, true)) {
                 for ($i = 0; $i < $qty; $i++) {
-                    $detail = new ReservationDetailItemDTO(tarif_id: $id);
-                    if (!empty($oldByTarif[$id][$i])) {
-                        $oldDetailArray = is_object($oldByTarif[$id][$i]) ? (array)$oldByTarif[$id][$i] : $oldByTarif[$id][$i];
-                        if (isset($oldDetailArray['nom'])) $detail->nom = $oldDetailArray['nom'];
-                        if (isset($oldDetailArray['prenom'])) $detail->prenom = $oldDetailArray['prenom'];
+                    // Si un ancien participant pour ce tarif existe à cet "index", on le réutilise entièrement.
+                    if (isset($oldByTarif[$id][$i])) {
+                        $newReservationDetails[] = $oldByTarif[$id][$i];
+                    } else {
+                        // Sinon, on crée un nouveau DTO vide pour ce nouveau participant.
+                        $newReservationDetails[] = new ReservationDetailItemDTO(tarif_id: $id);
                     }
-                    $newReservationDetails[] = $detail;
                 }
             }
         }
@@ -566,6 +567,7 @@ class ReservationService
      */
     public function processAndValidateStep4(array $postData, array $filesData, array $reservationData): array
     {
+
         $eventId = $reservationData['event_id'] ?? null;
         if (!$eventId) {
             return ['success' => false, 'error' => 'Session expirée.'];
@@ -630,12 +632,28 @@ class ReservationService
                     'size' => $justificatifs['size'][$justifIndex] ?? 0,
                 ];
 
-                //Télchargement du fichier
-                $resultFileToUpload = UploadHelper::FileToUpload($file, $i);
-                if ($resultFileToUpload['success']) {
-                    return $resultFileToUpload;
+                if ($file['error'] === UPLOAD_ERR_OK) {
+                    $extension = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+                    $uniqueName = $this->generateUniqueProofName($noms[$i], $prenoms[$i], $tarifId, $extension);
+                    $destination = __DIR__ . '/../..' . UPLOAD_PROOF_PATH . 'temp/';
+
+                    $uploadResult = $this->uploadService->handleUpload($file, $destination, $uniqueName, [
+                        'max_size_mb' => MAX_UPLOAD_PROOF_SIZE,
+                        'allowed_extensions' => ['pdf', 'jpg', 'jpeg', 'png'],
+                        'allowed_mime_types' => ['application/pdf', 'image/jpeg', 'image/png']
+                    ]);
+
+                    if (!$uploadResult['success']) {
+                        return ['success' => false, 'error' => "Participant " . ($i + 1) . ": " . $uploadResult['error']];
+                    }
+                    $newItem->justificatif_name = $uniqueName;
+
+                } elseif (!empty($detail['justificatif_name'])) {
+                    // Conserver le justificatif déjà présent en session
+                    $newItem->justificatif_name = $detail['justificatif_name'];
+                } else {
+                    return ['success' => false, 'error' => "Justificatif manquant pour le participant: " . ($i + 1)];
                 }
-                $newItem->justificatif_name = $resultFileToUpload['file_name'];
 
                 $justifIndex++;
             }
@@ -643,6 +661,23 @@ class ReservationService
         }
 
         return ['success' => true, 'data' => $updatedDetails];
+    }
+
+    /**
+     * Génère un nom de fichier unique pour un justificatif.
+     *
+     * @param string $nom
+     * @param string $prenom
+     * @param int $tarifId
+     * @param string $extension
+     * @return string
+     */
+    private function generateUniqueProofName(string $nom, string $prenom, int $tarifId, string $extension): string
+    {
+        $sessionId = session_id();
+        $safeNom = strtolower(preg_replace('/[^a-z0-9]/i', '', $nom));
+        $safePrenom = strtolower(preg_replace('/[^a-z0-9]/i', '', $prenom));
+        return "{$sessionId}_{$tarifId}_{$safeNom}_{$safePrenom}.{$extension}";
     }
 
     /**
@@ -686,7 +721,8 @@ class ReservationService
         if ($step >= 4) {
             $step == 4 ? $data = $dataInputed : $data = $reservationDataSession;
             $return = $this->processAndValidateStep4($data[0], $data[1], $reservationDataSession);
-            if (!$return['success']) {
+
+            if ($return['success']) {
                 return $return;
             }
         }

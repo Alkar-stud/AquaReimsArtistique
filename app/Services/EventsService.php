@@ -292,8 +292,8 @@ class EventsService
         $now = new \DateTime();
 
         foreach ($periods as $period) {
-            // Utiliser strcasecmp pour une comparaison insensible à la casse
-            if ($period->getAccessCode() && strcasecmp($period->getAccessCode(), $code) === 0) {
+            // Comparaison sensible à la casse
+            if ($period->getAccessCode() && $period->getAccessCode() === $code) {
                 if ($now < $period->getStartRegistrationAt()) {
                     $dateLocale = $period->getStartRegistrationAt()->format('d/m/Y à H\hi');
                     return [

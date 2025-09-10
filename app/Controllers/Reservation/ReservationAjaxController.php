@@ -255,7 +255,7 @@ class ReservationAjaxController extends AbstractController
     public function etape4(): void
     {
         // La validation CSRF se fait sur $_POST car c'est une requête multipart/form-data
-        $this->checkCsrfOrExit('reservation_etape4', true);
+        $this->checkCsrfOrExit('reservation_etape4', false);
 
         //On vérifie ce qui a été saisi et ce qu'il y a dans $_SESSION
         $validationResult = $this->reservationService->validateDataPerStep(4, [$_POST, $_FILES]);
@@ -268,10 +268,10 @@ class ReservationAjaxController extends AbstractController
         // Si la validation réussit, on met à jour la session avec les DTOs propres
         $this->reservationSessionService->setReservationSession('reservation_detail', $validationResult['data']);
 
-        // Récupérer l'événement pour la réponse
+        // Récupérer l'événement pour la réponse, car on a besoin de renvoyer si la piscine a des places numérotées pour savoir si on saute l'étape suivante
         $reservation = $this->reservationSessionService->getReservationSession();
-
         $event = $this->eventsRepository->findById($reservation['event_id']);
+
         $this->json(['success' => true, 'numberedSeats' => $event->getPiscine()->getNumberedSeats()]);
     }
 

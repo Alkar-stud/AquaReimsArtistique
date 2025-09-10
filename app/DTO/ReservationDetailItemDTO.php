@@ -20,7 +20,9 @@ class ReservationDetailItemDTO implements JsonSerializable
     public function jsonSerialize(): array
     {
         // Ne sérialise que les propriétés non nulles pour garder la session propre
-        return array_filter(get_object_vars($this), fn ($value) => $value !== null);
+        //return array_filter(get_object_vars($this), fn ($value) => $value !== null);
+        // Sérialise toutes les propriétés de l'objet.
+        return get_object_vars($this);
     }
 
 }

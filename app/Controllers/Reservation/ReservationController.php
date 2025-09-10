@@ -124,7 +124,7 @@ class ReservationController extends AbstractController
     {
         $reservation = $this->reservationSessionService->getReservationSession();
         // Valide le contexte des détails (prérequis pour l'étape 4)
-        if (!$this->reservationService->validateDetailsContext($reservation)['success']) {
+        if (!$this->reservationService->validateDetailsContextStep4($reservation)['success']) {
             // Redirection vers la page de début de réservation avec un message
             header('Location: /reservation?session_expiree=1');
             exit;
@@ -143,7 +143,7 @@ class ReservationController extends AbstractController
     {
         $reservation = $this->reservationSessionService->getReservationSession();
         // Valide le contexte des détails (prérequis pour l'étape 5, comme pour la 4)
-        if (!$this->reservationService->validateDetailsContext($reservation)['success']) {
+        if (!$this->reservationService->validateDetailsContextStep4($reservation)['success']) {
             // Redirection vers la page de début de réservation avec un message
             header('Location: /reservation?session_expiree=1');
             exit;
@@ -426,7 +426,7 @@ class ReservationController extends AbstractController
         unset($_SESSION['reservation'][session_id()]['selected_seats']);
 
         // Valide le contexte des détails (prérequis pour l'étape 6)
-        if (!$this->reservationService->validateDetailsContext($reservation)['success']) {
+        if (!$this->reservationService->validateDetailsContextStep4($reservation)['success']) {
             // Redirection vers la page de début de réservation avec un message
             header('Location: /reservation?session_expiree=1');
             exit;

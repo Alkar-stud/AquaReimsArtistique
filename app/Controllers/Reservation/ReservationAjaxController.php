@@ -243,7 +243,6 @@ class ReservationAjaxController extends AbstractController
         // Si c'est un succès, on met à jour la session avec les nouvelles données
         $this->reservationSessionService->setReservationSession('reservation_detail', $validationResult['data']);
         $this->json(['success' => true]);
-
     }
 
 
@@ -258,10 +257,8 @@ class ReservationAjaxController extends AbstractController
         // La validation CSRF se fait sur $_POST car c'est une requête multipart/form-data
         $this->checkCsrfOrExit('reservation_etape4', true);
 
-        $reservationData = $this->reservationSessionService->getReservationSession();
-
-        // On passe les données du formulaire et des fichiers au service pour validation
-        $validationResult = $this->reservationService->processAndValidateStep4($_POST, $_FILES, $reservationData);
+        //On vérifie ce qui a été saisi et ce qu'il y a dans $_SESSION
+        $validationResult = $this->reservationService->validateDataPerStep(4, [$_POST, $_FILES]);
 
         if (!$validationResult['success']) {
             $this->json($validationResult);

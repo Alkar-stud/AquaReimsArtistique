@@ -117,8 +117,9 @@ function updateParticipantsTable() {
 
 function updateSubmitBtn() {
     document.getElementById('selectedSeats').value = participantSeats.filter(Boolean).join(',');
-    document.getElementById('submitBtn').disabled = (participantSeats.filter(Boolean).length !== nbPlacesAssises);
-    document.getElementById('submitBtnTop').disabled = (participantSeats.filter(Boolean).length !== nbPlacesAssises);
+    const isDisabled = participantSeats.filter(Boolean).length !== nbPlacesAssises;
+    document.getElementById('submitBtnTop').disabled = isDisabled;
+    document.getElementById('submitBtnBottom').disabled = isDisabled;
 }
 
 function showError(msg) {
@@ -129,26 +130,45 @@ function showError(msg) {
 document.addEventListener('DOMContentLoaded', function() {
     updateParticipantsTable();
     updateSubmitBtn();
-    const openedZone = localStorage.getItem('openedZone');
-    if (openedZone) {
-        document.getElementById('zones-mini-plan').style.display = 'none';
-        document.querySelectorAll('.zone-detail').forEach(z => z.style.display = 'none');
-        const zoneDiv = document.getElementById('zone-detail-' + openedZone);
-        if (zoneDiv) {
-            zoneDiv.style.display = 'block';
-        }
-        localStorage.removeItem('openedZone');
-    }
 });
 
 document.getElementById('form_etape5').addEventListener('submit', function(e) {
     e.preventDefault();
     if (participantSeats.filter(Boolean).length !== nbPlacesAssises) return;
+    // Le bouton submit est cloné dans le DOM, donc on écoute les deux formulaires
+    // pour être sûr de capturer l'événement.
+    submitForm();
+});
+
+document.getElementById('submitBtnTop').form.addEventListener('submit', function(e) {
+    e.preventDefault();
+    if (participantSeats.filter(Boolean).length !== nbPlacesAssises) return;
+    submitForm();
+});
+
+document.getElementById('form_etape5_bottom').addEventListener('submit', function(e) {
+    e.preventDefault();
+    if (participantSeats.filter(Boolean).length !== nbPlacesAssises) return;
+    submitForm();
+});
+
+function submitForm() {
+    const submitButtons = document.querySelectorAll('button[type="submit"]');
+    submitButtons.forEach(btn => btn.disabled = true);
+
+    const seatsToSubmit = participantSeats.filter(Boolean);
+
+    if (seatsToSubmit.length !== nbPlacesAssises) {
+        showError('Veuillez sélectionner toutes vos places avant de continuer.');
+        submitButtons.forEach(btn => btn.disabled = false);
+        return;
+    }
+
     fetch('/reservation/etape5', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-            seats: participantSeats,
+            seats: seatsToSubmit,
             csrf_token: window.csrf_token
         })
     })
@@ -167,23 +187,47 @@ document.getElementById('form_etape5').addEventListener('submit', function(e) {
                 window.location.href = '/reservation/etape6Display';
             } else {
                 showError(data.error);
+                submitButtons.forEach(btn => btn.disabled = false);
             }
+        })
+        .catch(err => {
+            console.error('Fetch error:', err);
+            showError('Une erreur de communication est survenue.');
+            submitButtons.forEach(btn => btn.disabled = false);
         });
-});
+}
 
 // Affichage/masquage des zones
 document.querySelectorAll('.zone-btn').forEach(btn => {
     btn.onclick = function() {
+        const zoneId = btn.dataset.zone;
         document.getElementById('zones-mini-plan').style.display = 'none';
-        document.querySelectorAll('.zone-detail').forEach(z => z.style.display = 'none');
-        document.getElementById('zone-detail-' + btn.dataset.zone).style.display = 'block';
+        const planContainer = document.getElementById('zone-plan-container');
+        planContainer.style.display = 'block';
+        planContainer.innerHTML = '<div class="text-center"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Chargement...</span></div></div>';
+
+        fetch(`/reservation/zone-plan/${zoneId}`)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Erreur lors du chargement de la zone.');
+                }
+                return response.text();
+            })
+            .then(html => {
+                planContainer.innerHTML = html;
+                updateParticipantsTable(); // Mettre à jour l'état des boutons de siège
+            })
+            .catch(error => {
+                planContainer.innerHTML = `<div class="alert alert-danger">${error.message}</div>`;
+            });
     };
 });
-document.querySelectorAll('.retour-zones').forEach(btn => {
-    btn.onclick = function() {
+
+document.getElementById('zone-plan-container').addEventListener('click', function(e) {
+    if (e.target && e.target.classList.contains('retour-zones')) {
         document.getElementById('zones-mini-plan').style.display = '';
-        document.querySelectorAll('.zone-detail').forEach(z => z.style.display = 'none');
-    };
+        document.getElementById('zone-plan-container').style.display = 'none';
+    }
 });
 
 function showSpinnerForParticipant(index) {

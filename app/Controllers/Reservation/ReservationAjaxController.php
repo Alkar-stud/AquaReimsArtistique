@@ -6,6 +6,10 @@ use app\Controllers\AbstractController;
 use app\DTO\ReservationAccessCodeDTO;
 use app\DTO\ReservationDetailItemDTO;
 use app\Repository\Event\EventsRepository;
+use app\Repository\Piscine\PiscineGradinsPlacesRepository;
+use app\Repository\Piscine\PiscineGradinsZonesRepository;
+use app\Repository\Reservation\ReservationsDetailsRepository;
+use app\Repository\Reservation\ReservationsPlacesTempRepository;
 use app\Services\EventsService;
 use app\Services\NageuseService;
 use app\Services\ReservationService;
@@ -21,6 +25,10 @@ class ReservationAjaxController extends AbstractController
     private EventsService $eventsService;
     private TarifService $tarifService;
     private EventsRepository $eventsRepository;
+    private PiscineGradinsZonesRepository $zonesRepository;
+    private PiscineGradinsPlacesRepository $placesRepository;
+    private ReservationsPlacesTempRepository $tempRepo;
+    private ReservationsDetailsRepository $reservationsDetailsRepository;
 
     public function __construct()
     {
@@ -31,6 +39,10 @@ class ReservationAjaxController extends AbstractController
         $this->eventsService = new EventsService();
         $this->tarifService = new TarifService();
         $this->eventsRepository = new EventsRepository;
+        $this->zonesRepository = new PiscineGradinsZonesRepository();
+        $this->placesRepository = new PiscineGradinsPlacesRepository();
+        $this->tempRepo = new ReservationsPlacesTempRepository();
+        $this->reservationsDetailsRepository = new ReservationsDetailsRepository();
     }
 
 
@@ -273,6 +285,56 @@ class ReservationAjaxController extends AbstractController
         $event = $this->eventsRepository->findById($reservation['event_id']);
 
         $this->json(['success' => true, 'numberedSeats' => $event->getPiscine()->getNumberedSeats()]);
+    }
+
+
+    //======================================================================
+    // ETAPE 5 : Choix des places numérotées
+    //======================================================================
+
+    #[Route('/reservation/zone-plan/{zoneId}', name: 'reservation_zone_plan', methods: ['GET'])]
+    public function getZonePlan(int $zoneId): void
+    {
+        $reservation = $this->reservationSessionService->getReservationSession();
+        // Valide le contexte des détails (prérequis pour l'étape 5)
+        if (!$this->reservationService->validateDetailsContextStep4($reservation)['success']) {
+            // Redirection vers la page de début de réservation avec un message
+            http_response_code(403);
+            echo "Session expirée ou invalide.";
+            exit;
+        }
+
+        $zone = $this->zonesRepository->findById($zoneId);
+        if (!$zone) {
+            http_response_code(404);
+            echo "Zone non trouvée.";
+            exit;
+        }
+
+        $sessionId = session_id();
+        //Suppression des réservations en cours dont le timeout est expiré
+        $this->tempRepo->deleteExpired((new \DateTime())->format('Y-m-d H:i:s'));
+        // Récupérer les réservations temporaires de toutes les sessions restantes
+        $tempAllSeats = $this->tempRepo->findAll();
+
+        // Récupérer les places déjà réservées de manière définitive pour cette session
+        $placesReservees = $this->reservationsDetailsRepository->findReservedSeatsForSession(
+            $reservation['event_id'],
+            $reservation['event_session_id']
+        );
+
+        // Construire un tableau place_id → session pour le JS de la vue
+        $placesSessions = [];
+        foreach ($tempAllSeats as $t) {
+            $placesSessions[$t->getPlaceId()] = $t->getSession();
+        }
+
+        $this->render('reservation/_zone_plan', [
+            'zone' => $zone,
+            'places' => $this->placesRepository->findByZone($zone->getId()),
+            'placesReservees' => $placesReservees,
+            'placesSessions' => $placesSessions
+        ], '', true);
     }
 
 }

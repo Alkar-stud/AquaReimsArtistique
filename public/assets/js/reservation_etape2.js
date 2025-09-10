@@ -125,7 +125,6 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     function submitEtape2(nom, prenom, email, telephone) {
-console.log('début submitEtape2');
         fetch('/reservation/etape2', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -134,7 +133,19 @@ console.log('début submitEtape2');
                 csrf_token: window.csrf_token
             })
         })
-            .then(r => r.json())
+            .then(response => {
+                // Récupérer d'abord le texte brut
+                return response.text().then(text => {
+                    // Ensuite essayer de parser en JSON si possible
+                    try {
+                        return JSON.parse(text);
+                    } catch (error) {
+                        console.error("Erreur de parsing JSON:", error);
+                        console.log("Contenu non parsable:", text);
+                        throw new Error("Réponse non valide du serveur");
+                    }
+                });
+            })
             .then(data => {
                 if (data.success) {
                     window.location.href = '/reservation/etape3Display';

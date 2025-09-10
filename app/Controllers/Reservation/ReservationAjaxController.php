@@ -5,6 +5,7 @@ use app\Attributes\Route;
 use app\Controllers\AbstractController;
 use app\DTO\ReservationAccessCodeDTO;
 use app\DTO\ReservationDetailItemDTO;
+use app\Repository\Event\EventsRepository;
 use app\Services\EventsService;
 use app\Services\NageuseService;
 use app\Services\ReservationService;
@@ -19,6 +20,7 @@ class ReservationAjaxController extends AbstractController
     private ReservationService $reservationService;
     private EventsService $eventsService;
     private TarifService $tarifService;
+    private EventsRepository $eventsRepository;
 
     public function __construct()
     {
@@ -28,6 +30,7 @@ class ReservationAjaxController extends AbstractController
         $this->reservationService = new ReservationService();
         $this->eventsService = new EventsService();
         $this->tarifService = new TarifService();
+        $this->eventsRepository = new EventsRepository;
     }
 
 
@@ -95,7 +98,7 @@ class ReservationAjaxController extends AbstractController
         $nageuseId = isset($input['nageuse_id']) ? (int)$input['nageuse_id'] : null;
 
         //On vérifie ce qui a été saisi
-        $validationResult = $this->reservationService->verifyPrerequisitesStep1($eventId, $sessionId, $nageuseId);
+        $validationResult = $this->reservationService->validateDataPerStep(1, $input);
 
         if (!$validationResult['success']) {
             $this->json($validationResult);
@@ -118,7 +121,7 @@ class ReservationAjaxController extends AbstractController
      * Pour vérifier si un email a déjà été utilisé pour une réservation
      */
     #[Route('/reservation/check-duplicate-email', name: 'check-duplicate-email', methods: ['POST'])]
-    public function checkDuplicateEMailInReservation(): void
+    public function checkDuplicateEmailInReservation(): void
     {
         $this->checkCsrfOrExit('check_email', false);
         $input = json_decode(file_get_contents('php://input'), true);
@@ -159,19 +162,16 @@ class ReservationAjaxController extends AbstractController
         $this->checkCsrfOrExit('etape2', false);
         $input = json_decode(file_get_contents('php://input'), true);
 
-        $nom = trim($input['nom'] ?? '');
-        $prenom = trim($input['prenom'] ?? '');
-        $email = trim($input['email'] ?? '');
-        $telephone = trim($input['telephone'] ?? '');
+        //On vérifie ce qui a été saisi et ce qu'il y a dans $_SESSION
+        $validationResult = $this->reservationService->validateDataPerStep(2, $input);
 
-        // Validation des informations du payer
-        $validationResult = $this->reservationService->validatePayerInformation($nom, $prenom, $email, $telephone);
         if (!$validationResult['success']) {
             $this->json($validationResult);
             return;
         }
 
         // Enregistrement en session
+        // $validationResult['data'] contient une instance de ReservationUserDTO
         $this->reservationSessionService->setReservationSession('user', $validationResult['data']);
 
         $this->json(['success' => true]);
@@ -229,22 +229,53 @@ class ReservationAjaxController extends AbstractController
     #[Route('/reservation/etape3', name: 'etape3', methods: ['POST'])]
     public function etape3(): void
     {
-        $this->checkCsrfOrExit('etape3');
+        $this->checkCsrfOrExit('etape3', false);
         $input = json_decode(file_get_contents('php://input'), true);
-        $reservationData = $this->reservationSessionService->getReservationSession();
 
-        // Le service gère toute la logique de validation et de construction des détails
-        $result = $this->reservationService->processAndValidateStep3Submission($input, $reservationData);
+        //On vérifie ce qui a été saisi et ce qu'il y a dans $_SESSION
+        $validationResult = $this->reservationService->validateDataPerStep(3, $input);
 
-        if ($result['success']) {
-            // Si c'est un succès, on met à jour la session avec les nouvelles données
-            $this->reservationSessionService->setReservationSession('reservation_detail', $result['data']);
-            $this->json(['success' => true]);
-        } else {
-            // Sinon, on renvoie l'erreur fournie par le service
-            $this->json($result);
+        if (!$validationResult['success']) {
+            $this->json($validationResult);
+            return;
         }
+
+        // Si c'est un succès, on met à jour la session avec les nouvelles données
+        $this->reservationSessionService->setReservationSession('reservation_detail', $validationResult['data']);
+        $this->json(['success' => true]);
+
     }
 
+
+
+    //======================================================================
+    // ETAPE 4 : Nom des participants
+    //======================================================================
+
+    #[Route('/reservation/etape4', name: 'etape4',methods: ['POST'])]
+    public function etape4(): void
+    {
+        // La validation CSRF se fait sur $_POST car c'est une requête multipart/form-data
+        $this->checkCsrfOrExit('reservation_etape4', true);
+
+        $reservationData = $this->reservationSessionService->getReservationSession();
+
+        // On passe les données du formulaire et des fichiers au service pour validation
+        $validationResult = $this->reservationService->processAndValidateStep4($_POST, $_FILES, $reservationData);
+
+        if (!$validationResult['success']) {
+            $this->json($validationResult);
+            return;
+        }
+
+        // Si la validation réussit, on met à jour la session avec les DTOs propres
+        $this->reservationSessionService->setReservationSession('reservation_detail', $validationResult['data']);
+
+        // Récupérer l'événement pour la réponse
+        $reservation = $this->reservationSessionService->getReservationSession();
+
+        $event = $this->eventsRepository->findById($reservation['event_id']);
+        $this->json(['success' => true, 'numberedSeats' => $event->getPiscine()->getNumberedSeats()]);
+    }
 
 }

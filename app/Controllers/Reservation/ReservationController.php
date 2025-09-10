@@ -3,6 +3,7 @@ namespace app\Controllers\Reservation;
 
 use app\Attributes\Route;
 use app\Controllers\AbstractController;
+use app\Models\Reservation\ReservationsDetails;
 use app\Repository\Reservation\ReservationsPlacesTempRepository;
 use app\Repository\Piscine\PiscineGradinsZonesRepository;
 use app\Repository\Piscine\PiscineGradinsPlacesRepository;
@@ -15,6 +16,8 @@ use app\Services\ReservationSessionService;
 use app\Services\NageuseService;
 use app\Utils\CsrfHelper;
 use app\Utils\ReservationContextHelper;
+use DateInterval;
+use DateTime;
 
 class ReservationController extends AbstractController
 {
@@ -107,7 +110,7 @@ class ReservationController extends AbstractController
         // Préparer toutes les données pour la vue via le service
         $viewData = $this->reservationService->getReservationViewModel($reservation);
         if ($viewData === null) { // Gère le cas où l'événement n'est pas trouvé
-            // Gérer le cas où l'événement n'est pas trouvé ou la session est incohérente
+            // Gérer le cas où l'événement n'est pas trouvé, ou la session est incohérente
             header('Location: /reservation?erreur=session_invalide');
             exit;
         }
@@ -151,7 +154,7 @@ class ReservationController extends AbstractController
 
         $sessionId = session_id();
         //Suppression des réservations en cours dont le timeout est expiré
-        $this->tempRepo->deleteExpired((new \DateTime())->format('Y-m-d H:i:s'));
+        $this->tempRepo->deleteExpired((new DateTime())->format('Y-m-d H:i:s'));
         // Récupérer les réservations temporaires de toutes les sessions restantes
         $tempAllSeats = $this->tempRepo->findAll();
         // Remet à null seat_id et seat_name pour chaque participant directement dans $_SESSION
@@ -321,8 +324,8 @@ class ReservationController extends AbstractController
         }
 
         // Insérer la réservation temporaire
-        $now = new \DateTime();
-        $timeout = (clone $now)->add(new \DateInterval(TIMEOUT_PLACE_RESERV));
+        $now = new DateTime();
+        $timeout = (clone $now)->add(new DateInterval(TIMEOUT_PLACE_RESERV));
         if (!$this->tempRepo->insertTempReservation($sessionId, $seatId, $index, $now, $timeout)) {
             return;
         }
@@ -393,7 +396,7 @@ class ReservationController extends AbstractController
         }
         foreach ($reservationDetails as $detail) {
             $tarifId = null;
-            if (is_object($detail) && $detail instanceof \app\Models\Reservation\ReservationsDetails) {
+            if (is_object($detail) && $detail instanceof ReservationsDetails) {
                 $tarifId = $detail->getTarif();
             } elseif (is_array($detail) && isset($detail['tarif_id'])) {
                 $tarifId = $detail['tarif_id'];

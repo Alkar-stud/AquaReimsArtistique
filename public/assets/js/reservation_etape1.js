@@ -87,32 +87,6 @@ function validerFormulaireReservation(eventId) {
 
 }
 
-function step1Valid(eventId, sessionChoisie, nageuseId) {
-    sessionChoisie = parseInt(sessionChoisie);
-    nageuseId != null ? nageuseId = parseInt(nageuseId) : nageuseId = null;
-
-    // Envoi au serveur (POST)
-    fetch('/reservation/etape1', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            event_id: eventId,
-            event_session_id: sessionChoisie,
-            nageuse_id: nageuseId || null,
-            csrf_token: window.csrf_token
-        })
-    })
-        .then(r => r.json())
-        .then(data => {
-            if (data.success) {
-                // Rediriger ou afficher l’étape suivante
-                window.location.href = '/reservation/etape2Display';
-            } else {
-                alert(data.error || 'Erreur');
-            }
-        });
-}
-
 function validerCodeAcces(eventId) {
     const code = document.getElementById('access_code_input_' + eventId).value.trim();
     const status = document.getElementById('access_code_status_' + eventId);
@@ -141,6 +115,51 @@ function validerCodeAcces(eventId) {
                 status.classList.remove('text-success');
                 status.classList.add('text-danger');
                 document.getElementById('btn_reserver_' + eventId).disabled = true;
+            }
+        });
+}
+
+function step1Valid(eventId, sessionChoisie, nageuseId) {
+    sessionChoisie = parseInt(sessionChoisie);
+    nageuseId != null ? nageuseId = parseInt(nageuseId) : nageuseId = null;
+
+    // Envoi au serveur (POST)
+    fetch('/reservation/etape1', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            event_id: eventId,
+            event_session_id: sessionChoisie,
+            nageuse_id: nageuseId || null,
+            csrf_token: window.csrf_token
+        })
+    })
+        .then(response => {
+            // Récupérer d'abord le texte brut
+            return response.text().then(text => {
+                // Ensuite essayer de parser en JSON si possible
+                try {
+                    return JSON.parse(text);
+                } catch (error) {
+                    console.error("Erreur de parsing JSON:", error);
+                    console.log("Contenu non parsable:", text);
+                    throw new Error("Réponse non valide du serveur");
+                }
+            });
+        })
+        .then(data => {
+            if (data.success) {
+                // Rediriger ou afficher l’étape suivante
+                window.location.href = '/reservation/etape2Display';
+            } else {
+                const errorDiv = document.getElementById('form_error_message_' + eventId);
+                if (errorDiv) {
+                    // Affiche l'erreur dans la div dédiée sous le bouton
+                    errorDiv.textContent = data.error || 'Une erreur inconnue est survenue.';
+                } else {
+                    // Fallback si la div n'est pas trouvée
+                    alert(data.error || 'Erreur');
+                }
             }
         });
 }

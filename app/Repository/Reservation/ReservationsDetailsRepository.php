@@ -43,7 +43,7 @@ class ReservationsDetailsRepository extends AbstractRepository
     }
 
     /**
-     * Trouve tous les détails pour une réservation
+     * Trouve tous les détails des places assises pour une réservation
      * @param int $reservationId
      * @return ReservationsDetails[]
      */

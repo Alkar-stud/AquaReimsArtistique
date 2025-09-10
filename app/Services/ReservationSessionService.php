@@ -2,6 +2,8 @@
 
 namespace app\Services;
 
+use JsonSerializable;
+
 class ReservationSessionService
 {
     private string $sessionId;
@@ -30,14 +32,59 @@ class ReservationSessionService
      */
     public function setReservationSession(string $key, mixed $value): void
     {
-        $_SESSION['reservation'][$this->sessionId][$key] = $value;
+        // Sérialise récursivement la valeur pour s'assurer qu'aucun objet n'est stocké en session.
+        $_SESSION['reservation'][$this->sessionId][$key] = $this->recursiveSerialize($value);
+        // Met à jour le timestamp à chaque modification
+        $_SESSION['reservation'][$this->sessionId]['last_activity'] = time();
     }
 
     /**
-     * Efface complètement la session de réservation en cours.
+     * Parcourt récursivement une valeur (tableau ou objet) et convertit tous les objets
+     * implémentant JsonSerializable en leur représentation de tableau.
+     *
+     * @param mixed $data
+     * @return mixed
+     */
+    private function recursiveSerialize(mixed $data): mixed
+    {
+        if ($data instanceof JsonSerializable) {
+            $data = $data->jsonSerialize();
+        }
+
+        if (is_array($data)) {
+            return array_map([$this, 'recursiveSerialize'], $data);
+        }
+
+        return $data;
+    }
+
+    /**
+     * Efface complètement la session de réservation en cours et initialise une nouvelle session vide.
      */
     public function clearReservationSession(): void
     {
         unset($_SESSION['reservation'][$this->sessionId]);
+        $sessionId = session_id();
+        $_SESSION['reservation'][$sessionId] = $this->getDefaultReservationStructure();
+    }
+
+    /**
+     * Retourne la structure par défaut pour une session de réservation.
+     *
+     * @return array
+     */
+    private function getDefaultReservationStructure(): array
+    {
+        return [
+            'event_id' => null,
+            'event_session_id' => null,
+            'nageuse_id' => null,
+            'limitPerSwimmer' => null,
+            'access_code_used' => null,
+            'user' => null,
+            'reservation_detail' => [],
+            'reservation_complement' => [],
+            'last_activity' => time(),
+        ];
     }
 }

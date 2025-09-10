@@ -159,7 +159,8 @@ class Tarifs
 
     public function setAccessCode(?string $access_code): self
     {
-        $this->access_code = $access_code;
+        // Si la chaîne est vide, on la transforme en null
+        $this->access_code = empty($access_code) ? null : $access_code;
         return $this;
     }
 

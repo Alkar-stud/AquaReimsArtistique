@@ -93,4 +93,30 @@ class NageuseService
         return $result;
     }
 
+    /**
+     * Récupère le statut des réservations pour une nageuse sur un événement (limite, déjà réservées, restantes).
+     *
+     * @param int $eventId
+     * @param int $nageuseId
+     * @return array ['limit' => ?int, 'reserved' => int, 'remaining' => ?int]
+     * @throws DateMalformedStringException
+     */
+    public function getSwimmerReservationStatus(int $eventId, int $nageuseId): array
+    {
+        $event = $this->eventsRepository->findById($eventId);
+        if (!$event || $event->getLimitationPerSwimmer() === null) {
+            return ['limit' => null, 'reserved' => 0, 'remaining' => null];
+        }
+
+        $limit = $event->getLimitationPerSwimmer();
+        $reserved = $this->reservationsRepository->countReservationsForNageuse($eventId, $nageuseId);
+        $remaining = max(0, $limit - $reserved);
+
+        return [
+            'limit' => $limit,
+            'reserved' => $reserved,
+            'remaining' => $remaining,
+        ];
+    }
+
 }

@@ -71,7 +71,7 @@ class EventsRepository extends AbstractRepository
             INNER JOIN event_sessions s ON s.event_id = e.id
             WHERE s.event_start_at >= :today
             GROUP BY e.id
-            ORDER BY MIN(s.event_start_at) ASC";
+            ORDER BY MIN(s.event_start_at)";
         $results = $this->query($sql, ['today' => $today]);
         return array_map([$this, 'hydrate'], $results);
     }
@@ -128,21 +128,6 @@ class EventsRepository extends AbstractRepository
     {
         $sql = "DELETE FROM $this->tableName WHERE id = :id";
         return $this->execute($sql, ['id' => $id]);
-    }
-
-    /**
-     * Mise à jour de l'association entre événements
-     * @param int $eventId
-     * @param int|null $associateEventId
-     * @return bool
-     */
-    public function updateEventAssociation(int $eventId, ?int $associateEventId): bool
-    {
-        $sql = "UPDATE $this->tableName SET associate_event = :associate_event, updated_at = NOW() WHERE id = :id";
-        return $this->execute($sql, [
-            'id' => $eventId,
-            'associate_event' => $associateEventId
-        ]);
     }
 
     /**

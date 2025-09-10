@@ -118,6 +118,7 @@ function updateParticipantsTable() {
 function updateSubmitBtn() {
     document.getElementById('selectedSeats').value = participantSeats.filter(Boolean).join(',');
     document.getElementById('submitBtn').disabled = (participantSeats.filter(Boolean).length !== nbPlacesAssises);
+    document.getElementById('submitBtnTop').disabled = (participantSeats.filter(Boolean).length !== nbPlacesAssises);
 }
 
 function showError(msg) {

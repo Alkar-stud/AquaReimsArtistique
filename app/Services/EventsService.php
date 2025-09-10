@@ -317,4 +317,21 @@ class EventsService
         return ['success' => false, 'error' => 'Code inconnu pour cet événement.'];
     }
 
+    /**
+     * Récupère les événements à venir avec leur statut d'inscription.
+     *
+     * @return array ['events' => array, 'statuses' => array]
+     * @throws \Exception
+     */
+    public function getUpcomingEventsWithStatus(): array
+    {
+        $events = $this->getUpcomingEvents();
+        $statuses = [];
+
+        foreach ($events as $event) {
+            $statuses[$event->getId()] = $this->getRegistrationStatus($event);
+        }
+
+        return ['events' => $events, 'statuses' => $statuses];
+    }
 }

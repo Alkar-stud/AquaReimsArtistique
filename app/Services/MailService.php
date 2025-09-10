@@ -45,7 +45,7 @@ class MailService
         $this->mailer->Port = (int)$_ENV['MAIL_PORT'];
         $this->mailer->CharSet = 'UTF-8';
 
-        if (isset($_ENV['MAIL_MAILER']) && $_ENV['MAIL_MAILER'] === 'log') {
+        if ( (isset($_ENV['MAIL_MAILER']) && $_ENV['MAIL_MAILER'] === 'log') || isset($_ENV['MAIL_DEBUG']) && $_ENV['MAIL_DEBUG'] === 'true') {
             $this->mailer->SMTPDebug = SMTP::DEBUG_SERVER;
         }
 

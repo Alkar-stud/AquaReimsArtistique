@@ -54,8 +54,8 @@ document.addEventListener('DOMContentLoaded', function () {
             alertDiv.innerHTML = '<div class="alert alert-danger">Numéro de téléphone invalide.</div>';
             return;
         }
-        // Vérification email déjà utilisé
-        fetch('/reservation/check-email', {
+        // Vérification si email déjà utilisé dans d'autres réservations du même event
+        fetch('/reservation/check-duplicate-email', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -97,8 +97,6 @@ document.addEventListener('DOMContentLoaded', function () {
                                 .then(response => {
                                     // Récupérer d'abord le texte brut
                                     return response.text().then(text => {
-                                        console.log("Réponse brute:", text);
-
                                         // Ensuite essayer de parser en JSON si possible
                                         try {
                                             return JSON.parse(text);

@@ -52,7 +52,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const validateBtn = document.getElementById('validateCodeBtn');
     const feedback = document.getElementById('specialCodeFeedback');
     const specialTarifContainer = document.getElementById('specialTarifContainer');
-    // Ajout pour pré-remplir si un tarif spécial est déjà en session
+    // Ajout pour préremplir si un tarif spécial est déjà en session
     if (window.specialTarifSession) {
         const t = window.specialTarifSession;
         codeInput.value = t.code;
@@ -179,7 +179,19 @@ document.addEventListener('DOMContentLoaded', function () {
                 csrf_token: window.csrf_token
             })
         })
-            .then(r => r.json())
+            .then(response => {
+                // Récupérer d'abord le texte brut
+                return response.text().then(text => {
+                    // Ensuite essayer de parser en JSON si possible
+                    try {
+                        return JSON.parse(text);
+                    } catch (error) {
+                        console.error("Erreur de parsing JSON:", error);
+                        console.log("Contenu non parsable:", text);
+                        throw new Error("Réponse non valide du serveur");
+                    }
+                });
+            })
             .then(data => {
                 if (data.success) {
                     window.location.href = '/reservation/etape4Display';

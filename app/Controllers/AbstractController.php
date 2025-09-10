@@ -2,7 +2,7 @@
 
 namespace app\Controllers;
 
-use app\Enums\LogType;
+use app\Services\SessionValidationService;
 use app\Repository\User\UserRepository;
 use app\Services\LogService;
 use app\Utils\CsrfHelper;
@@ -16,11 +16,13 @@ use RuntimeException;
 abstract class AbstractController
 {
     protected LogService $logService;
+    protected SessionValidationService $sessionValidationService;
 
     public function __construct(bool $isPublicRoute = false)
     {
         $this->configureSession();
         $this->logService = new LogService();
+        $this->sessionValidationService = new SessionValidationService();
         // Log URL et Route
         $this->logUrlAccess();
         $this->logRouteAccess();
@@ -70,11 +72,8 @@ abstract class AbstractController
             return;
         }
 
-        // Convertir le format ISO 8601 de TIMEOUT_SESSION en secondes
-        $timeout_seconds = DurationHelper::iso8601ToSeconds(TIMEOUT_SESSION);
-
-        // Vérifier le timeout d'inactivité
-        if ((time() - $_SESSION['user']['LAST_ACTIVITY'] > $timeout_seconds)) {
+        // Vérifier le timeout d'inactivité en utilisant le service dédié
+        if (!$this->sessionValidationService->isSessionActive($_SESSION['user'] ?? null, 'LAST_ACTIVITY', TIMEOUT_SESSION)) {
             $this->logoutAndRedirect('Votre session a expiré pour cause d\'inactivité. Veuillez vous reconnecter.');
             return;
         }

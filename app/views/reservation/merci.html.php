@@ -19,7 +19,7 @@
             const errorContainer = document.getElementById('merci-error');
             const spinner = document.querySelector('.spinner-border');
             const message = document.querySelector('.message');
-
+console.log('avant fetch');
             fetch('/reservation/checkPayment', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
@@ -52,7 +52,21 @@
                             headers: {'Content-Type': 'application/json'},
                             body: JSON.stringify({checkoutIntentId})
                         })
-                            .then(response => response.json())
+                            .then(response => {
+                                // Récupérer d'abord le texte brut
+                                return response.text().then(text => {
+                                    console.log("Réponse brute:", text);
+
+                                    // Ensuite essayer de parser en JSON si possible
+                                    try {
+                                        return JSON.parse(text);
+                                    } catch (error) {
+                                        console.error("Erreur de parsing JSON:", error);
+                                        console.log("Contenu non parsable:", text);
+                                        throw new Error("Réponse non valide du serveur");
+                                    }
+                                });
+                            })
                             .then(forceData => {
                                 if (forceData && forceData.success === true) {
                                     window.location.href = '/reservation/success?uuid=' + data.reservationUuid;

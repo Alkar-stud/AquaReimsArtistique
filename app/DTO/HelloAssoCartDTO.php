@@ -1,8 +1,8 @@
 <?php
 
-namespace app\dto;
+namespace app\DTO;
 
-class HelloAssoCart
+class HelloAssoCartDTO
 {
     public int $totalAmount = 0; //total en centimes
     public int $initialAmount = 0; //total initial en centimes (si plusieurs échéances)

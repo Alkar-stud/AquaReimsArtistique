@@ -29,6 +29,22 @@ class LogService
     }
 
     /**
+     * Log an error and return a formatted error array.
+     *
+     * @param string $message The error message for the user.
+     * @param array $context Context for the logger.
+     * @param array $additionalData Additional data to merge into the returned array.
+     * @param string $level The log level (e.g., 'WARNING', 'DANGER').
+     * @return array
+     */
+    public function logAndReturnError(string $message, array $context = [], array $additionalData = [], string $level = 'WARNING'): array
+    {
+        $this->log(LogType::APPLICATION, $message, $context, $level);
+        $errorResponse = ['success' => false, 'error' => $message];
+        return array_merge($errorResponse, $additionalData);
+    }
+
+    /**
      * Collecte toutes les données de log une seule fois
      */
     private function collectLogData(LogType $type, string $message, array $context, string $level): array

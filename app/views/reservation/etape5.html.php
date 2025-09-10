@@ -60,7 +60,7 @@ $participants = $reservation['reservation_detail'] ?? [];
                             <a href="/reservation/etape4Display" class="btn btn-secondary w-100 w-md-auto">Modifier mon choix précédent</a>
                         </div>
                         <div class="col-12 col-md-6">
-                            <button type="submit" class="btn btn-primary w-100 w-md-auto">Valider et continuer</button>
+                            <button type="submit" class="btn btn-primary w-100 w-md-auto" id="submitBtnTop">Valider et continuer</button>
                         </div>
                     </div>
                 </form>
@@ -162,7 +162,7 @@ $participants = $reservation['reservation_detail'] ?? [];
                     <a href="/reservation/etape4Display" class="btn btn-secondary w-100 w-md-auto">Modifier mon choix précédent</a>
                 </div>
                 <div class="col-12 col-md-6">
-                    <button type="submit" class="btn btn-primary w-100 w-md-auto">Valider et continuer</button>
+                    <button type="submit" class="btn btn-primary w-100 w-md-auto" id="submitBtn">Valider et continuer</button>
                 </div>
             </div>
         </form>

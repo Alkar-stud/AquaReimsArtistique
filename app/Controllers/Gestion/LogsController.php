@@ -48,7 +48,7 @@ class LogsController extends AbstractController
         $totalPages = ceil($totalLogs / $perPage);
 
         // Liste des niveaux disponibles
-        $availableLevels = ['INFO', 'WARNING', 'DANGER', 'DEBUG'];
+        $availableLevels = ['INFO', 'APPLICATION', 'WARNING', 'DANGER', 'DEBUG'];
 
         $this->render('logs/index', [
             'logs' => $logs,
@@ -97,6 +97,7 @@ class LogsController extends AbstractController
             'access' => 'success',
             'database' => 'primary',
             'url' => 'info',
+            'application' => 'warning',
             'route' => 'warning',
             'url_error' => 'danger',
             default => 'secondary'
@@ -112,6 +113,7 @@ class LogsController extends AbstractController
         return match($level) {
             'DANGER' => 'danger',
             'WARNING' => 'warning',
+            'APPLICATION' => 'application',
             'INFO' => 'info',
             'DEBUG' => 'secondary',
             default => 'light'

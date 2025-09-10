@@ -158,8 +158,8 @@ unset($_SESSION['onglet_tarif']);
                 <?php foreach ($data as $tarif): ?>
                     <tr>
                         <form action="/gestion/tarifs/update/<?= $tarif->getId() ?>" method="POST">
-                            <td><input type="text" name="libelle" class="form-control" required value="<?= htmlspecialchars($tarif->getLibelle()) ?>" size="50"></td>
-                            <td><input type="text" name="description" class="form-control" value="<?= htmlspecialchars($tarif->getDescription()) ?>" size="100"></td>
+                            <td><input type="text" name="libelle" class="form-control" required value="<?= htmlspecialchars($tarif->getLibelle() ?? '') ?>" size="50"></td>
+                            <td><input type="text" name="description" class="form-control" value="<?= htmlspecialchars($tarif->getDescription() ?? '') ?>" size="100"></td>
                             <td><input type="number" name="nb_place" min="0"  class="form-control" value="<?= htmlspecialchars($tarif->getNbPlace() ?? '') ?>"></td>
                             <td><input type="number" name="age_min" min="0"  class="form-control" value="<?= htmlspecialchars($tarif->getAgeMin() ?? '') ?>"></td>
                             <td><input type="number" name="age_max" class="form-control" value="<?= htmlspecialchars($tarif->getAgeMax() ?? '') ?>"></td>
@@ -167,7 +167,7 @@ unset($_SESSION['onglet_tarif']);
                             <td><input type="number" step="0.01" min="0" name="price" class="form-control" required value="<?= number_format($tarif->getPrice(), 2, '.', '') ?>"></td>
                             <td class="text-center"><input type="checkbox" name="is_program_show_include" <?= $tarif->getIsProgramShowInclude() ? 'checked' : '' ?>></td>
                             <td class="text-center"><input type="checkbox" name="is_proof_required" <?= $tarif->getIsProofRequired() ? 'checked' : '' ?>></td>
-                            <td><input type="text" name="access_code" class="form-control" value="<?= htmlspecialchars($tarif->getAccessCode()) ?>"></td>
+                            <td><input type="text" name="access_code" class="form-control" value="<?= htmlspecialchars($tarif->getAccessCode() ?? '') ?>"></td>
                             <td class="text-center"><input type="checkbox" name="is_active" <?= $tarif->getIsActive() ? 'checked' : '' ?>></td>
                             <td>
                                 <button type="submit" class="btn btn-secondary btn-sm">Enregistrer</button>

@@ -14,7 +14,8 @@ use app\Repository\Reservation\ReservationsRepository;
 use app\Repository\TarifsRepository;
 use app\Repository\Reservation\ReservationsPlacesTempRepository;
 use app\Services\HelloAssoService;
-use app\dto\HelloAssoCart;
+use app\DTO\HelloAssoCartDTO;
+use app\Utils\CsrfHelper;
 use app\Utils\ReservationHelper;
 use app\Services\ReservationStorageInterface;
 use app\Services\ReservationPersistenceService;
@@ -24,7 +25,7 @@ use app\Services\MongoReservationStorage; // à changer si la sauvegarde tempora
 class ReservationConfirmationController extends AbstractController
 {
     private HelloAssoService $helloAssoService;
-    private HelloAssoCart $helloAssoCart;
+    private HelloAssoCartDTO $helloAssoCart;
     private ReservationHelper $reservationHelper;
     private ReservationStorageInterface $reservationStorage;
     private ReservationsPlacesTempRepository $reservationsPlacesTempRepository;
@@ -34,7 +35,7 @@ class ReservationConfirmationController extends AbstractController
     {
         parent::__construct(true); // route publique
         $this->helloAssoService = new HelloAssoService;
-        $this->helloAssoCart = new HelloAssoCart;
+        $this->helloAssoCart = new HelloAssoCartDTO;
         $this->reservationHelper = new ReservationHelper;
         // Pour MongoDB, à changer si autre BDD
         $this->reservationStorage = new MongoReservationStorage('ReservationTemp');
@@ -107,7 +108,7 @@ class ReservationConfirmationController extends AbstractController
     #[Route('/reservation/saveCart', name: 'app_reservation_saveCart', methods: ['POST'])]
     public function saveCart() {
         $input = json_decode(file_get_contents('php://input'), true);
-        if (!$this->checkCsrfOrJsonError($input['csrf_token'] ?? '', 'reservation_saveCart')) return;
+        if (!CsrfHelper::validateToken($input['csrf_token'] ?? '', 'reservation_saveCart')) return;
 
         $sessionId = session_id();
         $reservation = $_SESSION['reservation'][$sessionId] ?? null;
@@ -277,7 +278,7 @@ class ReservationConfirmationController extends AbstractController
         }
 
         // Si APP_DEBUG est à true, on enregistre le payload pour le débogage
-        if (isset($_ENV['APP_DEBUG']) && $_ENV['APP_DEBUG'] === 'true') {
+        if (isset($_ENV['HELOASSO_DEBUG']) && $_ENV['HELOASSO_DEBUG'] === 'true') {
             $dir = __DIR__ . '/../../../storage/app/private/';
             if (!is_dir($dir)) {
                 mkdir($dir, 0770, true);

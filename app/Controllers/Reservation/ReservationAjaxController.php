@@ -10,11 +10,13 @@ use app\Repository\Piscine\PiscineGradinsPlacesRepository;
 use app\Repository\Piscine\PiscineGradinsZonesRepository;
 use app\Repository\Reservation\ReservationsDetailsRepository;
 use app\Repository\Reservation\ReservationsPlacesTempRepository;
+use app\Repository\TarifsRepository;
 use app\Services\EventsService;
 use app\Services\NageuseService;
 use app\Services\ReservationService;
 use app\Services\ReservationSessionService;
 use app\Services\TarifService;
+use app\Utils\ReservationContextHelper;
 use DateInterval;
 use DateTime;
 use Exception;
@@ -23,6 +25,7 @@ class ReservationAjaxController extends AbstractController
 {
     private NageuseService $nageuseService;
     private ReservationSessionService $reservationSessionService;
+    private TarifsRepository $tarifsRepository;
     private ReservationService $reservationService;
     private EventsService $eventsService;
     private TarifService $tarifService;
@@ -37,6 +40,7 @@ class ReservationAjaxController extends AbstractController
         parent::__construct(true); // route publique
         $this->reservationSessionService = new ReservationSessionService();
         $this->nageuseService = new NageuseService();
+        $this->tarifsRepository = new TarifsRepository();
         $this->reservationService = new ReservationService();
         $this->eventsService = new EventsService();
         $this->tarifService = new TarifService();
@@ -332,7 +336,7 @@ class ReservationAjaxController extends AbstractController
         }
 
         //Suppression des réservations en cours dont le timeout est expiré
-        $this->tempRepo->deleteExpired((new \DateTime())->format('Y-m-d H:i:s'));
+        $this->tempRepo->deleteExpired((new DateTime())->format('Y-m-d H:i:s'));
         // Récupérer les réservations temporaires de toutes les sessions restantes
         $tempAllSeats = $this->tempRepo->findByEventSession($reservation['event_session_id']);
 
@@ -357,10 +361,10 @@ class ReservationAjaxController extends AbstractController
         ], '', true);
     }
 
-    #[Route('/reservation/etape5AddSeat', name: 'etape5AddSeat', methods: ['POST'])]
+    #[Route('/reservation/etape5AddSeat', name: 'etape5_add_seat', methods: ['POST'])]
     public function etape5AddSeat(): void
     {
-        $this->checkCsrfOrExit('reservation_etape5', false);
+        $this->checkCsrfOrExit('reservation_etape5_add_seat', false);
         $input = json_decode(file_get_contents('php://input'), true);
 
         //on récupère les différents éléments
@@ -402,9 +406,13 @@ class ReservationAjaxController extends AbstractController
         $timeout = (clone $now)->add(new DateInterval(TIMEOUT_PLACE_RESERV));
         $this->tempRepo->insertTempReservation($sessionId, $reservation['event_session_id'], $seatId, $index, $now, $timeout);
         //Mise à jour de $_SESSION avec la place du participant à l'index donné
-        $place = $checkSeatStatus['place'];
-        $_SESSION['reservation'][$sessionId]['reservation_detail'][$index]['seat_id'] = $seatId;
-        $_SESSION['reservation'][$sessionId]['reservation_detail'][$index]['seat_name'] = $place ? $place->getFullPlaceName() : $seatId;
+        $place = $checkSeatStatus['place'] ?? null;
+
+        // On récupère les détails actuels, on les modifie, puis on les réenregistre via le service.
+        $reservationDetails = $reservation['reservation_detail'];
+        $reservationDetails[$index]['seat_id'] = $seatId;
+        $reservationDetails[$index]['seat_name'] = $place ? $place->getFullPlaceName() : $seatId;
+        $this->reservationSessionService->setReservationSession('reservation_detail', $reservationDetails);
 
         $newToken = $this->getCsrfToken();
         $this->json([
@@ -414,7 +422,58 @@ class ReservationAjaxController extends AbstractController
         ]);
     }
 
+    #[Route('/reservation/etape5RemoveSeat', name: 'etape5_remove_seat', methods: ['POST'])]
+    public function etape5RemoveSeat(): void
+    {
+        $this->checkCsrfOrExit('etape5_remove_seat', false);
+        $input = json_decode(file_get_contents('php://input'), true);
 
+        //on récupère les différents éléments
+        $reservation = $this->reservationSessionService->getReservationSession() ?? [];
+        if (!$reservation || empty($reservation['event_id'])) {
+            $this->json(['success' => false, 'error' => 'Session expirée.']);
+            return;
+        }
 
+        //On récupère les données
+        $seatId = (int)($input['seat_id'] ?? 0);
+        if ($seatId <= 0) {
+            $this->json(['success' => false, 'error' => 'Paramètres manquants.']);
+            return;
+        }
 
+        $sessionId = session_id();
+        // Supprimer la réservation temporaire pour cette session et cette place
+        $this->tempRepo->deleteBySessionAndPlace($sessionId, $seatId, $reservation['event_session_id']);
+
+        //Mise à jour de $_SESSION avec la place du participant à retirer à l'index donné
+        $reservationDetails = $reservation['reservation_detail'] ?? [];
+        foreach ($reservationDetails as &$detail) {
+            if (($detail['seat_id'] ?? null) == $seatId) {
+                $detail['seat_id'] = null;
+                $detail['seat_name'] = null;
+                break; // La place a été trouvée, on peut sortir de la boucle.
+            }
+        }
+        unset($detail);
+        $this->reservationSessionService->setReservationSession('reservation_detail', $reservationDetails);
+
+        $newToken = $this->getCsrfToken();
+        $this->json([
+            'success' => true,
+            'csrf_token' => $newToken,
+            'session' => $_SESSION['reservation'][$sessionId]
+        ]);
+
+    }
+
+    /**
+     * pour rafraichir le contexte avec fetch
+     */
+    #[Route('/reservation/display-details-fragment', name: 'display_details_fragment', methods: ['GET'])]
+    public function displayDetailsFragment(): void
+    {
+        $context = ReservationContextHelper::getContext($this->eventsRepository, $this->tarifsRepository, $_SESSION['reservation'][session_id()] ?? null);
+        $this->render('reservation/_display_details', $context, '', true);
+    }
 }

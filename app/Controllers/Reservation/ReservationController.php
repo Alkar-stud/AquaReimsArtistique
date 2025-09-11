@@ -277,58 +277,6 @@ class ReservationController extends AbstractController
         $this->json(['success' => true]);
     }
 
-    #[Route('/reservation/etape5RemoveSeat', name: 'etape5RemoveSeat', methods: ['POST'])]
-    public function etape5RemoveSeat(): void
-    {
-        $this->checkCsrfOrExit('reservation_etape5', false);
-
-        $sessionId = session_id();
-        $reservation = $_SESSION['reservation'][$sessionId] ?? null;
-        if (!$reservation || empty($reservation['event_id'])) {
-            $this->json(['success' => false, 'error' => 'Session expirée.']);
-            return;
-        }
-
-        $input = json_decode(file_get_contents('php://input'), true);
-        $seatId = (int)($input['seat_id'] ?? 0);
-        if ($seatId <= 0) {
-            $this->json(['success' => false, 'error' => 'Paramètre manquant.']);
-            return;
-        }
-
-        // Supprimer la réservation temporaire pour cette session et cette place
-        $this->tempRepo->deleteBySessionAndPlace($sessionId, $seatId, $reservation['event_session_id']);
-
-
-        //Mise à jour de $_SESSION avec la place du participant à retirer à l'index donné
-        if (isset($_SESSION['reservation'][$sessionId]['reservation_detail'])) {
-            foreach ($_SESSION['reservation'][$sessionId]['reservation_detail'] as &$detail) {
-                if (($detail['seat_id'] ?? null) == $seatId) {
-                    $detail['seat_id'] = null;
-                    $detail['seat_name'] = null;
-                }
-            }
-            unset($detail);
-        }
-
-        $newToken = $this->getCsrfToken();
-        $this->json([
-            'success' => true,
-            'csrf_token' => $newToken,
-            'session' => $_SESSION['reservation'][$sessionId]
-        ]);
-    }
-
-
-    /**
-     * pour rafraichir le contexte avec fetch
-     */
-    #[Route('/reservation/display-details-fragment', name: 'display_details_fragment', methods: ['GET'])]
-    public function displayDetailsFragment(): void
-    {
-        $context = ReservationContextHelper::getContext($this->eventsRepository, $this->tarifsRepository, $_SESSION['reservation'][session_id()] ?? null);
-        $this->render('reservation/_display_details', $context, '', true);
-    }
 
     #[Route('/reservation/etape6Display', name: 'etape6Display', methods: ['GET'])]
     public function etape6Display(): void

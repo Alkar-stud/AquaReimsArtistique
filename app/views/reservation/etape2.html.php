@@ -19,8 +19,8 @@
             <div id="emailFeedback" class="invalid-feedback"></div>
         </div>
         <div class="mb-3">
-            <label for="telephone" class="form-label">Téléphone *</label>
-            <input type="tel" class="form-control" id="telephone" name="telephone" required
+            <label for="telephone" class="form-label">Téléphone</label>
+            <input type="tel" class="form-control" id="telephone" name="telephone"
                    value="<?= htmlspecialchars($reservation['user']['telephone'] ?? '') ?>">
             <div id="telFeedback" class="invalid-feedback"></div>
         </div>

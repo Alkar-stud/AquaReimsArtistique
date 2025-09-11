@@ -10,7 +10,7 @@ CREATE TABLE IF NOT EXISTS `reservations` (
     `nom` VARCHAR(255) NOT NULL,
     `prenom` VARCHAR(255) NOT NULL,
     `email` VARCHAR(255) NOT NULL,
-    `phone` CHAR(15) NOT NULL,
+    `phone` CHAR(15) NULL,
     `nageuse_si_limitation` bigint NULL,
     FOREIGN KEY (`nageuse_si_limitation`) REFERENCES `nageuses`(`id`),
     `total_amount` INT NOT NULL,

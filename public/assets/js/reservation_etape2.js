@@ -24,7 +24,8 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     telInput.addEventListener('blur', function () {
-        if (!validateTel(telInput.value)) {
+        const telephoneValue = telInput.value.trim();
+        if (telephoneValue !== '' && !validateTel(telephoneValue)) {
             telInput.classList.add('is-invalid');
             document.getElementById('telFeedback').textContent = "Numéro de téléphone invalide (format attendu : 0X XX XX XX XX).";
         } else {
@@ -50,7 +51,7 @@ document.addEventListener('DOMContentLoaded', function () {
             alertDiv.innerHTML = '<div class="alert alert-danger">Adresse mail invalide.</div>';
             return;
         }
-        if (!validateTel(telephone)) {
+        if (telephone !== '' && !validateTel(telephone)) {
             alertDiv.innerHTML = '<div class="alert alert-danger">Numéro de téléphone invalide.</div>';
             return;
         }

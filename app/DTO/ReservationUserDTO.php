@@ -10,7 +10,7 @@ readonly class ReservationUserDTO implements JsonSerializable
         public string $nom,
         public string $prenom,
         public string $email,
-        public string $telephone
+        public ?string $telephone = null
     ) {
     }
 

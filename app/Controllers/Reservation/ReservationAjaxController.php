@@ -467,6 +467,23 @@ class ReservationAjaxController extends AbstractController
 
     }
 
+    #[Route('/reservation/etape5', name: 'etape5',methods: ['POST'])]
+    public function etape5(): void
+    {
+        $this->checkCsrfOrExit('reservation_etape5', false);
+        $input = json_decode(file_get_contents('php://input'), true);
+        
+        //On vérifie ce qui a été saisi et ce qu'il y a dans $_SESSION
+        $validationResult = $this->reservationService->validateDataPerStep(5, $input);
+
+        if (!$validationResult['success']) {
+            $this->json($validationResult);
+        }
+
+        $this->json($validationResult);
+    }
+
+
     /**
      * pour rafraichir le contexte avec fetch
      */

@@ -10,6 +10,7 @@ use app\Repository\MailTemplateRepository;
 use app\Repository\Event\EventsRepository;
 use app\Repository\Nageuse\NageusesRepository;
 use app\Repository\Piscine\PiscineGradinsPlacesRepository;
+use app\Repository\Piscine\PiscineGradinsZonesRepository;
 use app\Repository\Reservation\ReservationsDetailsRepository;
 use app\Repository\Reservation\ReservationMailsSentRepository;
 use app\Repository\Reservation\ReservationsPlacesTempRepository;
@@ -37,6 +38,7 @@ class ReservationService
     private UploadService $uploadService;
     private PiscineGradinsPlacesRepository $placesRepository;
     private ReservationsPlacesTempRepository $tempRepo;
+    private PiscineGradinsZonesRepository $zonesRepository;
 
 
     public function __construct()
@@ -57,6 +59,7 @@ class ReservationService
         $this->uploadService = new UploadService();
         $this->placesRepository = new PiscineGradinsPlacesRepository();
         $this->tempRepo = new ReservationsPlacesTempRepository();
+        $this->zonesRepository = new PiscineGradinsZonesRepository();
     }
 
     /**
@@ -557,6 +560,12 @@ class ReservationService
      */
     public function validateDetailsContextStep4(?array $reservationData): array
     {
+        // Revalide le contexte de base lié à l'événement choisi (prérequis pour l'étape 2)
+        if (!$this->validateCoreContext($reservationData)['success']) {
+            // Redirection vers la page de début de réservation avec un message
+            header('Location: /reservation?session_expiree=1');
+            exit;
+        }
         $payerContextValidation = $this->validatePayerContext($reservationData);
         if (!$payerContextValidation['success']) {
             return $payerContextValidation;
@@ -579,7 +588,6 @@ class ReservationService
      */
     public function processAndValidateStep4(array $postData, array $filesData, array $reservationData): array
     {
-
         $eventId = $reservationData['event_id'] ?? null;
         if (!$eventId) {
             return ['success' => false, 'error' => 'Session expirée.'];
@@ -675,6 +683,35 @@ class ReservationService
         return ['success' => true, 'data' => $updatedDetails];
     }
 
+    public function processAndValidateStep5(array $input, array $reservationData): array
+    {
+        $sessionId = session_id();
+
+        $seats = $input['seats'] ?? [];
+
+        $nbPlacesAssises = count($reservationData['reservation_detail']);
+
+        if (count($seats) !== $nbPlacesAssises) {
+            return ['success' => false, 'error' => 'Nombre de places sélectionnées incorrect.'];
+        }
+
+        // Vérifier que chaque place est bien réservée temporairement pour cette session
+        $tempSeats = $this->tempRepo->findAllSeatsBySession($sessionId) ?? [];
+        $tempSeatIds = array_map(fn($t) => $t->getPlaceId(), $tempSeats);
+
+        foreach ($seats as $seatId) {
+            if (!in_array($seatId, $tempSeatIds)) {
+                return ['success' => false, 'error' => "La place $seatId n'est pas réservée pour cette session."];
+            }
+        }
+
+        //Pas besoin de mettre à jour $_SESSION, les places y sont déjà. On met juste à jour last_activity
+        $_SESSION['reservation'][$sessionId]['last_activity'] = time();
+
+        return ['success' => true, 'data' => $reservationData];
+    }
+
+
     /**
      * Génère un nom de fichier unique pour un justificatif.
      *
@@ -731,8 +768,24 @@ class ReservationService
         }
 
         if ($step >= 4) {
-            $step == 4 ? $data = $dataInputed : $data = $reservationDataSession;
-            $return = $this->processAndValidateStep4($data[0], $data[1], $reservationDataSession);
+            //Si on est plus loin que l'étape 4, ce n'est pas le potentiel fichier qu'il faut envoyer
+            //Le nom actuel sera conservé
+            if ($step == 4) {
+                $data = $dataInputed;
+                $return = $this->processAndValidateStep4($data[0], $data[1], $reservationDataSession);
+            } else {
+                $data = $reservationDataSession;
+            }
+            $return = $this->processAndValidateStep4($data, [], $reservationDataSession);
+
+            if ($return['success']) {
+                return $return;
+            }
+        }
+
+        if ($step >= 5) {
+            $step == 5 ? $data = $dataInputed : $data = $reservationDataSession;
+            $return = $this->processAndValidateStep5($data, $reservationDataSession);
 
             if ($return['success']) {
                 return $return;
@@ -784,13 +837,68 @@ class ReservationService
         return ['success' => true, 'error' => null, 'reason' => null, 'place' => $place];
     }
 
-
     /**
-     * Compte le nombre de places assises attendues.
+     * Prépare un "ViewModel" complet pour l'étape 5 (choix des places).
+     *
+     * @param array $reservationData
+     * @return array|null
+     * @throws DateMalformedStringException
      */
-    public function countPlacesAssisesAttendues(array $reservationDetails): int
+    public function getStep5ViewModel(array $reservationData): ?array
     {
-        return count($reservationDetails);
+        // Récupérer le contexte de base
+        $baseViewModel = $this->getReservationViewModel($reservationData);
+        if ($baseViewModel === null) {
+            return null;
+        }
+
+        // Logique spécifique à l'étape 5
+        $sessionId = session_id();
+        $event = $baseViewModel['event'];
+
+        // Suppression des réservations temporaires expirées
+        $this->tempRepo->deleteExpired((new DateTime())->format('Y-m-d H:i:s'));
+
+        // Récupérer les places temporairement réservées pour cette session d'événement
+        $tempSeats = $this->tempRepo->findByEventSession($reservationData['event_session_id']);
+
+        // Récupérer les places déjà réservées de manière définitive
+        $placesReservees = $this->reservationsDetailsRepository->findReservedSeatsForSession($reservationData['event_session_id']);
+
+        // Construire un tableau place_id ⇒ session_id pour la vue
+        $placesSessions = [];
+        foreach ($tempSeats as $t) {
+            $placesSessions[$t->getPlaceId()] = $t->getSession();
+            // Si la place temporaire appartient à la session en cours, on met à jour les détails en session
+            if ($t->getSession() === $sessionId) {
+                $place = $this->placesRepository->findById($t->getPlaceId());
+                $reservationData['reservation_detail'][$t->getIndex()]['seat_id'] = $t->getPlaceId();
+                $reservationData['reservation_detail'][$t->getIndex()]['seat_name'] = $place ? $place->getFullPlaceName() : $t->getPlaceId();
+            }
+        }
+        // On met à jour la session avec les places récupérées
+        $this->reservationSessionService->setReservationSession('reservation_detail', $reservationData['reservation_detail']);
+
+        // Récupérer les zones et les places pour l'affichage du plan
+        $zones = $this->zonesRepository->findOpenZonesByPiscine($event->getPiscine()->getId());
+        $zonesWithPlaces = [];
+        foreach ($zones as $zone) {
+            $zonesWithPlaces[] = [
+                'zone' => $zone,
+                'places' => $this->placesRepository->findByZone($zone->getId())
+            ];
+        }
+
+        // Fusionner et retourner toutes les données pour la vue
+        return array_merge($baseViewModel, [
+            'zonesWithPlaces' => $zonesWithPlaces,
+            'placesReservees' => $placesReservees,
+            'placesSessions' => $placesSessions,
+            'nbPlacesAssises' => $this->countSeatedPlaces($reservationData['reservation_detail'], $baseViewModel['tarifs']),
+            'reservation' => $this->reservationSessionService->getReservationSession() // On recharge la session au cas où elle a été modifiée
+        ]);
     }
+
+
 
 }

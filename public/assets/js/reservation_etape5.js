@@ -22,16 +22,7 @@ function toggleSeat(btn) {
                 csrf_token: window.csrf_token
             })
         })
-            .then(async r => {
-                const text = await r.text();
-                try {
-                    return JSON.parse(text);
-                } catch (e) {
-                    console.error('Réponse non JSON du serveur :', text);
-                    showError('Erreur de communication avec le serveur');
-                    throw e;
-                }
-            })
+            .then(r => r.json())
             .then(data => {
                 if (data && data.success) {
                     if (data.reload) {
@@ -74,20 +65,7 @@ function toggleSeat(btn) {
                     csrf_token: window.csrf_token
                 })
             })
-                .then(response => {
-                    // Récupérer d'abord le texte brut
-                    return response.text().then(text => {
-                        // Ensuite essayer de parser en JSON si possible
-                        try {
-                            return JSON.parse(text);
-                        } catch (error) {
-                            console.log(text);
-                            console.error("Erreur de parsing JSON:", error);
-                            console.log("Contenu non parsable:", text);
-                            throw new Error("Réponse non valide du serveur");
-                        }
-                    });
-                })
+                .then(r => r.json())
                 .then(data => {
                     if (data && data.success) {
                         if (data.csrf_token) {
@@ -190,14 +168,6 @@ document.addEventListener('DOMContentLoaded', function() {
     updateSubmitBtn();
 });
 
-document.getElementById('form_etape5').addEventListener('submit', function(e) {
-    e.preventDefault();
-    if (participantSeats.filter(Boolean).length !== nbPlacesAssises) return;
-    // Le bouton submit est cloné dans le DOM, donc on écoute les deux formulaires
-    // pour être sûr de capturer l'événement.
-    submitForm();
-});
-
 document.getElementById('submitBtnTop').form.addEventListener('submit', function(e) {
     e.preventDefault();
     if (participantSeats.filter(Boolean).length !== nbPlacesAssises) return;
@@ -230,15 +200,18 @@ function submitForm() {
             csrf_token: window.csrf_token
         })
     })
-        .then(async r => {
-            const text = await r.text();
-            try {
-                return JSON.parse(text);
-            } catch (e) {
-                console.error('Réponse non JSON du serveur :', text);
-                showError('Erreur de communication avec le serveur');
-                throw e;
-            }
+        .then(response => {
+            // Récupérer d'abord le texte brut
+            return response.text().then(text => {
+                // Ensuite essayer de parser en JSON si possible
+                try {
+                    return JSON.parse(text);
+                } catch (error) {
+                    console.error("Erreur de parsing JSON:", error);
+                    console.log("Contenu non parsable:", text);
+                    throw new Error("Réponse non valide du serveur");
+                }
+            });
         })
         .then(data => {
             if (data.success) {

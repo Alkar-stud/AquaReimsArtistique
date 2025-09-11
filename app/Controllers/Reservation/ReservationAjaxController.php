@@ -18,6 +18,7 @@ use app\Services\ReservationSessionService;
 use app\Services\TarifService;
 use app\Utils\ReservationContextHelper;
 use DateInterval;
+use DateMalformedStringException;
 use DateTime;
 use Exception;
 
@@ -105,6 +106,9 @@ class ReservationAjaxController extends AbstractController
      * Pour valider et enregistrer en $_SESSION les valeurs de l'étape 1
      *
      */
+    /**
+     * @throws DateMalformedStringException
+     */
     #[Route('/reservation/etape1', name: 'etape1', methods: ['POST'])]
     public function etape1(): void
     {
@@ -138,6 +142,9 @@ class ReservationAjaxController extends AbstractController
     /*
      * Pour vérifier si un email a déjà été utilisé pour une réservation
      */
+    /**
+     * @throws DateMalformedStringException
+     */
     #[Route('/reservation/check-duplicate-email', name: 'check-duplicate-email', methods: ['POST'])]
     public function checkDuplicateEmailInReservation(): void
     {
@@ -161,6 +168,9 @@ class ReservationAjaxController extends AbstractController
         $this->json($result);
     }
 
+    /**
+     * @throws Exception
+     */
     #[Route('/reservation/resend-confirmation', name: 'resend_confirmation', methods: ['POST'])]
     public function resendConfirmation(): void
     {
@@ -174,6 +184,9 @@ class ReservationAjaxController extends AbstractController
         $this->json($result);
     }
 
+    /**
+     * @throws DateMalformedStringException
+     */
     #[Route('/reservation/etape2', name: 'etape2', methods: ['POST'])]
     public function etape2(): void
     {
@@ -244,6 +257,9 @@ class ReservationAjaxController extends AbstractController
         $this->json(['success' => true]);
     }
 
+    /**
+     * @throws DateMalformedStringException
+     */
     #[Route('/reservation/etape3', name: 'etape3', methods: ['POST'])]
     public function etape3(): void
     {
@@ -269,6 +285,9 @@ class ReservationAjaxController extends AbstractController
     // ETAPE 4 : Nom des participants
     //======================================================================
 
+    /**
+     * @throws DateMalformedStringException
+     */
     #[Route('/reservation/etape4', name: 'etape4',methods: ['POST'])]
     public function etape4(): void
     {
@@ -298,6 +317,9 @@ class ReservationAjaxController extends AbstractController
     // ETAPE 5 : Choix des places numérotées
     //======================================================================
 
+    /**
+     * @throws DateMalformedStringException
+     */
     #[Route('/reservation/zone-plan/{zoneId}', name: 'reservation_zone_plan', methods: ['GET'])]
     public function getZonePlan(int $zoneId): void
     {
@@ -361,6 +383,9 @@ class ReservationAjaxController extends AbstractController
         ], '', true);
     }
 
+    /**
+     * @throws DateMalformedStringException
+     */
     #[Route('/reservation/etape5AddSeat', name: 'etape5_add_seat', methods: ['POST'])]
     public function etape5AddSeat(): void
     {
@@ -467,6 +492,9 @@ class ReservationAjaxController extends AbstractController
 
     }
 
+    /**
+     * @throws DateMalformedStringException
+     */
     #[Route('/reservation/etape5', name: 'etape5',methods: ['POST'])]
     public function etape5(): void
     {
@@ -484,6 +512,26 @@ class ReservationAjaxController extends AbstractController
     }
 
 
+    #[Route('/reservation/etape6', name: 'etape6', methods: ['POST'])]
+    public function etape6(): void
+    {
+        $this->checkCsrfOrExit('reservation_etape6');
+        $input = json_decode(file_get_contents('php://input'), true);
+
+        //On vérifie ce qui a été saisi et ce qu'il y a dans $_SESSION
+        $validationResult = $this->reservationService->validateDataPerStep(6, $input);
+
+        if (!$validationResult['success']) {
+            $this->json($validationResult);
+        }
+
+        // Enregistrement dans reservation_complement (même si vide)
+        $this->reservationSessionService->setReservationSession('reservation_complement', $validationResult['data']);
+
+        $this->json(['success' => true]);
+    }
+
+
     /**
      * pour rafraichir le contexte avec fetch
      */
@@ -493,4 +541,5 @@ class ReservationAjaxController extends AbstractController
         $context = ReservationContextHelper::getContext($this->eventsRepository, $this->tarifsRepository, $_SESSION['reservation'][session_id()] ?? null);
         $this->render('reservation/_display_details', $context, '', true);
     }
+
 }

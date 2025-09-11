@@ -560,15 +560,23 @@ class ReservationService
      */
     public function validateDetailsContextStep4(?array $reservationData): array
     {
-        // Revalide le contexte de base lié à l'événement choisi (prérequis pour l'étape 2)
-        if (!$this->validateCoreContext($reservationData)['success']) {
-            // Redirection vers la page de début de réservation avec un message
-            header('Location: /reservation?session_expiree=1');
-            exit;
-        }
-        $payerContextValidation = $this->validatePayerContext($reservationData);
-        if (!$payerContextValidation['success']) {
-            return $payerContextValidation;
+        try {
+            // Revalide le contexte de base lié à l'événement choisi (prérequis pour l'étape 2)
+            $coreContextValidation = $this->validateCoreContext($reservationData);
+            if (!$coreContextValidation['success']) {
+                return $coreContextValidation;
+            }
+
+            $payerContextValidation = $this->validatePayerContext($reservationData);
+            if (!$payerContextValidation['success']) {
+                return $payerContextValidation;
+            }
+
+        } catch (DateMalformedStringException $e) {
+            // On enregistre l'erreur technique pour le débogage.
+            $this->logService->logAndReturnError("Erreur de format de date lors de la validation du contexte: " . $e->getMessage());
+            // On retourne une erreur générique et propre à l'utilisateur.
+            return ['success' => false, 'error' => 'Une erreur interne est survenue (format de date invalide).'];
         }
 
         if (empty($reservationData['reservation_detail'])) {
@@ -683,12 +691,17 @@ class ReservationService
         return ['success' => true, 'data' => $updatedDetails];
     }
 
+    /**
+     * Traite et valide la soumission de l'étape 5 (choix des places sur le plan).
+     *
+     * @param array $input
+     * @param array $reservationData
+     * @return array
+     */
     public function processAndValidateStep5(array $input, array $reservationData): array
     {
         $sessionId = session_id();
-
         $seats = $input['seats'] ?? [];
-
         $nbPlacesAssises = count($reservationData['reservation_detail']);
 
         if (count($seats) !== $nbPlacesAssises) {
@@ -709,6 +722,43 @@ class ReservationService
         $_SESSION['reservation'][$sessionId]['last_activity'] = time();
 
         return ['success' => true, 'data' => $reservationData];
+    }
+
+    /**
+     * Traite et valide la soumission de l'étape 6 (choix des compléments).
+     *
+     * @param array $input
+     * @param array $reservationData
+     * @return array
+     */
+    public function processAndValidateStep6(array $input, array $reservationData): array
+    {
+        // Récupérer tous les tarifs de l'événement pour la validation.
+        $allEventTarifs = $this->tarifsRepository->findByEventId($reservationData['event_id']);
+
+        // Créer une "liste blanche" d'IDs de tarifs qui sont des compléments (pas de place assise).
+        $validComplementaryTarifIds = [];
+        foreach ($allEventTarifs as $tarif) {
+            if ($tarif->getNbPlace() === null) {
+                $validComplementaryTarifIds[] = $tarif->getId();
+            }
+        }
+
+        // Parcourir les articles soumis par l'utilisateur et ne conserver que les valides.
+        $submittedItems = $input['tarifs'] ?? [];
+        $validatedComplements = [];
+        foreach ($submittedItems as $item) {
+            $tarifId = (int)($item['id'] ?? 0);
+            $quantity = (int)($item['qty'] ?? 0);
+            // On ne garde l'article que si la quantité est positive et si le tarif
+            // fait bien partie de notre liste blanche de compléments.
+            if ($quantity > 0 && in_array($tarifId, $validComplementaryTarifIds, true)) {
+                $validatedComplements[] = ['tarif_id' => $tarifId, 'qty' => $quantity];
+            }
+        }
+
+        // Retourner le tableau propre des compléments validés.
+        return ['success' => true, 'data' => $validatedComplements];
     }
 
 
@@ -775,8 +825,8 @@ class ReservationService
                 $return = $this->processAndValidateStep4($data[0], $data[1], $reservationDataSession);
             } else {
                 $data = $reservationDataSession;
+                $return = $this->processAndValidateStep4($data, [], $reservationDataSession);
             }
-            $return = $this->processAndValidateStep4($data, [], $reservationDataSession);
 
             if ($return['success']) {
                 return $return;
@@ -792,9 +842,14 @@ class ReservationService
             }
         }
 
+        if ($step >= 6) {
+            $step == 6 ? $data = $dataInputed : $data = $reservationDataSession;
+            $return = $this->processAndValidateStep6($data, $reservationDataSession);
 
-
-
+            if ($return['success']) {
+                return $return;
+            }
+        }
 
         // Cas pour l'étape 1 ou si aucune étape supérieure n'est validée
         return ['success' => true, 'error' => null, 'data' => null];

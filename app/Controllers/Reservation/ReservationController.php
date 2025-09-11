@@ -3,10 +3,6 @@ namespace app\Controllers\Reservation;
 
 use app\Attributes\Route;
 use app\Controllers\AbstractController;
-use app\Repository\Reservation\ReservationsPlacesTempRepository;
-use app\Repository\Piscine\PiscineGradinsZonesRepository;
-use app\Repository\Piscine\PiscineGradinsPlacesRepository;
-use app\Repository\Reservation\ReservationsDetailsRepository;
 use app\Repository\TarifsRepository;
 use app\Repository\Event\EventsRepository;
 use app\Services\EventsService;
@@ -15,18 +11,15 @@ use app\Services\ReservationSessionService;
 use app\Services\NageuseService;
 use app\Utils\CsrfHelper;
 use app\Utils\ReservationContextHelper;
-use DateInterval;
-use DateTime;
+use DateMalformedStringException;
+use Exception;
+use Random\RandomException;
 
 class ReservationController extends AbstractController
 {
     private ReservationSessionService $reservationSessionService;
     private EventsRepository $eventsRepository;
     private TarifsRepository $tarifsRepository;
-    private PiscineGradinsZonesRepository $zonesRepository;
-    private PiscineGradinsPlacesRepository $placesRepository;
-    private ReservationsDetailsRepository $reservationsDetailsRepository;
-    private ReservationsPlacesTempRepository $tempRepo;
     private NageuseService $nageuseService;
     private EventsService $eventsService;
     private ReservationService $reservationService;
@@ -37,16 +30,17 @@ class ReservationController extends AbstractController
         $this->reservationSessionService = new ReservationSessionService();
         $this->eventsRepository = new EventsRepository();
         $this->tarifsRepository = new TarifsRepository();
-        $this->zonesRepository = new PiscineGradinsZonesRepository();
-        $this->placesRepository = new PiscineGradinsPlacesRepository();
-        $this->reservationsDetailsRepository = new ReservationsDetailsRepository();
-        $this->tempRepo = new ReservationsPlacesTempRepository();
         $this->nageuseService = new NageuseService();
         $this->eventsService = new EventsService();
         $this->reservationService = new ReservationService();
     }
 
     // Page d'accueil du processus de réservation
+
+    /**
+     * @throws RandomException
+     * @throws Exception
+     */
     #[Route('/reservation', name: 'app_reservation')]
     public function index(): void
     {
@@ -70,6 +64,9 @@ class ReservationController extends AbstractController
     }
 
 
+    /**
+     * @throws DateMalformedStringException
+     */
     #[Route('/reservation/etape2Display', name: 'etape2Display')]
     public function etape2Display(): void
     {
@@ -88,6 +85,9 @@ class ReservationController extends AbstractController
         ]), 'Réservations');
     }
 
+    /**
+     * @throws DateMalformedStringException
+     */
     #[Route('/reservation/etape3Display', name: 'etape3Display', methods: ['GET'])]
     public function etape3Display(): void
     {
@@ -121,6 +121,9 @@ class ReservationController extends AbstractController
         ]), 'Réservations');
     }
 
+    /**
+     * @throws DateMalformedStringException
+     */
     #[Route('/reservation/etape4Display', name: 'etape4Display', methods: ['GET'])]
     public function etape4Display(): void
     {
@@ -140,6 +143,9 @@ class ReservationController extends AbstractController
         ]), 'Réservations');
     }
 
+    /**
+     * @throws DateMalformedStringException
+     */
     #[Route('/reservation/etape5Display', name: 'etape5Display', methods: ['GET'])]
     public function etape5Display(): void
     {
@@ -165,6 +171,9 @@ class ReservationController extends AbstractController
         ]), 'Réservations');
     }
 
+    /**
+     * @throws DateMalformedStringException
+     */
     #[Route('/reservation/etape6Display', name: 'etape6Display', methods: ['GET'])]
     public function etape6Display(): void
     {
@@ -172,7 +181,7 @@ class ReservationController extends AbstractController
         //Ne sert plus à cette étape
         unset($_SESSION['reservation'][session_id()]['selected_seats']);
 
-        // Valide le contexte des détails (prérequis pour l'étape 6)
+        // Valide le contexte des détails (prérequis pour les étapes 5 et 6)
         if (!$this->reservationService->validateDetailsContextStep4($reservation)['success']) {
             // Redirection vers la page de début de réservation avec un message
             header('Location: /reservation?session_expiree=1');
@@ -196,39 +205,6 @@ class ReservationController extends AbstractController
             'reservation' => $reservation,
             'reservationComplement' => $reservationComplement
         ]), 'Réservations');
-    }
-
-    #[Route('/reservation/etape6', name: 'etape6', methods: ['POST'])]
-    public function etape6(): void
-    {
-        $this->checkCsrfOrExit('reservation_etape6');
-
-        $sessionId = session_id();
-        $reservation = $_SESSION['reservation'][$sessionId] ?? null;
-        if (!$reservation || empty($reservation['event_id'])) {
-            $this->json(['success' => false, 'error' => 'Session expirée.']);
-            return;
-        }
-
-        $input = json_decode(file_get_contents('php://input'), true);
-        $tarifs = $this->tarifsRepository->findByEventId($reservation['event_id']);
-        $tarifsSansPlaces = array_filter($tarifs, fn($t) => $t->getNbPlace() === null);
-        $tarifIdsSansPlaces = array_map(fn($t) => $t->getId(), $tarifsSansPlaces);
-
-        $tarifsInput = $input['tarifs'] ?? [];
-        $reservationComplement = [];
-        foreach ($tarifsInput as $t) {
-            $id = (int)($t['id'] ?? 0);
-            $qty = (int)($t['qty'] ?? 0);
-            if ($qty > 0 && in_array($id, $tarifIdsSansPlaces, true)) {
-                $reservationComplement[] = ['tarif_id' => $id, 'qty' => $qty];
-            }
-        }
-
-        // Enregistrement dans reservation_complement (même si vide)
-        $_SESSION['reservation'][$sessionId]['reservation_complement'] = $reservationComplement;
-
-        $this->json(['success' => true]);
     }
 
 }

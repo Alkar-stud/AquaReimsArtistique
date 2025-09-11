@@ -17,7 +17,19 @@ document.getElementById('tarifsSansPlacesForm').addEventListener('submit', funct
             csrf_token: window.csrf_token
         })
     })
-        .then(r => r.json())
+        .then(response => {
+            // Récupérer d'abord le texte brut
+            return response.text().then(text => {
+                // Ensuite essayer de parser en JSON si possible
+                try {
+                    return JSON.parse(text);
+                } catch (error) {
+                    console.error("Erreur de parsing JSON:", error);
+                    console.log("Contenu non parsable:", text);
+                    throw new Error("Réponse non valide du serveur");
+                }
+            });
+        })
         .then(data => {
             if (data.success) {
                 window.location.href = '/reservation/confirmation';

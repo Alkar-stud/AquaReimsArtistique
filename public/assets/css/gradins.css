@@ -3,7 +3,7 @@
 table.zone-plan td,
 table.zone-plan th {
     border: 1px solid var(--ara-color-black);
-    padding: 5px 0px;
+    padding: 5px 0;
 }
 
 table.zone-plan .seat.btn {
@@ -44,7 +44,7 @@ table.zone-plan .tdplaceVide {
 }
 
 /*  Couleur des cases déjà réservées */
-table.zone-plan .tdplacePris {
+table.zone-plan td.tdplacePris {
     background: var(--ara-color-red); /* rouge */
     color: var(--ara-color-white); /* blanc */
 }
@@ -56,7 +56,7 @@ table.zone-plan td.tdplacePMR {
 }
 
 /*  Couleur des cases VIP */
-table.zone-plan td.tdplaceVIP {
+table.zone-plan .tdplaceVIP {
     background-color: var(--ara-color-darkpink);
 }
 
@@ -66,12 +66,12 @@ table.zone-plan .tdplaceBenevole {
 }
 
 /*  Couleur des cases en cours de réservation par d'autres */
-table.zone-plan .tdplaceTemp {
+table.zone-plan td.tdplaceTemp {
     background-color: var(--ara-color-darkgray); /* gris clair */
 }
 
 /*  Couleur des cases en cours de réservation par le visiteur */
-table.zone-plan .tdplaceTempSession {
+table.zone-plan td.tdplaceTempSession {
     background-color: var(--ara-color-gray); /* gris */
     color: var(--ara-color-black);
 }
@@ -87,7 +87,7 @@ table.zone-plan .tdplaceTempSession {
     }
     table.zone-plan td,
     table.zone-plan th {
-        padding: 0px;
+        padding: 0;
     }
 }
 

@@ -21,71 +21,83 @@ ksort($placesByRank); // Rang 0 en haut
         <div class="case placeTemp"><span class="me-1"></span>Place en cours de réservation</div>
     </div>
     <div id="etape5Alert"></div>
-    <div class="zone-plan overflow-auto" style="max-width:100vw;">
-        <table class="table table-bordered text-center align-middle mb-0 zone-plan" style="min-width: 400px;">
-            <tbody>
-            <?php foreach ($placesByRank as $rank => $placesRow): ?>
-                <tr>
-                    <?php foreach ($placesRow as $place):
-                        $classes = [];
-                        $disabled = false;
-                        $reason = 'Place libre';
-                        if (!$place->isOpen()) {
-                            $classes[] = 'tdplaceClosed';
-                            $disabled = true;
-                            $reason = 'Place fermée';
-                        } elseif (in_array($place->getId(), $placesReservees ?? [])) {
-                            $classes[] = 'tdplacePris';
-                            $disabled = true;
-                            $reason = 'Déjà réservée';
-                        } elseif ($place->isVip()) {
-                            $classes[] = 'tdplaceVIP';
-                            $disabled = true;
-                            $reason = 'Réservée VIP';
-                        } elseif ($place->isVolunteer()) {
-                            $classes[] = 'tdplaceBenevole';
-                            $disabled = true;
-                            $reason = 'Réservée bénévole';
-                        } elseif ($place->isPmr()) {
-                            $classes[] = 'tdplacePMR';
-                            $reason = 'Accessible PMR';
-                        }
-                        //Vérification si les places sont en cours de réservation
-                        if (array_key_exists($place->getId(), $placesSessions)) {
-                            //Si la session est la session courante, case cliquable, on change la couleur
-                            //Sinon c'est la session de quelqu'un d'autre, case non cliquable, on met une couleur différente avec en $reason en cours de réservation.
-                            if ($placesSessions[$place->getId()] == session_id()) {
-                                $classes[] = 'tdplaceTempSession';
-                                $reason = 'En cours pour vous';
-                            } else {
-                                $classes[] = 'tdplaceTemp';
-                                $disabled = true;
-                                $reason = 'En cours de réservation';
-                            }
-                        }
+    <div class="d-flex align-items-center">
+        <!-- Flèche de navigation gauche -->
+        <div class="px-2">
+            <?php if (isset($prevZoneId)): ?>
+                <button class="btn btn-outline-secondary zone-nav-btn" data-zone="<?= $prevZoneId ?>" title="Zone précédente">
+                    <i class="bi bi-arrow-left-circle fs-4"></i>
+                </button>
+            <?php endif; ?>
+        </div>
 
-                        $btnClass = $disabled ? 'btn-secondary' : '';
-                        ?>
-                        <td class="<?= implode(' ', $classes) ?>">
-                            <?php if ($disabled): ?>
-                                <span class="seat btn <?= $btnClass ?> mb-1" style="opacity:0.7;" title="<?= htmlspecialchars($reason) ?>">
-                                    <?= $place->getFullPlaceName() ?>
-                                </span>
-                            <?php else: ?>
-                                <button type="button"
-                                        class="seat btn <?= $btnClass ?> mb-1"
-                                        data-seat="<?= $place->getId() ?>"
-                                        onclick="toggleSeat(this)"
-                                        title="<?= htmlspecialchars($reason) ?>">
-                                    <?= $place->getFullPlaceName() ?>
-                                </button>
-                            <?php endif; ?>
-                        </td>
-                    <?php endforeach; ?>
-                </tr>
-            <?php endforeach; ?>
-            </tbody>
-        </table>
+        <div class="zone-plan overflow-auto flex-grow-1" style="max-width:100vw;">
+            <table class="table table-bordered text-center align-middle mb-0 zone-plan" style="min-width: 400px;">
+                <tbody>
+                <?php foreach ($placesByRank as $rank => $placesRow): ?>
+                    <tr>
+                        <?php foreach ($placesRow as $place):
+                            $classes = [];
+                            $disabled = false;
+                            $reason = 'Place libre';
+                            if (!$place->isOpen()) {
+                                $classes[] = 'tdplaceClosed';
+                                $disabled = true;
+                                $reason = 'Place fermée';
+                            } elseif (in_array($place->getId(), $placesReservees ?? [])) {
+                                $classes[] = 'tdplacePris';
+                                $disabled = true;
+                                $reason = 'Déjà réservée';
+                            } elseif ($place->isVip()) {
+                                $classes[] = 'tdplaceVIP';
+                                $disabled = true;
+                                $reason = 'Réservée VIP';
+                            } elseif ($place->isVolunteer()) {
+                                $classes[] = 'tdplaceBenevole';
+                                $disabled = true;
+                                $reason = 'Réservée bénévole';
+                            } elseif ($place->isPmr()) {
+                                $classes[] = 'tdplacePMR';
+                                $reason = 'Accessible PMR';
+                            }
+                            //Vérification si les places sont en cours de réservation
+                            if (array_key_exists($place->getId(), $placesSessions)) {
+                                //Si la session est la session courante, case cliquable, on change la couleur
+                                //Sinon c'est la session de quelqu'un d'autre, case non cliquable, on met une couleur différente avec en $reason en cours de réservation.
+                                if ($placesSessions[$place->getId()] == session_id()) {
+                                    $classes[] = 'tdplaceTempSession';
+                                    $reason = 'En cours pour vous';
+                                } else {
+                                    $classes[] = 'tdplaceTemp';
+                                    $disabled = true;
+                                    $reason = 'En cours de réservation';
+                                }
+                            }
+
+                            $btnClass = $disabled ? 'btn-secondary' : '';
+                            ?>
+                            <td class="<?= implode(' ', $classes) ?>">
+                                <?php if ($disabled): ?>
+                                    <span class="seat btn <?= $btnClass ?> mb-1" style="opacity:0.7;" title="<?= htmlspecialchars($reason) ?>"><?= $place->getFullPlaceName() ?></span>
+                                <?php else: ?>
+                                    <button type="button" class="seat btn <?= $btnClass ?> mb-1" data-seat="<?= $place->getId() ?>" onclick="toggleSeat(this)" title="<?= htmlspecialchars($reason) ?>"><?= $place->getFullPlaceName() ?></button>
+                                <?php endif; ?>
+                            </td>
+                        <?php endforeach; ?>
+                    </tr>
+                <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Flèche de navigation droite -->
+        <div class="px-2">
+            <?php if (isset($nextZoneId)): ?>
+                <button class="btn btn-outline-secondary zone-nav-btn" data-zone="<?= $nextZoneId ?>" title="Zone suivante">
+                    <i class="bi bi-arrow-right-circle fs-4"></i>
+                </button>
+            <?php endif; ?>
+        </div>
     </div>
     <?php if ($zone->getComments()): ?>
         <div class="text-center text-muted small mt-2"><?= htmlspecialchars($zone->getComments()) ?></div>

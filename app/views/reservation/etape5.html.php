@@ -55,22 +55,23 @@ $participants = $reservation['reservation_detail'] ?? [];
                 <div class="text-center text-muted small">Cliquez sur une zone pour choisir vos places</div>
             </div>
 
-            <div id="zone-plan-container" class="mb-4" style="display:none;">
-                <!-- Le plan de la zone sera injecté ici par JavaScript -->
-            </div>
         </div>
-        <form id="form_etape5_bottom" class="mb-4">
-            <div class="row">
-                <div class="col-12 col-md-6 mb-2 mb-md-0">
-                    <a href="/reservation/etape4Display" class="btn btn-secondary w-100 w-md-auto">Modifier mon choix précédent</a>
-                </div>
-                <div class="col-12 col-md-6">
-                    <button type="submit" class="btn btn-primary w-100 w-md-auto" id="submitBtnBottom">Valider et continuer</button>
-                </div>
-            </div>
-        </form>
+
     </div>
 
+    <div id="zone-plan-container" class="container-fluid mb-4" style="display:none;">
+        <!-- Le plan de la zone sera injecté ici par JavaScript -->
+    </div>
+    <form id="form_etape5_bottom" class="mb-4">
+        <div class="row">
+            <div class="col-12 col-md-6 mb-2 mb-md-0">
+                <a href="/reservation/etape4Display" class="btn btn-secondary w-100 w-md-auto">Modifier mon choix précédent</a>
+            </div>
+            <div class="col-12 col-md-6">
+                <button type="submit" class="btn btn-primary w-100 w-md-auto" id="submitBtnBottom">Valider et continuer</button>
+            </div>
+        </div>
+    </form>
     <script>
         window.csrf_token = <?= json_encode($csrf_token ?? '') ?>;
         const nbPlacesAssises = <?= (int)$nbPlacesAssises ?>;

@@ -5,11 +5,14 @@ namespace app\Services;
 use app\DTO\ReservationDetailItemDTO;
 use app\Models\Reservation\ReservationMailsSent;
 use app\DTO\ReservationUserDTO;
+use app\Models\Reservation\ReservationsDetails;
 use app\Repository\MailTemplateRepository;
 use app\Repository\Event\EventsRepository;
 use app\Repository\Nageuse\NageusesRepository;
+use app\Repository\Piscine\PiscineGradinsPlacesRepository;
 use app\Repository\Reservation\ReservationsDetailsRepository;
 use app\Repository\Reservation\ReservationMailsSentRepository;
+use app\Repository\Reservation\ReservationsPlacesTempRepository;
 use app\Repository\Reservation\ReservationsRepository;
 use app\Repository\TarifsRepository;
 use DateMalformedStringException;
@@ -32,6 +35,8 @@ class ReservationService
     private LogService $logService;
     private ReservationSessionService $reservationSessionService;
     private UploadService $uploadService;
+    private PiscineGradinsPlacesRepository $placesRepository;
+    private ReservationsPlacesTempRepository $tempRepo;
 
 
     public function __construct()
@@ -50,6 +55,8 @@ class ReservationService
         $this->logService = new LogService();
         $this->reservationSessionService = new ReservationSessionService();
         $this->uploadService = new UploadService();
+        $this->placesRepository = new PiscineGradinsPlacesRepository();
+        $this->tempRepo = new ReservationsPlacesTempRepository();
     }
 
     /**
@@ -339,7 +346,7 @@ class ReservationService
         $telephone = strip_tags(trim($input['telephone'] ?? ''));
 
 
-        if (empty($nom) || empty($prenom) || empty($email) || empty($telephone)) {
+        if (empty($nom) || empty($prenom) || empty($email)) {
             return ['success' => false, 'error' => 'Tous les champs sont obligatoires.'];
         }
 
@@ -350,7 +357,7 @@ class ReservationService
         if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
             return ['success' => false, 'error' => 'Adresse mail invalide.'];
         }
-        if (!preg_match('/^0[1-9](\d{8})$/', str_replace(' ', '', $telephone))) {
+        if (!empty($telephone) && !preg_match('/^0[1-9](\d{8})$/', str_replace(' ', '', $telephone))) {
             return ['success' => false, 'error' => 'Numéro de téléphone invalide.'];
         }
 
@@ -492,6 +499,11 @@ class ReservationService
 
         $allTarifs = $this->tarifsRepository->findByEventId($eventId);
         $validTarifIds = array_map(fn($t) => $t->getId(), $allTarifs);
+
+        $tarifsById = [];
+        foreach ($allTarifs as $tarif) {
+            $tarifsById[$tarif->getId()] = $tarif;
+        }
 
         $newReservationDetails = [];
 
@@ -736,5 +748,49 @@ class ReservationService
     }
 
 
+    /**
+     * Indique le statut de la place dans la session de l'event en paramètre
+     *
+     * @param int $seatId
+     * @param int $eventSessionId
+     * @return array
+     * @throws DateMalformedStringException
+     */
+    public function seatStatus(int $seatId, int $eventSessionId): array
+    {
+        // Vérifier que la place existe et est ouverte
+        // 1. La place existe-t-elle et est-elle ouverte à la réservation ?
+        $place = $this->placesRepository->findById($seatId);
+        if (!$place || !$place->isOpen()) {
+            return ['success' => false, 'error' => "Cette place n'est plus disponible.", 'reason' => 'closed', 'seat_id' => $seatId];
+        }
+
+        // 2. La place est-elle déjà réservée de manière définitive ?
+        $placesReservees = $this->reservationsDetailsRepository->findReservedSeatsForSession($eventSessionId);
+        if (in_array($seatId, $placesReservees)) {
+            return ['success' => false, 'error' => "Cette place vient d'être réservée.", 'reason' => 'taken_definitively', 'seat_id' => $seatId];
+        }
+
+        // 3. La place est-elle déjà en cours de réservation par un autre utilisateur ?
+        // On supprime d'abord les sessions expirées pour un contrôle fiable.
+        $this->tempRepo->deleteExpired((new DateTime())->format('Y-m-d H:i:s'));
+        $tempSeats = $this->tempRepo->findByEventSession($eventSessionId);
+        foreach ($tempSeats as $t) {
+            if ($t->getPlaceId() == $seatId && $t->getSession() !== session_id()) {
+                return ['success' => false, 'error' => "Cette place est actuellement en cours de réservation par un autre utilisateur.", 'reason' => 'taken_temporarily', 'seat_id' => $seatId];
+            }
+        }
+
+        return ['success' => true, 'error' => null, 'reason' => null, 'place' => $place];
+    }
+
+
+    /**
+     * Compte le nombre de places assises attendues.
+     */
+    public function countPlacesAssisesAttendues(array $reservationDetails): int
+    {
+        return count($reservationDetails);
+    }
 
 }

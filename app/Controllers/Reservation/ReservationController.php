@@ -156,7 +156,7 @@ class ReservationController extends AbstractController
         //Suppression des réservations en cours dont le timeout est expiré
         $this->tempRepo->deleteExpired((new DateTime())->format('Y-m-d H:i:s'));
         // Récupérer les réservations temporaires de toutes les sessions restantes
-        $tempAllSeats = $this->tempRepo->findAll();
+        $tempAllSeats = $this->tempRepo->findByEventSession($reservation['event_session_id']);
         // Remet à null seat_id et seat_name pour chaque participant directement dans $_SESSION
         if (isset($_SESSION['reservation'][$sessionId]['reservation_detail']) && is_array($_SESSION['reservation'][$sessionId]['reservation_detail'])) {
             foreach ($_SESSION['reservation'][$sessionId]['reservation_detail'] as &$detail) {
@@ -168,10 +168,7 @@ class ReservationController extends AbstractController
 
         // Filtrage des places concernées par la session en cours
         // Récupérer les places déjà réservées de manière définitive pour cette session
-        $placesReservees = $this->reservationsDetailsRepository->findReservedSeatsForSession(
-            $reservation['event_id'],
-            $reservation['event_session_id']
-        );
+        $placesReservees = $this->reservationsDetailsRepository->findReservedSeatsForSession($reservation['event_session_id']);
 
         // Construire un tableau place_id → session pour le JS de la vue
         $placesSessions = [];
@@ -280,72 +277,10 @@ class ReservationController extends AbstractController
         $this->json(['success' => true]);
     }
 
-    #[Route('/reservation/etape5AddSeat', name: 'etape5AddSeat', methods: ['POST'])]
-    public function etape5AddSeat(): void
-    {
-        $this->checkCsrfOrExit('reservation_etape5');
-
-        $sessionId = session_id();
-        $reservation = $_SESSION['reservation'][$sessionId] ?? null;
-        if (!$reservation || empty($reservation['event_id'])) {
-            $this->json(['success' => false, 'error' => 'Session expirée.']);
-            return;
-        }
-
-        $input = json_decode(file_get_contents('php://input'), true);
-        $seatId = (int)($input['seat_id'] ?? 0);
-        $index = (int)($input['index'] ?? -1);
-        if ($seatId <= 0 || $index < 0) {
-            $this->json(['success' => false, 'error' => 'Paramètres manquants.']);
-            return;
-        }
-
-        $tarifs = $this->tarifsRepository->findByEventId($reservation['event_id']);
-        $nbPlacesAssises = $this->countPlacesAssises($reservation['reservation_detail'] ?? [], $tarifs);
-        if ($index >= $nbPlacesAssises) {
-            $this->json(['success' => false, 'error' => 'Index de participant invalide.']);
-            return;
-        }
-
-        // Vérifier que la place existe et est ouverte
-        $place = $this->placesRepository->findById($seatId);
-        if (!$place || !$place->isOpen()) {
-            $this->json(['success' => false, 'error' => "Place invalide ou fermée."]);
-            return;
-        }
-
-        // Vérifier qu'elle n'est pas déjà prise (temporaire ou définitive)
-        $tempSeats = $this->tempRepo->findAll();
-        foreach ($tempSeats as $t) {
-            if ($t->getPlaceId() == $seatId && $t->getSession() !== $sessionId) {
-                $this->json(['success' => false, 'error' => "Place déjà en cours de réservation."]);
-                return;
-            }
-        }
-
-        // Insérer la réservation temporaire
-        $now = new DateTime();
-        $timeout = (clone $now)->add(new DateInterval(TIMEOUT_PLACE_RESERV));
-        if (!$this->tempRepo->insertTempReservation($sessionId, $seatId, $index, $now, $timeout)) {
-            return;
-        }
-        //Mise à jour de $_SESSION avec la place du participant à l'index donné
-        $_SESSION['reservation'][$sessionId]['reservation_detail'][$index]['seat_id'] = $seatId;
-        $_SESSION['reservation'][$sessionId]['reservation_detail'][$index]['seat_name'] = $place ? $place->getFullPlaceName() : $seatId;
-
-
-        $newToken = $this->getCsrfToken();
-        $this->json([
-            'success' => true,
-            'csrf_token' => $newToken,
-            'session' => $_SESSION['reservation'][$sessionId]
-        ]);
-    }
-
     #[Route('/reservation/etape5RemoveSeat', name: 'etape5RemoveSeat', methods: ['POST'])]
     public function etape5RemoveSeat(): void
     {
-        $this->checkCsrfOrExit('reservation_etape5');
+        $this->checkCsrfOrExit('reservation_etape5', false);
 
         $sessionId = session_id();
         $reservation = $_SESSION['reservation'][$sessionId] ?? null;
@@ -362,7 +297,8 @@ class ReservationController extends AbstractController
         }
 
         // Supprimer la réservation temporaire pour cette session et cette place
-        $this->tempRepo->deleteBySessionAndPlace($sessionId, $seatId);
+        $this->tempRepo->deleteBySessionAndPlace($sessionId, $seatId, $reservation['event_session_id']);
+
 
         //Mise à jour de $_SESSION avec la place du participant à retirer à l'index donné
         if (isset($_SESSION['reservation'][$sessionId]['reservation_detail'])) {
@@ -383,33 +319,6 @@ class ReservationController extends AbstractController
         ]);
     }
 
-    /**
-     * Compte le nombre de places assises attendues.
-     */
-    private function countPlacesAssises(array $reservationDetails, array $tarifs): int
-    {
-        $nb = 0;
-        // Création d'une carte pour une recherche rapide des tarifs par ID
-        $tarifsById = [];
-        foreach ($tarifs as $tarif) {
-            $tarifsById[$tarif->getId()] = $tarif;
-        }
-        foreach ($reservationDetails as $detail) {
-            $tarifId = null;
-            if (is_object($detail) && $detail instanceof ReservationsDetails) {
-                $tarifId = $detail->getTarif();
-            } elseif (is_array($detail) && isset($detail['tarif_id'])) {
-                $tarifId = $detail['tarif_id'];
-            }
-            if ($tarifId !== null) {
-                $tarif = $tarifsById[$tarifId] ?? null;
-                if ($tarif && $tarif->getNbPlace() !== null) {
-                    $nb++;
-                }
-            }
-        }
-        return $nb;
-    }
 
     /**
      * pour rafraichir le contexte avec fetch

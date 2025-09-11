@@ -1,7 +1,9 @@
 -- Création de la table reservations_places_temp
 CREATE TABLE IF NOT EXISTS `reservations_places_temp` (
     `session` VARCHAR(255) NOT NULL,
-    `place_id` bigint NOT NULL UNIQUE ,
+    `event_session_id` bigint NOT NULL ,
+    FOREIGN KEY (`event_session_id`) REFERENCES `event_sessions`(`id`),
+    `place_id` bigint NOT NULL ,
     FOREIGN KEY (`place_id`) REFERENCES `piscine_gradins_places`(`id`),
     `index` int(10) NOT NULL,
     `created_at` DATETIME NOT NULL,

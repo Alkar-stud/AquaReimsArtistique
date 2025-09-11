@@ -15,6 +15,8 @@ use app\Services\NageuseService;
 use app\Services\ReservationService;
 use app\Services\ReservationSessionService;
 use app\Services\TarifService;
+use DateInterval;
+use DateTime;
 use Exception;
 
 class ReservationAjaxController extends AbstractController
@@ -304,6 +306,24 @@ class ReservationAjaxController extends AbstractController
             exit;
         }
 
+        // Pour trouver les zones précédente et suivante, nous devons connaître la piscine
+        $event = $this->eventsRepository->findById($reservation['event_id']);
+        if (!$event) {
+            http_response_code(404);
+            echo "Événement non trouvé.";
+            exit;
+        }
+        $piscineId = $event->getPiscine()->getId();
+
+        // Récupérer toutes les zones ouvertes et triées pour cette piscine
+        $openZones = $this->zonesRepository->findOpenZonesByPiscine($piscineId);
+        $openZoneIds = array_map(fn($z) => $z->getId(), $openZones);
+
+        // Trouver l'index de la zone actuelle pour déterminer la précédente et la suivante
+        $currentIndex = array_search($zoneId, $openZoneIds);
+        $prevZoneId = ($currentIndex !== false && $currentIndex > 0) ? $openZoneIds[$currentIndex - 1] : null;
+        $nextZoneId = ($currentIndex !== false && $currentIndex < count($openZoneIds) - 1) ? $openZoneIds[$currentIndex + 1] : null;
+
         $zone = $this->zonesRepository->findById($zoneId);
         if (!$zone) {
             http_response_code(404);
@@ -311,15 +331,13 @@ class ReservationAjaxController extends AbstractController
             exit;
         }
 
-        $sessionId = session_id();
         //Suppression des réservations en cours dont le timeout est expiré
         $this->tempRepo->deleteExpired((new \DateTime())->format('Y-m-d H:i:s'));
         // Récupérer les réservations temporaires de toutes les sessions restantes
-        $tempAllSeats = $this->tempRepo->findAll();
+        $tempAllSeats = $this->tempRepo->findByEventSession($reservation['event_session_id']);
 
         // Récupérer les places déjà réservées de manière définitive pour cette session
         $placesReservees = $this->reservationsDetailsRepository->findReservedSeatsForSession(
-            $reservation['event_id'],
             $reservation['event_session_id']
         );
 
@@ -333,8 +351,70 @@ class ReservationAjaxController extends AbstractController
             'zone' => $zone,
             'places' => $this->placesRepository->findByZone($zone->getId()),
             'placesReservees' => $placesReservees,
-            'placesSessions' => $placesSessions
+            'placesSessions' => $placesSessions,
+            'prevZoneId' => $prevZoneId,
+            'nextZoneId' => $nextZoneId
         ], '', true);
     }
+
+    #[Route('/reservation/etape5AddSeat', name: 'etape5AddSeat', methods: ['POST'])]
+    public function etape5AddSeat(): void
+    {
+        $this->checkCsrfOrExit('reservation_etape5', false);
+        $input = json_decode(file_get_contents('php://input'), true);
+
+        //on récupère les différents éléments
+        $reservation = $this->reservationSessionService->getReservationSession() ?? [];
+        if (!$reservation || empty($reservation['event_id'])) {
+            $this->json(['success' => false, 'error' => 'Session expirée.']);
+            return;
+        }
+
+        //On récupère les données
+        $seatId = (int)($input['seat_id'] ?? 0);
+        $index = (int)($input['index'] ?? -1);
+        if ($seatId <= 0 || $index < 0) {
+            $this->json(['success' => false, 'error' => 'Paramètres manquants.']);
+            return;
+        }
+
+        //On vérifie que l'index envoyé n'est pas supérieur au nombre de places attendues
+        $nbPlacesAssisesAttendues = count($reservation['reservation_detail']);
+        if ($index > $nbPlacesAssisesAttendues) {
+            $this->json(['success' => false, 'error' => 'Index de participant invalide.']);
+            return;
+        }
+
+        //On vérifie le statut de la place demandée
+        $checkSeatStatus = $this->reservationService->seatStatus($seatId, $reservation['event_session_id']);
+
+        // Si la place est libre, on peut continuer le processus d'ajout.
+        // Sinon, on retourne directement le statut d'échec.
+        if (!$checkSeatStatus['success']) {
+            $this->json($checkSeatStatus);
+            return;
+        }
+
+        //on ajoute à la session et en BDD
+        // Insérer la réservation temporaire
+        $now = new DateTime();
+        $sessionId = session_id();
+        $timeout = (clone $now)->add(new DateInterval(TIMEOUT_PLACE_RESERV));
+        $this->tempRepo->insertTempReservation($sessionId, $reservation['event_session_id'], $seatId, $index, $now, $timeout);
+        //Mise à jour de $_SESSION avec la place du participant à l'index donné
+        $place = $checkSeatStatus['place'];
+        $_SESSION['reservation'][$sessionId]['reservation_detail'][$index]['seat_id'] = $seatId;
+        $_SESSION['reservation'][$sessionId]['reservation_detail'][$index]['seat_name'] = $place ? $place->getFullPlaceName() : $seatId;
+
+        $newToken = $this->getCsrfToken();
+        $this->json([
+            'success' => true,
+            'csrf_token' => $newToken,
+            'session' => $_SESSION['reservation'][$sessionId]
+        ]);
+    }
+
+
+
 
 }

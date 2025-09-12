@@ -1,16 +1,20 @@
 <?php
 
-namespace app\Services;
+namespace app\Services\Reservation;
 
 use app\Models\Reservation\ReservationMailsSent;
-use app\Repository\MailTemplateRepository;
 use app\Repository\Event\EventsRepository;
-use app\Repository\Reservation\ReservationsDetailsRepository;
+use app\Repository\MailTemplateRepository;
 use app\Repository\Reservation\ReservationMailsSentRepository;
+use app\Repository\Reservation\ReservationsDetailsRepository;
 use app\Repository\Reservation\ReservationsRepository;
 use app\Repository\TarifsRepository;
+use app\Services\LogService;
+use app\Services\MailService;
+use app\Services\SessionValidationService;
 use DateMalformedStringException;
 use Exception;
+
 
 class ReservationService
 {

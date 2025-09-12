@@ -1,21 +1,22 @@
 <?php
 
-namespace app\Services;
+namespace app\Services\Reservation;
 
 use app\Models\Reservation\ReservationMailsSent;
-use app\Models\Reservation\Reservations;
-use app\Models\Reservation\ReservationsDetails;
-use app\Models\Reservation\ReservationsComplements;
 use app\Models\Reservation\ReservationPayments;
+use app\Models\Reservation\Reservations;
+use app\Models\Reservation\ReservationsComplements;
+use app\Models\Reservation\ReservationsDetails;
 use app\Repository\Event\EventsRepository;
 use app\Repository\MailTemplateRepository;
 use app\Repository\Reservation\ReservationMailsSentRepository;
+use app\Repository\Reservation\ReservationPaymentsRepository;
+use app\Repository\Reservation\ReservationsComplementsRepository;
+use app\Repository\Reservation\ReservationsDetailsRepository;
 use app\Repository\Reservation\ReservationsPlacesTempRepository;
 use app\Repository\Reservation\ReservationsRepository;
-use app\Repository\Reservation\ReservationsDetailsRepository;
-use app\Repository\Reservation\ReservationsComplementsRepository;
-use app\Repository\Reservation\ReservationPaymentsRepository;
-use app\Utils\ReservationHelper;
+use app\Services\MailService;
+use app\Services\ReservationStorageInterface;
 use DateMalformedStringException;
 use DateTime;
 use Exception;
@@ -26,16 +27,16 @@ use Exception;
 class ReservationPersistenceService
 {
     private ReservationStorageInterface $reservationStorage;
-    private ReservationHelper $reservationHelper;
+    private ReservationTokenService $reservationTokenService;
     private ReservationsPlacesTempRepository $reservationsPlacesTempRepository;
 
     public function __construct(
-        ReservationStorageInterface $reservationStorage,
-        ReservationHelper $reservationHelper,
+        ReservationStorageInterface      $reservationStorage,
+        ReservationTokenService          $reservationTokenService,
         ReservationsPlacesTempRepository $reservationsPlacesTempRepository)
     {
         $this->reservationStorage = $reservationStorage;
-        $this->reservationHelper = $reservationHelper;
+        $this->reservationTokenService = $reservationTokenService;
         $this->reservationsPlacesTempRepository = $reservationsPlacesTempRepository;
     }
 
@@ -146,7 +147,7 @@ class ReservationPersistenceService
             }
         }
         $closeRegistrationDate = $inscriptionDateToUse ? $inscriptionDateToUse->getCloseRegistrationAt() : $sessionObj->getEventStartAt();
-        $tokenGenerated = $this->reservationHelper->createReservationToken(32, $sessionObj->getEventStartAt(), $closeRegistrationDate);
+        $tokenGenerated = $this->reservationTokenService->createReservationToken(32, $sessionObj->getEventStartAt(), $closeRegistrationDate);
 
         $reservation = new Reservations();
         $reservation->setEvent($tempReservation['event_id'])

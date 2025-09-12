@@ -1,6 +1,6 @@
 <?php
 
-namespace app\Services;
+namespace app\Services\Reservation;
 
 use app\Repository\Piscine\PiscineGradinsPlacesRepository;
 use app\Repository\Reservation\ReservationsDetailsRepository;

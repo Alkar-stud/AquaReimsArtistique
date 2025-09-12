@@ -3,24 +3,24 @@ namespace app\Controllers\Reservation;
 
 use app\Attributes\Route;
 use app\Controllers\AbstractController;
+use app\DTO\HelloAssoCartDTO;
 use app\Models\Reservation\ReservationPayments;
 use app\Models\Reservation\Reservations;
-use app\Repository\Reservation\ReservationPaymentsRepository;
 use app\Repository\Event\EventsRepository;
 use app\Repository\Nageuse\NageusesRepository;
+use app\Repository\Reservation\ReservationPaymentsRepository;
 use app\Repository\Reservation\ReservationsComplementsRepository;
 use app\Repository\Reservation\ReservationsDetailsRepository;
+use app\Repository\Reservation\ReservationsPlacesTempRepository;
 use app\Repository\Reservation\ReservationsRepository;
 use app\Repository\TarifsRepository;
-use app\Repository\Reservation\ReservationsPlacesTempRepository;
 use app\Services\HelloAssoService;
-use app\DTO\HelloAssoCartDTO;
-use app\Services\ReservationCartService;
-use app\Utils\CsrfHelper;
-use app\Utils\ReservationHelper;
-use app\Services\ReservationStorageInterface;
-use app\Services\ReservationPersistenceService;
 use app\Services\MongoReservationStorage;
+use app\Services\Reservation\ReservationCartService;
+use app\Services\Reservation\ReservationPersistenceService;
+use app\Services\Reservation\ReservationTokenService;
+use app\Services\ReservationStorageInterface;
+use app\Utils\CsrfHelper;
 use DateMalformedStringException;
 use Exception;
 use MongoDB\BSON\UTCDateTime;
@@ -32,7 +32,7 @@ class ReservationConfirmationController extends AbstractController
 {
     private HelloAssoService $helloAssoService;
     private HelloAssoCartDTO $helloAssoCart;
-    private ReservationHelper $reservationHelper;
+    private ReservationTokenService $reservationHelper;
     private ReservationStorageInterface $reservationStorage;
     private ReservationsPlacesTempRepository $reservationsPlacesTempRepository;
     private ReservationPersistenceService $persistenceService;
@@ -43,7 +43,7 @@ class ReservationConfirmationController extends AbstractController
         parent::__construct(true); // route publique
         $this->helloAssoService = new HelloAssoService;
         $this->helloAssoCart = new HelloAssoCartDTO;
-        $this->reservationHelper = new ReservationHelper;
+        $this->reservationHelper = new ReservationTokenService;
         // Pour MongoDB, à changer si autre BDD
         $this->reservationStorage = new MongoReservationStorage('ReservationTemp');
         $this->reservationsPlacesTempRepository = new ReservationsPlacesTempRepository();

@@ -3,13 +3,13 @@ namespace app\Controllers\Reservation;
 
 use app\Attributes\Route;
 use app\Controllers\AbstractController;
-use app\Repository\TarifsRepository;
 use app\Repository\Event\EventsRepository;
+use app\Repository\TarifsRepository;
 use app\Services\EventsService;
-use app\Services\ReservationService;
-use app\Services\ReservationSessionService;
 use app\Services\NageuseService;
-use app\Services\ReservationViewModelService;
+use app\Services\Reservation\ReservationService;
+use app\Services\Reservation\ReservationSessionService;
+use app\Services\Reservation\ReservationViewModelService;
 use app\Utils\CsrfHelper;
 use app\Utils\ReservationContextHelper;
 use DateMalformedStringException;

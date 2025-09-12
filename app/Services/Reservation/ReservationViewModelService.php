@@ -1,6 +1,6 @@
 <?php
 
-namespace app\Services;
+namespace app\Services\Reservation;
 
 use app\Repository\Event\EventsRepository;
 use app\Repository\Nageuse\NageusesRepository;
@@ -9,6 +9,8 @@ use app\Repository\Piscine\PiscineGradinsZonesRepository;
 use app\Repository\Reservation\ReservationsDetailsRepository;
 use app\Repository\Reservation\ReservationsPlacesTempRepository;
 use app\Repository\TarifsRepository;
+use app\Services\NageuseService;
+use app\Services\TarifService;
 use DateInterval;
 use DateMalformedStringException;
 use DateTime;

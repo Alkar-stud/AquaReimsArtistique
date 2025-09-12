@@ -157,7 +157,7 @@ class TarifsRepository extends AbstractRepository
             ->setAgeMin($data['age_min'])
             ->setAgeMax($data['age_max'])
             ->setMaxTickets($data['max_tickets'])
-            ->setPrice($data['price'])
+            ->setPrice((int)$data['price'])
             ->setIsProgramShowInclude($data['is_program_show_include'])
             ->setIsProofRequired($data['is_proof_required'])
             ->setAccessCode($data['access_code'])

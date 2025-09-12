@@ -28,7 +28,7 @@ $limiteMessage = $limiteMessage ?? '';
                                 <label for="tarif_<?= $tarif->getId() ?>" class="form-label">
                                     <?= htmlspecialchars($tarif->getLibelle()) ?>
                                     (<?= $tarif->getNbPlace() ?> place<?= $tarif->getNbPlace() > 1 ? 's' : '' ?> inclus<?= $tarif->getNbPlace() > 1 ? 'es' : 'e' ?>)
-                                    - <?= number_format($tarif->getPrice(), 2, ',', ' ') ?> €
+                                    - <?= number_format($tarif->getPrice() / 100, 2, ',', ' ') ?> €
                                 </label>
                                 <?php if ($tarif->getDescription()): ?>
                                     <div class="text-muted small mb-1">

@@ -7,7 +7,7 @@ CREATE TABLE IF NOT EXISTS `tarifs` (
     `age_min` INT NULL,
     `age_max` INT NULL,
     `max_tickets` INT NULL,
-    `price` DECIMAL(10,2) NOT NULL,
+    `price` INT NOT NULL,
     `is_program_show_include` BOOLEAN NOT NULL,
     `is_proof_required` BOOLEAN  NOT NULL,
     `access_code` CHAR(32) NULL,

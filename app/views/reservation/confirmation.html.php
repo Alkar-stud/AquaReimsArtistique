@@ -40,7 +40,7 @@ foreach ($tarifs as $t) {
                 ?>
                 <li class="list-group-item d-flex justify-content-between lh-sm">
                     <div>
-                        <h6 class="my-0"><?= htmlspecialchars($tarif->getLibelle()) ?> (<?= htmlspecialchars($tarif->getPrice()) ?> €)</h6>
+                        <h6 class="my-0"><?= htmlspecialchars($tarif->getLibelle()) ?> (<?= number_format($tarif->getPrice() / 100, 2, ',', ' ') ?> €)</h6>
                         <small class="text-muted">
                             Quantité : <?= $quantity ?>
                             <?php if ($tarif->getNbPlace() > 1): ?>
@@ -48,7 +48,7 @@ foreach ($tarifs as $t) {
                             <?php endif; ?>
                         </small>
                     </div>
-                    <span class="text-muted"><?= number_format($quantity * $tarif->getPrice(), 2, ',', ' ') ?> €</span>
+                    <span class="text-muted"><?= number_format($quantity * $tarif->getPrice() / 100, 2, ',', ' ') ?> €</span>
                 </li>
             <?php endif; ?>
         <?php endforeach; ?>
@@ -64,7 +64,7 @@ foreach ($tarifs as $t) {
                             <h6 class="my-0"><?= htmlspecialchars($tarif->getLibelle()) ?></h6>
                             <small class="text-muted">Quantité : <?= $complement['qty'] ?></small>
                         </div>
-                        <span class="text-muted"><?= number_format($complement['qty'] * $tarif->getPrice(), 2, ',', ' ') ?> €</span>
+                        <span class="text-muted"><?= number_format($complement['qty'] * $tarif->getPrice() / 100, 2, ',', ' ') ?> €</span>
                     </li>
                 <?php endif; ?>
             <?php endforeach; ?>
@@ -72,7 +72,7 @@ foreach ($tarifs as $t) {
 
         <li class="list-group-item d-flex justify-content-between">
             <span>Total (EUR)</span>
-            <strong><?= number_format($totalAmount, 2, ',', ' ') ?> €</strong>
+            <strong><?= number_format($totalAmount / 100, 2, ',', ' ') ?> €</strong>
         </li>
     </ul>
     <?php if (!empty($reservation['reservation_detail'])): ?>

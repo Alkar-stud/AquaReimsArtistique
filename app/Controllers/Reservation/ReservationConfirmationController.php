@@ -182,8 +182,8 @@ class ReservationConfirmationController extends AbstractController
             }
 
             $TabData = $this->helloAssoCart;
-            $TabData->setTotalAmount($total);
-            $TabData->setInitialAmount($total);
+            $TabData->setTotalAmount((int)$total); // Total en centimes
+            $TabData->setInitialAmount((int)$total); // Total en centimes
             $TabData->setPayer([
                 'firstName' => $reservation['user']['prenom'],
                 'lastName' => $reservation['user']['nom'],

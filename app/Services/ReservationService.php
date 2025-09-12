@@ -5,7 +5,6 @@ namespace app\Services;
 use app\DTO\ReservationDetailItemDTO;
 use app\Models\Reservation\ReservationMailsSent;
 use app\DTO\ReservationUserDTO;
-use app\Models\Reservation\ReservationsDetails;
 use app\Repository\MailTemplateRepository;
 use app\Repository\Event\EventsRepository;
 use app\Repository\Nageuse\NageusesRepository;
@@ -1031,11 +1030,11 @@ class ReservationService
      * Calcule le montant total de la réservation en se basant sur les quantités de chaque tarif.
      *
      * @param array $reservationData Les données complètes de la session de réservation.
-     * @return float Le montant total.
+     * @return int Le montant total en centimes
      */
-    public function calculateTotalAmount(array $reservationData): float
+    public function calculateTotalAmount(array $reservationData): int
     {
-        $total = 0.0;
+        $total = 0;
         $eventId = $reservationData['event_id'] ?? null;
         if (!$eventId) {
             return $total;

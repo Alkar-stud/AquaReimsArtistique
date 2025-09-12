@@ -79,8 +79,8 @@ document.addEventListener('DOMContentLoaded', function () {
             <div class="form-check mb-3">
                 <input class="form-check-input" type="checkbox" id="specialTarifCheck" name="specialTarif[${t.id}]" checked>
                 <label class="form-check-label" for="specialTarifCheck">
-                    Utiliser ce tarif (${t.nb_place} place${t.nb_place > 1 ? 's' : ''} inclus${t.nb_place > 1 ? 'es' : 'e'}) - ${Number(t.price).toFixed(2).replace('.', ',')} €
-                </label>
+                     Utiliser ce tarif (${t.nb_place} place${t.nb_place > 1 ? 's' : ''} inclus${t.nb_place > 1 ? 'es' : 'e'}) - ${Number(t.price / 100).toFixed(2).replace('.', ',')} €
+                 </label>
             </div>
             ${t.description ? `<div class="text-muted small mb-1">${t.description.replace(/\n/g, '<br>')}</div>` : ''}
         `;
@@ -123,8 +123,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 <div class="form-check mb-3">
                     <input class="form-check-input" type="checkbox" id="specialTarifCheck" name="specialTarif[${t.id}]" checked>
                     <label class="form-check-label" for="specialTarifCheck">
-                        Utiliser ce tarif (${t.nb_place} place${t.nb_place > 1 ? 's' : ''} inclus${t.nb_place > 1 ? 'es' : 'e'}) - ${Number(t.price).toFixed(2).replace('.', ',')} €
-                    </label>
+                         Utiliser ce tarif (${t.nb_place} place${t.nb_place > 1 ? 's' : ''} inclus${t.nb_place > 1 ? 'es' : 'e'}) - ${Number(t.price / 100).toFixed(2).replace('.', ',')} €
+                     </label>
                 </div>
                 ${t.description ? `<div class="text-muted small mb-1">${t.description.replace(/\n/g, '<br>')}</div>` : ''}
             `;

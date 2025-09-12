@@ -15,7 +15,7 @@ class Tarifs
     private ?int $age_min = null;
     private ?int $age_max = null;
     private ?int $max_tickets = null;
-    private float $price;
+    private int $price;
     private bool $is_program_show_include;
     private bool $is_proof_required;
     private ?string $access_code = null;
@@ -24,79 +24,22 @@ class Tarifs
     private ?DateTimeInterface $updated_at = null;
 
     // --- GETTERS ---
-
-    public function getId(): int
-    {
-        return $this->id;
-    }
-
-    public function getLibelle(): string
-    {
-        return $this->libelle;
-    }
-
-    public function getDescription(): ?string
-    {
-        return $this->description;
-    }
-
-    public function getNbPlace(): ?int
-    {
-        return $this->nb_place;
-    }
-
-    public function getAgeMin(): ?int
-    {
-        return $this->age_min;
-    }
-
-    public function getAgeMax(): ?int
-    {
-        return $this->age_max;
-    }
-
-    public function getMaxTickets(): ?int
-    {
-        return $this->max_tickets;
-    }
-
-    public function getPrice(): float
-    {
-        return $this->price;
-    }
-
-    public function getIsProgramShowInclude(): bool
-    {
-        return $this->is_program_show_include;
-    }
-
-    public function getIsProofRequired(): bool
-    {
-        return $this->is_proof_required;
-    }
-
-    public function getAccessCode(): ?string
-    {
-        return $this->access_code;
-    }
-
-    public function getIsActive(): bool
-    {
-        return $this->is_active;
-    }
-
-    public function getCreatedAt(): DateTimeInterface
-    {
-        return $this->created_at;
-    }
-
-    public function getUpdatedAt(): ?DateTimeInterface
-    {
-        return $this->updated_at;
-    }
+    public function getId(): int { return $this->id; }
+    public function getLibelle(): string { return $this->libelle; }
+    public function getDescription(): ?string { return $this->description; }
+    public function getNbPlace(): ?int { return $this->nb_place; }
+    public function getAgeMin(): ?int { return $this->age_min; }
+    public function getAgeMax(): ?int { return $this->age_max; }
+    public function getMaxTickets(): ?int { return $this->max_tickets; }
+    public function getPrice(): int { return $this->price; }
+    public function getIsProgramShowInclude(): bool { return $this->is_program_show_include; }
+    public function getIsProofRequired(): bool { return $this->is_proof_required; }
+    public function getAccessCode(): ?string { return $this->access_code; }
+    public function getIsActive(): bool { return $this->is_active; }
+    public function getCreatedAt(): DateTimeInterface { return $this->created_at; }
+    public function getUpdatedAt(): ?DateTimeInterface { return $this->updated_at; }
 
     // --- SETTERS ---
-
     public function setId(int $id): self
     {
         $this->id = $id;
@@ -139,7 +82,7 @@ class Tarifs
         return $this;
     }
 
-    public function setPrice(float $price): self
+    public function setPrice(int $price): self
     {
         $this->price = $price;
         return $this;

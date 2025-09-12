@@ -15,11 +15,16 @@ use app\Repository\TarifsRepository;
 use app\Repository\Reservation\ReservationsPlacesTempRepository;
 use app\Services\HelloAssoService;
 use app\DTO\HelloAssoCartDTO;
+use app\Services\ReservationService;
 use app\Utils\CsrfHelper;
 use app\Utils\ReservationHelper;
 use app\Services\ReservationStorageInterface;
 use app\Services\ReservationPersistenceService;
-use app\Services\MongoReservationStorage; // à changer si la sauvegarde temporaire ne se fait plus dans MongoDB
+use app\Services\MongoReservationStorage;
+use DateMalformedStringException;
+use MongoDB\BSON\UTCDateTime;
+
+// à changer si la sauvegarde temporaire ne se fait plus dans MongoDB
 
 
 class ReservationConfirmationController extends AbstractController
@@ -30,6 +35,7 @@ class ReservationConfirmationController extends AbstractController
     private ReservationStorageInterface $reservationStorage;
     private ReservationsPlacesTempRepository $reservationsPlacesTempRepository;
     private ReservationPersistenceService $persistenceService;
+    private ReservationService $reservationService;
 
     public function __construct()
     {
@@ -45,8 +51,12 @@ class ReservationConfirmationController extends AbstractController
             $this->reservationHelper,
             $this->reservationsPlacesTempRepository
         );
+        $this->reservationService = new ReservationService();
     }
 
+    /**
+     * @throws DateMalformedStringException
+     */
     #[Route('/reservation/confirmation', name: 'app_reservation_confirmation')]
     public function index(): void
     {
@@ -72,27 +82,29 @@ class ReservationConfirmationController extends AbstractController
         $event = null;
         $sessionObj = null;
         $nageuse = null;
-        $tarifs = [];
         $tarifsById = [];
 
-        if (!empty($reservation['event_id'])) {
-            $event = $eventsRepository->findById($reservation['event_id']);
-            if ($event && !empty($reservation['event_session_id'])) {
-                foreach ($event->getSessions() as $s) {
-                    if ($s->getId() == $reservation['event_session_id']) {
-                        $sessionObj = $s;
-                        break;
-                    }
+        $event = $eventsRepository->findById($reservation['event_id']);
+        if ($event && !empty($reservation['event_session_id'])) {
+            foreach ($event->getSessions() as $s) {
+                if ($s->getId() == $reservation['event_session_id']) {
+                    $sessionObj = $s;
+                    break;
                 }
             }
-            $tarifs = $tarifsRepository->findByEventId($reservation['event_id']);
-            foreach ($tarifs as $tarif) {
-                $tarifsById[$tarif->getId()] = $tarif->getLibelle();
-            }
+        }
+        $tarifs = $tarifsRepository->findByEventId($reservation['event_id']);
+        foreach ($tarifs as $tarif) {
+            $tarifsById[$tarif->getId()] = $tarif->getLibelle();
         }
         if (!empty($reservation['nageuse_id'])) {
             $nageuse = $nageusesRepository->findById($reservation['nageuse_id']);
         }
+
+        // Calculer le total et les quantités correctes pour l'affichage
+        $totalAmount = $this->reservationService->calculateTotalAmount($reservation);
+        $allEventTarifs = $tarifsRepository->findByEventId($reservation['event_id']);
+        $tarifQuantities = $this->reservationService->getTarifQuantitiesFromDetails($reservation['reservation_detail'] ?? [], $allEventTarifs);
 
         $this->render('reservation/confirmation', [
             'reservation' => $reservation,
@@ -100,13 +112,16 @@ class ReservationConfirmationController extends AbstractController
             'event' => $event,
             'session' => $sessionObj,
             'nageuse' => $nageuse,
-            'tarifs' => $tarifs,
-            'tarifsById' => $tarifsById
+            'tarifs' => $allEventTarifs, // On passe tous les tarifs
+            'tarifsById' => $tarifsById,
+            'totalAmount' => $totalAmount,
+            'tarifQuantities' => $tarifQuantities
         ], 'Réservations - Confirmation');
     }
 
     #[Route('/reservation/saveCart', name: 'app_reservation_saveCart', methods: ['POST'])]
-    public function saveCart() {
+    public function saveCart(): void
+    {
         $input = json_decode(file_get_contents('php://input'), true);
         if (!CsrfHelper::validateToken($input['csrf_token'] ?? '', 'reservation_saveCart')) return;
 
@@ -121,8 +136,12 @@ class ReservationConfirmationController extends AbstractController
     }
 
 
+    /**
+     * @throws DateMalformedStringException
+     */
     #[Route('/reservation/payment', name: 'app_reservation_payment')]
-    public function payment() {
+    public function payment(): void
+    {
 
         $sessionId = session_id();
         $reservation = $_SESSION['reservation'][$sessionId] ?? null;
@@ -144,30 +163,9 @@ class ReservationConfirmationController extends AbstractController
         ) {
             $redirectUrl = $reservation['redirectUrl'];
         } else {
-            // Sinon, on en crée un nouveau auprès de HelloAsso.
-            $eventsRepository = new EventsRepository();
-            $tarifsRepository = new TarifsRepository();
-
-            $event = null;
-            $tarifs = [];
-            $tarifsById = [];
-
-
-            $event = $eventsRepository->findById($reservation['event_id']);
-            if ($event && !empty($reservation['event_session_id'])) {
-                foreach ($event->getSessions() as $s) {
-                    if ($s->getId() == $reservation['event_session_id']) {
-                        break;
-                    }
-                }
-            }
-            $tarifs = $tarifsRepository->findByEventId($reservation['event_id']);
-            foreach ($tarifs as $tarif) {
-                $tarifsById[$tarif->getId()] = $tarif->getLibelle();
-            }
-
-
-            $total = ReservationHelper::calculerTotal($reservation, $tarifs);
+            // Sinon, on en crée un nouveau auprès de HelloAsso
+            $event = (new EventsRepository())->findById($reservation['event_id']);
+            $total = $this->reservationService->calculateTotalAmount($reservation);
             $_SESSION['reservation'][$sessionId]['total'] = $total;
             $reservation['total'] = $total;
             $reservation['php_session_id'] = $sessionId; // Pour retrouver la session dans reservations_places_temp car suppression en callback
@@ -175,10 +173,10 @@ class ReservationConfirmationController extends AbstractController
             // S'assure qu'une réservation temporaire existe et la met à jour, ou la crée si besoin.
             $reservationId = $reservation['reservationId'] ?? null;
             if ($reservationId) {
-                $reservation['updatedAt'] = new \MongoDB\BSON\UTCDateTime(time() * 1000);
+                $reservation['updatedAt'] = new UTCDateTime(time() * 1000);
                 $this->reservationStorage->updateReservation($reservationId, $reservation);
             } else {
-                $reservation['createdAt'] = new \MongoDB\BSON\UTCDateTime(time() * 1000);
+                $reservation['createdAt'] = new UTCDateTime(time() * 1000);
                 $reservationId = $this->reservationStorage->saveReservation($reservation);
                 $_SESSION['reservation'][$sessionId]['reservationId'] = $reservationId;
             }
@@ -237,8 +235,11 @@ class ReservationConfirmationController extends AbstractController
         ], 'Vérification du paiement');
     }
 
+    /**
+     * @throws DateMalformedStringException
+     */
     #[Route('/reservation/checkPayment', name: 'app_reservation_checkPayment', methods: ['POST'])]
-    public function checkPayment()
+    public function checkPayment(): void
     {
         $input = json_decode(file_get_contents('php://input'), true);
         $checkoutIntentId = $input['checkoutIntentId'] ?? null;
@@ -260,6 +261,9 @@ class ReservationConfirmationController extends AbstractController
     }
 
 
+    /**
+     * @throws DateMalformedStringException
+     */
     #[Route('/reservation/paymentCallback', name: 'app_reservation_paymentCallback', methods: ['POST'])]
     public function paymentCallback(): void
     {
@@ -278,7 +282,7 @@ class ReservationConfirmationController extends AbstractController
         }
 
         // Si APP_DEBUG est à true, on enregistre le payload pour le débogage
-        if (isset($_ENV['HELOASSO_DEBUG']) && $_ENV['HELOASSO_DEBUG'] === 'true') {
+        if (isset($_ENV['HELLOASSO_DEBUG']) && $_ENV['HELLOASSO_DEBUG'] === 'true') {
             $dir = __DIR__ . '/../../../storage/app/private/';
             if (!is_dir($dir)) {
                 mkdir($dir, 0770, true);
@@ -306,6 +310,9 @@ class ReservationConfirmationController extends AbstractController
         echo 'OK';
     }
 
+    /**
+     * @throws DateMalformedStringException
+     */
     #[Route('/reservation/forceCheckPayment', name: 'app_reservation_forceCheckPayment', methods: ['POST'])]
     public function forceCheckPayment(): void
     {
@@ -367,6 +374,7 @@ class ReservationConfirmationController extends AbstractController
     /**
      * Gère la réponse JSON pour une vérification de paiement réussie.
      * @param ReservationPayments $payment
+     * @throws DateMalformedStringException
      */
     private function handleSuccessfulCheck(ReservationPayments $payment): void
     {
@@ -387,6 +395,7 @@ class ReservationConfirmationController extends AbstractController
      * @param object $paymentData Données de la commande/paiement.
      * @param string $reservationIdMongo ID de la réservation temporaire.
      * @return Reservations|null
+     * @throws DateMalformedStringException
      */
     private function processAndPersistReservation(object $paymentData, string $reservationIdMongo): ?Reservations
     {
@@ -408,6 +417,9 @@ class ReservationConfirmationController extends AbstractController
         return $this->persistenceService->persistPaidReservation($paymentData, $tempReservation);
     }
 
+    /**
+     * @throws DateMalformedStringException
+     */
     #[Route('/reservation/success', name: 'app_reservation_success')]
     public function success(): void
     {

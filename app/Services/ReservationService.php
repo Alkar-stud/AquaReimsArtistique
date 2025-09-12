@@ -86,7 +86,7 @@ class ReservationService
             return $resultCheckNageuseLimitation;
         }
 
-        return ['success' => true, 'error' => null];
+        return ['success' => true, 'error' => null, 'data' => null];
     }
 
     /**
@@ -379,18 +379,32 @@ class ReservationService
   /**
      * Calcule les quantités pour chaque tarif à partir des détails de la réservation.
      *
-     * @param array $reservationDetails Les détails de la réservation.
+     * @param array $reservationDetails Les détails de la réservation (liste des participants).
+     * @param array $allEventTarifs La liste complète des objets Tarif de l'événement.
      * @return array Un tableau associatif [tarif_id => quantity].
      */
-    public function getTarifQuantitiesFromDetails(array $reservationDetails): array
+    public function getTarifQuantitiesFromDetails(array $reservationDetails, array $allEventTarifs): array
     {
         if (empty($reservationDetails)) {
             return [];
         }
-        // Extrait tous les 'tarif_id' dans un tableau simple
+        // Compter le nombre de places pour chaque tarif_id
         $tarifIds = array_column($reservationDetails, 'tarif_id');
-        // Compte les occurrences de chaque ID
-        return array_count_values($tarifIds);
+        $placesPerTarifId = array_count_values($tarifIds);
+
+        // Convertir le nombre de places en nombre de "packs" (quantité de tarifs)
+        $tarifQuantities = [];
+        foreach ($allEventTarifs as $tarif) {
+            $tarifId = $tarif->getId();
+            $nbPlacesInTarif = $tarif->getNbPlace() ?? 1;
+            if (isset($placesPerTarifId[$tarifId])) {
+                // On s'assure que la division est entière et logique.
+                // Si on a 4 places pour un tarif de 4 places, ça fait 1 pack.
+                // La division par zéro est évitée car getNbPlace() renvoie 1 par défaut.
+                $tarifQuantities[$tarifId] = (int)($placesPerTarifId[$tarifId] / $nbPlacesInTarif);
+            }
+        }
+        return $tarifQuantities;
     }
 
     /**
@@ -453,7 +467,7 @@ class ReservationService
             'limitation' => $reservationData['limitPerSwimmer'] ?? null,
             'placesDejaReservees' => $status['reserved'],
             'placesRestantes' => $status['remaining'],
-            'tarifQuantities' => $this->getTarifQuantitiesFromDetails($reservationDetails),
+            'tarifQuantities' => $this->getTarifQuantitiesFromDetails($reservationDetails, $tarifs),
             'specialTarifSession' => $this->tarifService->findSpecialTarifInDetails($reservationDetails, $tarifs),
         ];
     }
@@ -501,52 +515,61 @@ class ReservationService
         }
 
         $allTarifs = $this->tarifsRepository->findByEventId($eventId);
-        $validTarifIds = array_map(fn($t) => $t->getId(), $allTarifs);
 
         $tarifsById = [];
         foreach ($allTarifs as $tarif) {
             $tarifsById[$tarif->getId()] = $tarif;
         }
 
-        $newReservationDetails = [];
-
-        // Préserver les anciens détails pour les noms/prénoms
+        // Préserver les anciens détails pour les noms/prénoms/places
         $oldDetails = $reservationData['reservation_detail'] ?? [];
-        $oldByTarif = [];
-        foreach ($oldDetails as $detail) {
-            $tid = $detail['tarif_id'];
-            if (!isset($oldByTarif[$tid])) $oldByTarif[$tid] = [];
-            $oldByTarif[$tid][] = $detail;
-        }
 
-        // Tarifs classiques
+        // Compter les nouvelles quantités demandées par tarif_id
+        $newQuantities = [];
         foreach ($input['tarifs'] ?? [] as $t) {
             $id = (int)($t['id'] ?? 0);
             $qty = (int)($t['qty'] ?? 0);
-            if ($qty > 0 && in_array($id, $validTarifIds, true)) {
-                for ($i = 0; $i < $qty; $i++) {
-                    // Si un ancien participant pour ce tarif existe à cet "index", on le réutilise entièrement.
-                    if (isset($oldByTarif[$id][$i])) {
-                        $newReservationDetails[] = $oldByTarif[$id][$i];
-                    } else {
-                        // Sinon, on crée un nouveau DTO vide pour ce nouveau participant.
-                        $newReservationDetails[] = new ReservationDetailItemDTO(tarif_id: $id);
-                    }
-                }
+            if ($qty > 0 && isset($tarifsById[$id])) {
+                $placesPerTarif = $tarifsById[$id]->getNbPlace() ?? 1;
+                $newQuantities[$id] = ($newQuantities[$id] ?? 0) + ($qty * $placesPerTarif);
             }
         }
 
-        // Tarif spécial (qui est déjà dans la session, on le conserve)
-        $specialTarif = $this->tarifService->findSpecialTarifInDetails($oldDetails, $allTarifs);
-        if ($specialTarif) {
-            $newReservationDetails[] = new ReservationDetailItemDTO(tarif_id: $specialTarif['id'], access_code: $specialTarif['code']);
+        $updatedDetails = [];
+        // D'abord, on essaie de conserver les participants existants
+        foreach ($oldDetails as $oldDetail) {
+            $tarifId = $oldDetail['tarif_id'];
+            if (isset($newQuantities[$tarifId]) && $newQuantities[$tarifId] > 0) {
+                // Ce participant est toujours valide, on le garde
+                $updatedDetails[] = new ReservationDetailItemDTO(
+                    tarif_id: $tarifId,
+                    nom: $oldDetail['nom'] ?? null,
+                    prenom: $oldDetail['prenom'] ?? null,
+                    access_code: $oldDetail['access_code'] ?? null,
+                    justificatif_name: $oldDetail['justificatif_name'] ?? null,
+                    seat_id: $oldDetail['seat_id'] ?? null,
+                    seat_name: $oldDetail['seat_name'] ?? null
+                );
+                $newQuantities[$tarifId]--; // On décrémente le besoin pour ce tarif
+            }
         }
 
-        if (empty($newReservationDetails)) {
+        // Ensuite, on ajoute les nouveaux participants pour les quantités restantes
+        foreach ($newQuantities as $tarifId => $remainingQty) {
+            // On cherche le code associé à ce tarif dans l'input initial
+            $code = null;
+            foreach ($input['tarifs'] as $t) { if (($t['id'] ?? 0) == $tarifId) { $code = $t['code'] ?? null; break; } }
+
+            for ($i = 0; $i < $remainingQty; $i++) {
+                $updatedDetails[] = new ReservationDetailItemDTO(tarif_id: $tarifId, access_code: $code);
+            }
+        }
+
+        if (empty($updatedDetails)) {
             return ['success' => false, 'error' => 'Aucun tarif sélectionné.'];
         }
 
-        return ['success' => true, 'data' => $newReservationDetails];
+        return ['success' => true, 'data' => $updatedDetails];
     }
 
     /**
@@ -605,12 +628,14 @@ class ReservationService
         $prenoms = $postData['prenoms'] ?? [];
         $justificatifs = $filesData['justificatifs'] ?? null;
 
+        // Valider que le nombre de noms/prénoms soumis correspond au nombre de participants attendus.
         $reservationDetails = $reservationData['reservation_detail'] ?? [];
+
         if (count($reservationDetails) !== count($noms) || count($noms) !== count($prenoms)) {
             return ['success' => false, 'error' => 'Incohérence du nombre de participants.'];
         }
 
-        // Validation des noms/prénoms
+        // Valider la qualité des noms/prénoms (non vides, pas identiques, pas de doublons).
         $couples = [];
         for ($i = 0; $i < count($noms); $i++) {
             $nom = trim($noms[$i]);
@@ -628,25 +653,24 @@ class ReservationService
             $couples[] = $key;
         }
 
-        // Traitement des détails et justificatifs
+        // 3. Préparer les données pour le traitement (tarifs).
         $tarifs = $this->tarifsRepository->findByEventId($eventId);
         $tarifsById = [];
-        foreach ($tarifs as $tarif) {
-            $tarifsById[$tarif->getId()] = $tarif;
-        }
+        foreach ($tarifs as $tarif) { $tarifsById[$tarif->getId()] = $tarif; }
 
+        // 4. Reconstruire la liste des participants avec les nouvelles informations.
         $updatedDetails = [];
         $justifIndex = 0;
 
-        foreach ($reservationDetails as $i => $detail) {
+        foreach ($reservationDetails as $index => $detail) {
             $tarifId = $detail['tarif_id'];
             $tarif = $tarifsById[$tarifId] ?? null;
 
             // Crée un nouveau DTO avec les informations de base
             $newItem = new ReservationDetailItemDTO(
                 tarif_id: $tarifId,
-                nom: strtoupper($noms[$i]),
-                prenom: ucwords(strtolower($prenoms[$i])),
+                nom: strtoupper($noms[$index]),
+                prenom: ucwords(strtolower($prenoms[$index])),
                 access_code: $detail['access_code'] ?? null,
                 seat_id: $detail['seat_id'] ?? null,
                 seat_name: $detail['seat_name'] ?? null
@@ -662,7 +686,7 @@ class ReservationService
 
                 if ($file['error'] === UPLOAD_ERR_OK) {
                     $extension = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
-                    $uniqueName = $this->generateUniqueProofName($noms[$i], $prenoms[$i], $tarifId, $extension);
+                    $uniqueName = $this->generateUniqueProofName($noms[$index], $prenoms[$index], $tarifId, $extension);
                     $destination = __DIR__ . '/../..' . UPLOAD_PROOF_PATH . 'temp/';
 
                     $uploadResult = $this->uploadService->handleUpload($file, $destination, $uniqueName, [
@@ -672,7 +696,7 @@ class ReservationService
                     ]);
 
                     if (!$uploadResult['success']) {
-                        return ['success' => false, 'error' => "Participant " . ($i + 1) . ": " . $uploadResult['error']];
+                        return ['success' => false, 'error' => "Participant " . ($index + 1) . ": " . $uploadResult['error']];
                     }
                     $newItem->justificatif_name = $uniqueName;
 
@@ -680,11 +704,12 @@ class ReservationService
                     // Conserver le justificatif déjà présent en session
                     $newItem->justificatif_name = $detail['justificatif_name'];
                 } else {
-                    return ['success' => false, 'error' => "Justificatif manquant pour le participant: " . ($i + 1)];
+                    return ['success' => false, 'error' => "Justificatif manquant pour le participant: " . ($index + 1)];
                 }
 
                 $justifIndex++;
             }
+
             $updatedDetails[] = $newItem;
         }
 
@@ -794,65 +819,113 @@ class ReservationService
         if ($step >= 1) {
             $step == 1 ? $data = $dataInputed : $data = $reservationDataSession;
             $return = $this->verifyPrerequisitesStep1($data['event_id'], $data['event_session_id'], $data['nageuse_id']);
+
             if (!$return['success']) {
                 return $return;
             }
         }
 
         if ($step >= 2) {
-            $step == 2 ? $data = $dataInputed : $data = $reservationDataSession;
+            if ($step == 2) {
+                $data = $dataInputed;
+            } else {
+                $data = $reservationDataSession['user'];
+            }
             $return = $this->validatePayerInformationStep2($data);
+
             // Si la validation de l'étape 2 réussit, on la considère comme la donnée de retour principale.
             // Sinon, on retourne l'erreur.
-            if ($return['success']) {
-                return $return; // Contient ['success' => true, 'data' => ReservationUserDTO]
+            if (!$return['success']) {
+                return $return;
             }
         }
 
         if ($step >= 3) {
-            $step == 3 ? $data = $dataInputed : $data = $reservationDataSession;
-            $return = $this->processAndValidateStep3($data, $reservationDataSession);
-            if ($return['success']) {
+            $dataForStep3 = [];
+            if ($step == 3) {
+                // Pour la soumission de l'étape 3, on utilise les données du formulaire.
+                $dataForStep3 = $dataInputed;
+            } else {
+                // Pour les étapes suivantes, on reconstruit un input de type "étape 3"
+                // à partir des données déjà validées et stockées en session.
+                $allEventTarifs = $this->tarifsRepository->findByEventId($reservationDataSession['event_id']);
+                $tarifQuantities = $this->getTarifQuantitiesFromDetails($reservationDataSession['reservation_detail'] ?? [], $allEventTarifs);
+
+                $reconstructedTarifs = [];
+                foreach ($tarifQuantities as $tarifId => $qty) {
+                    $reconstructedTarifs[] = ['id' => $tarifId, 'qty' => $qty];
+                }
+                // On ne reconstruit pas le 'code' ici, car la validation des codes spéciaux est déjà implicite dans les `reservation_detail` en session.
+                $dataForStep3 = ['tarifs' => $reconstructedTarifs];
+            }
+
+            $return = $this->processAndValidateStep3($dataForStep3, $reservationDataSession);
+
+            if (!$return['success']) {
                 return $return;
             }
         }
 
         if ($step >= 4) {
-            //Si on est plus loin que l'étape 4, ce n'est pas le potentiel fichier qu'il faut envoyer
-            //Le nom actuel sera conservé
+            $dataForStep4 = [];
             if ($step == 4) {
-                $data = $dataInputed;
-                $return = $this->processAndValidateStep4($data[0], $data[1], $reservationDataSession);
+                // Pour la soumission de l'étape 4, on utilise les données du formulaire.
+                $postData = $dataInputed[0] ?? [];
+                $filesData = $dataInputed[1] ?? [];
+                $return = $this->processAndValidateStep4($postData, $filesData, $reservationDataSession);
             } else {
-                $data = $reservationDataSession;
-                $return = $this->processAndValidateStep4($data, [], $reservationDataSession);
+                // Pour les étapes suivantes, on reconstruit les noms/prénoms à partir de la session.
+                $details = $reservationDataSession['reservation_detail'] ?? [];
+                $postData = [
+                    'noms' => array_column($details, 'nom'),
+                    'prenoms' => array_column($details, 'prenom')
+                ];
+                // On passe un tableau de fichiers vide, car on ne re-valide pas les uploads.
+                $return = $this->processAndValidateStep4($postData, [], $reservationDataSession);
             }
 
-            if ($return['success']) {
+            if (!$return['success']) {
                 return $return;
             }
         }
 
         if ($step >= 5) {
-            $step == 5 ? $data = $dataInputed : $data = $reservationDataSession;
-            $return = $this->processAndValidateStep5($data, $reservationDataSession);
+            $dataForStep5 = [];
+            if ($step == 5) {
+                // Pour la soumission de l'étape 5, on utilise les données du formulaire.
+                $dataForStep5 = $dataInputed;
+            } else {
+                // Pour les étapes suivantes, on reconstruit la liste des places à partir de la session.
+                $details = $reservationDataSession['reservation_detail'] ?? [];
+                $seatIds = array_filter(array_column($details, 'seat_id'));
+                $dataForStep5 = ['seats' => $seatIds];
+            }
 
-            if ($return['success']) {
+            $return = $this->processAndValidateStep5($dataForStep5, $reservationDataSession);
+
+            if (!$return['success']) {
                 return $return;
             }
         }
 
         if ($step >= 6) {
-            $step == 6 ? $data = $dataInputed : $data = $reservationDataSession;
-            $return = $this->processAndValidateStep6($data, $reservationDataSession);
+            // Pour l'étape 6, la re-validation n'est pas nécessaire, car elle n'a pas d'impact
+            // sur les étapes précédentes et ne modifie pas les 'reservation_detail'.
+            // On ne la valide que lors de sa soumission directe.
+            if ($step == 6) {
+                $return = $this->processAndValidateStep6($dataInputed, $reservationDataSession);
+            } else {
+                // Si on valide une étape > 6 (inexistante pour l'instant), on considère la 6 comme valide.
+                $return = ['success' => true, 'data' => $reservationDataSession['reservation_complement'] ?? []];
+            }
 
-            if ($return['success']) {
+            if (!$return['success']) {
                 return $return;
             }
         }
 
         // Cas pour l'étape 1 ou si aucune étape supérieure n'est validée
-        return ['success' => true, 'error' => null, 'data' => null];
+        return ['success' => true, 'error' => null, 'data' => $return['data']];
     }
 
 
@@ -954,6 +1027,46 @@ class ReservationService
         ]);
     }
 
+    /**
+     * Calcule le montant total de la réservation en se basant sur les quantités de chaque tarif.
+     *
+     * @param array $reservationData Les données complètes de la session de réservation.
+     * @return float Le montant total.
+     */
+    public function calculateTotalAmount(array $reservationData): float
+    {
+        $total = 0.0;
+        $eventId = $reservationData['event_id'] ?? null;
+        if (!$eventId) {
+            return $total;
+        }
 
+        $allEventTarifs = $this->tarifsRepository->findByEventId($eventId);
+        $tarifsById = [];
+        foreach ($allEventTarifs as $tarif) {
+            $tarifsById[$tarif->getId()] = $tarif;
+        }
+
+        // 1. Calcul pour les tarifs avec places assises (packs inclus)
+        $reservationDetails = $reservationData['reservation_detail'] ?? [];
+        $seatedTarifQuantities = $this->getTarifQuantitiesFromDetails($reservationDetails, $allEventTarifs);
+
+        foreach ($seatedTarifQuantities as $tarifId => $quantity) {
+            if (isset($tarifsById[$tarifId])) {
+                $total += $quantity * $tarifsById[$tarifId]->getPrice();
+            }
+        }
+
+        // 2. Calcul pour les compléments (tarifs sans place assise)
+        $complements = $reservationData['reservation_complement'] ?? [];
+        foreach ($complements as $complement) {
+            $tarifId = $complement['tarif_id'];
+            if (isset($tarifsById[$tarifId])) {
+                $total += $complement['qty'] * $tarifsById[$tarifId]->getPrice();
+            }
+        }
+
+        return $total;
+    }
 
 }

@@ -122,6 +122,7 @@ class ReservationAjaxController extends AbstractController
         //On vérifie ce qui a été saisi
         $validationResult = $this->reservationService->validateDataPerStep(1, $input);
 
+        //Si ce n'est pas bon, on retourne l'erreur
         if (!$validationResult['success']) {
             $this->json($validationResult);
             return;
@@ -153,11 +154,6 @@ class ReservationAjaxController extends AbstractController
 
         $email = trim($input['email'] ?? '');
         $eventId = (int)($input['event_id'] ?? 0);
-
-        if (empty($email) || empty($eventId)) {
-            $this->json(['exists' => false, 'error' => 'Paramètres manquants.']);
-            return;
-        }
 
         $result = $this->reservationService->checkExistingReservations($eventId, $email);
 
@@ -269,6 +265,7 @@ class ReservationAjaxController extends AbstractController
         //On vérifie ce qui a été saisi et ce qu'il y a dans $_SESSION
         $validationResult = $this->reservationService->validateDataPerStep(3, $input);
 
+        //Si ce n'est pas bon, on retourne l'erreur
         if (!$validationResult['success']) {
             $this->json($validationResult);
             return;

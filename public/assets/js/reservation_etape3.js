@@ -175,13 +175,19 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         });
 
-        // Tarif spécial
-        let specialTarif = null;
-        if (window.specialTarifSession) {
-            specialTarif = {
+        // Ajouter le tarif spécial au tableau des tarifs s'il est sélectionné
+        const specialTarifCheckbox = document.getElementById('specialTarifCheck');
+        if (window.specialTarifSession && specialTarifCheckbox && specialTarifCheckbox.checked) {
+            tarifs.push({
                 id: window.specialTarifSession.id,
+                qty: 1, // On suppose une quantité de 1 pour un code
                 code: window.specialTarifSession.code
-            };
+            });
+        }
+
+        if (tarifs.length === 0) {
+            alertDiv.innerHTML = `<div class="alert alert-danger">Veuillez sélectionner au moins un tarif.</div>`;
+            return;
         }
 
         fetch('/reservation/etape3', {
@@ -189,7 +195,6 @@ document.addEventListener('DOMContentLoaded', function () {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 tarifs,
-                specialTarif,
                 csrf_token: window.csrf_token
             })
         })

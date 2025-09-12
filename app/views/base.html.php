@@ -76,10 +76,10 @@ if ($_ENV['APP_DEBUG'] === "true") {
 			window.addEventListener('resize', updateDimensions);
 		});
 	</script>
-	<?php
-    echo '<pre>$_SESSION : ';
-    print_r($_SESSION);
-    echo '</pre>';
+<?php
+echo '<pre>$_SESSION : ';
+print_r($_SESSION);
+echo '</pre>';
 }
 ?>
 </body>

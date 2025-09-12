@@ -7,7 +7,7 @@ use app\DTO\ReservationUserDTO;
 use app\Repository\Event\EventsRepository;
 use app\Repository\Reservation\ReservationsPlacesTempRepository;
 use app\Repository\TarifsRepository;
-use app\Services\LogService;
+use app\Services\Logs\LogService;
 use app\Services\NageuseService;
 use app\Services\UploadService;
 use DateMalformedStringException;

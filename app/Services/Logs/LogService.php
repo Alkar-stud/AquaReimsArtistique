@@ -1,7 +1,8 @@
 <?php
-namespace app\Services;
+namespace app\Services\Logs;
 
 use app\Enums\LogType;
+use app\Services\MongoService;
 use Exception;
 use MongoDB\BSON\UTCDateTime;
 
@@ -12,7 +13,7 @@ class LogService
 
     public function __construct()
     {
-        $this->logDirectory = __DIR__ . '/../../storage/logs/';
+        $this->logDirectory = __DIR__ . '/../../../storage/logs/';
         if (!is_dir($this->logDirectory)) {
             mkdir($this->logDirectory, 0755, true);
         }
@@ -169,7 +170,7 @@ class LogService
     private function getDatabaseLogLevel(string $operation, string $table): string
     {
         $operation = strtoupper($operation);
-        $sensitiveConfig = require __DIR__ . '/../../config/security.php';
+        $sensitiveConfig = require __DIR__ . '/../../../config/security.php';
         $criticalTables = $sensitiveConfig['critical_tables'] ?? [];
 
         // DELETE = toujours DANGER
@@ -363,7 +364,7 @@ class LogService
 
     private function maskSensitiveData(array $data): array
     {
-        $sensitiveConfig = require __DIR__ . '/../../config/security.php';
+        $sensitiveConfig = require __DIR__ . '/../../../config/security.php';
         $sensitiveKeys = $sensitiveConfig['sensitive_data_keys'] ?? [];
 
         return $this->maskSensitiveDataRecursive($data, $sensitiveKeys);

@@ -1,8 +1,6 @@
 <?php
 
-namespace app\Services;
-
-use DateTime;
+namespace app\Services\Logs;
 
 class FileLogService
 {

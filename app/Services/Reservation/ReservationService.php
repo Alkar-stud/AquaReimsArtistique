@@ -9,7 +9,7 @@ use app\Repository\Reservation\ReservationMailsSentRepository;
 use app\Repository\Reservation\ReservationsDetailsRepository;
 use app\Repository\Reservation\ReservationsRepository;
 use app\Repository\TarifsRepository;
-use app\Services\LogService;
+use app\Services\Logs\LogService;
 use app\Services\MailService;
 use app\Services\SessionValidationService;
 use DateMalformedStringException;

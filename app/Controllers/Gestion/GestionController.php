@@ -3,7 +3,7 @@ namespace app\Controllers\Gestion;
 
 use app\Attributes\Route;
 use app\Controllers\AbstractController;
-use app\Services\LogRotationService;
+use app\Services\Logs\LogRotationService;
 
 class GestionController extends AbstractController
 {

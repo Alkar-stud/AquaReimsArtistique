@@ -5,7 +5,6 @@ use app\Attributes\Route;
 use app\Controllers\AbstractController;
 use app\DTO\HelloAssoCartDTO;
 use app\Models\Reservation\ReservationPayments;
-use app\Models\Reservation\Reservations;
 use app\Repository\Event\EventsRepository;
 use app\Repository\Nageuse\NageusesRepository;
 use app\Repository\Reservation\ReservationPaymentsRepository;
@@ -16,8 +15,10 @@ use app\Repository\Reservation\ReservationsRepository;
 use app\Repository\TarifsRepository;
 use app\Services\HelloAssoService;
 use app\Services\MongoReservationStorage;
+use app\Services\Payment\PaymentService;
 use app\Services\Reservation\ReservationCartService;
 use app\Services\Reservation\ReservationPersistenceService;
+use app\Services\Reservation\ReservationprocessAndPersistService;
 use app\Services\Reservation\ReservationTokenService;
 use app\Services\ReservationStorageInterface;
 use app\Utils\CsrfHelper;
@@ -25,34 +26,35 @@ use DateMalformedStringException;
 use Exception;
 use MongoDB\BSON\UTCDateTime;
 
-// à changer si la sauvegarde temporaire ne se fait plus dans MongoDB
-
-
 class ReservationConfirmationController extends AbstractController
 {
     private HelloAssoService $helloAssoService;
     private HelloAssoCartDTO $helloAssoCart;
-    private ReservationTokenService $reservationHelper;
+    private ReservationTokenService $reservationTokenService;
     private ReservationStorageInterface $reservationStorage;
     private ReservationsPlacesTempRepository $reservationsPlacesTempRepository;
     private ReservationPersistenceService $persistenceService;
     private ReservationCartService $reservationCartService;
+    private ReservationprocessAndPersistService $reservationprocessAndPersistService;
+    private PaymentService $paymentService;
 
     public function __construct()
     {
         parent::__construct(true); // route publique
         $this->helloAssoService = new HelloAssoService;
         $this->helloAssoCart = new HelloAssoCartDTO;
-        $this->reservationHelper = new ReservationTokenService;
+        $this->reservationTokenService = new ReservationTokenService;
         // Pour MongoDB, à changer si autre BDD
         $this->reservationStorage = new MongoReservationStorage('ReservationTemp');
         $this->reservationsPlacesTempRepository = new ReservationsPlacesTempRepository();
         $this->persistenceService = new ReservationPersistenceService(
             $this->reservationStorage,
-            $this->reservationHelper,
+            $this->reservationTokenService,
             $this->reservationsPlacesTempRepository
         );
         $this->reservationCartService = new ReservationCartService();
+        $this->reservationprocessAndPersistService = new ReservationprocessAndPersistService();
+        $this->paymentService = new PaymentService();
     }
 
     /**
@@ -165,58 +167,60 @@ class ReservationConfirmationController extends AbstractController
             $redirectUrl = $reservation['redirectUrl'];
         } else {
             // Sinon, on en crée un nouveau auprès de HelloAsso
-            $event = (new EventsRepository())->findById($reservation['event_id']);
             $total = $this->reservationCartService->calculateTotalAmount($reservation);
-            $_SESSION['reservation'][$sessionId]['total'] = $total;
-            $reservation['total'] = $total;
-            $reservation['php_session_id'] = $sessionId; // Pour retrouver la session dans reservations_places_temp car suppression en callback
 
-            // S'assure qu'une réservation temporaire existe et la met à jour, ou la crée si besoin.
-            $reservationId = $reservation['reservationId'] ?? null;
-            if ($reservationId) {
-                $reservation['updatedAt'] = new UTCDateTime(time() * 1000);
-                $this->reservationStorage->updateReservation($reservationId, $reservation);
-            } else {
-                $reservation['createdAt'] = new UTCDateTime(time() * 1000);
-                $reservationId = $this->reservationStorage->saveReservation($reservation);
-                $_SESSION['reservation'][$sessionId]['reservationId'] = $reservationId;
-            }
-
-            $TabData = $this->helloAssoCart;
-            $TabData->setTotalAmount($total); // Total en centimes
-            $TabData->setInitialAmount($total); // Total en centimes
-            $TabData->setPayer([
+            // Préparation des données pour le PaymentService
+            $event = (new EventsRepository())->findById($reservation['event_id']);
+            $itemName = 'Réservation gala ' . $event->getLibelle();
+            $payerInfo = [
                 'firstName' => $reservation['user']['prenom'],
-                'lastName' => $reservation['user']['nom'],
-                'email' => $reservation['user']['email'],
-                'country' => 'FRA'
-            ]);
-            $TabData->setItemName('Réservation gala ' . $event->getLibelle());
+                'lastName'  => $reservation['user']['nom'],
+                'email'     => $reservation['user']['email']
+            ];
 
-            $TabData->setMetaData(['reservationId' => $reservationId]);
+            // Sauvegarde de la réservation temporaire pour obtenir un ID stable
+            $reservation['total'] = $total;
+            $reservation['php_session_id'] = $sessionId;
+            $mongoId = $this->reservationStorage->saveOrUpdateReservation($reservation);
+            $_SESSION['reservation'][$sessionId]['reservationId'] = $mongoId;
+
+            // Définition des URLs de callback
             $protocol = "https://";
             $host = $_SERVER['HTTP_HOST'];
             $baseUrl = $protocol . $host;
 
-            $TabData->setBackUrl($baseUrl . '/reservation/confirmation');
-            $TabData->setErrorUrl($baseUrl . '/reservation/erreur');
-            $TabData->setReturnUrl($baseUrl . '/reservation/merci');
-
-            $accessToken = $this->helloAssoService->getToken();
-            $checkout = $this->helloAssoService->PostCheckoutIntents($accessToken, $TabData);
-            $redirectUrl = $checkout->redirectUrl;
-            $checkoutIntentId = $checkout->id;
-
-            // Ajout dans la session
-            $_SESSION['reservation'][$sessionId]['checkoutIntentId'] = $checkoutIntentId;
-            $_SESSION['reservation'][$sessionId]['redirectUrl'] = $redirectUrl;
-            $_SESSION['reservation'][$sessionId]['paymentIntentTimestamp'] = $now;
-
-            // Mise à jour dans MongoDB avec l'ID du checkout
-            $this->reservationStorage->updateReservation(
-                $reservationId,
-                ['checkoutIntentId' => $checkoutIntentId]
+            // Appel du PaymentService
+            $paymentResult = $this->paymentService->createPaymentIntent(
+                $total,
+                $payerInfo,
+                $itemName,
+                ['reservationId' => $mongoId], // Métadonnées
+                $baseUrl . '/reservation/confirmation', // backUrl
+                $baseUrl . '/reservation/erreur',       // errorUrl
+                $baseUrl . '/reservation/merci'         // returnUrl
             );
+
+            if ($paymentResult['success']) {
+                $redirectUrl = $paymentResult['redirectUrl'];
+                $checkoutIntentId = $paymentResult['checkoutIntentId'];
+
+                // Sauvegarde des informations de paiement dans la session et la BDD temporaire
+                $_SESSION['reservation'][$sessionId]['checkoutIntentId'] = $checkoutIntentId;
+                $_SESSION['reservation'][$sessionId]['redirectUrl'] = $redirectUrl;
+                $_SESSION['reservation'][$sessionId]['paymentIntentTimestamp'] = $now;
+                $this->reservationStorage->updateReservation($mongoId, ['checkoutIntentId' => $checkoutIntentId]);
+            } else {
+                // Gérer l'erreur de création de paiement
+                error_log("Erreur de création de paiement HelloAsso: " . ($paymentResult['error'] ?? 'Inconnue'));
+                // Pour le débogage, on affiche l'erreur complète au lieu de rediriger.
+                echo "<h1>Erreur lors de la création du paiement</h1>";
+                echo "<p>Le service de paiement a retourné une erreur. Voici les détails :</p>";
+                echo "<pre>";
+                print_r($paymentResult);
+                echo "</pre>";
+                //header('Location: /reservation/erreur?msg=creation_paiement_impossible');
+                exit;
+            }
         }
 
         $this->render('reservation/payment', [
@@ -248,7 +252,7 @@ class ReservationConfirmationController extends AbstractController
             $this->json(['success' => false, 'error' => 'checkoutId manquant']);
             return;
         }
-        // 2. Vérifier dans la BDD si un paiement avec cet ID a été enregistré (par le webhook)
+        // Vérifier dans la BDD si un paiement avec cet ID a été enregistré (par le webhook)
         $paymentsRepository = new ReservationPaymentsRepository();
         $payment = $paymentsRepository->findByCheckoutId((int)$checkoutIntentId);
 
@@ -305,7 +309,7 @@ class ReservationConfirmationController extends AbstractController
         }
 
         // Traiter et persister la réservation
-        $this->processAndPersistReservation($payload->data, $reservationIdMongo);
+        $this->reservationprocessAndPersistService->processAndPersistReservation($payload->data, $reservationIdMongo);
 
         http_response_code(200);
         echo 'OK';
@@ -350,7 +354,7 @@ class ReservationConfirmationController extends AbstractController
         $orderData = $result->order;
         $orderData->checkoutIntentId = $result->id;
 
-        $persistedReservation = $this->processAndPersistReservation($orderData, $reservationIdMongo);
+        $persistedReservation = $this->reservationprocessAndPersistService->processAndPersistReservation($orderData, $reservationIdMongo);
 
         if ($persistedReservation) {
             unset($_SESSION['reservation'][session_id()]);
@@ -392,43 +396,11 @@ class ReservationConfirmationController extends AbstractController
     }
 
     /**
-     * Logique centrale pour traiter et persister une réservation après un paiement réussi.
-     * @param object $paymentData Données de la commande/paiement.
-     * @param string $reservationIdMongo ID de la réservation temporaire.
-     * @return Reservations|null
-     * @throws DateMalformedStringException
-     * @throws Exception
-     */
-    private function processAndPersistReservation(object $paymentData, string $reservationIdMongo): ?Reservations
-    {
-        $reservationsRepository = new ReservationsRepository();
-        // Vérifie si cette réservation a déjà été persistée pour éviter les doublons
-        $existingReservation = $reservationsRepository->findByMongoId($reservationIdMongo);
-        if ($existingReservation) {
-            error_log("Tentative de double traitement pour la réservation MongoDB ID: " . $reservationIdMongo);
-            return $existingReservation; // C'est déjà fait, on retourne l'objet existant.
-        }
-
-        $tempReservation = $this->reservationStorage->findReservationById($reservationIdMongo);
-        if (!$tempReservation) {
-            error_log("Impossible de trouver la réservation temporaire pour l'ID: " . $reservationIdMongo);
-            return null;
-        }
-
-        // Utilise le service pour persister la réservation
-        return $this->persistenceService->persistPaidReservation($paymentData, $tempReservation);
-    }
-
-    /**
      * @throws Exception
      */
     #[Route('/reservation/finalize-free', name: 'app_reservation_finalize_free', methods: ['POST'])]
     public function finalizeFreeReservation(): void
     {
-        $input = json_decode(file_get_contents('php://input'), true);
-        // Le token CSRF est validé par le JS, mais une double vérification est bonne
-        // if (!CsrfHelper::validateToken($input['csrf_token'] ?? '', '...')) { ... }
-
         $sessionId = session_id();
         $reservation = $_SESSION['reservation'][$sessionId] ?? null;
         if (!$reservation) {
@@ -436,7 +408,7 @@ class ReservationConfirmationController extends AbstractController
             return;
         }
 
-        // Sécurité : on re-calcule le total pour s'assurer qu'il est bien de 0
+        // Sécurité : on re-calcule le total pour s'assurer qu'il est bien de 0.
         $total = $this->reservationCartService->calculateTotalAmount($reservation);
         if ($total > 0) {
             $this->json(['success' => false, 'error' => 'Cette réservation n\'est pas gratuite.']);

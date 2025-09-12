@@ -2,10 +2,9 @@
 
 namespace app\Repository;
 
-use PDOStatement;
+use app\Services\Logs\LogService;
 use app\Traits\HasPdoConnection;
-use app\Services\LogService;
-use app\Enums\LogType;
+use PDOStatement;
 
 abstract class AbstractRepository
 {

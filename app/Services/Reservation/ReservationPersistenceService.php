@@ -50,7 +50,7 @@ class ReservationPersistenceService
      */
     public function persistPaidReservation(object $paymentData, array $tempReservation): ?Reservations
     {
-        // 1. Créer l'objet Reservation principal
+        // Créer l'objet Reservation principal
         $reservation = $this->createMainReservationObject($tempReservation, $paymentData);
         if (!$reservation) {
             return null;
@@ -69,13 +69,13 @@ class ReservationPersistenceService
         $reservationPaymentsRepository = new ReservationPaymentsRepository();
         $reservationPaymentsRepository->insert($reservationPayment);
 
-        // 2. Persister les détails et compléments
+        // Persister les détails et compléments
         $this->persistDetailsAndComplements($reservation->getId(), $tempReservation);
 
-        // 3. Envoyer l'email de confirmation et enregistrer l'envoi
+        // Envoyer l'email de confirmation et enregistrer l'envoi
         $this->sendAndRecordConfirmationEmail($reservation);
 
-        // 4. Nettoyer les données temporaires
+        // Nettoyer les données temporaires
         $this->cleanupTemporaryData($tempReservation);
 
         return $reservation;
@@ -191,7 +191,7 @@ class ReservationPersistenceService
                 ->setTarif($detailData['tarif_id'])
                 ->setTarifAccessCode($detailData['access_code'] ?? null)
                 ->setJustificatifName($detailData['justificatif_name'] ?? null)
-                ->setPlaceNumber($detailData['place_number'] ?? null)
+                ->setPlaceNumber($detailData['seat_id'] ?? null)
                 ->setCreatedAt((new DateTime())->format('Y-m-d H:i:s'));
             $reservationsDetailsRepository->insert($reservationDetail);
         }

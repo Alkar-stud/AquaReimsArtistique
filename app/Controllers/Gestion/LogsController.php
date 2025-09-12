@@ -4,7 +4,7 @@ namespace app\Controllers\Gestion;
 use app\Attributes\Route;
 use app\Controllers\AbstractController;
 use app\Enums\LogType;
-use app\Services\LogService;
+use app\Services\Logs\LogService;
 
 class LogsController extends AbstractController
 {

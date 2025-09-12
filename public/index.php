@@ -1,10 +1,10 @@
 <?php
 
-use Dotenv\Dotenv;
-use app\Core\Router;
-use app\Services\LogService;
-use Dotenv\Exception\InvalidPathException;
 use app\Core\Database;
+use app\Core\Router;
+use app\Services\Logs\LogService;
+use Dotenv\Dotenv;
+use Dotenv\Exception\InvalidPathException;
 
 date_default_timezone_set('Europe/Paris');
 session_start();

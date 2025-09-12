@@ -35,4 +35,22 @@ class MongoReservationStorage implements ReservationStorageInterface
         // Supprime une réservation par son ID MongoDB
         return $this->mongo->deleteOne(['_id' => new \MongoDB\BSON\ObjectId($id)]);
     }
+
+    /**
+     * Sauvegarde ou met à jour une réservation et retourne son ID.
+     * @param array $reservationData
+     * @return string L'ID de la réservation.
+     */
+    public function saveOrUpdateReservation(array &$reservationData): string
+    {
+        $reservationId = $reservationData['reservationId'] ?? null;
+        if ($reservationId) {
+            $reservationData['updatedAt'] = new \MongoDB\BSON\UTCDateTime(time() * 1000);
+            $this->updateReservation($reservationId, $reservationData);
+        } else {
+            $reservationData['createdAt'] = new \MongoDB\BSON\UTCDateTime(time() * 1000);
+            $reservationId = $this->saveReservation($reservationData);
+        }
+        return $reservationId;
+    }
 }

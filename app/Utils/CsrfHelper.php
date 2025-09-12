@@ -1,8 +1,8 @@
 <?php
 namespace app\Utils;
 
-use app\Services\LogService;
 use app\Enums\LogType;
+use app\Services\Logs\LogService;
 use Random\RandomException;
 
 class CsrfHelper

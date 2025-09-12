@@ -2,11 +2,10 @@
 
 namespace app\Controllers;
 
-use app\Services\SessionValidationService;
 use app\Repository\User\UserRepository;
-use app\Services\LogService;
+use app\Services\Logs\LogService;
+use app\Services\SessionValidationService;
 use app\Utils\CsrfHelper;
-use app\Utils\DurationHelper;
 use DateMalformedStringException;
 use Exception;
 use JetBrains\PhpStorm\NoReturn;

@@ -367,8 +367,8 @@ class ReservationService
             'success' => true,
             'error' => null,
             'data' => new ReservationUserDTO(
-                nom: strtoupper($nom),
-                prenom: ucwords(strtolower($prenom)), // ucwords fonctionne mieux sur du texte en minuscules
+                nom: mb_strtoupper($nom, 'UTF-8'),
+                prenom: mb_convert_case(mb_strtolower($prenom, 'UTF-8'), MB_CASE_TITLE, 'UTF-8'),
                 email: $email,
                 telephone: $telephone
             )
@@ -668,8 +668,8 @@ class ReservationService
             // Crée un nouveau DTO avec les informations de base
             $newItem = new ReservationDetailItemDTO(
                 tarif_id: $tarifId,
-                nom: strtoupper($noms[$index]),
-                prenom: ucwords(strtolower($prenoms[$index])),
+                nom: mb_strtoupper($noms[$index], 'UTF-8'),
+                prenom: mb_convert_case(mb_strtolower($prenoms[$index], 'UTF-8'), MB_CASE_TITLE, 'UTF-8'),
                 access_code: $detail['access_code'] ?? null,
                 seat_id: $detail['seat_id'] ?? null,
                 seat_name: $detail['seat_name'] ?? null

@@ -1058,7 +1058,7 @@ class ReservationService
             $tarifsById[$tarif->getId()] = $tarif;
         }
 
-        // 1. Calcul pour les tarifs avec places assises (packs inclus)
+        // Calcul pour les tarifs avec places assises (packs inclus)
         $reservationDetails = $reservationData['reservation_detail'] ?? [];
         $seatedTarifQuantities = $this->getTarifQuantitiesFromDetails($reservationDetails, $allEventTarifs);
 
@@ -1068,7 +1068,7 @@ class ReservationService
             }
         }
 
-        // 2. Calcul pour les compléments (tarifs sans place assise)
+        // Calcul pour les compléments (tarifs sans place assise)
         $complements = $reservationData['reservation_complement'] ?? [];
         foreach ($complements as $complement) {
             $tarifId = $complement['tarif_id'];

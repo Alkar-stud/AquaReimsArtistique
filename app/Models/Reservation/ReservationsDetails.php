@@ -23,71 +23,19 @@ class ReservationsDetails
     private ?DateTimeInterface $updated_at = null;
 
     // --- GETTERS ---
-
-    public function getId(): int
-    {
-        return $this->id;
-    }
-
-    public function getReservation(): int
-    {
-        return $this->reservation;
-    }
-
-    public function getReservationObject(): ?Reservations
-    {
-        return $this->reservationObject;
-    }
-
-    public function getNom(): ?string
-    {
-        return $this->nom;
-    }
-
-    public function getPrenom(): ?string
-    {
-        return $this->prenom;
-    }
-
-    public function getTarif(): int
-    {
-        return $this->tarif;
-    }
-
-    public function getTarifObject(): ?object
-    {
-        return $this->tarifObject;
-    }
-
-    public function getTarifAccessCode(): ?string
-    {
-        return $this->tarif_access_code;
-    }
-
-    public function getJustificatifName(): ?string
-    {
-        return $this->justificatif_name;
-    }
-
-    public function getPlaceNumber(): ?int
-    {
-        return $this->place_number;
-    }
-
-    public function getPlaceObject(): ?object
-    {
-        return $this->placeObject;
-    }
-
-    public function getCreatedAt(): DateTimeInterface
-    {
-        return $this->created_at;
-    }
-
-    public function getUpdatedAt(): ?DateTimeInterface
-    {
-        return $this->updated_at;
-    }
+    public function getId(): int { return $this->id; }
+    public function getReservation(): int { return $this->reservation; }
+    public function getReservationObject(): ?Reservations { return $this->reservationObject; }
+    public function getNom(): ?string { return $this->nom; }
+    public function getPrenom(): ?string { return $this->prenom; }
+    public function getTarif(): int { return $this->tarif; }
+    public function getTarifObject(): ?object { return $this->tarifObject; }
+    public function getTarifAccessCode(): ?string { return $this->tarif_access_code; }
+    public function getJustificatifName(): ?string { return $this->justificatif_name; }
+    public function getPlaceNumber(): ?int { return $this->place_number; }
+    public function getPlaceObject(): ?object { return $this->placeObject; }
+    public function getCreatedAt(): DateTimeInterface { return $this->created_at; }
+    public function getUpdatedAt(): ?DateTimeInterface { return $this->updated_at; }
 
     // --- SETTERS ---
 

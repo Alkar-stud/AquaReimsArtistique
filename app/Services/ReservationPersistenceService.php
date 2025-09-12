@@ -127,6 +127,7 @@ class ReservationPersistenceService
                 ->setPrenom($detailData['prenom'])
                 ->setTarif($detailData['tarif_id'])
                 ->setTarifAccessCode($detailData['access_code'] ?? null)
+                ->setJustificatifName($detailData['justificatif_name'] ?? null)
                 ->setPlaceNumber($detailData['seat_id'])
                 ->setCreatedAt((new DateTime())->format('Y-m-d H:i:s'));
             $reservationsDetailsRepository->insert($reservationDetail);

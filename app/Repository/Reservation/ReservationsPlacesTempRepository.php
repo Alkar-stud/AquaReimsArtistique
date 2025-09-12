@@ -4,6 +4,7 @@ namespace app\Repository\Reservation;
 
 use app\Models\Reservation\ReservationsPlacesTemp;
 use app\Repository\AbstractRepository;
+use DateTime;
 
 class ReservationsPlacesTempRepository extends AbstractRepository
 {
@@ -83,6 +84,28 @@ class ReservationsPlacesTempRepository extends AbstractRepository
             'timeout' => $reservation->getTimeout()->format('Y-m-d H:i:s')
         ]);
     }
+
+    /**
+     * Met à jour le timeout pour une place spécifique d'une session.
+     *
+     * @param string $sessionId L'ID de la session PHP.
+     * @param int $placeId L'ID de la place.
+     * @param DateTime $newTimeout Le nouveau timestamp d'expiration.
+     * @return bool
+     */
+    public function updateTimeoutForSessionAndPlace(string $sessionId, int $placeId, DateTime $newTimeout): bool
+    {
+        $sql = "UPDATE $this->tableName 
+                SET timeout = :timeout 
+                WHERE session = :session_id AND place_id = :place_id";
+
+        return $this->execute($sql, [
+            'timeout' => $newTimeout->format('Y-m-d H:i:s'),
+            'session_id' => $sessionId,
+            'place_id' => $placeId
+        ]);
+    }
+
 
     public function deleteExpired(string $now): void
     {

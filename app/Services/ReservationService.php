@@ -983,25 +983,37 @@ class ReservationService
         $sessionId = session_id();
         $event = $baseViewModel['event'];
 
-        // Suppression des réservations temporaires expirées
+        // Suppression des réservations temporaires expirées pour tous les utilisateurs
         $this->tempRepo->deleteExpired((new DateTime())->format('Y-m-d H:i:s'));
 
-        // Récupérer les places temporairement réservées pour cette session d'événement
-        $tempSeats = $this->tempRepo->findByEventSession($reservationData['event_session_id']);
+        // Récupérer les places temporaires valides UNIQUEMENT pour la session de l'utilisateur courant
+        $validTempSeatsForUser = $this->tempRepo->findAllSeatsBySession($sessionId);
+        $validTempSeatIds = array_map(fn($t) => $t->getPlaceId(), $validTempSeatsForUser);
+
+        // Vérifier et nettoyer les places en session de l'utilisateur
+        $newTimeout = (new DateTime())->add(new \DateInterval(TIMEOUT_PLACE_RESERV));
+        foreach ($reservationData['reservation_detail'] as &$detail) {
+            if (!empty($detail['seat_id'])) {
+                if (in_array($detail['seat_id'], $validTempSeatIds)) {
+                    // La place est toujours bien réservée, on rafraîchit son timeout
+                    $this->tempRepo->updateTimeoutForSessionAndPlace($sessionId, $detail['seat_id'], $newTimeout);
+                } else {
+                    // La place a expiré, on la retire de la session
+                    $detail['seat_id'] = null;
+                    $detail['seat_name'] = null;
+                }
+            }
+        }
+        unset($detail);
 
         // Récupérer les places déjà réservées de manière définitive
         $placesReservees = $this->reservationsDetailsRepository->findReservedSeatsForSession($reservationData['event_session_id']);
 
-        // Construire un tableau place_id ⇒ session_id pour la vue
+        // Récupérer TOUTES les places temporaires restantes (pour l'affichage des places prises par d'autres)
+        $tempSeats = $this->tempRepo->findByEventSession($reservationData['event_session_id']);
         $placesSessions = [];
         foreach ($tempSeats as $t) {
             $placesSessions[$t->getPlaceId()] = $t->getSession();
-            // Si la place temporaire appartient à la session en cours, on met à jour les détails en session
-            if ($t->getSession() === $sessionId) {
-                $place = $this->placesRepository->findById($t->getPlaceId());
-                $reservationData['reservation_detail'][$t->getIndex()]['seat_id'] = $t->getPlaceId();
-                $reservationData['reservation_detail'][$t->getIndex()]['seat_name'] = $place ? $place->getFullPlaceName() : $t->getPlaceId();
-            }
         }
         // On met à jour la session avec les places récupérées
         $this->reservationSessionService->setReservationSession('reservation_detail', $reservationData['reservation_detail']);

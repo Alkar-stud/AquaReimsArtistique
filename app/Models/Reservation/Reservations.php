@@ -20,7 +20,7 @@ class Reservations
     private string $nom;
     private string $prenom;
     private string $email;
-    private string $phone;
+    private ?string $phone = null;
     private ?int $nageuse_si_limitation = null; // ID de la nageuse (si limitation)
     private ?Nageuses $nageuse = null; // Objet Nageuses lié
     private int $total_amount;
@@ -126,7 +126,7 @@ class Reservations
         return $this;
     }
 
-    public function setPhone(string $phone): self
+    public function setPhone(?string $phone): self
     {
         $this->phone = $phone;
         return $this;

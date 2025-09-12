@@ -13,6 +13,7 @@ use app\Repository\Reservation\ReservationsPlacesTempRepository;
 use app\Repository\TarifsRepository;
 use app\Services\EventsService;
 use app\Services\NageuseService;
+use app\Services\ReservationSeatService;
 use app\Services\ReservationService;
 use app\Services\ReservationSessionService;
 use app\Services\TarifService;
@@ -35,6 +36,7 @@ class ReservationAjaxController extends AbstractController
     private PiscineGradinsPlacesRepository $placesRepository;
     private ReservationsPlacesTempRepository $tempRepo;
     private ReservationsDetailsRepository $reservationsDetailsRepository;
+    private ReservationSeatService $reservationSeatService;
 
     public function __construct()
     {
@@ -50,6 +52,7 @@ class ReservationAjaxController extends AbstractController
         $this->placesRepository = new PiscineGradinsPlacesRepository();
         $this->tempRepo = new ReservationsPlacesTempRepository();
         $this->reservationsDetailsRepository = new ReservationsDetailsRepository();
+        $this->reservationSeatService = new ReservationSeatService();
     }
 
 
@@ -412,7 +415,7 @@ class ReservationAjaxController extends AbstractController
         }
 
         //On vérifie le statut de la place demandée
-        $checkSeatStatus = $this->reservationService->seatStatus($seatId, $reservation['event_session_id']);
+        $checkSeatStatus = $this->reservationSeatService->seatStatus($seatId, $reservation['event_session_id']);
 
         // Si la place est libre, on peut continuer le processus d'ajout.
         // Sinon, on retourne directement le statut d'échec.
@@ -509,6 +512,9 @@ class ReservationAjaxController extends AbstractController
     }
 
 
+    /**
+     * @throws DateMalformedStringException
+     */
     #[Route('/reservation/etape6', name: 'etape6', methods: ['POST'])]
     public function etape6(): void
     {

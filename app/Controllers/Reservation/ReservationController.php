@@ -9,6 +9,7 @@ use app\Services\EventsService;
 use app\Services\ReservationService;
 use app\Services\ReservationSessionService;
 use app\Services\NageuseService;
+use app\Services\ReservationViewModelService;
 use app\Utils\CsrfHelper;
 use app\Utils\ReservationContextHelper;
 use DateMalformedStringException;
@@ -23,6 +24,7 @@ class ReservationController extends AbstractController
     private NageuseService $nageuseService;
     private EventsService $eventsService;
     private ReservationService $reservationService;
+    private ReservationViewModelService $reservationViewModelService;
 
     public function __construct()
     {
@@ -33,6 +35,7 @@ class ReservationController extends AbstractController
         $this->nageuseService = new NageuseService();
         $this->eventsService = new EventsService();
         $this->reservationService = new ReservationService();
+        $this->reservationViewModelService = new ReservationViewModelService();
     }
 
     // Page d'accueil du processus de réservation
@@ -107,7 +110,7 @@ class ReservationController extends AbstractController
         }
 
         // Préparer toutes les données pour la vue via le service
-        $viewData = $this->reservationService->getReservationViewModel($reservation);
+        $viewData = $this->reservationViewModelService->getReservationViewModel($reservation);
         if ($viewData === null) { // Gère le cas où l'événement n'est pas trouvé
             // Gérer le cas où l'événement n'est pas trouvé, ou la session est incohérente
             header('Location: /reservation?erreur=session_invalide');
@@ -135,7 +138,7 @@ class ReservationController extends AbstractController
             exit;
         }
 
-        $context = $this->reservationService->getReservationViewModel($reservation);
+        $context = $this->reservationViewModelService->getReservationViewModel($reservation);
         $this->render('reservation/etape4', array_merge($context, [
             'numberedSeats' => $context['event']->getPiscine()->getNumberedSeats(),
             'csrf_token' => $this->getCsrfToken(),
@@ -158,7 +161,7 @@ class ReservationController extends AbstractController
         }
 
         // Le service prépare toutes les données nécessaires pour la vue.
-        $viewData = $this->reservationService->getStep5ViewModel($reservation);
+        $viewData = $this->reservationViewModelService->getStep5ViewModel($reservation);
         if ($viewData === null) {
             // Gérer le cas où l'événement n'est pas trouvé, ou la session est incohérente
             header('Location: /reservation?erreur=session_invalide');
@@ -189,7 +192,7 @@ class ReservationController extends AbstractController
         }
 
         //Filtre les item sans places assises
-        $context = $this->reservationService->getReservationViewModel($reservation);
+        $context = $this->reservationViewModelService->getReservationViewModel($reservation);
         $tarifsSansPlaces = array_filter($context['tarifs'], fn($t) => $t->getNbPlace() === null);
 
         //Récupération des tarifs sans places assises éventuellement déjà saisis pour pré remplissage

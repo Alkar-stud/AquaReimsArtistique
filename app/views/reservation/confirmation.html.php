@@ -111,13 +111,16 @@ foreach ($tarifs as $t) {
             <a href="/reservation/etape6Display" class="btn btn-secondary w-100 w-md-auto">Modifier mon choix précédent</a>
         </div>
         <div class="col-12 col-md-6">
-            <button type="submit" class="btn btn-primary w-100 w-md-auto">Valider et payer</button>
+            <button type="submit" class="btn btn-primary w-100 w-md-auto" id="submit-confirmation-btn">
+                <?= $totalAmount > 0 ? 'Valider et payer' : 'Valider ma réservation' ?>
+            </button>
         </div>
     </div>
 </div>
 
 <script>
     window.csrf_token = <?= json_encode($csrf_token ?? '') ?>;
+    window.totalAmount = <?= (int)($totalAmount ?? 0) ?>;
 </script>
 <script src="/assets/js/reservation_confirmation.js" defer></script>
 

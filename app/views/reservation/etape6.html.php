@@ -11,7 +11,7 @@ $reservationComplement = $reservationComplement ?? [];
                 <?php foreach ($tarifsSansPlaces as $tarif): ?>
                     <div class="mb-3">
                         <label for="tarif_<?= $tarif->getId() ?>" class="form-label">
-                            <?= htmlspecialchars($tarif->getLibelle()) ?> - <?= number_format($tarif->getPrice(), 2, ',', ' ') ?> €
+                            <?= htmlspecialchars($tarif->getLibelle()) ?> - <?= number_format($tarif->getPrice() / 100, 2, ',', ' ') ?> €
                         </label>
                         <?php if ($tarif->getDescription()): ?>
                             <div class="text-muted small mb-1"><?= nl2br(htmlspecialchars($tarif->getDescription())) ?></div>

@@ -16,9 +16,13 @@ foreach ($tarifs as $t) {
 ?>
 
 <div class="container">
-    <h2 class="mb-4 text-success">🎉 Paiement réussi !</h2>
+    <?php if ($reservation && $reservation->getTotalAmountPaid() > 0): ?>
+        <h2 class="mb-4 text-success">🎉 Paiement réussi !</h2>
+    <?php else: ?>
+        <h2 class="mb-4 text-success">🎉 Réservation enregistrée !</h2>
+    <?php endif; ?>
     <div class="alert alert-success">
-        Merci, votre réservation a bien été enregistrée et payée.<br>
+        Merci, votre réservation a bien été enregistrée.<br>
         <strong>Numéro de réservation :</strong> <?= htmlspecialchars($reservationNumber) ?>
     </div>
 
@@ -67,7 +71,7 @@ foreach ($tarifs as $t) {
                             — Place : <em><?= htmlspecialchars($detail->getPlaceNumber()) ?></em>
                         <?php endif; ?>
                     </div>
-                    <span class="float-end fw-bold"><?= number_format($prix, 2, ',', ' ') ?> €</span>
+                    <span class="float-end fw-bold"><?= number_format($prix / 100, 2, ',', ' ') ?> €</span>
                 </li>
             <?php endforeach; ?>
         </ul>
@@ -84,7 +88,7 @@ foreach ($tarifs as $t) {
                 ?>
                 <li class="list-group-item d-flex justify-content-between align-items-center">
                     <?= htmlspecialchars($tarif ? $tarif->getLibelle() : 'Tarif inconnu') ?> (x<?= $qty ?>)
-                    <span class="float-end fw-bold"><?= number_format($subtotal, 2, ',', ' ') ?> €</span>
+                    <span class="float-end fw-bold"><?= number_format($subtotal / 100, 2, ',', ' ') ?> €</span>
                 </li>
             <?php endforeach; ?>
         </ul>

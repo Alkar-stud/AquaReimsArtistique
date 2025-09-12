@@ -15,13 +15,14 @@ use app\Repository\TarifsRepository;
 use app\Repository\Reservation\ReservationsPlacesTempRepository;
 use app\Services\HelloAssoService;
 use app\DTO\HelloAssoCartDTO;
-use app\Services\ReservationService;
+use app\Services\ReservationCartService;
 use app\Utils\CsrfHelper;
 use app\Utils\ReservationHelper;
 use app\Services\ReservationStorageInterface;
 use app\Services\ReservationPersistenceService;
 use app\Services\MongoReservationStorage;
 use DateMalformedStringException;
+use Exception;
 use MongoDB\BSON\UTCDateTime;
 
 // à changer si la sauvegarde temporaire ne se fait plus dans MongoDB
@@ -35,7 +36,7 @@ class ReservationConfirmationController extends AbstractController
     private ReservationStorageInterface $reservationStorage;
     private ReservationsPlacesTempRepository $reservationsPlacesTempRepository;
     private ReservationPersistenceService $persistenceService;
-    private ReservationService $reservationService;
+    private ReservationCartService $reservationCartService;
 
     public function __construct()
     {
@@ -51,7 +52,7 @@ class ReservationConfirmationController extends AbstractController
             $this->reservationHelper,
             $this->reservationsPlacesTempRepository
         );
-        $this->reservationService = new ReservationService();
+        $this->reservationCartService = new ReservationCartService();
     }
 
     /**
@@ -102,9 +103,9 @@ class ReservationConfirmationController extends AbstractController
         }
 
         // Calculer le total et les quantités correctes pour l'affichage
-        $totalAmount = $this->reservationService->calculateTotalAmount($reservation);
+        $totalAmount = $this->reservationCartService->calculateTotalAmount($reservation);
         $allEventTarifs = $tarifsRepository->findByEventId($reservation['event_id']);
-        $tarifQuantities = $this->reservationService->getTarifQuantitiesFromDetails($reservation['reservation_detail'] ?? [], $allEventTarifs);
+        $tarifQuantities = $this->reservationCartService->getTarifQuantitiesFromDetails($reservation['reservation_detail'] ?? [], $allEventTarifs);
 
         $this->render('reservation/confirmation', [
             'reservation' => $reservation,
@@ -165,7 +166,7 @@ class ReservationConfirmationController extends AbstractController
         } else {
             // Sinon, on en crée un nouveau auprès de HelloAsso
             $event = (new EventsRepository())->findById($reservation['event_id']);
-            $total = $this->reservationService->calculateTotalAmount($reservation);
+            $total = $this->reservationCartService->calculateTotalAmount($reservation);
             $_SESSION['reservation'][$sessionId]['total'] = $total;
             $reservation['total'] = $total;
             $reservation['php_session_id'] = $sessionId; // Pour retrouver la session dans reservations_places_temp car suppression en callback
@@ -182,8 +183,8 @@ class ReservationConfirmationController extends AbstractController
             }
 
             $TabData = $this->helloAssoCart;
-            $TabData->setTotalAmount((int)$total); // Total en centimes
-            $TabData->setInitialAmount((int)$total); // Total en centimes
+            $TabData->setTotalAmount($total); // Total en centimes
+            $TabData->setInitialAmount($total); // Total en centimes
             $TabData->setPayer([
                 'firstName' => $reservation['user']['prenom'],
                 'lastName' => $reservation['user']['nom'],
@@ -396,6 +397,7 @@ class ReservationConfirmationController extends AbstractController
      * @param string $reservationIdMongo ID de la réservation temporaire.
      * @return Reservations|null
      * @throws DateMalformedStringException
+     * @throws Exception
      */
     private function processAndPersistReservation(object $paymentData, string $reservationIdMongo): ?Reservations
     {
@@ -416,6 +418,51 @@ class ReservationConfirmationController extends AbstractController
         // Utilise le service pour persister la réservation
         return $this->persistenceService->persistPaidReservation($paymentData, $tempReservation);
     }
+
+    /**
+     * @throws Exception
+     */
+    #[Route('/reservation/finalize-free', name: 'app_reservation_finalize_free', methods: ['POST'])]
+    public function finalizeFreeReservation(): void
+    {
+        $input = json_decode(file_get_contents('php://input'), true);
+        // Le token CSRF est validé par le JS, mais une double vérification est bonne
+        // if (!CsrfHelper::validateToken($input['csrf_token'] ?? '', '...')) { ... }
+
+        $sessionId = session_id();
+        $reservation = $_SESSION['reservation'][$sessionId] ?? null;
+        if (!$reservation) {
+            $this->json(['success' => false, 'error' => 'Session expirée.']);
+            return;
+        }
+
+        // Sécurité : on re-calcule le total pour s'assurer qu'il est bien de 0
+        $total = $this->reservationCartService->calculateTotalAmount($reservation);
+        if ($total > 0) {
+            $this->json(['success' => false, 'error' => 'Cette réservation n\'est pas gratuite.']);
+            return;
+        }
+
+        // Sauvegarde en BDD temporaire si ce n'est pas déjà fait
+        $reservationId = $reservation['reservationId'] ?? null;
+        if (!$reservationId) {
+            $reservation['createdAt'] = new UTCDateTime(time() * 1000);
+            $reservationId = $this->reservationStorage->saveReservation($reservation);
+            $_SESSION['reservation'][$sessionId]['reservationId'] = $reservationId;
+        }
+
+        // Utilisation du service de persistance pour les réservations gratuites
+        $persistedReservation = $this->persistenceService->persistFreeReservation($reservation);
+
+        if ($persistedReservation) {
+            // Nettoyer la session de réservation
+            unset($_SESSION['reservation'][$sessionId]);
+            $this->json(['success' => true, 'reservationUuid' => $persistedReservation->getUuid()]);
+        } else {
+            $this->json(['success' => false, 'error' => 'Erreur serveur lors de la sauvegarde de la réservation.']);
+        }
+    }
+
 
     /**
      * @throws DateMalformedStringException

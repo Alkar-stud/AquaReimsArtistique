@@ -16,7 +16,7 @@ class PiscineGradinsZones
     private int $nb_seats_horizontally;
     private bool $is_open = true;
     private bool $is_stairs_after = true;
-    private string $comments;
+    private ?string $comments = null;
     private DateTimeInterface $created_at;
     private ?DateTimeInterface $updated_at = null;
 
@@ -130,7 +130,7 @@ class PiscineGradinsZones
         return $this;
     }
 
-    public function setComments(string $comments): self
+    public function setComments(?string $comments): self
     {
         $this->comments = $comments;
         return $this;
@@ -138,6 +138,7 @@ class PiscineGradinsZones
 
     /**
      * @throws DateMalformedStringException
+     * @throws \Exception
      */
     public function setCreatedAt(string $created_at): self
     {
@@ -146,7 +147,7 @@ class PiscineGradinsZones
     }
 
     /**
-     * @throws DateMalformedStringException
+     * @throws DateMalformedStringException|\Exception
      */
     public function setUpdatedAt(?string $updated_at): self
     {

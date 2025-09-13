@@ -1,5 +1,4 @@
 <?php
-//Execute à l'affichage de la page d'accueil de Gestion : gestion.html.php
 namespace app\Services\Logs;
 
 use app\Enums\LogType;

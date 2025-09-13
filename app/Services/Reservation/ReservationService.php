@@ -333,20 +333,33 @@ class ReservationService
         }
 
         if ($step >= 5) {
-            if ($step == 5) {
-                // Pour la soumission de l'étape 5, on utilise les données du formulaire.
-                $dataForStep5 = $dataInputed;
-            } else {
-                // Pour les étapes suivantes, on reconstruit la liste des places à partir de la session.
-                $details = $reservationDataSession['reservation_detail'] ?? [];
-                $seatIds = array_filter(array_column($details, 'seat_id'));
-                $dataForStep5 = ['seats' => $seatIds];
+            // On vérifie si l'événement a des places numérotées avant de valider l'étape 5.
+            $event = $this->eventsRepository->findById($reservationDataSession['event_id']);
+            $shouldSkipStep5 = false;
+            if ($event) {
+                //Si pas de places numérotées dans la piscine de l'event, on saute la vérification 5 qui correspond au choix des places sur le plan.
+                if (!$event->getPiscine()->getNumberedSeats()) {
+                    $shouldSkipStep5 = true;
+                }
             }
 
-            $return = $this->reservationValidationService->processAndValidateStep5($dataForStep5, $reservationDataSession);
+            // Si l'étape 5 doit être sautée, on ne la valide pas.
+            if (!$shouldSkipStep5) {
+                if ($step == 5) {
+                    // Pour la soumission de l'étape 5, on utilise les données du formulaire.
+                    $dataForStep5 = $dataInputed;
+                } else {
+                    // Pour les étapes suivantes, on reconstruit la liste des places à partir de la session.
+                    $details = $reservationDataSession['reservation_detail'] ?? [];
+                    $seatIds = array_filter(array_column($details, 'seat_id'));
+                    $dataForStep5 = ['seats' => $seatIds];
+                }
 
-            if (!$return['success']) {
-                return $return;
+                $return = $this->reservationValidationService->processAndValidateStep5($dataForStep5, $reservationDataSession);
+
+                if (!$return['success']) {
+                    return $return;
+                }
             }
         }
 

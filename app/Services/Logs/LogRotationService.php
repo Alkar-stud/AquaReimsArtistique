@@ -14,7 +14,7 @@ class LogRotationService
     public function __construct()
     {
         $this->logService = new LogService();
-        $this->logDirectory = __DIR__ . '/../../storage/logs/';
+        $this->logDirectory = __DIR__ . '/../../../storage/logs/';
     }
 
     public function rotateAllLogs(): array

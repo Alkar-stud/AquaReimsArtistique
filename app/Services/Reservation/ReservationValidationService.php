@@ -168,11 +168,11 @@ class ReservationValidationService
             }
         }
 
-        if (empty($updatedDetails)) {
-            return ['success' => false, 'error' => 'Aucun tarif sélectionné.'];
+        if (empty($updatedDetails) && !empty($input['tarifs'])) {
+            return ['success' => false, 'error' => 'Veuillez sélectionner au moins une place assise.'];
         }
 
-        return ['success' => true, 'data' => $updatedDetails];
+             return ['success' => true, 'error' => null, 'data' => $updatedDetails];
     }
 
     /**
@@ -291,6 +291,7 @@ class ReservationValidationService
      */
     public function processAndValidateStep5(array $input, array $reservationData): array
     {
+
         $sessionId = session_id();
         $seats = $input['seats'] ?? [];
         $nbPlacesAssises = count($reservationData['reservation_detail']);

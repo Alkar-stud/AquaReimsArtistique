@@ -102,6 +102,11 @@ document.addEventListener('DOMContentLoaded', function () {
                 // Callback de succès pour mettre à jour les totaux
                 if (result.success && typeof result.newTotalAmount !== 'undefined') {
                     updateTotals(result.newTotalAmount);
+                    if (result.success) {
+                        const scrollY = window.scrollY;
+                        localStorage.setItem('scrollY', scrollY);
+                        window.location.reload();
+                    }
                 }
             });
         });
@@ -128,7 +133,11 @@ document.addEventListener('DOMContentLoaded', function () {
             const totalFeedbackSpan = document.createElement('span'); // Span virtuel
             updateField(totalFeedbackSpan, data, (result) => {
                 // En cas de succès, on recharge la page pour voir le nouvel article et les totaux mis à jour.
-                if (result.success) window.location.reload();
+                if (result.success) {
+                    const scrollY = window.scrollY;
+                    localStorage.setItem('scrollY', scrollY);
+                    window.location.reload();
+                }
             });
         });
     });
@@ -153,12 +162,38 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
 
+    // Après le rechargement, restaure la position
+    window.addEventListener('load', () => {
+        const scrollY = localStorage.getItem('scrollY');
+        if (scrollY !== null) {
+            window.scrollTo(0, parseInt(scrollY, 10));
+            localStorage.removeItem('scrollY');
+        }
+    });
+
+    // --- Gestion de l'annulation ---
+    const cancelButton = document.querySelectorAll('.cancel-button');
+    cancelButton.forEach(input => {
+        input.addEventListener('click', function () {
+            if (confirm('Êtes-vous sûr ?')) {
+                const data = {
+                    typeField: 'cancel',
+                    token: token
+                };
+
+                updateField(null, data);
+            }
+
+        });
+    });
 
     // --- Fonction générique de mise à jour ---
     function updateField(feedbackSpan, data, successCallback = null) {
-        feedbackSpan.textContent = '...';
-        feedbackSpan.classList.remove('text-success', 'text-danger');
-        feedbackSpan.title = ''; // On réinitialise l'infobulle
+        if (feedbackSpan !== null) {
+            feedbackSpan.textContent = '...';
+            feedbackSpan.classList.remove('text-success', 'text-danger');
+            feedbackSpan.title = ''; // On réinitialise l'infobulle
+        }
 
         fetch('/modifData/update', {
             method: 'POST',
@@ -184,24 +219,32 @@ document.addEventListener('DOMContentLoaded', function () {
             .then(result => {
 console.log('result : ', result);
                 if (result.success) {
-                    feedbackSpan.textContent = '✓';
-                    feedbackSpan.classList.add('text-success');
-                    if (successCallback) {
-                        successCallback(result);
+                    if (feedbackSpan !== null) {
+                        feedbackSpan.textContent = '✓';
+                        feedbackSpan.classList.add('text-success');
+                        if (successCallback) {
+                            successCallback(result);
+                        }
+                    } else {
+                        window.location.reload();
                     }
                 } else {
-                    feedbackSpan.textContent = '✗';
-                    feedbackSpan.classList.add('text-danger');
-                    // On affiche l'erreur dans l'infobulle au lieu d'une alerte
-                    feedbackSpan.title = result.message || 'Une erreur est survenue.';
+                    if (feedbackSpan !== null) {
+                        feedbackSpan.textContent = '✗';
+                        feedbackSpan.classList.add('text-danger');
+                        // On affiche l'erreur dans l'infobulle au lieu d'une alerte
+                        feedbackSpan.title = result.message || 'Une erreur est survenue.';
+                    }
                     console.error('Erreur lors de la mise à jour:', result.message);
                 }
             })
             .catch(error => {
                 console.error('Erreur lors de la mise à jour:', error);
-                feedbackSpan.textContent = '✗';
-                feedbackSpan.classList.add('text-danger');
-                feedbackSpan.title = 'Une erreur de communication est survenue. Veuillez réessayer.';
+                if (feedbackSpan !== null) {
+                    feedbackSpan.textContent = '✗';
+                    feedbackSpan.classList.add('text-danger');
+                    feedbackSpan.title = 'Une erreur de communication est survenue. Veuillez réessayer.';
+                }
                 console.error('Erreur de communication:', error);
             });
     }

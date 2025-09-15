@@ -243,11 +243,30 @@ class ReservationsRepository extends AbstractRepository
      * @param bool $is_canceled
      * @return bool
      */
-    public function cancel(int $id, bool $is_canceled = true): bool
+    public function cancelById(int $id, bool $is_canceled = true): bool
     {
-        $sql = "UPDATE $this->tableName SET is_canceled = ($is_canceled == false ? 0 : 1), updated_at = NOW() WHERE id = :id";
-        return $this->execute($sql, ['id' => $id]);
+        $sql = "UPDATE $this->tableName SET is_canceled = :is_canceled, updated_at = NOW() WHERE id = :id";
+        return $this->execute($sql, [
+            'id' => $id,
+            'is_canceled' => $is_canceled ? 1 : 0
+        ]);
     }
+
+    /**
+     * Annule une réservation par le token
+     * @param string $token
+     * @param bool $is_canceled
+     * @return bool
+     */
+    public function cancelByToken(string $token, bool $is_canceled = true): bool
+    {
+        $sql = "UPDATE $this->tableName SET is_canceled = :is_canceled, updated_at = NOW() WHERE token = :token";
+        return $this->execute($sql, [
+            'token' => $token,
+            'is_canceled' => $is_canceled ? 1 : 0
+        ]);
+    }
+
 
     /**
      * Marque une réservation comme vérifiée / ou non

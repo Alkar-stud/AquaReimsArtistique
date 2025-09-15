@@ -2,6 +2,7 @@
 // Variables attendues : $reservation, $reservationDetails, $reservationComplements, $event, $session, $tarifsByIdObj
 
 $canBeModified = new DateTime() < $reservation->getTokenExpireAt();
+$canBeModified = !$reservation->isCanceled();
 ?>
     <div class="container"
          id="reservation-data-container"
@@ -77,7 +78,7 @@ $canBeModified = new DateTime() < $reservation->getTokenExpireAt();
                             $detailsByTarif[$detail->getTarif()][] = $detail;
                         }
 
-                        // On boucle sur les QUANTITÉS de tarifs (packs), pas sur les participants
+                        // On boucle sur les quantités de tarifs (packs)
                         foreach ($tarifQuantities as $tarifId => $quantity):
                             $tarifObj = $tarifsByIdObj[$tarifId] ?? null;
                             if (!$tarifObj) continue;
@@ -206,7 +207,7 @@ $canBeModified = new DateTime() < $reservation->getTokenExpireAt();
             </div>
             <br>
             <div class="d-flex justify-content-end">
-                <button class="btn btn-warning" onClick="alert('Fonctionnalité à implémenter : Annuler la réservation <?= $reservation->getId() ?>');">Annuler la réservation</button>
+                <button class="btn btn-warning cancel-button">Annuler la réservation</button>
             </div>
         </fieldset>
     </div>

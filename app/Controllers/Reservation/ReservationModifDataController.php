@@ -74,7 +74,7 @@ class ReservationModifDataController extends AbstractController
         $reservationComplements = $this->reservationsComplementsRepository->findByReservation($reservation->getId());
 
         // On récupère tous les tarifs pour pouvoir afficher les libellés
-        $tarifs = $this->tarifsRepository->findAll();
+        //$tarifs = $this->tarifsRepository->findAll();
         $tarifs = $this->tarifsRepository->findByEventId($event->getId());
         $tarifsByIdObj = [];
         foreach ($tarifs as $t) {
@@ -193,7 +193,7 @@ class ReservationModifDataController extends AbstractController
                 // Recalculer le total de la réservation
                 $allReservationDetails = $this->reservationsDetailsRepository->findByReservation($reservation->getId());
                 $allReservationComplements = $this->reservationsComplementsRepository->findByReservation($reservation->getId());
-                $allEventTarifs = $this->tarifsRepository->findByEventId($reservation->getEvent());
+                //$allEventTarifs = $this->tarifsRepository->findByEventId($reservation->getEvent());
 
                 $detailsAsArray = array_map(fn($d) => ['tarif_id' => $d->getTarif()], $allReservationDetails);
                 $complementsAsArray = array_map(fn($c) => ['tarif_id' => $c->getTarif(), 'qty' => $c->getQty()], $allReservationComplements);
@@ -206,6 +206,8 @@ class ReservationModifDataController extends AbstractController
                 $return['newTotalAmount'] = $newTotalAmount;
 
             }
+        } elseif ($typeField == 'cancel') {
+            $return = $this->cancel($reservation->getToken());
         } else {
             $return = ['success' => false, 'message' => 'Erreur lors de la mise à jour.'];
         }
@@ -253,5 +255,13 @@ class ReservationModifDataController extends AbstractController
         }
     }
 
-
+    public function cancel($token): array
+    {
+        $return = $this->reservationsRepository->cancelByToken($token, true);
+        if ($return) {
+            return ['success' => true, 'message' => 'Réservation annulée.'];
+        } else {
+            return ['success' => false, 'message' => 'Erreur lors de l\'annulation.'];
+        }
+    }
 }

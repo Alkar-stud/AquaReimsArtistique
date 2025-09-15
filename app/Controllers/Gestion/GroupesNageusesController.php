@@ -30,7 +30,7 @@ class GroupesNageusesController extends AbstractController
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $groupe = new GroupesNageuses();
             $groupe->setLibelle($_POST['libelle'] ?? '')
-                ->setCoach(isset($_POST['coach']) && $_POST['coach'] !== '' ? $_POST['coach'] : null)
+                ->setCoach(isset($_POST['coach']) && $_POST['coach'] !== '' ? mb_convert_case($_POST['coach'], MB_CASE_TITLE, "UTF-8") : null)
                 ->setIsActive(isset($_POST['is_active']))
                 ->setOrder((int)($_POST['order'] ?? 0))
                 ->setCreatedAt(date('Y-m-d H:i:s'));
@@ -48,7 +48,7 @@ class GroupesNageusesController extends AbstractController
             $groupe = $this->repository->findById($id);
             if ($groupe) {
                 $groupe->setLibelle($_POST['libelle'] ?? '')
-                    ->setCoach(isset($_POST['coach']) && $_POST['coach'] !== '' ? $_POST['coach'] : null)
+                    ->setCoach(isset($_POST['coach']) && $_POST['coach'] !== '' ? mb_convert_case($_POST['coach'], MB_CASE_TITLE, "UTF-8") : null)
                     ->setIsActive(isset($_POST['is_active']))
                     ->setOrder((int)($_POST['order'] ?? 0));
                 $this->repository->update($groupe);

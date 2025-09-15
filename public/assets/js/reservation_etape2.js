@@ -6,13 +6,6 @@ document.addEventListener('DOMContentLoaded', function () {
     const emailInput = form.email;
     const telInput = form.telephone;
 
-    function validateEmail(email) {
-        return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-    }
-    function validateTel(tel) {
-        return /^0[1-9](\d{8})$/.test(tel.replace(/\s+/g, ''));
-    }
-
     emailInput.addEventListener('blur', function () {
         if (!validateEmail(emailInput.value)) {
             emailInput.classList.add('is-invalid');

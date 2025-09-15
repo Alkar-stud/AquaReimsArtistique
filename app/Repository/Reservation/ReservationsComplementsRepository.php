@@ -55,6 +55,20 @@ class ReservationsComplementsRepository extends AbstractRepository
     }
 
     /**
+     * Trouve tous les compléments pour une réservation
+     *
+     * @param int $reservationId
+     * @param $tarifId
+     * @return ReservationsComplements[]
+     */
+    public function findByReservationAndTarif(int $reservationId, $tarifId): array
+    {
+        $sql = "SELECT * FROM $this->tableName WHERE reservation = :reservationId AND tarif = :tarifId ORDER BY created_at";
+        $results = $this->query($sql, ['reservationId' => $reservationId, 'tarifId' => $tarifId]);
+        return array_map([$this, 'hydrate'], $results);
+    }
+
+    /**
      * Insère un nouveau complément de réservation
      * @param ReservationsComplements $complement
      * @return int ID du complément inséré
@@ -98,6 +112,22 @@ class ReservationsComplementsRepository extends AbstractRepository
             'tarif_access_code' => $complement->getTarifAccessCode(),
             'qty' => $complement->getQty()
         ]);
+    }
+
+    /**
+     * Met à jour un seul champ d'un détail de réservation.
+     *
+     * @param int $id L'ID du détail
+     * @param string|null $tarif_access_code
+     * @param int $qty
+     * @return bool
+     */
+    public function updateQuantity(int $id, ?string $tarif_access_code, int $qty): bool
+    {
+        // la liste blanche ci-dessus sert de protection.
+        $sql = "UPDATE $this->tableName SET `qty` = :qty, `tarif_access_code` = :tarif_access_code WHERE id = :id";
+
+        return $this->execute($sql, ['id' => $id, 'qty' => $qty, 'tarif_access_code' => $tarif_access_code]);
     }
 
     /**

@@ -34,3 +34,10 @@ function restoreReservationDetailsState() {
         if (btnBottom) btnBottom.textContent = open ? 'Masquer' : 'Détail';
     }
 }
+
+function validateEmail(email) {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+function validateTel(tel) {
+    return /^0[1-9](\d{8})$/.test(tel.replace(/\s+/g, ''));
+}

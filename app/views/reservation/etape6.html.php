@@ -20,10 +20,11 @@ $reservationComplement = $reservationComplement ?? [];
                         $defaultQty = $reservationComplement[$tarif->getId()] ?? 0;
                         ?>
                         <input type="number"
-                               class="form-control"
+                               class="form-control complement-input"
                                id="tarif_<?= $tarif->getId() ?>"
                                name="tarifs[<?= $tarif->getId() ?>]"
                                min="0"
+                               <?= ($tarif->getMaxTickets() !== null ? 'max="' . $tarif->getMaxTickets() . '"':''); ?>
                                value="<?= htmlspecialchars($defaultQty) ?>">
                     </div>
                 <?php endforeach; ?>

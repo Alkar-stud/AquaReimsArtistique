@@ -39,3 +39,24 @@ document.getElementById('tarifsSansPlacesForm').addEventListener('submit', funct
             }
         });
 });
+
+const inputs = document.querySelectorAll('.complement-input');
+
+inputs.forEach(input => {
+    // Quand on clique dans le champ, s'il vaut 0, on le vide.
+    input.addEventListener('focus', function() {
+        if (this.value === '0') {
+            this.value = '';
+        }
+    });
+
+    // Quand on quitte le champ, s'il est vide, on remet 0.
+    input.addEventListener('blur', function() {
+        if (this.value === '') {
+            this.value = '0';
+        }
+    });
+
+    input.addEventListener('blur', checkLimite);
+    input.addEventListener('input', checkLimite);
+});

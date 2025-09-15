@@ -212,6 +212,32 @@ class ReservationsRepository extends AbstractRepository
     }
 
     /**
+     * Met à jour un seul champ d'une réservation.
+     * @param int $id L'ID de la réservation
+     * @param string $field Le nom de la colonne à mettre à jour
+     * @param string|null $value La nouvelle valeur
+     * @return bool
+     */
+    public function updateSingleField(int $id, string $field, ?string $value): bool
+    {
+        // Liste blanche des champs autorisés pour la sécurité
+        $allowedFields = ['nom', 'prenom', 'email', 'phone', 'total_amount', 'total_amount_paid'];
+        if (!in_array($field, $allowedFields)) {
+            return false;
+        }
+        // Si le champ est 'phone' et que la valeur est une chaîne vide, on la transforme en null
+        if ($field === 'phone' && $value === '') {
+            $value = null;
+        }
+
+        // On ne peut pas utiliser de paramètre pour le nom de la colonne,
+        // la liste blanche ci-dessus sert de protection.
+        $sql = "UPDATE $this->tableName SET `$field` = :value WHERE id = :id";
+
+        return $this->execute($sql, ['id' => $id, 'value' => $value]);
+    }
+
+    /**
      * Annule une réservation
      * @param int $id
      * @param bool $is_canceled

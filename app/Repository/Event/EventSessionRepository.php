@@ -12,6 +12,26 @@ class EventSessionRepository extends AbstractRepository
         parent::__construct('event_sessions');
     }
 
+    /**
+     * Trouve une session par son ID
+     * @param int $sessionId
+     * @return EventSession|null
+     */
+    public function findById(int $sessionId): ?EventSession
+    {
+        $sql = "SELECT * FROM $this->tableName WHERE id = :id";
+        $result = $this->query($sql, ['id' => $sessionId]);
+        if (empty($result)) {
+            return null;
+        }
+        return $this->hydrate($result[0]);
+    }
+
+    /**
+     * Trouve toutes les sessions d'un événement
+     * @param int $eventId
+     * @return array
+     */
     public function findByEventId(int $eventId): array
     {
         $sql = "SELECT * FROM $this->tableName WHERE event_id = :event_id ORDER BY event_start_at ASC";

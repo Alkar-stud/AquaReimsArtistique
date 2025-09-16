@@ -16,6 +16,7 @@ use app\Repository\TarifsRepository;
 use app\Services\HelloAssoService;
 use app\Services\MongoReservationStorage;
 use app\Services\Payment\PaymentService;
+use app\Services\Payment\PaymentWebhookService;
 use app\Services\Reservation\ReservationCartService;
 use app\Services\Reservation\ReservationPersistenceService;
 use app\Services\Reservation\ReservationprocessAndPersistService;
@@ -37,6 +38,7 @@ class ReservationConfirmationController extends AbstractController
     private ReservationCartService $reservationCartService;
     private ReservationprocessAndPersistService $reservationprocessAndPersistService;
     private PaymentService $paymentService;
+    private PaymentWebhookService $paymentWebhookService;
 
     public function __construct()
     {
@@ -55,6 +57,7 @@ class ReservationConfirmationController extends AbstractController
         $this->reservationCartService = new ReservationCartService();
         $this->reservationprocessAndPersistService = new ReservationprocessAndPersistService();
         $this->paymentService = new PaymentService();
+        $this->paymentWebhookService = new PaymentWebhookService();
     }
 
     /**
@@ -145,7 +148,6 @@ class ReservationConfirmationController extends AbstractController
     #[Route('/reservation/payment', name: 'app_reservation_payment')]
     public function payment(): void
     {
-
         $sessionId = session_id();
         $reservation = $_SESSION['reservation'][$sessionId] ?? null;
         if (!$reservation || empty($reservation['event_id'])) {
@@ -189,16 +191,20 @@ class ReservationConfirmationController extends AbstractController
             $host = $_SERVER['HTTP_HOST'];
             $baseUrl = $protocol . $host;
 
+            // Création et hydratation du DTO
+            $cartDTO = new HelloAssoCartDTO();
+            $cartDTO->setTotalAmount($total);
+            $cartDTO->setItemName($itemName);
+            $cartDTO->setPayer($payerInfo);
+            $cartDTO->setMetaData(['reservationId' => $mongoId, 'context' => 'new_reservation']);
+            $cartDTO->setBackUrl($baseUrl . '/reservation/confirmation');
+            $cartDTO->setErrorUrl($baseUrl . '/reservation/erreur');
+            $cartDTO->setReturnUrl($baseUrl . '/reservation/merci');
+            // La notion de don n'est pas gérée dans le tunnel initial, donc false par défaut.
+            $cartDTO->setContainsDonation(false);
+
             // Appel du PaymentService
-            $paymentResult = $this->paymentService->createPaymentIntent(
-                $total,
-                $payerInfo,
-                $itemName,
-                ['reservationId' => $mongoId], // Métadonnées
-                $baseUrl . '/reservation/confirmation', // backUrl
-                $baseUrl . '/reservation/erreur',       // errorUrl
-                $baseUrl . '/reservation/merci'         // returnUrl
-            );
+            $paymentResult = $this->paymentService->createPaymentIntent($cartDTO);
 
             if ($paymentResult['success']) {
                 $redirectUrl = $paymentResult['redirectUrl'];
@@ -263,56 +269,6 @@ class ReservationConfirmationController extends AbstractController
             // Le paiement n'est pas encore trouvé ou n'a pas le bon statut, on indique au front de patienter.
             $this->json(['success' => false, 'status' => 'pending']);
         }
-    }
-
-
-    /**
-     * @throws DateMalformedStringException
-     */
-    #[Route('/reservation/paymentCallback', name: 'app_reservation_paymentCallback', methods: ['POST'])]
-    public function paymentCallback(): void
-    {
-        $raw = file_get_contents('php://input');
-        $payload = json_decode($raw);
-
-        // Vérification de base de la notification
-        if (
-            !$payload || !isset($payload->eventType) || $payload->eventType !== 'Order' ||
-            !isset($payload->data->items[0]->state) || $payload->data->items[0]->state !== 'Processed'
-        ) {
-            // Ce n'est pas une notification de paiement réussi, on l'ignore.
-            http_response_code(200); // On répond 200 pour que HelloAsso ne réessaie pas.
-            echo 'Notification ignored';
-            return;
-        }
-
-        // Si APP_DEBUG est à true, on enregistre le payload pour le débogage
-        if (isset($_ENV['HELLOASSO_DEBUG']) && $_ENV['HELLOASSO_DEBUG'] === 'true') {
-            $dir = __DIR__ . '/../../../storage/app/private/';
-            if (!is_dir($dir)) {
-                mkdir($dir, 0770, true);
-            }
-            $filename = $dir . 'webhook_callback_' . date('Ymd_His') . '_' . uniqid() . '.json';
-            // On essaie de formater le JSON pour la lisibilité, sinon on sauvegarde le texte brut.
-            $decodedPayload = json_decode($raw);
-            $contentToSave = json_last_error() === JSON_ERROR_NONE ? json_encode($decodedPayload, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) : $raw;
-            file_put_contents($filename, $contentToSave);
-        }
-
-        // Récupérer l'ID de la réservation temporaire depuis les métadonnées
-        $reservationIdMongo = $payload->metadata->reservationId ?? null;
-        if (!$reservationIdMongo) {
-            error_log("Webhook HelloAsso reçu sans reservationId dans les metadata.");
-            http_response_code(200);
-            echo 'Missing metadata';
-            return;
-        }
-
-        // Traiter et persister la réservation
-        $this->reservationprocessAndPersistService->processAndPersistReservation($payload->data, $reservationIdMongo);
-
-        http_response_code(200);
-        echo 'OK';
     }
 
     /**

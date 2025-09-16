@@ -41,3 +41,7 @@ function validateEmail(email) {
 function validateTel(tel) {
     return /^0[1-9](\d{8})$/.test(tel.replace(/\s+/g, ''));
 }
+
+function showToast(message) {
+    alert(message);
+}

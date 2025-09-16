@@ -3,6 +3,7 @@
 namespace app\Services;
 
 use app\Models\Reservation\Reservations;
+use app\Repository\Event\EventsRepository;
 use app\Repository\MailTemplateRepository;
 use app\Repository\Reservation\ReservationsComplementsRepository;
 use app\Repository\Reservation\ReservationsDetailsRepository;
@@ -79,6 +80,7 @@ class MailService
         foreach ($params as $key => $value) {
             $placeholder = '{' . $key . '}';
             $subject = str_replace($placeholder, $value, $subject);
+
             if ($bodyHtml) {
                 $bodyHtml = str_replace($placeholder, $value, $bodyHtml);
             }
@@ -183,7 +185,7 @@ class MailService
                     $recapHtml .= ' &mdash; Place: <em>' . htmlspecialchars($detail->getPlaceNumber()) . '</em>';
                 }
                 $recapHtml .= '</td>';
-                $recapHtml .= '<td style="border-bottom: 1px solid #ddd; text-align: right;"><strong>' . number_format($prix, 2, ',', ' ') . ' €</strong></td>';
+                $recapHtml .= '<td style="border-bottom: 1px solid #ddd; text-align: right;"><strong>' . number_format($prix / 100, 2, ',', ' ') . ' €</strong></td>';
                 $recapHtml .= '</tr>';
             }
             $recapHtml .= '</table>';
@@ -199,11 +201,17 @@ class MailService
                     $subtotal = $tarif->getPrice() * $qty;
                     $recapHtml .= '<tr>';
                     $recapHtml .= '<td style="border-bottom: 1px solid #ddd;">' . htmlspecialchars($tarif->getLibelle()) . ' (x' . $qty . ')</td>';
-                    $recapHtml .= '<td style="border-bottom: 1px solid #ddd; text-align: right;"><strong>' . number_format($subtotal, 2, ',', ' ') . ' €</strong></td>';
+                    $recapHtml .= '<td style="border-bottom: 1px solid #ddd; text-align: right;"><strong>' . number_format($subtotal / 100, 2, ',', ' ') . ' €</strong></td>';
                     $recapHtml .= '</tr>';
                 }
             }
             $recapHtml .= '</table>';
+        }
+
+        // S'assurer que l'objet Event est hydraté
+        if (!$reservation->getEventObject()) {
+            $eventsRepository = new EventsRepository();
+            $reservation->setEventObject($eventsRepository->findById($reservation->getEvent()));
         }
 
         $event = $reservation->getEventObject();
@@ -235,18 +243,18 @@ class MailService
             'prenom' => $reservation->getPrenom(),
             'token' => $reservation->getToken(),
             'IDreservation' => $reservation->getId(),
-            'EventLibelle' => $event ? $event->getLibelle() : '',
-            'DateEvent' => $session ? $session->getEventStartAt()->format('d/m/Y H:i') : '',
-            'OpenDoorsAt' => $session ? $session->getOpeningDoorsAt()->format('d/m/Y H:i') : '',
-            'Piscine' => $event && $event->getPiscine() ? $event->getPiscine()->getLibelle() . '(' . $event->getPiscine()->getAdresse() . ')' : '',
+            'EventLibelle' => $event?->getLibelle() ?? 'N/A',
+            'DateEvent' => $session?->getEventStartAt()->format('d/m/Y H:i') ?? 'N/A',
+            'OpenDoorsAt' => $session?->getOpeningDoorsAt()->format('d/m/Y H:i') ?? 'N/A',
+            'Piscine' => $event?->getPiscine() ? ($event->getPiscine()->getLibelle() . ' (' . $event->getPiscine()->getAdresse() . ')') : 'N/A',
             'ReservationNomPrenom' => $reservation->getPrenom() . ' ' . $reservation->getNom(),
             'Reservationmail' => $reservation->getEmail(),
-            'Reservationtel' => $reservation->getPhone(),
+            'Reservationtel' => $reservation->getPhone() ?? 'Non fourni',
             'ReservationNbTotalPlace' => $nbTotalPlace,
             'AffichRecapDetailPlaces' => $recapHtml,
             'TotalAPayer' => $totalAPayerHtml,
             'ReservationMontantTotal' => number_format($montantAAfficher / 100, 2, ',', ' ') . ' €',
-            'SIGNATURE' => SIGNATURE ?? 'L\'équipe Aqua Reims Artistique'
+            'SIGNATURE' => $_ENV['MAIL_SIGNATURE'] ?? 'L\'équipe Aqua Reims Artistique'
         ]);
     }
 }

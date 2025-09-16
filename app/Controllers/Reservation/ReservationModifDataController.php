@@ -4,6 +4,7 @@ namespace app\Controllers\Reservation;
 
 use app\Attributes\Route;
 use app\Controllers\AbstractController;
+use app\DTO\HelloAssoCartDTO;
 use app\Models\Reservation\Reservations;
 use app\Models\Reservation\ReservationsComplements;
 use app\Models\Reservation\ReservationsDetails;
@@ -12,6 +13,8 @@ use app\Repository\Event\EventsRepository;
 use app\Repository\Reservation\ReservationsComplementsRepository;
 use app\Repository\Reservation\ReservationsDetailsRepository;
 use app\Repository\Reservation\ReservationsRepository;
+use app\Services\HelloAssoService;
+use app\Services\Payment\PaymentService;
 use app\Services\Reservation\ReservationCartService;
 use app\Repository\TarifsRepository;
 use app\Services\Reservation\ReservationService;
@@ -28,6 +31,8 @@ class ReservationModifDataController extends AbstractController
     private TarifsRepository $tarifsRepository;
     private ReservationCartService $reservationCartService;
     private ReservationTokenService $reservationTokenService;
+    private PaymentService $paymentService;
+    private HelloAssoService $helloAssoService;
     private ReservationService $reservationService;
 
 
@@ -43,6 +48,8 @@ class ReservationModifDataController extends AbstractController
         $this->reservationCartService = new ReservationCartService();
         $this->reservationTokenService = new ReservationTokenService();
         $this->reservationService = new ReservationService();
+        $this->paymentService = new PaymentService();
+        $this->helloAssoService = new HelloAssoService();
     }
 
     /**
@@ -278,4 +285,119 @@ class ReservationModifDataController extends AbstractController
             return ['success' => false, 'message' => 'Erreur lors de l\'annulation.'];
         }
     }
+
+    /**
+     * Crée une intention de paiement pour le solde restant d'une réservation.
+     * @throws DateMalformedStringException
+     */
+    #[Route('/modifData/createPayment', name: 'app_reservation_create_payment_balance', methods: ['POST'])]
+    public function createPaymentForBalance(): void
+    {
+        $data = json_decode(file_get_contents('php://input'), true);
+        $token = $data['token'] ?? null;
+        $amountToPay = (int)($data['amountToPay'] ?? 0); // Montant total à régler en centimes
+        $containsDonation = (bool)($data['containsDonation'] ?? false);
+
+        if (!$token || !ctype_alnum($token)) {
+            $this->json(['success' => false, 'message' => 'Token invalide.']);
+            return;
+        }
+
+        $reservation = $this->reservationsRepository->findByToken($token);
+        if (!$this->reservationTokenService->checkReservationToken($reservation, $token)) {
+            $this->json(['success' => false, 'message' => 'La modification n\'est plus autorisée.']);
+            return;
+        }
+
+        if ($amountToPay <= 0) {
+            $this->json(['success' => false, 'message' => 'Le montant à payer doit être positif.']);
+            return;
+        }
+
+        // Préparation des données pour le PaymentService
+        $event = $this->eventsRepository->findById($reservation->getEvent());
+        $itemName = 'Solde réservation ' . $reservation->getId() . ' - ' . $event->getLibelle();
+        $payerInfo = [
+            'firstName' => $reservation->getPrenom(),
+            'lastName'  => $reservation->getNom(),
+            'email'     => $reservation->getEmail()
+        ];
+
+        // Construction des URLs de retour avec le token
+        $baseUrl = "https://" . $_SERVER['HTTP_HOST'];
+        $returnParams = '?token=' . $token;
+
+        // Création et hydratation du DTO
+        $cartDTO = new HelloAssoCartDTO();
+        $cartDTO->setTotalAmount($amountToPay);
+        $cartDTO->setItemName($itemName);
+        $cartDTO->setPayer($payerInfo);
+        $cartDTO->setMetaData(['reservationId' => $reservation->getId(), 'context' => 'balance_payment']);
+        $cartDTO->setBackUrl($baseUrl . '/modifData' . $returnParams);
+        $cartDTO->setErrorUrl($baseUrl . '/modifData' . $returnParams . '&status=error');
+        $cartDTO->setReturnUrl($baseUrl . '/modifData' . $returnParams . '&status=success');
+        $cartDTO->setContainsDonation($containsDonation);
+
+        // Appel du PaymentService
+        $paymentResult = $this->paymentService->createPaymentIntent($cartDTO);
+
+        if ($paymentResult['success']) {
+            // On pourrait stocker le checkoutIntentId sur la réservation si nécessaire
+            // $this->reservationsRepository->updateSingleField($reservation->getId(), 'checkout_intent_id', $paymentResult['checkoutIntentId']);
+            $this->json(['success' => true, 'redirectUrl' => $paymentResult['redirectUrl']]);
+        } else {
+            error_log("Erreur de création de paiement (solde) pour reservationId {$reservation->getId()}: " . ($paymentResult['error'] ?? 'Inconnue'));
+            $this->json(['success' => false, 'message' => 'Erreur lors de la communication avec le service de paiement.', 'details' => $paymentResult['details'] ?? null]);
+        }
+    }
+
+    /**
+     * Force la vérification d'un paiement de solde directement auprès de HelloAsso.
+     * @throws DateMalformedStringException
+     */
+    #[Route('/modifData/forceCheckPayment', name: 'app_reservation_force_check_payment_balance', methods: ['POST'])]
+    public function forceCheckPaymentForBalance(): void
+    {
+        $data = json_decode(file_get_contents('php://input'), true);
+        $checkoutIntentId = $data['checkoutIntentId'] ?? null;
+
+        if (!$checkoutIntentId) {
+            $this->json(['success' => false, 'message' => 'ID de transaction manquant.']);
+            return;
+        }
+
+        // Étape 1 : Vérifier si le webhook n'a pas déjà traité ce paiement entre-temps
+        $payment = (new \app\Repository\Reservation\ReservationPaymentsRepository())->findByCheckoutId($checkoutIntentId);
+        if ($payment) {
+            $this->json(['success' => true]); // Le paiement est déjà là, tout va bien.
+            return;
+        }
+
+        // Étape 2 : Interroger directement HelloAsso
+        $accessToken = $this->helloAssoService->getToken();
+        $paymentInfo = $this->helloAssoService->checkPayment($accessToken, $checkoutIntentId);
+
+        // Étape 3 : Valider la réponse et traiter le paiement
+        if (
+            isset($paymentInfo->order, $paymentInfo->metadata->context) &&
+            $paymentInfo->metadata->context === 'balance_payment' &&
+            $paymentInfo->order->items[0]->state === 'Processed'
+        ) {
+            // La logique est la même que dans le webhook, on pourrait la factoriser
+            // mais pour l'instant on la duplique pour la clarté.
+            $reservationId = $paymentInfo->metadata->reservationId;
+            $orderData = $paymentInfo->order;
+            $orderData->checkoutIntentId = $paymentInfo->id; // Important: l'ID est à la racine
+
+            // On simule l'action du webhook
+            $webhookService = new \app\Services\Payment\PaymentWebhookService();
+            $webhookService->handleWebhook($paymentInfo, json_encode($paymentInfo));
+
+            $this->json(['success' => true]);
+        } else {
+            $this->json(['success' => false, 'message' => 'Le paiement n\'est pas encore confirmé par la plateforme.']);
+        }
+    }
+
+
 }

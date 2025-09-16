@@ -15,10 +15,14 @@ body {
     flex-direction: column;
 }
 
-
 main#main-page {
     flex: 1 0 auto;
     overflow-y: auto;
+}
+
+header {
+    position: fixed;
+    z-index: 1030; /* Valeur élevée pour rester au-dessus des autres éléments */
 }
 
 footer {
@@ -36,7 +40,22 @@ footer {
         height: auto !important;
     }
 
+    main {
+        margin-top: 50px;
+    }
+
     footer {
         position: static;
+    }
+}
+
+
+@media (min-width: 768px) {
+    main {
+        margin-top: 120px;
+    }
+    /* Limite la largeur du slider de don sur les écrans larges dans la page modifData */
+    .donation-slider-container {
+        max-width: 25%;
     }
 }

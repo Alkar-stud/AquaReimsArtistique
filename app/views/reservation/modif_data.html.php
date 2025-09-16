@@ -1,9 +1,26 @@
 <?php
 // Variables attendues : $reservation, $reservationDetails, $reservationComplements, $event, $session, $tarifsByIdObj
 
+$paymentStatus = $_GET['status'] ?? null;
+$checkoutIntentId = $_GET['checkoutIntentId'] ?? null;
+
 $canBeModified = new DateTime() < $reservation->getTokenExpireAt();
 $canBeModified = !$reservation->isCanceled();
-?>
+
+if ($paymentStatus == 'success' && $checkoutIntentId): ?>
+    <div class="container text-center" id="payment-check-container" data-checkout-id="<?= htmlspecialchars($checkoutIntentId) ?>">
+        <h2 class="mb-4">Vérification de votre paiement...</h2>
+        <div id="payment-check-spinner" class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
+            <span class="visually-hidden">Chargement...</span>
+        </div>
+        <p id="payment-check-message" class="mt-3">Nous vérifions la confirmation de votre paiement auprès de nos services. Veuillez patienter.</p>
+        <div id="payment-check-error" class="alert alert-danger mt-3" style="display: none;"></div>
+        <div id="payment-check-success" class="alert alert-success mt-3" style="display: none;">
+            Paiement confirmé ! Vous allez être redirigé vers le récapitulatif mis à jour.
+        </div>
+    </div>
+<?php else: ?>
+    ?>
     <div class="container"
          id="reservation-data-container"
          data-reservation-id="<?= $reservation->getId() ?>"
@@ -198,17 +215,42 @@ $canBeModified = !$reservation->isCanceled();
                     <div class="text-success">Déjà payé : <strong id="total-paid-amount"><?= number_format($reservation->getTotalAmountPaid() / 100, 2, ',', ' ') ?> €</strong></div>
                     <hr>
                     <div id="amount-due-container" class="fs-4 fw-bold">
-                        <?php
-                        if ($amountDue > 0) {
-                            ?>
+                        <?php if ($amountDue > 0): ?>
+                        <div class="mb-3">
+                            <label for="donation-slider" class="form-label fs-6 fw-normal">Faire un don à l'association : <strong id="donation-amount-display">0,00 €</strong></label>
+                            <div class="donation-slider-container ms-auto">
+                                <input type="range" class="form-range" min="0" max="<?= round(($amountDue) / 100, 2) ?>" step="0.1" value="0" id="donation-slider">
+                            </div>
+                            <small class="form-text text-muted"></small>
+                        </div>
+                        <hr>
+                        <div>
                             Reste à payer : <span class="text-danger" id="amount-due"><?= number_format($amountDue / 100, 2, ',', ' '); ?> €</span>
-                            <button class="btn btn-danger" onClick="alert('Fonctionnalité à implémenter : Payer le reste à payer');">Payer</button>
-                        <?php
-                        } elseif ($amountDue < 0) {
+                        </div>
+                        <div class="mt-2 d-none" id="total-with-donation-container">
+                            Total à régler (avec don) : <span class="text-danger" id="total-to-pay-with-donation"><?= number_format($amountDue / 100, 2, ',', ' '); ?> €</span>
+                        </div>
+                        <div class="mt-3">
+                            <a id="pay-balance-btn" href="#" title="Payer le solde avec HelloAsso">
+                                <img src="/assets/images/payer-avec-helloasso.svg" alt="Payer le solde avec HelloAsso" style="height: 50px;">
+                            </a>
+                        </div>
+                        <?php elseif ($amountDue < 0):
                             echo 'Crédit disponible : <span class="text-info" id="amount-due">' . number_format(abs($amountDue) / 100, 2, ',', ' ') . ' €</span>';
-                        }
-                        ?>
+                        else: ?>
+                            <div class="text-success">
+                                Vous êtes à jour dans vos paiements.
+                            </div>
+                        <?php endif; ?>
                     </div>
+                    <?php
+                    if (isset($_ENV['APP_ENV']) && in_array($_ENV['APP_ENV'], ['local', 'dev']) && $amountDue > 0): ?>
+                        <div class="alert alert-info mt-4">
+                            <p class="mb-0"><b>Environnement de test :</b> voici la carte bancaire à utiliser : <b>4242424242424242</b>. Validité <b>date supérieure au mois en cours</b>, code : <b>3 chiffres au choix</b>.</p>
+                            <p class="mb-0">Il faut cliquer sur le lien, la redirection automatique est désactivée en environnement de test.</p>
+                        </div>
+                    <?php endif;
+                    ?>
                 </div>
             </div>
             <br>
@@ -217,9 +259,7 @@ $canBeModified = !$reservation->isCanceled();
             </div>
         </fieldset>
     </div>
-
-
-<?php if ($canBeModified): ?>
-    <script src="/assets/js/reservation_common.js" defer></script>
-    <script src="/assets/js/reservation_modif_data.js" defer></script>
 <?php endif; ?>
+
+<script src="/assets/js/reservation_common.js" defer></script>
+<script src="/assets/js/reservation_modif_data.js" defer></script>

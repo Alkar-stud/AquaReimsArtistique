@@ -4,10 +4,10 @@ namespace app\Services\Payment;
 
 use app\DTO\HelloAssoCartDTO;
 use app\Services\HelloAssoService;
+use Exception;
 
 /**
  * Service pour gérer la création d'intentions de paiement.
- * Il est agnostique du contexte (réservation, boutique, etc.).
  */
 class PaymentService
 {
@@ -21,43 +21,21 @@ class PaymentService
     /**
      * Crée une intention de paiement auprès du fournisseur (HelloAsso).
      *
-     * @param int $totalAmount Le montant total en centimes.
-     * @param array $payerInfo Tableau contenant ['firstName', 'lastName', 'email'].
-     * @param string $itemName Le nom de l'article/panier pour le paiement.
-     * @param array $metaData Tableau de métadonnées à associer au paiement (ex: ['reservationId' => '...']).
-     * @param string $backUrl URL de retour en cas d'annulation.
-     * @param string $errorUrl URL en cas d'erreur de paiement.
-     * @param string $returnUrl URL de succès après paiement.
+     * @param HelloAssoCartDTO $cartDTO L'objet contenant toutes les informations du panier.
      *
      * @return array ['success' => bool, 'redirectUrl' => ?string, 'checkoutIntentId' => ?string, 'error' => ?string]
      */
-    public function createPaymentIntent(
-        int $totalAmount,
-        array $payerInfo,
-        string $itemName,
-        array $metaData,
-        string $backUrl,
-        string $errorUrl,
-        string $returnUrl
-    ): array {
-        if ($totalAmount <= 0) {
+    public function createPaymentIntent(HelloAssoCartDTO $cartDTO): array
+    {
+        if ($cartDTO->getTotalAmount() <= 0) {
             return ['success' => false, 'error' => 'Le montant doit être positif.'];
         }
 
-        $cartDTO = new HelloAssoCartDTO();
-        $cartDTO->setTotalAmount($totalAmount);
-        $cartDTO->setInitialAmount($totalAmount);
-        $cartDTO->setItemName($itemName);
-        $cartDTO->setPayer([
-            'firstName' => $payerInfo['firstName'],
-            'lastName'  => $payerInfo['lastName'],
-            'email'     => $payerInfo['email'],
-            'country'   => 'FRA'
-        ]);
-        $cartDTO->setMetaData($metaData);
-        $cartDTO->setBackUrl($backUrl);
-        $cartDTO->setErrorUrl($errorUrl);
-        $cartDTO->setReturnUrl($returnUrl);
+        // L'initialAmount doit être égal au totalAmount pour un paiement unique.
+        // On s'assure que c'est bien le cas.
+        if ($cartDTO->getInitialAmount() !== $cartDTO->getTotalAmount()) {
+            $cartDTO->setInitialAmount($cartDTO->getTotalAmount());
+        }
 
         try {
             $accessToken = $this->helloAssoService->GetToken();
@@ -70,7 +48,7 @@ class PaymentService
             $errorMessage = $checkout->message ?? 'Réponse invalide de la plateforme de paiement.';
             return ['success' => false, 'error' => $errorMessage, 'details' => $checkout];
 
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             error_log('Erreur lors de la création de l\'intention de paiement: ' . $e->getMessage());
             return ['success' => false, 'error' => 'Erreur de communication avec la plateforme de paiement.'];
         }

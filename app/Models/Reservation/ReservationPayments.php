@@ -11,6 +11,7 @@ class ReservationPayments
     private int $id;
     private int $reservation; // ID de la réservation
     private ?Reservations $reservationObject = null; // Objet Reservations lié
+    private string $type;
     private int $amount_paid;
     private int $checkout_id;
     private int $order_id;
@@ -23,6 +24,7 @@ class ReservationPayments
     public function getId(): int { return $this->id; }
     public function getReservation(): int { return $this->reservation; }
     public function getReservationObject(): ?Reservations { return $this->reservationObject; }
+    public function getType(): string { return $this->type; }
     public function getAmountPaid(): int { return $this->amount_paid; }
     public function getCheckoutId(): int { return $this->checkout_id; }
     public function getOrderId(): int { return $this->order_id; }
@@ -50,6 +52,11 @@ class ReservationPayments
         if ($reservationObject) {
             $this->reservation = $reservationObject->getId();
         }
+        return $this;
+    }
+    public function setType(string $type): self
+    {
+        $this->type = $type;
         return $this;
     }
 

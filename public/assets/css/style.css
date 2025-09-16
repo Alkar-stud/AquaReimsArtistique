@@ -13,23 +13,20 @@ body {
     min-height: 100vh;
     display: flex;
     flex-direction: column;
-    height: 100vh;
-    overflow: hidden;
 }
 
 
 main#main-page {
-    flex: 1 1 auto;
+    flex: 1 0 auto;
     overflow-y: auto;
-    min-height: 0;
 }
 
 footer {
-    flex: 0 0 auto;
-    margin-top: 0;
+    flex-shrink: 0; /* Empêche le footer de rétrécir */
     position: sticky;
     bottom: 0;
     z-index: 100;
+    background-color: var(--ara-color-darkblue); /* Assurez-vous que le fond est opaque */
 }
 
 @media (max-width: 1024px) {
@@ -37,12 +34,9 @@ footer {
         display: block !important;
         min-height: auto !important;
         height: auto !important;
-        overflow: auto !important;
     }
 
     footer {
         position: static;
-        bottom: auto !important;
-        z-index: auto !important;
     }
 }

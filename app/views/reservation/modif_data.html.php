@@ -78,7 +78,7 @@ $canBeModified = !$reservation->isCanceled();
                             $detailsByTarif[$detail->getTarif()][] = $detail;
                         }
 
-                        // On boucle sur les quantités de tarifs (packs)
+                        // On boucle sur les quantités de tarifs (packs).
                         foreach ($tarifQuantities as $tarifId => $quantity):
                             $tarifObj = $tarifsByIdObj[$tarifId] ?? null;
                             if (!$tarifObj) continue;
@@ -92,7 +92,10 @@ $canBeModified = !$reservation->isCanceled();
                                 <div class="d-flex justify-content-between align-items-center fw-bold mb-2">
                                  <span>
                                      <?= $quantity ?> x <?= htmlspecialchars($tarifObj->getLibelle()) ?>
-                                     <small class="fw-normal text-muted">(<?= number_format($unitPrice / 100, 2, ',', ' ') ?> €)</small>
+                                     <small class="fw-normal text-muted">
+                                        (<?= $tarifObj->getDescription() ?>)
+                                        (<?= number_format($unitPrice / 100, 2, ',', ' ') ?> €)
+                                     </small>
                                  </span>
                                     <span><?= number_format($totalPrice / 100, 2, ',', ' ') ?> €</span>
                                 </div>
@@ -145,7 +148,10 @@ $canBeModified = !$reservation->isCanceled();
                         <div class="list-group-item">
                             <div class="row align-items-center">
                                  <div class="col-md-6">
-                                     <span class="fw-bold"><?= htmlspecialchars($tarif ? $tarif->getLibelle() : 'Tarif inconnu') ?></span>
+                                     <span class="fw-bold">
+                                        <?= htmlspecialchars($tarif ? $tarif->getLibelle() : 'Tarif inconnu') ?>
+                                        <small class="text-muted">(<?= number_format($tarif->getPrice() / 100, 2, ',', ' ') ?> €)</small>
+                                     </span>
                                  </div>
                                  <div class="col-md-6 d-flex justify-content-end align-items-center">
                                         <div class="input-group input-group-sm" style="max-width: 100px;">

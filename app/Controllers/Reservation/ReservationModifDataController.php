@@ -14,8 +14,9 @@ use app\Repository\Reservation\ReservationsDetailsRepository;
 use app\Repository\Reservation\ReservationsRepository;
 use app\Services\Reservation\ReservationCartService;
 use app\Repository\TarifsRepository;
+use app\Services\Reservation\ReservationService;
+use app\Services\Reservation\ReservationTokenService;
 use DateMalformedStringException;
-use DateTime;
 
 class ReservationModifDataController extends AbstractController
 {
@@ -26,6 +27,8 @@ class ReservationModifDataController extends AbstractController
     private ReservationsComplementsRepository $reservationsComplementsRepository;
     private TarifsRepository $tarifsRepository;
     private ReservationCartService $reservationCartService;
+    private ReservationTokenService $reservationTokenService;
+    private ReservationService $reservationService;
 
 
     public function __construct()
@@ -38,6 +41,8 @@ class ReservationModifDataController extends AbstractController
         $this->reservationsComplementsRepository = new ReservationsComplementsRepository();
         $this->tarifsRepository = new TarifsRepository();
         $this->reservationCartService = new ReservationCartService();
+        $this->reservationTokenService = new ReservationTokenService();
+        $this->reservationService = new ReservationService();
     }
 
     /**
@@ -74,7 +79,6 @@ class ReservationModifDataController extends AbstractController
         $reservationComplements = $this->reservationsComplementsRepository->findByReservation($reservation->getId());
 
         // On récupère tous les tarifs pour pouvoir afficher les libellés
-        //$tarifs = $this->tarifsRepository->findAll();
         $tarifs = $this->tarifsRepository->findByEventId($event->getId());
         $tarifsByIdObj = [];
         foreach ($tarifs as $t) {
@@ -129,57 +133,54 @@ class ReservationModifDataController extends AbstractController
         $typeField = $data['typeField'];
         $token = $data['token'] ?? null;
         $fieldId = $data['id'] ?? null;
-        $tarifId = $data['tarifId'] ?? null; // Pour les nouveaux compléments
+        $tarifId = $data['tarifId'] ?? null;
         $field = $data['field'] ?? null;
         $value = $data['value'] ?? null;
-        $qty = $data['qty'] ?? null;
+        $action = $data['action'] ?? null;
 
+        //Si pas de token
         if (!$token || !ctype_alnum($token)) {
             $this->json(['success' => false, 'message' => 'Modification non autorisée.']);
             return;
         }
+        //On récupère la réservation
         $reservation = $this->reservationsRepository->findByToken($token);
-        // On vérifie que le token est toujours valide
-        if (!$reservation || new DateTime() >= $reservation->getTokenExpireAt()) {
+
+        // On vérifie que le token est existant dans la table et toujours valide
+        if (!$this->reservationTokenService->checkReservationToken($reservation, $token)) {
             $this->json(['success' => false, 'message' => 'La modification n\'est plus autorisée.']);
-            return;
         }
 
-        // Appliquer les règles de casse pour les noms et prénoms
-        if ($field === 'nom') {
-            $value = mb_strtoupper($value, 'UTF-8');
-        } elseif ($field === 'prenom') {
-            // Met en majuscule la première lettre de chaque mot (gère les prénoms composés)
-            $value = mb_convert_case($value, MB_CASE_TITLE, 'UTF-8');
-        }
+        // On applique les règles de casse pour champs pour lesquels c'est nécessaire
+        $value = $this->reservationService->normalizeFieldValue($field, $value);
+
 
         if ($typeField == 'contact') {
+            //Pour les infos de contact de la réservation
             $return = $this->updateContact($reservation, $field, $value);
+
         } elseif ($typeField == 'detail') {
-            //On récupère l'objet ReservationsDetails
+            //Pour les infos des participants
             $detail = $this->reservationsDetailsRepository->findById((int)$fieldId);
-            //On vérifie que $fieldId fait bien partie de la réservation
-            if (!$detail || $detail->getReservation() !== $reservation->getId()) {
-                $this->json(['success' => false, 'message' => 'Détail non trouvé ou invalide.']);
+            if (!$detail) {
+                $this->json(['success' => false, 'message' => 'Participant non trouvé.']);
                 return;
             }
-            $return = $this->updateDetail($detail, $field, $value);
+            $return = $this->updateDetail($reservation, $detail, $field, $value);
+
         } elseif ($typeField == 'complement') {
+            $return = [];
+            //Pour les infos des compléments
             if ($fieldId) { // Mise à jour d'un complément existant
-                $complement = $this->reservationsComplementsRepository->findById((int)$fieldId);
-                if (!$complement || $complement->getReservation() !== $reservation->getId()) {
-                    $this->json(['success' => false, 'message' => 'Complément non trouvé ou invalide.']);
-                    return;
-                }
                 // $value contient le code d'accès au tarif si besoin. Sinon la valeur est nulle
-                $return = $this->updateComplements($complement, $value, $qty);
+                $return = $this->updateComplements($reservation, $value, $fieldId, $action);
 
             } elseif ($tarifId) { // Ajout d'un nouveau complément
                 // On vérifie si un complément avec ce tarif n'existe pas déjà
                 $existingComplement = $this->reservationsComplementsRepository->findByReservationAndTarif($reservation->getId(), (int)$tarifId);
                 if ($existingComplement) {
                     // Si oui, on incrémente sa quantité
-                    $return = $this->updateComplements($existingComplement, $existingComplement->getTarifAccessCode(), $existingComplement->getQty() + 1);
+                    $return = $this->updateComplements($reservation, $value, $fieldId, 'plus'); // On met plus car l'intention est d'ajouter
                 } else {
                     // Sinon, on le crée
                     $newComplement = new ReservationsComplements();
@@ -193,7 +194,6 @@ class ReservationModifDataController extends AbstractController
                 // Recalculer le total de la réservation
                 $allReservationDetails = $this->reservationsDetailsRepository->findByReservation($reservation->getId());
                 $allReservationComplements = $this->reservationsComplementsRepository->findByReservation($reservation->getId());
-                //$allEventTarifs = $this->tarifsRepository->findByEventId($reservation->getEvent());
 
                 $detailsAsArray = array_map(fn($d) => ['tarif_id' => $d->getTarif()], $allReservationDetails);
                 $complementsAsArray = array_map(fn($c) => ['tarif_id' => $c->getTarif(), 'qty' => $c->getQty()], $allReservationComplements);
@@ -207,7 +207,7 @@ class ReservationModifDataController extends AbstractController
 
             }
         } elseif ($typeField == 'cancel') {
-            $return = $this->cancel($reservation->getToken());
+            $return = $this->cancel($reservation);
         } else {
             $return = ['success' => false, 'message' => 'Erreur lors de la mise à jour.'];
         }
@@ -226,7 +226,7 @@ class ReservationModifDataController extends AbstractController
         }
     }
 
-    public function updateDetail(ReservationsDetails $detail, $field, $value): array
+    public function updateDetail(Reservations $reservation, ReservationsDetails $detail, string $field, string $value): array
     {
         $success = $this->reservationsDetailsRepository->updateSingleField($detail->getId(), $field, $value);
 
@@ -237,8 +237,16 @@ class ReservationModifDataController extends AbstractController
         }
     }
 
-    public function updateComplements(ReservationsComplements $complement, $tarif_access_code, int $qty): array
+    /**
+     * @throws DateMalformedStringException
+     */
+    public function updateComplements(Reservations $reservation, ?string $tarif_access_code, int $fieldId, ?string $action): array
     {
+        $complement = $this->reservationsComplementsRepository->findById($fieldId);
+
+        $qty = $complement->getQty();
+        if ($action == 'plus') { $qty ++; }
+        else { $qty--; }
         //Si $qty <= 0 on supprime la ligne
         if ($qty <= 0) {
             $success = $this->reservationsComplementsRepository->delete($complement->getId());
@@ -253,13 +261,19 @@ class ReservationModifDataController extends AbstractController
         } else {
             return ['success' => false, 'message' => 'Erreur lors de la mise à jour.'];
         }
+
     }
 
-    public function cancel($token): array
+    public function cancel($reservation): array
     {
-        $return = $this->reservationsRepository->cancelByToken($token, true);
+        $return = $this->reservationsRepository->cancelByToken($reservation->getToken());
         if ($return) {
-            return ['success' => true, 'message' => 'Réservation annulée.'];
+            $return = $this->reservationsDetailsRepository->cancelByReservation($reservation->getId());
+            if ($return) {
+                return ['success' => true, 'message' => 'Réservation annulée.'];
+            } else {
+                return ['success' => false, 'message' => 'Erreur lors de l\'annulation.'];
+            }
         } else {
             return ['success' => false, 'message' => 'Erreur lors de l\'annulation.'];
         }

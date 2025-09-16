@@ -1,16 +1,17 @@
 <?php
 namespace app\Services\Reservation;
 
+use app\Models\Reservation\Reservations;
+use DateTime;
 use DateTimeInterface;
 use Random\RandomException;
 
 class ReservationTokenService
 {
 
-    /*
-     * Pour générer un token avec date de validité au jour de l'event
-     */
     /**
+     * Pour générer un token avec date de validité au jour de l'event
+     *
      * @throws RandomException
      */
     public static function createReservationToken(int $nbCaractereToken, DateTimeInterface $dateEvent, ?DateTimeInterface $dateFinInscriptionsEvent = null): array
@@ -27,6 +28,24 @@ class ReservationTokenService
 
         return [$token, $token_valid];
     }
+
+    /**
+     * Pour vérifier si le token est toujours valide
+     *
+     * @param Reservations $reservation
+     * @param string $token
+     * @return bool
+     */
+    public function checkReservationToken(Reservations $reservation, string $token): bool
+    {
+        // On vérifie que le token est toujours valide
+        if ($token !== $reservation->getToken() || new DateTime() >= $reservation->getTokenExpireAt()) {
+            return false;
+        } else {
+            return true;
+        }
+    }
+
 
 }
 

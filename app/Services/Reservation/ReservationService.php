@@ -383,6 +383,30 @@ class ReservationService
         return ['success' => true, 'error' => null, 'data' => $return['data']];
     }
 
+    /**
+     * Applique les règles de mise en forme (casse) pour les champs 'nom' et 'prenom'.
+     *
+     * @param string|null $field Le nom du champ.
+     * @param string|null $value La valeur à formater.
+     * @return string|null La valeur formatée.
+     */
+    public function normalizeFieldValue(?string $field, ?string $value): ?string
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        if ($field === 'nom') {
+            return mb_strtoupper($value, 'UTF-8');
+        }
+
+        if ($field === 'prenom') {
+            // Met en majuscule la première lettre de chaque mot (gère les prénoms composés)
+            return mb_convert_case($value, MB_CASE_TITLE, 'UTF-8');
+        }
+
+        return $value;
+    }
 
 
 }

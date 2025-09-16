@@ -1,31 +1,44 @@
 document.addEventListener('DOMContentLoaded', function () {
+    // Variable pour stocker la position de défilement actuelle
+    let currentScrollPosition = 0;
+
+    // Gestionnaire de défilement
+    const scrollManager = {
+        // Obtenir la position actuelle de manière fiable
+        getPosition: function() {
+            return currentScrollPosition;
+        },
+        // Sauvegarder la position
+        savePosition: function() {
+            const pos = this.getPosition();
+            localStorage.setItem('scrollpos', pos);
+        },
+        // Restaurer la position
+        restorePosition: function() {
+            const pos = localStorage.getItem('scrollpos');
+            if (pos) {
+                window.scrollTo(0, parseInt(pos, 10));
+                localStorage.removeItem('scrollpos');
+            }
+        }
+    };
+
+    // Suivre en temps réel la position de défilement
+    window.addEventListener('scroll', function() {
+        currentScrollPosition = window.scrollY || document.documentElement.scrollTop || document.body.scrollTop || 0;
+    });
+
+    // Restaurer la position au chargement initial
+    scrollManager.restorePosition();
+
+    // Récupération du conteneur principal
     const container = document.getElementById('reservation-data-container');
     if (!container) {
         console.error("Le conteneur de données de réservation est introuvable.");
         return;
     }
 
-    const { reservationId, token } = container.dataset;
-
-    // --- Gestion des détails des participants ---
-    const editableDetails = document.querySelectorAll('.editable-detail');
-    editableDetails.forEach(input => {
-        input.addEventListener('blur', function () {
-            const feedbackSpan = this.parentElement.querySelector('.feedback-span');
-
-            const data = {
-                typeField: 'detail',
-                token: token,
-                id: this.dataset.detailId,
-                field: this.dataset.field,
-                value: this.value
-            };
-
-            if (feedbackSpan) {
-                updateField(feedbackSpan, data);
-            }
-        });
-    });
+    const {reservationId, token} = container.dataset;
 
     // --- Gestion des infos du contact principal ---
     const editableContacts = document.querySelectorAll('.editable-contact');
@@ -37,18 +50,14 @@ document.addEventListener('DOMContentLoaded', function () {
 
             // Validation de l'email
             if (field === 'email' && !validateEmail(value)) {
-                feedbackSpan.textContent = '✗';
-                feedbackSpan.classList.add('text-danger');
-                feedbackSpan.title = 'Adresse e-mail invalide.';
-                return; // On arrête l'exécution
+                showFeedback(feedbackSpan, 'error', 'Adresse e-mail invalide.');
+                return;
             }
 
             // Validation du téléphone (s'il n'est pas vide)
             if (field === 'phone' && value.trim() !== '' && !validateTel(value)) {
-                feedbackSpan.textContent = '✗';
-                feedbackSpan.classList.add('text-danger');
-                feedbackSpan.title = 'Format de téléphone invalide.';
-                return; // On arrête l'exécution
+                showFeedback(feedbackSpan, 'error', 'Format de téléphone invalide.');
+                return;
             }
 
             const data = {
@@ -64,137 +73,28 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     });
 
-    // --- Gestion des quantités des compléments ---
-    document.querySelectorAll('.complement-qty-btn').forEach(button => {
-        button.addEventListener('click', function() {
-            const action = this.dataset.action;
-            const complementId = this.dataset.complementId;
-            const qtyInput = document.getElementById(`qty-complement-${complementId}`);
-            let currentQty = parseInt(qtyInput.value, 10);
 
-            if (action === 'minus') {
-                if (currentQty <= 0) return;
-                const confirmationMessage = "Souhaitez-vous vraiment retirer 1 ticket de cet item de votre commande ?\nLe trop perçu ne sera pas remboursé !!\nMais il peut servir à prendre autre chose en ligne uniquement !";
-                if (!confirm(confirmationMessage)) {
-                    return;
-                }
-                currentQty--;
-            } else {
-                const confirmationMessage = "Confirmez-vous l'ajout de cet article ?\nLe montant total de votre réservation sera mis à jour.";
-                if (!confirm(confirmationMessage)) {
-                    return;
-                }
-                currentQty++;
-            }
+    // --- Fonction pour afficher les feedbacks ---
+    function showFeedback(feedbackSpan, status, message = '') {
+        if (!feedbackSpan) return;
 
-            qtyInput.value = currentQty;
-
-            const data = {
-                typeField: 'complement',
-                token: token,
-                id: complementId,
-                qty: currentQty
-            };
-
-            // On utilise un feedback "global" pour les totaux
-            const totalFeedbackSpan = document.createElement('span'); // Span virtuel
-            updateField(totalFeedbackSpan, data, (result) => {
-                // Callback de succès pour mettre à jour les totaux
-                if (result.success && typeof result.newTotalAmount !== 'undefined') {
-                    updateTotals(result.newTotalAmount);
-                    if (result.success) {
-                        const scrollY = window.scrollY;
-                        localStorage.setItem('scrollY', scrollY);
-                        window.location.reload();
-                    }
-                }
-            });
-        });
-    });
-
-    // --- Gestion de l'AJOUT de nouveaux compléments ---
-    document.querySelectorAll('.add-complement-btn').forEach(button => {
-        button.addEventListener('click', function() {
-            const tarifId = this.dataset.tarifId;
-
-            const confirmationMessage = "Confirmez-vous l'ajout de cet article ?\nLe montant total de votre réservation sera mis à jour.";
-            if (!confirm(confirmationMessage)) {
-                return;
-            }
-
-            const data = {
-                typeField: 'complement',
-                token: token,
-                tarifId: tarifId, // On envoie l'ID du tarif, pas l'ID du complément
-                qty: 1 // On ajoute toujours 1
-            };
-
-            // On utilise un feedback "global" pour les totaux
-            const totalFeedbackSpan = document.createElement('span'); // Span virtuel
-            updateField(totalFeedbackSpan, data, (result) => {
-                // En cas de succès, on recharge la page pour voir le nouvel article et les totaux mis à jour.
-                if (result.success) {
-                    const scrollY = window.scrollY;
-                    localStorage.setItem('scrollY', scrollY);
-                    window.location.reload();
-                }
-            });
-        });
-    });
-
-    function updateTotals(newTotalAmount) {
-        const totalPaid = parseFloat(document.getElementById('total-paid-amount').textContent.replace(',', '.'));
-        const newTotal = newTotalAmount / 100;
-
-        document.getElementById('new-total-amount').textContent = newTotal.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' });
-
-        const amountDue = newTotal - totalPaid;
-        const amountDueContainer = document.getElementById('amount-due-container');
-        const amountDueSpan = document.getElementById('amount-due');
-
-        if (amountDue > 0) {
-            amountDueContainer.innerHTML = `Reste à payer : <span class="text-danger" id="amount-due">${amountDue.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' })}</span>`;
-        } else if (amountDue < 0) {
-            amountDueContainer.innerHTML = `Crédit disponible : <span class="text-info" id="amount-due">${Math.abs(amountDue).toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' })}</span>`;
-        } else {
-            amountDueContainer.innerHTML = '';
-        }
+        feedbackSpan.textContent = status === 'success' ? '✓' : status === 'error' ? '✗' : '...';
+        feedbackSpan.className = 'input-group-text feedback-span';
+        feedbackSpan.classList.add(status === 'success' ? 'text-success' :
+            status === 'error' ? 'text-danger' : 'text-muted');
+        feedbackSpan.title = message;
     }
-
-
-    // Après le rechargement, restaure la position
-    window.addEventListener('load', () => {
-        const scrollY = localStorage.getItem('scrollY');
-        if (scrollY !== null) {
-            window.scrollTo(0, parseInt(scrollY, 10));
-            localStorage.removeItem('scrollY');
-        }
-    });
-
-    // --- Gestion de l'annulation ---
-    const cancelButton = document.querySelectorAll('.cancel-button');
-    cancelButton.forEach(input => {
-        input.addEventListener('click', function () {
-            if (confirm('Êtes-vous sûr ?')) {
-                const data = {
-                    typeField: 'cancel',
-                    token: token
-                };
-
-                updateField(null, data);
-            }
-
-        });
-    });
 
     // --- Fonction générique de mise à jour ---
     function updateField(feedbackSpan, data, successCallback = null) {
-        if (feedbackSpan !== null) {
-            feedbackSpan.textContent = '...';
-            feedbackSpan.classList.remove('text-success', 'text-danger');
-            feedbackSpan.title = ''; // On réinitialise l'infobulle
+        // Sauvegarde de la position de défilement avant l'action
+        scrollManager.savePosition();
+
+        if (feedbackSpan) {
+            showFeedback(feedbackSpan, 'loading');
         }
 
+        // Appel AJAX pour mettre à jour les données
         fetch('/modifData/update', {
             method: 'POST',
             headers: {
@@ -217,35 +117,140 @@ document.addEventListener('DOMContentLoaded', function () {
                 });
             })
             .then(result => {
-console.log('result : ', result);
+                console.log('result : ', result);
                 if (result.success) {
-                    if (feedbackSpan !== null) {
-                        feedbackSpan.textContent = '✓';
-                        feedbackSpan.classList.add('text-success');
-                        if (successCallback) {
-                            successCallback(result);
-                        }
-                    } else {
-                        window.location.reload();
+                    if (feedbackSpan) {
+                        showFeedback(feedbackSpan, 'success');
+                    }
+                    if (successCallback) {
+                        successCallback(result);
                     }
                 } else {
-                    if (feedbackSpan !== null) {
-                        feedbackSpan.textContent = '✗';
-                        feedbackSpan.classList.add('text-danger');
-                        // On affiche l'erreur dans l'infobulle au lieu d'une alerte
-                        feedbackSpan.title = result.message || 'Une erreur est survenue.';
+                    if (feedbackSpan) {
+                        showFeedback(feedbackSpan, 'error', result.message || 'Une erreur est survenue');
                     }
-                    console.error('Erreur lors de la mise à jour:', result.message);
                 }
+                window.location.reload();
             })
             .catch(error => {
                 console.error('Erreur lors de la mise à jour:', error);
-                if (feedbackSpan !== null) {
-                    feedbackSpan.textContent = '✗';
-                    feedbackSpan.classList.add('text-danger');
-                    feedbackSpan.title = 'Une erreur de communication est survenue. Veuillez réessayer.';
+                if (feedbackSpan) {
+                    showFeedback(feedbackSpan, 'error', 'Une erreur est survenue');
                 }
-                console.error('Erreur de communication:', error);
             });
+    }
+
+    // Ajoutez ici les gestionnaires pour les autres éléments (participants, compléments, etc.)
+
+    // --- Gestion des participants ---
+    const editableDetails = document.querySelectorAll('.editable-detail');
+    if (editableDetails.length > 0) {
+        editableDetails.forEach(input => {
+            input.addEventListener('blur', function () {
+                const feedbackSpan = this.parentElement.querySelector('.feedback-span');
+                const data = {
+                    typeField: 'detail',
+                    token: token,
+                    id: this.dataset.detailId,
+                    field: this.dataset.field,
+                    value: this.value
+                };
+
+                if (feedbackSpan) {
+                    updateField(feedbackSpan, data);
+                }
+            });
+        });
+    }
+
+    // --- Gestion des quantités de compléments ---
+    const complementBtns = document.querySelectorAll('.complement-qty-btn');
+    if (complementBtns.length > 0) {
+        complementBtns.forEach(btn => {
+            btn.addEventListener('click', function() {
+                const action = this.dataset.action;
+                const complementId = this.dataset.complementId;
+                const qtyInput = document.getElementById(`qty-complement-${complementId}`);
+
+                if (action === 'minus') {
+                    //Selon si la diminution de 1 entre la suppression complète
+                    let confirmationMessage;
+                    if (qtyInput.value <= 1) {
+                        confirmationMessage = "Souhaitez-vous vraiment supprimer cet élément de votre commande ?\nLe trop perçu ne sera pas remboursé !!\nMais il peut servir à prendre autre chose en ligne uniquement !";
+                    } else {
+                        confirmationMessage = "Souhaitez-vous vraiment retirer 1 ticket de cet élément de votre commande ?\nLe trop perçu ne sera pas remboursé !!\nMais il peut servir à prendre autre chose en ligne uniquement !";
+                    }
+                    if (!confirm(confirmationMessage)) {
+                        return;
+                    }
+                } else {
+                    const confirmationMessage = "Confirmez-vous l'ajout de cet article ?\nLe montant total de votre réservation sera mis à jour.";
+                    if (!confirm(confirmationMessage)) {
+                        return;
+                    }
+                }
+
+                const data = {
+                    typeField: 'complement',
+                    token: token,
+                    id: complementId,
+                    action: action
+                };
+                updateField(null, data, function(result) {
+                    if (result.success && result.newQty !== undefined) {
+                        qtyInput.value = result.newQty;
+                        if (result.newSubtotal !== undefined) {
+                            document.getElementById(`subtotal-complement-${complementId}`).textContent = result.newSubtotal;
+                        }
+                        if (result.newTotalAmount !== undefined) {
+                            document.getElementById('new-total-amount').textContent = result.newTotalAmount;
+                        }
+                        if (result.newAmountDue !== undefined) {
+                            document.getElementById('amount-due').textContent = result.newAmountDue;
+                        }
+                    }
+                });
+            });
+        });
+    }
+
+    // --- Gestion de l'ajout de compléments ---
+    const addComplementBtns = document.querySelectorAll('.add-complement-btn');
+    if (addComplementBtns.length > 0) {
+        addComplementBtns.forEach(btn => {
+            btn.addEventListener('click', function() {
+                const confirmationMessage = "Confirmez-vous l'ajout de cet article ?\nLe montant total de votre réservation sera mis à jour.";
+                if (!confirm(confirmationMessage)) {
+                    return;
+                }
+                const tarifId = this.dataset.tarifId;
+
+                const data = {
+                    typeField: 'complement',
+                    token: token,
+                    tarifId: tarifId,
+                    qty: 1
+                };
+
+                updateField(null, data);
+            });
+        });
+    }
+
+    // --- Gestion de l'annulation de la réservation ---
+    const cancelBtn = document.querySelector('.cancel-button');
+    if (cancelBtn) {
+        cancelBtn.addEventListener('click', function() {
+            if (confirm("Êtes-vous sûr de vouloir annuler cette réservation ?\nCette action est irréversible.")) {
+                if (confirm("Êtes-vous toujours sûr ?\n Vous ne pourrez prétendre à aucun remboursement !")) {
+                    const data = {
+                        typeField: 'cancel',
+                        token: token
+                    };
+
+                    updateField(null, data);
+                }
+            }
+        });
     }
 });

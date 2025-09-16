@@ -196,6 +196,18 @@ class ReservationsDetailsRepository extends AbstractRepository
     }
 
     /**
+     * Met les champs place_number à null lorsqu'il y a annulation
+     *
+     * @param int $reservationId
+     * @return bool;
+     */
+    public function cancelByReservation(int $reservationId): bool
+    {
+        $sql = "UPDATE $this->tableName SET place_number = null WHERE reservation = :reservationId";
+        return $this->execute($sql, ['reservationId' => $reservationId]);
+    }
+
+    /**
      * Supprime un détail de réservation
      * @param int $id
      * @return bool

@@ -17,6 +17,9 @@ abstract class AbstractController
     protected LogService $logService;
     protected SessionValidationService $sessionValidationService;
 
+    /**
+     * @throws DateMalformedStringException
+     */
     public function __construct(bool $isPublicRoute = false)
     {
         $this->configureSession();
@@ -32,28 +35,72 @@ abstract class AbstractController
 
     protected function render(string $view, array $data = [], string $title = '', bool $partial = false): void
     {
-        extract($data);
-        ob_start();
+        $content = '';
+        $engine = new \app\Utils\TemplateEngine();
 
-        $page = __DIR__ . '/../views/' . $view . '.html.php';
 
-        if (!file_exists($page)) {
-            ob_end_clean();
-            throw new RuntimeException("La vue '$page' n'existe pas.");
+        // Préparation des variables pour les templates, afin d'éviter la logique PHP dans les vues.
+        $uri = strtok($_SERVER['REQUEST_URI'], '?');
+        $data['uri'] = $uri;
+        $data['is_gestion_page'] = str_starts_with($uri, '/gestion');
+        $data['load_ckeditor'] = $data['is_gestion_page'] && (str_starts_with($uri, '/gestion/mail_templates') || str_starts_with($uri, '/gestion/accueil'));
+
+        $templateTpl = __DIR__ . '/../views/templates/' . $view . '.tpl';
+
+        // Détermine si c'est un template .tpl ou un ancien .html.php
+        if (file_exists($templateTpl)) {
+            $content = $engine->render($templateTpl, $this->prepareLoopData($data));
+        } else {
+            // On garde l'ancien chemin le temps de tout migrer
+            $templatePhp = __DIR__ . '/../views/' . $view . '.html.php';
+            if (!file_exists($templatePhp)) {
+                throw new RuntimeException("La vue '$view' n'a pas été trouvée.");
+            }
+            extract($data);
+            ob_start();
+            include $templatePhp;
+            $content = ob_get_clean();
         }
-
-        include $page;
-        $content = ob_get_clean();
 
         if ($partial) {
             // Affiche juste le fragment demandé
             echo $content;
         } else {
-            // Affiche tout avec le layout global
-            require __DIR__ . '/../views/base.html.php';
+            // Affiche tout avec le layout global .tpl
+            $layoutData = array_merge($data, [
+                'title' => $title,
+                'content' => $content
+            ]);
+            echo $engine->render(__DIR__ . '/../views/templates/base.tpl', $layoutData);
         }
-
     }
+
+    /**
+     * Enrichit les données pour les boucles en ajoutant des métadonnées utiles.
+     * @param array $data Les données à passer à la vue.
+     * @return array Les données enrichies.
+     */
+    private function prepareLoopData(array $data): array
+    {
+        foreach ($data as $key => $value) {
+            if (is_array($value) && !empty($value) && array_keys($value) === range(0, count($value) - 1)) {
+                $loopData = [];
+                $total = count($value);
+                foreach ($value as $index => $item) {
+                    $loopData[] = [
+                        'item' => $item,
+                        'index' => $index,
+                        'first' => ($index === 0),
+                        'last' => ($index === $total - 1),
+                        'count' => $total
+                    ];
+                }
+                $data[$key . '_loop'] = $loopData;
+            }
+        }
+        return $data;
+    }
+
 
     /**
      * @throws DateMalformedStringException

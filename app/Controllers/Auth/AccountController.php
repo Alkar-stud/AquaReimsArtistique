@@ -4,7 +4,7 @@ namespace app\Controllers\Auth;
 use app\Attributes\Route;
 use app\Controllers\AbstractController;
 use app\Repository\User\UserRepository;
-use app\Services\MailService;
+use app\Services\Mails\MailPrepareService;
 use DateMalformedStringException;
 use Exception;
 
@@ -118,9 +118,9 @@ class AccountController extends AbstractController
 
             //on envoie un mail au user pour signaler le changement
             try {
-                $mailService = new MailService();
+                $mailPrepareService = new MailPrepareService();
 
-                $mailService->sendPasswordModifiedEmail(
+                $mailPrepareService->sendPasswordModifiedEmail(
                     $user->getEmail(),
                     $user->getDisplayName()
                 );

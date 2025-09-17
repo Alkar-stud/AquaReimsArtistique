@@ -13,7 +13,7 @@ use app\Repository\Reservation\ReservationsComplementsRepository;
 use app\Repository\Reservation\ReservationsDetailsRepository;
 use app\Repository\Reservation\ReservationsPlacesTempRepository;
 use app\Repository\Reservation\ReservationsRepository;
-use app\Services\MailService;
+use app\Services\Mails\MailPrepareService;
 use app\Services\ReservationStorageInterface;
 use app\Services\Payment\PaymentRecordService;
 use DateMalformedStringException;
@@ -215,8 +215,8 @@ class ReservationPersistenceService
      */
     public function sendAndRecordConfirmationEmail(Reservations $reservation): void
     {
-        $mailService = new MailService();
-        if ($mailService->sendReservationConfirmationEmail($reservation)) {
+        $mailPrepareService = new MailPrepareService();
+        if ($mailPrepareService->sendReservationConfirmationEmail($reservation)) {
             $mailTemplateRepository = new MailTemplateRepository();
             $template = $mailTemplateRepository->findByCode('paiement_confirme');
             if ($template) {

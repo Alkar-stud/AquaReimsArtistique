@@ -10,7 +10,7 @@ use app\Repository\Reservation\ReservationsDetailsRepository;
 use app\Repository\Reservation\ReservationsRepository;
 use app\Repository\TarifsRepository;
 use app\Services\Logs\LogService;
-use app\Services\MailService;
+use app\Services\Mails\MailPrepareService;
 use app\Services\SessionValidationService;
 use DateMalformedStringException;
 use Exception;
@@ -24,7 +24,7 @@ class ReservationService
     private TarifsRepository $tarifsRepository;
     private MailTemplateRepository $mailTemplateRepository;
     private ReservationMailsSentRepository $reservationMailsSentRepository;
-    private MailService $mailService;
+    private MailPrepareService $mailPrepareService;
     private SessionValidationService $sessionValidationService;
     private LogService $logService;
     private ReservationSessionService $reservationSessionService;
@@ -40,7 +40,7 @@ class ReservationService
         $this->tarifsRepository = new TarifsRepository();
         $this->mailTemplateRepository = new MailTemplateRepository();
         $this->reservationMailsSentRepository = new ReservationMailsSentRepository();
-        $this->mailService = new MailService();
+        $this->mailPrepareService = new MailPrepareService();
         $this->sessionValidationService = new SessionValidationService();
         $this->logService = new LogService();
         $this->reservationSessionService = new ReservationSessionService();
@@ -121,7 +121,7 @@ class ReservationService
             $event = $this->eventsRepository->findById($reservation->getEvent());
             $reservation->setEventObject($event);
 
-            if ($this->mailService->sendReservationConfirmationEmail($reservation)) {
+            if ($this->mailPrepareService->sendReservationConfirmationEmail($reservation)) {
                 $mailSentRecord = new ReservationMailsSent();
                 $mailSentRecord->setReservation($reservation->getId())->setMailTemplate($template->getId())->setSentAt(date('Y-m-d H:i:s'));
                 $this->reservationMailsSentRepository->insert($mailSentRecord);

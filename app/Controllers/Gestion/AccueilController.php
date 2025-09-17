@@ -204,7 +204,7 @@ class AccueilController extends AbstractController
         }
     }
 
-    #[NoReturn] #[Route('/gestion/accueil/delete/{id}', name: 'app_gestion_accueil_delete', methods: ['POST'])]
+    #[Route('/gestion/accueil/delete/{id}', name: 'app_gestion_accueil_delete', methods: ['POST'])]
     public function delete(?int $id): void
     {
         if (isset($id)) {

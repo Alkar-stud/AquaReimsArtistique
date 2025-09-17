@@ -56,20 +56,8 @@ class ReservationPersistenceService
         }
 
         // --- Persistance des informations de paiement ---
-/*
-        $paymentInfo = $paymentData->payments[0];
-        $reservationPayment = new ReservationPayments();
-        $reservationPayment->setReservation($reservation->getId())
-            ->setAmountPaid($paymentInfo->amount)
-            ->setCheckoutId($paymentData->checkoutIntentId)
-            ->setOrderId($paymentData->id)
-            ->setPaymentId($paymentInfo->id)
-            ->setStatusPayment($paymentInfo->state)
-            ->setCreatedAt((new DateTime())->format('Y-m-d H:i:s'));
-        $reservationPaymentsRepository = new ReservationPaymentsRepository();
-        $reservationPaymentsRepository->insert($reservationPayment);
-*/
         (new PaymentRecordService())->createPaymentRecord($reservation->getId(), $paymentData);
+
         // Persister les détails et compléments
         $this->persistDetailsAndComplements($reservation->getId(), $tempReservation);
 

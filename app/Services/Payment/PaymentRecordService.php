@@ -64,9 +64,13 @@ class PaymentRecordService
         $this->paymentsRepository->insert($payment);
 
         // Mettre à jour le total payé sur la réservation
-        $reservation = $this->reservationsRepository->findById($reservationId);
-        $newTotalPaid = $reservation->getTotalAmountPaid() + $payment->getAmountPaid();
-        $this->reservationsRepository->updateSingleField($reservationId, 'total_amount_paid', $newTotalPaid);
+        // Pour un nouveau paiement, le montant est déjà défini lors de la création de la réservation.
+        // On ne met à jour (en ajoutant) que pour les paiements complémentaires.
+        if ($typePayment === 'add') {
+            $reservation = $this->reservationsRepository->findById($reservationId);
+            $newTotalPaid = $reservation->getTotalAmountPaid() + $payment->getAmountPaid();
+            $this->reservationsRepository->updateSingleField($reservationId, 'total_amount_paid', $newTotalPaid);
+        }
 
         return $payment;
     }

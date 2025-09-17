@@ -50,7 +50,7 @@ class ReservationprocessAndPersistService
         $existingReservation = $this->reservationsRepository->findByMongoId($reservationIdMongo);
         if ($existingReservation) {
             error_log("Tentative de double traitement pour la réservation MongoDB ID: " . $reservationIdMongo);
-            return $existingReservation; // C'est déjà fait, on retourne l'objet existant.
+            return $existingReservation;
         }
 
         $tempReservation = $this->reservationStorage->findReservationById($reservationIdMongo);

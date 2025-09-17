@@ -20,7 +20,6 @@ if ($paymentStatus == 'success' && $checkoutIntentId): ?>
         </div>
     </div>
 <?php else: ?>
-    ?>
     <div class="container"
          id="reservation-data-container"
          data-reservation-id="<?= $reservation->getId() ?>"

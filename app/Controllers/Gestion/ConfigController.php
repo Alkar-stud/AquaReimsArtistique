@@ -5,22 +5,32 @@ namespace app\Controllers\Gestion;
 use app\Attributes\Route;
 use app\Controllers\AbstractController;
 use app\Repository\ConfigRepository;
+use app\Services\FlashMessageService;
 
 #[Route('/gestion/configuration/configs', name: 'app_gestion_configs')]
 class ConfigController extends AbstractController
 {
     private ConfigRepository $repository;
+    private FlashMessageService $flashMessageService;
 
     public function __construct()
     {
         parent::__construct(false);
         $this->repository = new ConfigRepository();
+        $this->flashMessageService = new FlashMessageService();
     }
 
     public function index(): void
     {
         $configs = $this->repository->findAll();
-        $this->render('/gestion/configs', $configs, 'Gestion des configurations');
+
+        $flashMessage = $this->flashMessageService->getFlashMessage();
+        $this->flashMessageService->unsetFlashMessage();
+
+        $this->render('/gestion/configs', [
+            'data' => $configs,
+            'flash_message' => $flashMessage
+        ], 'Gestion des configurations');
     }
 
     #[Route('/gestion/configuration/configs/add', name: 'app_gestion_configs_add')]
@@ -34,7 +44,7 @@ class ConfigController extends AbstractController
                 ->setConfigType($_POST['config_type'] ?? null)
                 ->setCreatedAt(date('Y-m-d H:i:s'));
             $this->repository->insert($config);
-            $_SESSION['flash_message'] = ['type' => 'success', 'message' => 'Configuration ajoutée'];
+            $this->flashMessageService->setFlashMessage('success', "Configuration ajoutée.");
             header('Location: /gestion/configuration/configs');
             exit;
         }
@@ -51,7 +61,7 @@ class ConfigController extends AbstractController
                     ->setConfigValue($_POST['config_value'] ?? $config->getConfigValue())
                     ->setConfigType($_POST['config_type'] ?? $config->getConfigType());
                 $this->repository->update($config);
-                $_SESSION['flash_message'] = ['type' => 'success', 'message' => 'Configuration modifiée'];
+                $this->flashMessageService->setFlashMessage('success', "Configuration modifiée.");
             }
             header('Location: /gestion/configuration/configs');
             exit;
@@ -62,7 +72,7 @@ class ConfigController extends AbstractController
     public function delete(int $id): void
     {
         $this->repository->delete($id);
-        $_SESSION['flash_message'] = ['type' => 'success', 'message' => 'Configuration supprimée'];
+        $this->flashMessageService->setFlashMessage('success', "Configuration supprimée.");
         header('Location: /gestion/configuration/configs');
         exit;
     }

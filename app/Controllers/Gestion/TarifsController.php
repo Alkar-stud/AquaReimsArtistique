@@ -6,16 +6,20 @@ use app\Attributes\Route;
 use app\Controllers\AbstractController;
 use app\Models\Tarifs;
 use app\Repository\TarifsRepository;
+use app\Services\FlashMessageService;
+use DateMalformedStringException;
 
 #[Route('/gestion/tarifs', name: 'app_gestion_tarifs')]
 class TarifsController extends AbstractController
 {
     private TarifsRepository $repository;
+    private FlashMessageService $flashMessageService;
 
     public function __construct()
     {
         parent::__construct(false);
         $this->repository = new TarifsRepository();
+        $this->flashMessageService = new FlashMessageService();
     }
 
     public function index(): void
@@ -23,9 +27,20 @@ class TarifsController extends AbstractController
         $onglet = $_GET['onglet'] ?? ($_SESSION['onglet_tarif'] ?? 'all');
         $_SESSION['onglet_tarif'] = $onglet;
         $tarifs = $this->repository->findAll($onglet);
-        $this->render('/gestion/tarifs', $tarifs, 'Gestion des tarifs');
+
+        $flashMessage = $this->flashMessageService->getFlashMessage();
+        $this->flashMessageService->unsetFlashMessage();
+
+        $this->render('/gestion/tarifs', [
+            'data' => $tarifs,
+            'flash_message' => $flashMessage,
+            'onglet' => $onglet
+        ], 'Gestion des tarifs');
     }
 
+    /**
+     * @throws DateMalformedStringException
+     */
     #[Route('/gestion/tarifs/add', name: 'app_gestion_tarifs_add')]
     public function add(): void
     {
@@ -46,12 +61,15 @@ class TarifsController extends AbstractController
                 ->setCreatedAt(date('Y-m-d H:i:s'));
             $this->repository->insert($tarif);
             $_SESSION['onglet_tarif'] = $tarif->getNbPlace() !== null ? 'places' : 'autres';
-            $_SESSION['flash_message'] = ['type' => 'success', 'message' => 'Tarif ajouté'];
+            $this->flashMessageService->setFlashMessage('success', "Tarif ajouté.");
             header('Location: /gestion/tarifs');
             exit;
         }
     }
 
+    /**
+     * @throws DateMalformedStringException
+     */
     #[Route('/gestion/tarifs/update/{id}', name: 'app_gestion_tarifs_update')]
     public function update(int $id): void
     {
@@ -71,7 +89,7 @@ class TarifsController extends AbstractController
                     ->setIsActive(isset($_POST['is_active']));
                 $this->repository->update($tarif);
                 $_SESSION['onglet_tarif'] = $tarif->getNbPlace() !== null ? 'places' : 'autres';
-                $_SESSION['flash_message'] = ['type' => 'success', 'message' => 'Tarif modifié'];
+                $this->flashMessageService->setFlashMessage('success', "Tarif modifié.");
             }
             header('Location: /gestion/tarifs');
             exit;
@@ -82,7 +100,7 @@ class TarifsController extends AbstractController
     public function delete($id)
     {
         $this->repository->delete((int)$id);
-        $_SESSION['flash_message'] = ['type' => 'success', 'message' => 'Tarif supprimé'];
+        $this->flashMessageService->setFlashMessage('success', "Tarif supprimé.");
         header('Location: /gestion/tarifs');
         exit;
     }

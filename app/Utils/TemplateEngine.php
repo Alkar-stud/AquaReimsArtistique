@@ -24,6 +24,15 @@ class TemplateEngine
         $__data = $data;                 // paquet de variables à propager aux includes
         extract($__data, EXTR_OVERWRITE);
 
+        // Valeurs par défaut sûres
+        if (!isset($load_ckeditor)) {
+            $load_ckeditor = false;
+        }
+        if (!isset($is_gestion_page)) {
+            $is_gestion_page = false;
+        }
+
+
         ob_start();
         try {
             eval('?>' . $template);
@@ -117,10 +126,9 @@ class TemplateEngine
 
     private function compileEchos(string $template): string
     {
-        // {{ ... }} échappé
         return preg_replace(
             '/\{\{\s*(.+?)\s*}}/s',
-            '<?= htmlspecialchars($1, ENT_QUOTES | ENT_SUBSTITUTE, \'UTF-8\') ?>',
+            '<?= htmlspecialchars((string)($1), ENT_QUOTES | ENT_SUBSTITUTE, "UTF-8") ?>',
             $template
         );
     }

@@ -132,13 +132,14 @@ class ReservationPaymentsRepository extends AbstractRepository
     public function insert(ReservationPayments $payment): int
     {
         $sql = "INSERT INTO $this->tableName
-            (reservation, type, amount_paid, checkout_id, order_id, payment_id, status_payment, created_at)
-            VALUES (:reservation, :type, :amount_paid, :checkout_id, :order_id, :payment_id, :status_payment, :created_at)";
+            (reservation, type, amount_paid, part_of_donation, checkout_id, order_id, payment_id, status_payment, created_at)
+            VALUES (:reservation, :type, :amount_paid, :part_of_donation, :checkout_id, :order_id, :payment_id, :status_payment, :created_at)";
 
         $this->execute($sql, [
             'reservation' => $payment->getReservation(),
             'type' => $payment->getType(),
             'amount_paid' => $payment->getAmountPaid(),
+            'part_of_donation' => $payment->getPartOfDonation(),
             'checkout_id' => $payment->getCheckoutId(),
             'order_id' => $payment->getOrderId(),
             'payment_id' => $payment->getPaymentId(),
@@ -160,6 +161,7 @@ class ReservationPaymentsRepository extends AbstractRepository
         reservation = :reservation,
         type = :type,
         amount_paid = :amount_paid,
+        part_of_donation = :part_of_donation,
         checkout_id = :checkout_id,
         order_id = :order_id,
         payment_id = :payment_id,
@@ -172,6 +174,7 @@ class ReservationPaymentsRepository extends AbstractRepository
             'reservation' => $payment->getReservation(),
             'type' => $payment->getType(),
             'amount_paid' => $payment->getAmountPaid(),
+            'part_of_donation' => $payment->getAmountPaid(),
             'checkout_id' => $payment->getCheckoutId(),
             'order_id' => $payment->getOrderId(),
             'payment_id' => $payment->getPaymentId(),
@@ -206,6 +209,7 @@ class ReservationPaymentsRepository extends AbstractRepository
             ->setOrderId($data['order_id'])
             ->setPaymentId($data['payment_id'])
             ->setAmountPaid($data['amount_paid'])
+            ->setPartOfDonation($data['part_of_donation'])
             ->setCheckoutId($data['checkout_id'])
             ->setStatusPayment($data['status_payment'])
             ->setCreatedAt($data['created_at']);

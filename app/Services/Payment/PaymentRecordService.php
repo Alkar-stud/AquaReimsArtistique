@@ -61,16 +61,28 @@ class PaymentRecordService
             ->setStatusPayment($orderData->payments[0]->state)
             ->setCreatedAt($orderData->date);
 
-        $this->paymentsRepository->insert($payment);
-
         // Mettre à jour le total payé sur la réservation
         // Pour un nouveau paiement, le montant est déjà défini lors de la création de la réservation.
         // On ne met à jour (en ajoutant) que pour les paiements complémentaires.
+        //On met $reservation totalAmountPaid à la bonne valeur, car $payment->getAmountPaid() peut être supérieur en cas de don.
+        //Dans ce cas, on enregistre la différence ailleurs.
         if ($typePayment === 'add') {
             $reservation = $this->reservationsRepository->findById($reservationId);
-            $newTotalPaid = $reservation->getTotalAmountPaid() + $payment->getAmountPaid();
+            if ($reservation->getTotalAmount() < ($reservation->getTotalAmountPaid() + $payment->getAmountPaid()))
+            {
+                $amountToPaid = $reservation->getTotalAmount() - $reservation->getTotalAmountPaid();
+                $partOfDonation = $payment->getAmountPaid() - $amountToPaid;
+                $newTotalPaid = $reservation->getTotalAmount();
+
+                $payment->setPartOfDonation($partOfDonation);
+            } else {
+                $newTotalPaid = $reservation->getTotalAmountPaid() + $payment->getAmountPaid();
+            }
+
             $this->reservationsRepository->updateSingleField($reservationId, 'total_amount_paid', $newTotalPaid);
         }
+
+        $this->paymentsRepository->insert($payment);
 
         return $payment;
     }

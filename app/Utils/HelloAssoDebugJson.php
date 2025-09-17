@@ -10,7 +10,7 @@ class HelloAssoDebugJson
     private string $storageDir;
     public function __construct()
     {
-        $this->storageDir = __DIR__ . '/../../../storage/app/private/HelloAssoDebug/';
+        $this->storageDir = __DIR__ . '/../../storage/app/private/HelloAssoDebug/';
         if (!is_dir($this->storageDir)) {
             mkdir($this->storageDir, 0770, true);
         }

@@ -253,7 +253,7 @@ class ReservationValidationService
                 if ($file['error'] === UPLOAD_ERR_OK) {
                     $extension = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
                     $uniqueName = $this->generateUniqueProofName($noms[$index], $prenoms[$index], $tarifId, $extension);
-                    $destination = __DIR__ . '/../..' . UPLOAD_PROOF_PATH . 'temp/';
+                    $destination = __DIR__ . '/../../..' . UPLOAD_PROOF_PATH . 'temp/';
 
                     $uploadResult = $this->uploadService->handleUpload($file, $destination, $uniqueName, [
                         'max_size_mb' => MAX_UPLOAD_PROOF_SIZE,

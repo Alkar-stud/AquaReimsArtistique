@@ -259,6 +259,6 @@ if ($paymentStatus == 'success' && $checkoutIntentId): ?>
         </fieldset>
     </div>
 <?php endif; ?>
-
+<br>
 <script src="/assets/js/reservation_common.js" defer></script>
 <script src="/assets/js/reservation_modif_data.js" defer></script>

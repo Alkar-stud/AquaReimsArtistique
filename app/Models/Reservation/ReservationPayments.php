@@ -13,6 +13,7 @@ class ReservationPayments
     private ?Reservations $reservationObject = null; // Objet Reservations lié
     private string $type;
     private int $amount_paid;
+    private ?int $part_of_donation = null;
     private int $checkout_id;
     private int $order_id;
     private int $payment_id;
@@ -25,7 +26,8 @@ class ReservationPayments
     public function getReservation(): int { return $this->reservation; }
     public function getReservationObject(): ?Reservations { return $this->reservationObject; }
     public function getType(): string { return $this->type; }
-    public function getAmountPaid(): int { return $this->amount_paid; }
+    public function getAmountPaid(): ?int { return $this->amount_paid; }
+    public function getPartOfDonation(): int { return $this->part_of_donation; }
     public function getCheckoutId(): int { return $this->checkout_id; }
     public function getOrderId(): int { return $this->order_id; }
     public function getPaymentId(): int { return $this->payment_id; }
@@ -63,6 +65,12 @@ class ReservationPayments
     public function setAmountPaid(int $amount_paid): self
     {
         $this->amount_paid = $amount_paid;
+        return $this;
+    }
+
+    public function setPartOfDonation(?int $part_of_donation): self
+    {
+        $this->part_of_donation = $part_of_donation;
         return $this;
     }
 

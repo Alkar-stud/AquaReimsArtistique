@@ -56,13 +56,13 @@ class ReservationPersistenceService
         }
 
         // --- Persistance des informations de paiement ---
-        (new PaymentRecordService())->createPaymentRecord($reservation->getId(), $paymentData);
+        (new PaymentRecordService())->createPaymentRecord($reservation->getId(), $paymentData, 'new_reservation');
 
         // Persister les détails et compléments
         $this->persistDetailsAndComplements($reservation->getId(), $tempReservation);
 
         // Envoyer l'email de confirmation et enregistrer l'envoi
-        $this->sendAndRecordConfirmationEmail($reservation);
+        $this->sendAndRecordConfirmationEmail($reservation, 'paiement_confirme');
 
         // Nettoyer les données temporaires
         $this->cleanupTemporaryData($tempReservation);
@@ -90,7 +90,7 @@ class ReservationPersistenceService
         $this->persistDetailsAndComplements($reservation->getId(), $tempReservation);
 
         // Envoyer l'email de confirmation et enregistrer l'envoi
-        $this->sendAndRecordConfirmationEmail($reservation);
+        $this->sendAndRecordConfirmationEmail($reservation, 'paiement_confirme');
 
         // Nettoyer les données temporaires
         $this->cleanupTemporaryData($tempReservation);
@@ -201,7 +201,7 @@ class ReservationPersistenceService
      * Envoie l'email de confirmation et enregistre l'envoi.
      * @throws DateMalformedStringException
      */
-    public function sendAndRecordConfirmationEmail(Reservations $reservation): void
+    public function sendAndRecordConfirmationEmail(Reservations $reservation, string $templateMailCode): void
     {
         $mailPrepareService = new MailPrepareService();
         if ($mailPrepareService->sendReservationConfirmationEmail($reservation)) {

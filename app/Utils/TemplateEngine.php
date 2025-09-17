@@ -60,6 +60,8 @@ class TemplateEngine
             '/\{% endif %\}/' => '<?php endif; ?>',
             '/\{% foreach (.+?) as (.+?) %\}/' => '<?php foreach ($1 as $2): ?>',
             '/\{% endforeach %\}/' => '<?php endforeach; ?>',
+            '/\{% for (.+?) %\}/' => '<?php for ($1): ?>',
+            '/\{% endfor %\}/' => '<?php endfor; ?>'
         ];
         return preg_replace(array_keys($patterns), array_values($patterns), $template);
     }

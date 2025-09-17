@@ -88,8 +88,9 @@ class ReservationprocessAndPersistService
             return false;
         }
 
-        //Si le montant ne correspond pas à la différence manquante dans la réservation, on retourne false
-        if ($paymentData->amount->total != $reservation->getTotalAmount() - $reservation->getTotalAmountPaid()) {
+        //Si le montant ne correspond pas à la différence manquante dans la réservation, on retourne false.
+        //Il peut être supérieur s'il y a un don, il faudra simplement enregistrer ce qu'il manque dans réservation et ailleurs le montant du don.
+        if ($paymentData->amount->total <= $reservation->getTotalAmount() - $reservation->getTotalAmountPaid()) {
             return false;
         }
 
@@ -100,7 +101,7 @@ class ReservationprocessAndPersistService
         $reservation = $this->reservationsRepository->findById($reservationId);
 
         // Envoyer l'email de confirmation et enregistrer l'envoi
-        $this->persistenceService->sendAndRecordConfirmationEmail($reservation);
+        $this->persistenceService->sendAndRecordConfirmationEmail($reservation, 'paiement_confirme_add');
 
         return true;
     }

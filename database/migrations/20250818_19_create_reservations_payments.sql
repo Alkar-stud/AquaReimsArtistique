@@ -5,6 +5,7 @@ CREATE TABLE IF NOT EXISTS `reservations_payments` (
     FOREIGN KEY (`reservation`) REFERENCES `reservations`(`id`),
     `type` CHAR(5) NOT NULL,
     `amount_paid` INT NOT NULL,
+    `part_of_donation` INT NULL,
     `checkout_id` INT NOT NULL,
     `order_id` INT NOT NULL,
     `payment_id` INT NOT NULL,

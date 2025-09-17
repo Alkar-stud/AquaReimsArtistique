@@ -5,7 +5,7 @@ use app\Attributes\Route;
 use app\Controllers\AbstractController;
 use app\Enums\LogType;
 use app\Repository\User\UserRepository;
-use app\Utils\FlashMessageService;
+use app\Services\FlashMessageService;
 use DateMalformedStringException;
 use Random\RandomException;
 
@@ -16,7 +16,7 @@ class LoginController extends AbstractController
 
     public function __construct()
     {
-        parent::__construct(true); // true = route publique, pas de vérif session pour éviter le TOO_MANY_REDIRECT
+        parent::__construct(true); // true = route publique, pas de vérif session
         $this->flashMessageService = new FlashMessageService();
     }
 
@@ -77,7 +77,7 @@ class LoginController extends AbstractController
 
         if (empty($username) || empty($password)) {
             $this->logService->logAccess('LOGIN_ATTEMPT_EMPTY_FIELDS', ['username' => $username]);
-            $_SESSION['flash_message'] = ['type' => 'danger', 'message' => 'Veuillez remplir tous les champs.'];
+            $this->flashMessageService->setFlashMessage('danger', "Veuillez remplir tous les champs.");
             header('Location: /login');
             exit;
         }

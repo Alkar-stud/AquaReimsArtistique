@@ -21,6 +21,7 @@ abstract class AbstractController
 
     /**
      * @throws DateMalformedStringException
+     * @throws RandomException
      */
     public function __construct(bool $isPublicRoute = false)
     {
@@ -35,6 +36,15 @@ abstract class AbstractController
 
     }
 
+    /**
+     * Pour permettre au controller d'afficher la vue.
+     *
+     * @param string $view
+     * @param array $data
+     * @param string $title
+     * @param bool $partial
+     * @return void
+     */
     protected function render(string $view, array $data = [], string $title = '', bool $partial = false): void
     {
         $content = '';
@@ -104,6 +114,7 @@ abstract class AbstractController
 
 
     /**
+     * Vérifie la session de l'utilisation
      * @throws DateMalformedStringException
      * @throws Exception
      */
@@ -159,6 +170,10 @@ abstract class AbstractController
         exit;
     }
 
+    /**
+     * Journalise les connexions
+     * @return void
+     */
     private function logUrlAccess(): void
     {
         $url = $_SERVER['REQUEST_URI'] ?? '';
@@ -173,15 +188,25 @@ abstract class AbstractController
         $this->logService->logUrl($url, $method, $context);
     }
 
+    /**
+     * Journalise l'accès à la route
+     * @return void
+     * @throws RandomException
+     */
     private function logRouteAccess(): void
     {
         $route = $this->getCurrentRoute();
         $controller = static::class;
         $action = $this->getCurrentAction();
 
+        $requestId = $_SERVER['REQUEST_ID'] ?? bin2hex(random_bytes(8));
+        $_SERVER['REQUEST_ID'] = $requestId;
+
         $context = [
             'route_params' => $this->getRouteParams(),
-            'execution_time_start' => microtime(true)
+            'execution_time_start' => microtime(true),
+            'request_id' => $requestId,
+            'user_id' => $_SESSION['user']['id'] ?? null
         ];
 
         $this->logService->logRoute($route, $controller, $action, $context);
@@ -220,6 +245,10 @@ abstract class AbstractController
             strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
     }
 
+    /**
+     * Initialise la configuration de session avant son démarrage
+     * @return void
+     */
     protected function configureSession(): void
     {
         // Ne configurer que si aucune session n'est active

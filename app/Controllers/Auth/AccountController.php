@@ -5,7 +5,7 @@ use app\Attributes\Route;
 use app\Controllers\AbstractController;
 use app\Repository\User\UserRepository;
 use app\Services\Mails\MailPrepareService;
-use app\Utils\FlashMessageService;
+use app\Services\FlashMessageService;
 use DateMalformedStringException;
 use Exception;
 
@@ -21,7 +21,6 @@ class AccountController extends AbstractController
     }
     public function index(): void
     {
-
         // Récupérer le message flash s'il existe
         $flashMessage = $this->flashMessageService->getFlashMessage();
         $this->flashMessageService->unsetFlashMessage();
@@ -41,10 +40,7 @@ class AccountController extends AbstractController
         $email = $_POST['email'] ?? '';
 
         if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-            $_SESSION['flash_message'] = [
-                'type' => 'danger',
-                'message' => "L'adresse email saisie est invalide."
-            ];
+            $this->flashMessageService->setFlashMessage('danger', "L'adresse email saisie est invalide.");
             header('Location: /account');
             exit;
         }
@@ -57,10 +53,7 @@ class AccountController extends AbstractController
             $userEmailTarget = $userRepository->findByEmail($email);
 
             if ($userEmailTarget && $userEmailTarget->getId() != $userId) {
-                $_SESSION['flash_message'] = [
-                    'type' => 'danger',
-                    'message' => "Il est impossible de mettre à jour cette adresse email."
-                ];
+                $this->flashMessageService->setFlashMessage('danger', "Il est impossible de mettre à jour cette adresse email.");
                 header('Location: /account');
                 exit;
             }
@@ -69,24 +62,18 @@ class AccountController extends AbstractController
             }
             //Si l'adresse mail et displayname sont identiques, on ne met pas à jour, mais on met quand même le message.
             if ($displayname == $_SESSION['user']['displayname'] && $email == $_SESSION['user']['email']) {
-                $_SESSION['flash_message'] = [
-                    'type' => 'info',
-                    'message' => "Vos informations n'ont pas été modifiées."];
+                $this->flashMessageService->setFlashMessage('info', "Vos informations n'ont pas été modifiées.");
                 header('Location: /account');
                 exit;
             }
             if ($userRepository->updateData($userId, $displayname, $email)) {
                 $_SESSION['user']['displayname'] = $displayname;
                 $_SESSION['user']['email'] = $email;
-                $_SESSION['flash_message'] = [
-                    'type' => 'success',
-                    'message' => "Vos informations ont bien été mise à jour."];
+                $this->flashMessageService->setFlashMessage('success', "Vos informations ont bien été mise à jour.");
                 header('Location: /account');
                 exit;
             } else {
-                $_SESSION['flash_message'] = [
-                    'type' => 'danger',
-                    'message' => "Erreur lors de la mise à jour de vos informations."];
+                $this->flashMessageService->setFlashMessage('info', "Erreur lors de la mise à jour de vos informations.");
             }
         }
 
@@ -104,18 +91,14 @@ class AccountController extends AbstractController
 
         //Si les nouveaux mots de passe ne sont pas identiques, on refuse
         if ($new_password != $confirm_password) {
-            $_SESSION['flash_message'] = [
-                'type' => 'danger',
-                'message' => "Les mots de passe ne correspondent pas."];
+            $this->flashMessageService->setFlashMessage('danger', "Erreur, les mots de passe ne correspondent pas");
             header('Location: /account');
             exit;
         }
 
         //Si le nouveau mot de passe est identique au mot de passe actuel, on refuse
         if ($new_password == $current_password) {
-            $_SESSION['flash_message'] = [
-                'type' => 'warning',
-                'message' => "Le nouveau mot de passe est identique à l'ancien."];
+            $this->flashMessageService->setFlashMessage('warning', "Le nouveau mot de passe est identique à l'ancien.");
             header('Location: /account');
             exit;
         }
@@ -139,13 +122,9 @@ class AccountController extends AbstractController
                 error_log('Erreur critique du service Mail: ' . $e->getMessage());
             }
 
-            $_SESSION['flash_message'] = [
-                'type' => 'success',
-                'message' => "Le mot de passe a bien été changé."];
+            $this->flashMessageService->setFlashMessage('success', "Le mot de passe a bien été changé.");
         } else {
-            $_SESSION['flash_message'] = [
-                'type' => 'danger',
-                'message' => "Le mot de passe actuel est erroné."];
+            $this->flashMessageService->setFlashMessage('danger', "Le mot de passe actuel est erroné.");
         }
         header('Location: /account');
         exit;

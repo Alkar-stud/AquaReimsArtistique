@@ -5,6 +5,7 @@ use app\Attributes\Route;
 use app\Controllers\AbstractController;
 use app\Enums\LogType;
 use app\Repository\User\UserRepository;
+use app\Services\FlashMessageService;
 use app\Services\Mails\MailPrepareService;
 use DateMalformedStringException;
 use DateTime;
@@ -13,9 +14,11 @@ use Random\RandomException;
 
 class PasswordResetController extends AbstractController
 {
+    private FlashMessageService $flashMessageService;
     public function __construct()
     {
         parent::__construct(true); // true = route publique, pas de vérif session pour éviter le TOO_MANY_REDIRECT
+        $this->flashMessageService = new FlashMessageService();
     }
     /**
      * Gère l'affichage (GET) et le traitement (POST) du formulaire de mot de passe oublié.
@@ -40,10 +43,7 @@ class PasswordResetController extends AbstractController
                     'user_agent' => $_SERVER['HTTP_USER_AGENT'] ?? ''
                 ], 'DANGER');
 
-                $_SESSION['flash_message'] = [
-                    'type' => 'danger',
-                    'message' => 'Token de sécurité invalide. Veuillez réessayer.'
-                ];
+                $this->flashMessageService->setFlashMessage('danger', "Token de sécurité invalide. Veuillez réessayer.");
                 header('Location: /forgot-password');
                 exit;
             }
@@ -52,7 +52,7 @@ class PasswordResetController extends AbstractController
 
             $email = trim($_POST['email'] ?? '');
             if (empty($email) || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
-                $_SESSION['flash_message'] = ['type' => 'danger', 'message' => 'Veuillez fournir une adresse email valide.'];
+                $this->flashMessageService->setFlashMessage('danger', "Veuillez fournir une adresse email valide.");
                 header('Location: /forgot-password');
                 exit;
             }
@@ -88,8 +88,8 @@ class PasswordResetController extends AbstractController
                 }
             }
 
-            // IMPORTANT : Toujours afficher un message de succès générique pour la sécurité.
-            $_SESSION['flash_message'] = ['type' => 'success', 'message' => 'Si votre adresse email est dans notre système, vous recevrez un lien pour réinitialiser votre mot de passe.'];
+            // Afficher un message de succès générique.
+            $this->flashMessageService->setFlashMessage('success', "Si votre adresse email est dans notre système, vous recevrez un lien pour réinitialiser votre mot de passe.");
             header('Location: /forgot-password');
             exit;
 
@@ -99,8 +99,13 @@ class PasswordResetController extends AbstractController
                 $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
             }
 
+            // Récupérer le message flash s'il existe
+            $flashMessage = $this->flashMessageService->getFlashMessage();
+            $this->flashMessageService->unsetFlashMessage();
+
             $this->render('password/forgot', [
-                'csrf_token' => $_SESSION['csrf_token']
+                'csrf_token' => $_SESSION['csrf_token'],
+                'flash_message' => $flashMessage
             ], 'Mot de passe oublié');
         }
     }
@@ -132,10 +137,7 @@ class PasswordResetController extends AbstractController
                     'user_agent' => $_SERVER['HTTP_USER_AGENT'] ?? ''
                 ], 'DANGER');
 
-                $_SESSION['flash_message'] = [
-                    'type' => 'danger',
-                    'message' => 'Token de sécurité invalide. Veuillez réessayer.'
-                ];
+                $this->flashMessageService->setFlashMessage('danger', "Token de sécurité invalide. Veuillez réessayer.");
                 header('Location: /reset-password?token=' . $token);
                 exit;
             }
@@ -151,14 +153,14 @@ class PasswordResetController extends AbstractController
 
             if (!$user) {
                 // Si le token est devenu invalide entre-temps
-                $_SESSION['flash_message'] = ['type' => 'danger', 'message' => 'Ce lien de réinitialisation est invalide ou a expiré. Veuillez refaire une demande.'];
+                $this->flashMessageService->setFlashMessage('danger', "Ce lien de réinitialisation est invalide ou a expiré. Veuillez refaire une demande.");
                 header('Location: /forgot-password');
                 exit;
             }
 
             // Valider les mots de passe
             if (empty($password) || $password !== $passwordConfirm) {
-                $_SESSION['flash_message'] = ['type' => 'danger', 'message' => 'Les mots de passe ne correspondent pas ou sont vides.'];
+                $this->flashMessageService->setFlashMessage('danger', "Les mots de passe ne correspondent pas ou sont vides.");
                 // On redirige vers la même page pour que l'utilisateur puisse réessayer
                 header('Location: /reset-password?token=' . $token);
                 exit;
@@ -171,8 +173,8 @@ class PasswordResetController extends AbstractController
             // IMPORTANT : On invalide le token pour qu'il ne soit pas réutilisé
             $userRepository->clearResetToken($user->getId());
 
-            // 5. On redirige vers la page de connexion avec un message de succès
-            $_SESSION['flash_message'] = ['type' => 'success', 'message' => 'Votre mot de passe a été réinitialisé avec succès. Vous pouvez maintenant vous connecter.'];
+            // On redirige vers la page de connexion avec un message de succès
+            $this->flashMessageService->setFlashMessage('success', "Votre mot de passe a été réinitialisé avec succès. Vous pouvez maintenant vous connecter.");
             header('Location: /login');
             exit;
         } else {
@@ -185,14 +187,19 @@ class PasswordResetController extends AbstractController
             $user = $userRepository->findByValidResetToken($token);
 
             if (!$user) {
-                $_SESSION['flash_message'] = ['type' => 'danger', 'message' => 'Ce lien de réinitialisation est invalide ou a expiré.'];
+                $this->flashMessageService->setFlashMessage('danger', "Ce lien de réinitialisation est invalide ou a expiré.");
                 header('Location: /forgot-password');
                 exit;
             }
 
+            // Récupérer le message flash s'il existe
+            $flashMessage = $this->flashMessageService->getFlashMessage();
+            $this->flashMessageService->unsetFlashMessage();
+
             $this->render('password/reset', [
                 'token' => $token,
-                'csrf_token' => $_SESSION['csrf_token']
+                'csrf_token' => $_SESSION['csrf_token'],
+                'flash_message' => $flashMessage
             ], 'Réinitialiser le mot de passe');
         }
 

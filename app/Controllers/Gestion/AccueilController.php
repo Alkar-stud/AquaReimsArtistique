@@ -8,6 +8,7 @@ use app\Models\Accueil;
 use app\Repository\AccueilRepository;
 use app\Repository\Event\EventsRepository;
 use app\Repository\Event\EventSessionRepository;
+use app\Services\FlashMessageService;
 use app\Services\UploadService;
 use Exception;
 use JetBrains\PhpStorm\NoReturn;
@@ -17,6 +18,7 @@ class AccueilController extends AbstractController
     private AccueilRepository $repository;
     private EventsRepository $eventsRepository;
     private EventSessionRepository $eventSessionRepository;
+    private FlashMessageService $flashMessageService;
 
     function __construct()
     {
@@ -24,6 +26,7 @@ class AccueilController extends AbstractController
         $this->repository = new AccueilRepository();
         $this->eventsRepository = new EventsRepository();
         $this->eventSessionRepository = new EventSessionRepository();
+        $this->flashMessageService = new FlashMessageService();
     }
 
     #[Route('/gestion/accueil', name: 'app_gestion_accueil')]
@@ -35,9 +38,8 @@ class AccueilController extends AbstractController
 
         // Récupération des dernières sessions pour chaque événement
         $eventSessions = [];
-        $eventSessionRepository = new EventSessionRepository();
         foreach ($events as $event) {
-            $lastSession = $eventSessionRepository->findLastSessionByEventId($event->getId());
+            $lastSession = $this->eventSessionRepository->findLastSessionByEventId($event->getId());
             if ($lastSession) {
                 $eventSessions[$event->getId()] = $lastSession['event_start_at'];
             }
@@ -66,9 +68,8 @@ class AccueilController extends AbstractController
 
         // Récupération des dernières sessions pour chaque événement
         $eventSessions = [];
-        $eventSessionRepository = new EventSessionRepository();
         foreach ($events as $event) {
-            $lastSession = $eventSessionRepository->findLastSessionByEventId($event->getId());
+            $lastSession = $this->eventSessionRepository->findLastSessionByEventId($event->getId());
             if ($lastSession) {
                 $eventSessions[$event->getId()] = $lastSession['event_start_at'];
             }
@@ -94,9 +95,9 @@ class AccueilController extends AbstractController
                 ->setCreatedAt(date('Y-m-d H:i:s'));
 
             $this->repository->insert($accueil);
-            $_SESSION['flash_message'] = ['type' => 'success', 'message' => 'Le contenu a été ajouté avec succès.'];
+            $this->flashMessageService->setFlashMessage('success', "Le contenu a été ajouté avec succès.");
         } else {
-            $_SESSION['flash_message'] = ['type' => 'danger', 'message' => 'Données manquantes pour l\'ajout.'];
+            $this->flashMessageService->setFlashMessage('danger', "Données manquantes pour l'ajout.");
         }
         header('Location: /gestion/accueil');
         exit();
@@ -109,18 +110,18 @@ class AccueilController extends AbstractController
         $data = json_decode(file_get_contents('php://input'), true);
 
         if (!isset($data['id'], $data['status'])) {
-            $this->json(['success' => false, 'message' => 'Données invalides.'], 400);
+            $this->json(['success' => false, 'message' => 'Données invalides.']);
             return;
         }
 
         try {
             $this->repository->updateStatus((int)$data['id'], (bool)$data['status']);
-            $_SESSION['flash_message'] = ['type' => 'success', 'message' => 'Le statut a été mis à jour avec succès.'];
+            $this->flashMessageService->setFlashMessage('success', "Le statut a été mis à jour avec succès.");
             $this->json(['success' => true]);
         } catch (Exception $e) {
             error_log("Erreur lors de la mise à jour du statut : " . $e->getMessage());
-            $_SESSION['flash_message'] = ['type' => 'danger', 'message' => 'Une erreur est survenue lors de la mise à jour du statut.'];
-            $this->json(['success' => false, 'message' => 'Erreur serveur.'], 500);
+            $this->flashMessageService->setFlashMessage('danger', "Une erreur est survenue lors de la mise à jour du statut.");
+            $this->json(['success' => false, 'message' => 'Erreur serveur.']);
         }
     }
 
@@ -132,7 +133,7 @@ class AccueilController extends AbstractController
             $accueil = $this->repository->findById($id);
 
             if (!$accueil) {
-                $_SESSION['flash_message'] = ['type' => 'danger', 'message' => 'Le contenu à modifier n\'a pas été trouvé.'];
+                $this->flashMessageService->setFlashMessage('danger', "Le contenu à modifier n'a pas été trouvé.");
             } else {
                 $accueil->setEvent($_POST['event'])
                     ->setDisplayUntil($_POST['display_until'])
@@ -140,10 +141,10 @@ class AccueilController extends AbstractController
                     ->setIsdisplayed(isset($_POST['is_displayed']));
 
                 $this->repository->update($accueil);
-                $_SESSION['flash_message'] = ['type' => 'success', 'message' => 'Le contenu a été modifié avec succès.'];
+                $this->flashMessageService->setFlashMessage('success', "Le contenu a été modifié avec succès.");
             }
         } else {
-            $_SESSION['flash_message'] = ['type' => 'danger', 'message' => 'Données manquantes pour la modification.'];
+            $this->flashMessageService->setFlashMessage('danger', "Données manquantes pour la modification.");
         }
         header('Location: /gestion/accueil');
         exit();
@@ -210,13 +211,13 @@ class AccueilController extends AbstractController
             $accueil = $this->repository->findById($id);
 
             if (!$accueil) {
-                $_SESSION['flash_message'] = ['type' => 'danger', 'message' => 'Ce contenu à supprimer n\'a pas été trouvé.'];
+                $this->flashMessageService->setFlashMessage('warning', "Ce contenu à supprimer n'a pas été trouvé.");
             } else {
                 $this->repository->delete($id);
-                $_SESSION['flash_message'] = ['type' => 'success', 'message' => 'Le contenu a été supprimé avec succès.'];
+                $this->flashMessageService->setFlashMessage('success', "Le contenu a été supprimé avec succès.");
             }
         } else {
-            $_SESSION['flash_message'] = ['type' => 'danger', 'message' => 'Données manquantes pour la suppression.'];
+            $this->flashMessageService->setFlashMessage('danger', "Données manquantes pour la suppression.");
         }
         header('Location: /gestion/accueil');
         exit();

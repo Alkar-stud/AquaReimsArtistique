@@ -1,6 +1,6 @@
 <?php
 
-namespace app\Utils;
+namespace app\Services;
 
 class FlashMessageService
 {

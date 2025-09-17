@@ -228,7 +228,7 @@
                                                                 <input class="form-check-input" type="checkbox" name="tarifs[]" value="<?= $tarif->getId() ?>" id="tarif_<?= $tarif->getId() ?>">
                                                                 <label class="form-check-label" for="tarif_<?= $tarif->getId() ?>">
                                                                     <strong><?= htmlspecialchars($tarif->getLibelle()) ?></strong>
-                                                                    &nbsp;<span class="float-end"><?= number_format($tarif->getPrice(), 2, ',', ' ') ?> €</span>
+                                                                    &nbsp;<span class="float-end"><?= number_format($tarif->getPrice() / 100, 2, ',', ' ') ?> €</span>
                                                                 </label>
                                                             </div>
                                                             <!-- Reste du contenu du tarif -->
@@ -261,7 +261,7 @@
                                                                 <input class="form-check-input" type="checkbox" name="tarifs[]" value="<?= $tarif->getId() ?>" id="tarif_<?= $tarif->getId() ?>">
                                                                 <label class="form-check-label" for="tarif_<?= $tarif->getId() ?>">
                                                                     <strong><?= htmlspecialchars($tarif->getLibelle()) ?></strong>
-                                                                    <span class="float-end"><?= number_format($tarif->getPrice(), 2, ',', ' ') ?> €</span>
+                                                                     <span class="float-end"><?= number_format($tarif->getPrice() / 100, 2, ',', ' ') ?> €</span>
                                                                 </label>
                                                             </div>
                                                             <!-- Reste du contenu du tarif -->

@@ -1,5 +1,4 @@
 <?php
-//Execute à l'affichage de la page d'accueil de Gestion : gestion.html.php
 namespace app\Services\Logs;
 
 use app\Enums\LogType;
@@ -15,7 +14,7 @@ class LogRotationService
     public function __construct()
     {
         $this->logService = new LogService();
-        $this->logDirectory = __DIR__ . '/../../storage/logs/';
+        $this->logDirectory = __DIR__ . '/../../../storage/logs/';
     }
 
     public function rotateAllLogs(): array

@@ -186,7 +186,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
         if (tarifs.length === 0) {
-            alertDiv.innerHTML = `<div class="alert alert-danger">Veuillez sélectionner au moins un tarif.</div>`;
+            alertDiv.innerHTML = `<div class="alert alert-danger">Veuillez sélectionner au moins une place assise.</div>`;
             return;
         }
 

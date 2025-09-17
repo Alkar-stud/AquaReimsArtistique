@@ -45,7 +45,7 @@ class Reservations
     public function getNom(): string { return $this->nom; }
     public function getPrenom(): string { return $this->prenom; }
     public function getEmail(): string { return $this->email; }
-    public function getPhone(): string { return $this->phone; }
+    public function getPhone(): ?string { return $this->phone; }
     public function getNageuseId(): ?int { return $this->nageuse_si_limitation; }
     public function getNageuse(): ?Nageuses { return $this->nageuse; }
     public function getTotalAmount(): int { return $this->total_amount; }

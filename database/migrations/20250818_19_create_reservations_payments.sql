@@ -3,6 +3,7 @@ CREATE TABLE IF NOT EXISTS `reservations_payments` (
     `id` bigint NOT NULL AUTO_INCREMENT PRIMARY KEY,
     `reservation` bigint NOT NULL,
     FOREIGN KEY (`reservation`) REFERENCES `reservations`(`id`),
+    `type` CHAR(5) NOT NULL,
     `amount_paid` INT NOT NULL,
     `checkout_id` INT NOT NULL,
     `order_id` INT NOT NULL,

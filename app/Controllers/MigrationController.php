@@ -4,7 +4,7 @@ namespace app\Controllers;
 
 use app\Attributes\Route;
 use app\Repository\User\UserRepository;
-use app\Services\MailService;
+use app\Services\Mails\MailPrepareService;
 use app\Traits\HasPdoConnection;
 use DateTime;
 use Exception;
@@ -96,10 +96,10 @@ class MigrationController
                     // Envoie le mail (inchangé)
                     try {
                         if (class_exists('\app\Services\MailService')) {
-                            $mailService = new MailService();
-                            $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? "https://" : "http://";
+                            $mailPrepareService = new MailPrepareService();
+                            $protocol = "https://";
                             $resetLink = $protocol . $_SERVER['HTTP_HOST'] . '/reset-password?token=' . $token;
-                            $mailService->sendPasswordResetEmail($email, 'Super Admin', $resetLink);
+                            $mailPrepareService->sendPasswordResetEmail($email, 'Super Admin', $resetLink);
                         }
                     } catch (Exception $e) {
                         error_log('Erreur lors de l\'envoi de l\'email de réinitialisation : ' . $e->getMessage());
@@ -114,7 +114,7 @@ class MigrationController
                             echo "<li>" . htmlspecialchars($file) . "</li>";
                         }
                         echo "</ul>";
-                        echo '<a href="/">Retour à l\'accueil</a>';;
+                        echo '<a href="/">Retour à l\'accueil</a>';
                         unset($_SESSION['applied_migrations']);
                     }
                     return;

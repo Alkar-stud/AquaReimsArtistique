@@ -1,10 +1,16 @@
 /* Styles globaux pour la navbar */
 .navbar {
     background: var(--ara-color-darkblue);
-    flex-direction: row;
-    gap: 0.5rem;
-    padding: 0;
-    margin: 0;
+    position: fixed;
+    top: 112px;
+    left: 0;
+    right: 0;
+    z-index: 1000;
+}
+
+/* Padding en haut du contenu principal pour éviter qu'il soit caché sous le menu fixe */
+main, .container:first-of-type:not(header .container):not(footer .container) {
+    padding-top: 70px;
 }
 
 @media (max-width: 768px) {

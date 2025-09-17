@@ -24,7 +24,7 @@ class NageusesController extends AbstractController
     {
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $nageuse = new Nageuses();
-            $nageuse->setName($_POST['name'] ?? '')
+            $nageuse->setName(mb_convert_case($_POST['name'], MB_CASE_TITLE, "UTF-8") ?? '')
                 ->setGroupe(isset($_POST['groupe']) ? (int)$_POST['groupe'] : null)
                 ->setCreatedAt(date('Y-m-d H:i:s'));
             $this->repository->insert($nageuse);
@@ -45,7 +45,7 @@ class NageusesController extends AbstractController
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $nageuse = $this->repository->findById($id);
             if ($nageuse) {
-                $nageuse->setName($_POST['name'] ?? '')
+                $nageuse->setName(mb_convert_case($_POST['name'], MB_CASE_TITLE, "UTF-8") ?? '')
                     ->setGroupe(isset($_POST['groupe']) ? (int)$_POST['groupe'] : null);
                 $this->repository->update($nageuse);
                 $_SESSION['flash_message'] = ['type' => 'success', 'message' => 'Nageuse modifiée'];

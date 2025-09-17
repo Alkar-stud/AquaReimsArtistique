@@ -6,7 +6,7 @@ use DateMalformedStringException;
 use DateTime;
 use DateTimeInterface;
 
-class ReservationsComplements
+class ReservationsComplements extends \app\Repository\Reservation\ReservationsComplementsRepository
 {
     private int $id;
     private int $reservation;
@@ -19,54 +19,17 @@ class ReservationsComplements
     private ?DateTimeInterface $updated_at = null;
 
     // --- GETTERS ---
-
-    public function getId(): int
-    {
-        return $this->id;
-    }
-
-    public function getReservation(): int
-    {
-        return $this->reservation;
-    }
-
-    public function getReservationObject(): ?Reservations
-    {
-        return $this->reservationObject;
-    }
-
-    public function getTarif(): int
-    {
-        return $this->tarif;
-    }
-
-    public function getTarifObject(): ?object
-    {
-        return $this->tarifObject;
-    }
-
-    public function getTarifAccessCode(): ?string
-    {
-        return $this->tarif_access_code;
-    }
-
-    public function getQty(): int
-    {
-        return $this->qty;
-    }
-
-    public function getCreatedAt(): DateTimeInterface
-    {
-        return $this->created_at;
-    }
-
-    public function getUpdatedAt(): ?DateTimeInterface
-    {
-        return $this->updated_at;
-    }
+    public function getId(): int { return $this->id; }
+    public function getReservation(): int { return $this->reservation; }
+    public function getReservationObject(): ?Reservations { return $this->reservationObject; }
+    public function getTarif(): int { return $this->tarif; }
+    public function getTarifObject(): ?object { return $this->tarifObject; }
+    public function getTarifAccessCode(): ?string { return $this->tarif_access_code; }
+    public function getQty(): int { return $this->qty; }
+    public function getCreatedAt(): DateTimeInterface { return $this->created_at; }
+    public function getUpdatedAt(): ?DateTimeInterface { return $this->updated_at; }
 
     // --- SETTERS ---
-
     public function setId(int $id): self
     {
         $this->id = $id;

@@ -46,14 +46,14 @@ unset($_SESSION['onglet_tarif']);
                         data-age_min="<?= htmlspecialchars($tarif->getAgeMin() ?? '') ?>"
                         data-age_max="<?= htmlspecialchars($tarif->getAgeMax() ?? '') ?>"
                         data-max_tickets="<?= htmlspecialchars($tarif->getMaxTickets() ?? '') ?>"
-                        data-price="<?= number_format($tarif->getPrice(), 2, '.', '') ?>"
+                        data-price="<?= number_format($tarif->getPrice() / 100, 2, '.', '') ?>"
                         data-is_program_show_include="<?= $tarif->getIsProgramShowInclude() ? '1' : '0' ?>"
                         data-is_proof_required="<?= $tarif->getIsProofRequired() ? '1' : '0' ?>"
-                        data-access_code="<?= htmlspecialchars($tarif->getAccessCode()) ?>"
+                        data-access_code="<?= $tarif->getAccessCode() !== null ? htmlspecialchars($tarif->getAccessCode()): '' ?>"
                         data-is_active="<?= $tarif->getIsActive() ? '1' : '0' ?>"
                         onclick="openTarifModal('edit', this.dataset)">
                         <span><?= htmlspecialchars($tarif->getLibelle()) ?></span>
-                        <span><?= number_format($tarif->getPrice(), 2, ',', ' ') ?> €</span>
+                        <span><?= number_format($tarif->getPrice() / 100, 2, ',', ' ') ?> €</span>
                         <a href="/gestion/tarifs/delete/<?= $tarif->getId() ?>" class="btn btn-danger btn-sm" onclick="return confirm('Supprimer ce tarif ?');">Supprimer</a>
                     </li>
                 <?php endforeach; ?>
@@ -164,7 +164,7 @@ unset($_SESSION['onglet_tarif']);
                             <td><input type="number" name="age_min" min="0"  class="form-control" value="<?= htmlspecialchars($tarif->getAgeMin() ?? '') ?>"></td>
                             <td><input type="number" name="age_max" class="form-control" value="<?= htmlspecialchars($tarif->getAgeMax() ?? '') ?>"></td>
                             <td><input type="number" name="max_tickets" min="0"  class="form-control" value="<?= $tarif->getMaxTickets() ?>"></td>
-                            <td><input type="number" step="0.01" min="0" name="price" class="form-control" required value="<?= number_format($tarif->getPrice(), 2, '.', '') ?>"></td>
+                            <td><input type="number" step="0.01" min="0" name="price" class="form-control" required value="<?= number_format($tarif->getPrice() / 100, 2, '.', '') ?>"></td>
                             <td class="text-center"><input type="checkbox" name="is_program_show_include" <?= $tarif->getIsProgramShowInclude() ? 'checked' : '' ?>></td>
                             <td class="text-center"><input type="checkbox" name="is_proof_required" <?= $tarif->getIsProofRequired() ? 'checked' : '' ?>></td>
                             <td><input type="text" name="access_code" class="form-control" value="<?= htmlspecialchars($tarif->getAccessCode() ?? '') ?>"></td>

@@ -5,7 +5,7 @@ use app\Attributes\Route;
 use app\Controllers\AbstractController;
 use app\Enums\LogType;
 use app\Repository\User\UserRepository;
-use app\Services\MailService;
+use app\Services\Mails\MailPrepareService;
 use DateMalformedStringException;
 use DateTime;
 use Exception;
@@ -74,11 +74,11 @@ class PasswordResetController extends AbstractController
 
                 // Envoyer l'email avec le lien de réinitialisation
                 try {
-                    $mailService = new MailService();
-                    $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? "https://" : "http://";
-                    $resetLink = $protocol . '' . $_SERVER['HTTP_HOST'] . '/reset-password?token=' . $token;
+                    $mailPrepareService = new MailPrepareService();
+                    $protocol = "https://";
+                    $resetLink = $protocol . $_SERVER['HTTP_HOST'] . '/reset-password?token=' . $token;
 
-                    $mailService->sendPasswordResetEmail(
+                    $mailPrepareService->sendPasswordResetEmail(
                         $user->getEmail(),
                         $user->getDisplayName(),
                         $resetLink
@@ -108,6 +108,7 @@ class PasswordResetController extends AbstractController
     /**
      * Gère l'affichage (GET) et le traitement (POST) du formulaire de réinitialisation.
      * @throws DateMalformedStringException
+     * @throws RandomException
      */
     #[Route('/reset-password', name: 'app_reset_password')]
     public function resetPassword(): void

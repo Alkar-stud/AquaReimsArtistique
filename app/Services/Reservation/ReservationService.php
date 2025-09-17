@@ -10,7 +10,7 @@ use app\Repository\Reservation\ReservationsDetailsRepository;
 use app\Repository\Reservation\ReservationsRepository;
 use app\Repository\TarifsRepository;
 use app\Services\Logs\LogService;
-use app\Services\MailService;
+use app\Services\Mails\MailPrepareService;
 use app\Services\SessionValidationService;
 use DateMalformedStringException;
 use Exception;
@@ -24,7 +24,7 @@ class ReservationService
     private TarifsRepository $tarifsRepository;
     private MailTemplateRepository $mailTemplateRepository;
     private ReservationMailsSentRepository $reservationMailsSentRepository;
-    private MailService $mailService;
+    private MailPrepareService $mailPrepareService;
     private SessionValidationService $sessionValidationService;
     private LogService $logService;
     private ReservationSessionService $reservationSessionService;
@@ -40,7 +40,7 @@ class ReservationService
         $this->tarifsRepository = new TarifsRepository();
         $this->mailTemplateRepository = new MailTemplateRepository();
         $this->reservationMailsSentRepository = new ReservationMailsSentRepository();
-        $this->mailService = new MailService();
+        $this->mailPrepareService = new MailPrepareService();
         $this->sessionValidationService = new SessionValidationService();
         $this->logService = new LogService();
         $this->reservationSessionService = new ReservationSessionService();
@@ -121,7 +121,7 @@ class ReservationService
             $event = $this->eventsRepository->findById($reservation->getEvent());
             $reservation->setEventObject($event);
 
-            if ($this->mailService->sendReservationConfirmationEmail($reservation)) {
+            if ($this->mailPrepareService->sendReservationConfirmationEmail($reservation)) {
                 $mailSentRecord = new ReservationMailsSent();
                 $mailSentRecord->setReservation($reservation->getId())->setMailTemplate($template->getId())->setSentAt(date('Y-m-d H:i:s'));
                 $this->reservationMailsSentRepository->insert($mailSentRecord);
@@ -333,20 +333,33 @@ class ReservationService
         }
 
         if ($step >= 5) {
-            if ($step == 5) {
-                // Pour la soumission de l'étape 5, on utilise les données du formulaire.
-                $dataForStep5 = $dataInputed;
-            } else {
-                // Pour les étapes suivantes, on reconstruit la liste des places à partir de la session.
-                $details = $reservationDataSession['reservation_detail'] ?? [];
-                $seatIds = array_filter(array_column($details, 'seat_id'));
-                $dataForStep5 = ['seats' => $seatIds];
+            // On vérifie si l'événement a des places numérotées avant de valider l'étape 5.
+            $event = $this->eventsRepository->findById($reservationDataSession['event_id']);
+            $shouldSkipStep5 = false;
+            if ($event) {
+                //Si pas de places numérotées dans la piscine de l'event, on saute la vérification 5 qui correspond au choix des places sur le plan.
+                if (!$event->getPiscine()->getNumberedSeats()) {
+                    $shouldSkipStep5 = true;
+                }
             }
 
-            $return = $this->reservationValidationService->processAndValidateStep5($dataForStep5, $reservationDataSession);
+            // Si l'étape 5 doit être sautée, on ne la valide pas.
+            if (!$shouldSkipStep5) {
+                if ($step == 5) {
+                    // Pour la soumission de l'étape 5, on utilise les données du formulaire.
+                    $dataForStep5 = $dataInputed;
+                } else {
+                    // Pour les étapes suivantes, on reconstruit la liste des places à partir de la session.
+                    $details = $reservationDataSession['reservation_detail'] ?? [];
+                    $seatIds = array_filter(array_column($details, 'seat_id'));
+                    $dataForStep5 = ['seats' => $seatIds];
+                }
 
-            if (!$return['success']) {
-                return $return;
+                $return = $this->reservationValidationService->processAndValidateStep5($dataForStep5, $reservationDataSession);
+
+                if (!$return['success']) {
+                    return $return;
+                }
             }
         }
 
@@ -370,6 +383,30 @@ class ReservationService
         return ['success' => true, 'error' => null, 'data' => $return['data']];
     }
 
+    /**
+     * Applique les règles de mise en forme (casse) pour les champs 'nom' et 'prenom'.
+     *
+     * @param string|null $field Le nom du champ.
+     * @param string|null $value La valeur à formater.
+     * @return string|null La valeur formatée.
+     */
+    public function normalizeFieldValue(?string $field, ?string $value): ?string
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        if ($field === 'nom') {
+            return mb_strtoupper($value, 'UTF-8');
+        }
+
+        if ($field === 'prenom') {
+            // Met en majuscule la première lettre de chaque mot (gère les prénoms composés)
+            return mb_convert_case($value, MB_CASE_TITLE, 'UTF-8');
+        }
+
+        return $value;
+    }
 
 
 }

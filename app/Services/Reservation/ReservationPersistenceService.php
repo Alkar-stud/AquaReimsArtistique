@@ -3,20 +3,19 @@
 namespace app\Services\Reservation;
 
 use app\Models\Reservation\ReservationMailsSent;
-use app\Models\Reservation\ReservationPayments;
 use app\Models\Reservation\Reservations;
 use app\Models\Reservation\ReservationsComplements;
 use app\Models\Reservation\ReservationsDetails;
 use app\Repository\Event\EventsRepository;
 use app\Repository\MailTemplateRepository;
 use app\Repository\Reservation\ReservationMailsSentRepository;
-use app\Repository\Reservation\ReservationPaymentsRepository;
 use app\Repository\Reservation\ReservationsComplementsRepository;
 use app\Repository\Reservation\ReservationsDetailsRepository;
 use app\Repository\Reservation\ReservationsPlacesTempRepository;
 use app\Repository\Reservation\ReservationsRepository;
-use app\Services\MailService;
+use app\Services\Mails\MailPrepareService;
 use app\Services\ReservationStorageInterface;
+use app\Services\Payment\PaymentRecordService;
 use DateMalformedStringException;
 use DateTime;
 use Exception;
@@ -57,17 +56,7 @@ class ReservationPersistenceService
         }
 
         // --- Persistance des informations de paiement ---
-        $paymentInfo = $paymentData->payments[0];
-        $reservationPayment = new ReservationPayments();
-        $reservationPayment->setReservation($reservation->getId())
-            ->setAmountPaid($paymentInfo->amount)
-            ->setCheckoutId($paymentData->checkoutIntentId)
-            ->setOrderId($paymentData->id)
-            ->setPaymentId($paymentInfo->id)
-            ->setStatusPayment($paymentInfo->state)
-            ->setCreatedAt((new DateTime())->format('Y-m-d H:i:s'));
-        $reservationPaymentsRepository = new ReservationPaymentsRepository();
-        $reservationPaymentsRepository->insert($reservationPayment);
+        (new PaymentRecordService())->createPaymentRecord($reservation->getId(), $paymentData);
 
         // Persister les détails et compléments
         $this->persistDetailsAndComplements($reservation->getId(), $tempReservation);
@@ -91,19 +80,19 @@ class ReservationPersistenceService
      */
     public function persistFreeReservation(array $tempReservation): ?Reservations
     {
-        // 1. Créer l'objet Reservation principal (sans données de paiement)
+        // Créer l'objet Reservation principal (sans données de paiement)
         $reservation = $this->createMainReservationObject($tempReservation);
         if (!$reservation) {
             return null;
         }
 
-        // 2. Persister les détails et compléments
+        // Persister les détails et compléments
         $this->persistDetailsAndComplements($reservation->getId(), $tempReservation);
 
-        // 3. Envoyer l'email de confirmation et enregistrer l'envoi
+        // Envoyer l'email de confirmation et enregistrer l'envoi
         $this->sendAndRecordConfirmationEmail($reservation);
 
-        // 4. Nettoyer les données temporaires
+        // Nettoyer les données temporaires
         $this->cleanupTemporaryData($tempReservation);
 
         return $reservation;
@@ -212,10 +201,10 @@ class ReservationPersistenceService
      * Envoie l'email de confirmation et enregistre l'envoi.
      * @throws DateMalformedStringException
      */
-    private function sendAndRecordConfirmationEmail(Reservations $reservation): void
+    public function sendAndRecordConfirmationEmail(Reservations $reservation): void
     {
-        $mailService = new MailService();
-        if ($mailService->sendReservationConfirmationEmail($reservation)) {
+        $mailPrepareService = new MailPrepareService();
+        if ($mailPrepareService->sendReservationConfirmationEmail($reservation)) {
             $mailTemplateRepository = new MailTemplateRepository();
             $template = $mailTemplateRepository->findByCode('paiement_confirme');
             if ($template) {

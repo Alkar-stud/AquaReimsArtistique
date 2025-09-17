@@ -71,6 +71,40 @@ class ReservationPaymentsRepository extends AbstractRepository
         return $this->hydrate($result[0]);
     }
 
+    /**
+     * Trouve un paiement par son id de paiement
+     * @param int $paymentId
+     * @return ReservationPayments|null
+     * @throws DateMalformedStringException
+     */
+    public function findByPaymentId(int $paymentId): ?ReservationPayments
+    {
+        $sql = "SELECT * FROM $this->tableName WHERE payment_id = :payment_id LIMIT 1";
+        $result = $this->query($sql, ['payment_id' => $paymentId]);
+
+        if (empty($result)) {
+            return null;
+        }
+        return $this->hydrate($result[0]);
+    }
+
+
+    /**
+     * Trouve un paiement par son order id
+     * @param int $orderId
+     * @return ReservationPayments|null
+     * @throws DateMalformedStringException
+     */
+    public function findByOrderId(int $orderId): ?ReservationPayments
+    {
+        $sql = "SELECT * FROM $this->tableName WHERE order_id = :order_id LIMIT 1";
+        $result = $this->query($sql, ['order_id' => $orderId]);
+
+        if (empty($result)) {
+            return null;
+        }
+        return $this->hydrate($result[0]);
+    }
 
 
     /**
@@ -98,11 +132,12 @@ class ReservationPaymentsRepository extends AbstractRepository
     public function insert(ReservationPayments $payment): int
     {
         $sql = "INSERT INTO $this->tableName
-            (reservation, amount_paid, checkout_id, order_id, payment_id, status_payment, created_at)
-            VALUES (:reservation, :amount_paid, :checkout_id, :order_id, :payment_id, :status_payment, :created_at)";
+            (reservation, type, amount_paid, checkout_id, order_id, payment_id, status_payment, created_at)
+            VALUES (:reservation, :type, :amount_paid, :checkout_id, :order_id, :payment_id, :status_payment, :created_at)";
 
         $this->execute($sql, [
             'reservation' => $payment->getReservation(),
+            'type' => $payment->getType(),
             'amount_paid' => $payment->getAmountPaid(),
             'checkout_id' => $payment->getCheckoutId(),
             'order_id' => $payment->getOrderId(),
@@ -123,6 +158,7 @@ class ReservationPaymentsRepository extends AbstractRepository
     {
         $sql = "UPDATE $this->tableName SET
         reservation = :reservation,
+        type = :type,
         amount_paid = :amount_paid,
         checkout_id = :checkout_id,
         order_id = :order_id,
@@ -134,6 +170,7 @@ class ReservationPaymentsRepository extends AbstractRepository
         return $this->execute($sql, [
             'id' => $payment->getId(),
             'reservation' => $payment->getReservation(),
+            'type' => $payment->getType(),
             'amount_paid' => $payment->getAmountPaid(),
             'checkout_id' => $payment->getCheckoutId(),
             'order_id' => $payment->getOrderId(),
@@ -165,6 +202,7 @@ class ReservationPaymentsRepository extends AbstractRepository
         $payment = new ReservationPayments();
         $payment->setId($data['id'])
             ->setReservation($data['reservation'])
+            ->setType($data['type'])
             ->setOrderId($data['order_id'])
             ->setPaymentId($data['payment_id'])
             ->setAmountPaid($data['amount_paid'])

@@ -3,6 +3,7 @@
 namespace app\Repository\Reservation;
 
 use app\Models\Reservation\ReservationsDetails;
+use app\Repository\Piscine\PiscineGradinsPlacesRepository;
 use app\Repository\AbstractRepository;
 use DateMalformedStringException;
 
@@ -173,6 +174,40 @@ class ReservationsDetailsRepository extends AbstractRepository
     }
 
     /**
+     * Met à jour un seul champ d'un détail de réservation.
+     * @param int $id L'ID du détail
+     * @param string $field Le nom de la colonne à mettre à jour
+     * @param string|null $value La nouvelle valeur
+     * @return bool
+     */
+    public function updateSingleField(int $id, string $field, ?string $value): bool
+    {
+        // Liste blanche des champs autorisés pour la sécurité
+        $allowedFields = ['nom', 'prenom'];
+        if (!in_array($field, $allowedFields)) {
+            return false;
+        }
+
+        // On ne peut pas utiliser de paramètre pour le nom de la colonne,
+        // la liste blanche ci-dessus sert de protection.
+        $sql = "UPDATE $this->tableName SET `$field` = :value WHERE id = :id";
+
+        return $this->execute($sql, ['id' => $id, 'value' => $value]);
+    }
+
+    /**
+     * Met les champs place_number à null lorsqu'il y a annulation
+     *
+     * @param int $reservationId
+     * @return bool;
+     */
+    public function cancelByReservation(int $reservationId): bool
+    {
+        $sql = "UPDATE $this->tableName SET place_number = null WHERE reservation = :reservationId";
+        return $this->execute($sql, ['reservationId' => $reservationId]);
+    }
+
+    /**
      * Supprime un détail de réservation
      * @param int $id
      * @return bool
@@ -214,6 +249,14 @@ class ReservationsDetailsRepository extends AbstractRepository
             ->setCreatedAt($data['created_at'])
             ->setUpdatedAt($data['updated_at']);
 
+        // Charger l'objet Place si un numéro de place est défini
+        if ($data['place_number']) {
+            $placeRepository = new PiscineGradinsPlacesRepository();
+            $place = $placeRepository->findById($data['place_number']);
+            if ($place) {
+                $detail->setPlaceObject($place);
+            }
+        }
         return $detail;
     }
 }

@@ -5,7 +5,7 @@ namespace app\DTO;
 class HelloAssoCartDTO
 {
     public int $totalAmount = 0; //total en centimes
-    public int $initialAmount = 0; //total initial en centimes (si plusieurs échéances)
+    public int $initialAmount = 0; //total initial en centimes (si plusieurs échéances, mais obligatoire)
     public string $itemName; //Nom du panier
     public string $backUrl;
     public string $errorUrl;

@@ -1,14 +1,26 @@
-/.idea/*
+# Fichiers et dossiers spécifiques à l'IDE
+/.idea/
 
+# Fichiers de configuration d'environnement
+# Ne jamais versionner les secrets !
 /.env
 /.env.local
 /.env.prod
 /.env.docker
-/var/
+
+# Dépendances et fichiers générés
 /vendor/
 
+# Fichiers de log
+*.log
+
+# Dossiers de cache, logs, etc. (si applicable)
+# La ligne ci-dessous est large. Assurez-vous qu'elle correspond à votre structure.
 storage/*
  !storage/.gitkeep
 
-*.log
+ # Contenu généré par les utilisateurs (uploads)
+  /public/images/accueil/
+
+# Fichiers liés à Docker (si non partagés)
 /.dockerignore

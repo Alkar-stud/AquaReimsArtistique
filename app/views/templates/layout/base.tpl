@@ -17,22 +17,16 @@
     <link rel="stylesheet" href="/assets/css/ckeditor.css">
     <link rel="stylesheet" href="/assets/ckeditor5/ckeditor5.css">
     {% endif %}
-
     <script type="text/javascript" src="/assets/js/scripts.js" charset="UTF8"></script>
-
     <title>{{ ($_ENV['APP_NAME'] ?? 'Titre') . ' - ' . ($title ?? '') }}</title>
 </head>
 <body class="d-flex flex-column min-vh-100">
 {% include 'header.tpl' %}
-
 <main id="main-page" class="flex-grow-1">
     {{! $content !}}
 </main>
-
 {% include 'footer.tpl' %}
-
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/js/bootstrap.bundle.min.js" integrity="sha384-ndDqU0Gzau9qJ1lfW4pNLlhNTkCfHzAVBReH9diLvGRem5+R9g2FzA8ZGN954O5Q" crossorigin="anonymous"></script>
-
 {% if $load_ckeditor %}
 <script type="importmap">
     {
@@ -44,7 +38,6 @@
 </script>
 <script type="module" src="/assets/js/ckeditor.js"></script>
 {% endif %}
-
 {% if $_ENV['APP_DEBUG'] == "true" %}
 <!-- Outil de débogage pour afficher les dimensions de la fenêtre -->
 <div id="screen-dimensions-display" style="position: fixed; bottom: 10px; right: 10px; background-color: rgba(0,0,0,0.7); color: white; padding: 5px 10px; border-radius: 5px; font-family: monospace; z-index: 9999; font-size: 14px;"></div>

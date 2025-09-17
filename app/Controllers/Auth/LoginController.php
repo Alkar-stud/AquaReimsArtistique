@@ -5,15 +5,19 @@ use app\Attributes\Route;
 use app\Controllers\AbstractController;
 use app\Enums\LogType;
 use app\Repository\User\UserRepository;
+use app\Utils\FlashMessageService;
 use DateMalformedStringException;
 use Random\RandomException;
 
 #[Route('/login', name: 'app_login')]
 class LoginController extends AbstractController
 {
+    private FlashMessageService $flashMessageService;
+
     public function __construct()
     {
         parent::__construct(true); // true = route publique, pas de vérif session pour éviter le TOO_MANY_REDIRECT
+        $this->flashMessageService = new FlashMessageService();
     }
 
     /**
@@ -30,8 +34,13 @@ class LoginController extends AbstractController
                 $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
             }
 
+            // Récupérer le message flash s'il existe
+            $flashMessage = $this->flashMessageService->getFlashMessage();
+            $this->flashMessageService->unsetFlashMessage();
+
             $this->render('auth/login', [
-                'csrf_token' => $_SESSION['csrf_token']
+                'csrf_token' => $_SESSION['csrf_token'],
+                'flash_message' => $flashMessage
             ], 'Connexion');
         }
     }
@@ -54,10 +63,8 @@ class LoginController extends AbstractController
                 'user_agent' => $_SERVER['HTTP_USER_AGENT'] ?? ''
             ], 'DANGER');
 
-            $_SESSION['flash_message'] = [
-                'type' => 'danger',
-                'message' => 'Token de sécurité invalide. Veuillez réessayer.'
-            ];
+            $this->flashMessageService->setFlashMessage('danger', 'Token de sécurité invalide. Veuillez réessayer.');
+
             header('Location: /login');
             exit;
         }
@@ -84,7 +91,7 @@ class LoginController extends AbstractController
                 $userRepository->updatePassword($user->getId(), $newHash);
             }
 
-            unset($_SESSION['flash_message']);
+            $this->flashMessageService->unsetFlashMessage();
 
             // Régénérer l'ID de session après connexion réussie
             session_regenerate_id(true);
@@ -121,7 +128,7 @@ class LoginController extends AbstractController
             'user_exists' => $user !== null
         ]);
 
-        $_SESSION['flash_message'] = ['type' => 'danger', 'message' => 'Identifiants incorrects.'];
+        $this->flashMessageService->setFlashMessage('danger', 'Identifiants incorrects.');
         header('Location: /login');
         exit;
     }

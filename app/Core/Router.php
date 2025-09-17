@@ -2,6 +2,8 @@
 namespace app\Core;
 
 
+use Exception;
+
 class Router
 {
     private array $routes;
@@ -11,7 +13,10 @@ class Router
         $this->routes = $routes;
     }
 
-    public function dispatch(string $uri)
+    /**
+     * @throws Exception
+     */
+    public function dispatch(string $uri): void
     {
 
         $found = false;
@@ -49,7 +54,7 @@ class Router
         }
 
         if (!$found) {
-            throw new \Exception('404');
+            throw new Exception('404');
         }
     }
 }

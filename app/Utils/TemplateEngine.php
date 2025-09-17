@@ -6,75 +6,122 @@ use Throwable;
 
 class TemplateEngine
 {
+    private string $baseDir = '';
+    private array $baseDirStack = [];
+
     public function render(string $templatePath, array $data = []): string
     {
-        if (!file_exists($templatePath)) {
+        if (!is_file($templatePath)) {
             throw new RuntimeException("Le template '$templatePath' n'existe pas.");
         }
+
+        $this->pushBaseDir(dirname($templatePath));
+
         $template = file_get_contents($templatePath);
+        $template = $this->compile($template);
 
-        // Gestion des inclusions {% include '...' %}
-        $template = $this->compileIncludes($template, dirname($templatePath));
+        // Variables disponibles dans le template
+        $__data = $data;                 // paquet de variables à propager aux includes
+        extract($__data, EXTR_OVERWRITE);
 
-        // Remplacement des balises de logique (if, foreach, etc.)
-        $template = $this->compileControlStructures($template);
-
-        // Remplacement des variables et expressions
-        $template = $this->compileEchos($template);
-
-        // Évaluation du template compilé dans un scope isolé
-        extract($data);
         ob_start();
         try {
             eval('?>' . $template);
         } catch (Throwable $e) {
             ob_end_clean();
+            $this->popBaseDir();
             throw new RuntimeException("Erreur lors du rendu du template '$templatePath': " . $e->getMessage(), 0, $e);
         }
-        return ob_get_clean() ?: '';
+        $out = ob_get_clean() ?: '';
+
+        $this->popBaseDir();
+        return $out;
     }
 
-    private function compileIncludes(string $template, string $templateDir): string
+    private function pushBaseDir(string $dir): void
     {
-        // Utilise une fonction de rappel pour gérer les inclusions
-        return preg_replace_callback('/\{% include [\'"](.+?)[\'"] %}/', function ($matches) use ($templateDir) {
-            // Le chemin du template à inclure, ex : '_menu.tpl'
-            $includePath = $matches[1];
-            // On construit le chemin absolu vers le template à inclure
-            // On part du dossier du template parent pour résoudre le chemin
-            $fullPath = realpath($templateDir . '/' . $includePath);
+        $this->baseDirStack[] = $this->baseDir;
+        $this->baseDir = $dir;
+    }
 
-            // On ne passe que les variables du tableau $data original pour éviter une récursion infinie
-            // avec les variables internes de la méthode render().
-            // On utilise addslashes pour échapper les apostrophes dans le chemin du fichier.
-            return '<?= $this->render(\'' . addslashes($fullPath) . '\', $data) ?>';
-        }, $template);
+    private function popBaseDir(): void
+    {
+        $this->baseDir = array_pop($this->baseDirStack) ?? '';
+    }
+
+    private function compile(string $template): string
+    {
+        // Enlever les commentaires (sans toucher aux échos bruts `{{! ... !}}`)
+        $template = $this->compileComments($template);
+
+        // Includes
+        $template = $this->compileIncludes($template);
+
+        // Structures de contrôle
+        $template = $this->compileControlStructures($template);
+
+        // Échos bruts (non échappés)
+        $template = $this->compileRawEchos($template);
+
+        // Échos échappés
+        return $this->compileEchos($template);
+    }
+
+    private function compileComments(string $template): string
+    {
+        // Handlebars: {{!-- ... --}}
+        // Ne pas supprimer les formes `{{! ... !}}` (échos bruts) ni `{{! ... }}` pour éviter conflits
+        return preg_replace('/\{\{!--.*?--}}/s', '', $template);
+    }
+
+    private function compileIncludes(string $template): string
+    {
+        // {% include 'file.tpl' %}
+        return preg_replace_callback(
+            '/\{%\s*include\s+[\'"](.+?)[\'"]\s*%}/',
+            function ($m) {
+                $file = addslashes($m[1]);
+                // Passer uniquement $__data pour éviter l'inflation de scope
+                return "<?php echo \$this->render(\$this->resolveInclude('$file'), \$__data); ?>";
+            },
+            $template
+        );
+    }
+
+    private function resolveInclude(string $path): string
+    {
+        if (str_starts_with($path, '/')) {
+            return $path;
+        }
+        return rtrim($this->baseDir, '/\\') . DIRECTORY_SEPARATOR . $path;
     }
 
     private function compileControlStructures(string $template): string
     {
         $patterns = [
-            '/\{% if (.+?) %\}/' => '<?php if ($1): ?>',
-            '/\{% elseif (.+?) %\}/' => '<?php elseif ($1): ?>',
-            '/\{% else %\}/' => '<?php else: ?>',
-            '/\{% endif %\}/' => '<?php endif; ?>',
+            '/\{% if (.+?) %\}/'               => '<?php if ($1): ?>',
+            '/\{% elseif (.+?) %\}/'           => '<?php elseif ($1): ?>',
+            '/\{% else %\}/'                   => '<?php else: ?>',
+            '/\{% endif %\}/'                  => '<?php endif; ?>',
             '/\{% foreach (.+?) as (.+?) %\}/' => '<?php foreach ($1 as $2): ?>',
-            '/\{% endforeach %\}/' => '<?php endforeach; ?>',
-            '/\{% for (.+?) %\}/' => '<?php for ($1): ?>',
-            '/\{% endfor %\}/' => '<?php endfor; ?>'
+            '/\{% endforeach %\}/'             => '<?php endforeach; ?>',
         ];
         return preg_replace(array_keys($patterns), array_values($patterns), $template);
     }
 
+    private function compileRawEchos(string $template): string
+    {
+        // {{! ... !}}
+        return preg_replace('/\{\{!\s*(.+?)\s*!}}/s', '<?= $1 ?>', $template);
+    }
+
     private function compileEchos(string $template): string
     {
-        // {{! variable !}} pour du HTML brut (non échappé)
-        $template = preg_replace_callback('/\{\{! ([^}]+) !}}/', function ($matches) {
-            return '<?= ' . $matches[1] . ' ?>';
-        }, $template);
-        // {{ variable }} pour des données échappées
-        return preg_replace_callback('/\{\{ ([^}]+) }}/', function ($matches) {
-            return '<?= htmlspecialchars(' . $matches[1] . ', ENT_QUOTES, \'UTF-8\') ?>';
-        }, $template);
+        // {{ ... }} échappé
+        return preg_replace(
+            '/\{\{\s*(.+?)\s*}}/s',
+            '<?= htmlspecialchars($1, ENT_QUOTES | ENT_SUBSTITUTE, \'UTF-8\') ?>',
+            $template
+        );
     }
 }

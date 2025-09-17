@@ -99,7 +99,7 @@ if ($uri !== '/install' && !str_starts_with($uri, '/install/')) {
             $uri = '/maintenance';
         }
     } catch (PDOException $e) {
-        // Si une erreur de connexion BDD survient (ex: mauvais mot de passe dans .env),
+        // Si une erreur de connexion BDD survient (ex : mauvais mot de passe dans .env),
         // on affiche une erreur claire au lieu d'une page blanche.
         http_response_code(503);
         die("Erreur critique de connexion à la base de données. Vérifiez vos identifiants dans le fichier .env. Détail : " . htmlspecialchars($e->getMessage()));
@@ -114,7 +114,7 @@ try {
     if ($e->getMessage() === '404') {
         http_response_code(404);
 
-        $logService = new LogService();
+        $logService = new \app\Services\Logs\LogService();
         $logService->logUrlError(
             $_SERVER['REQUEST_URI'] ?? 'unknown',
             $_SERVER['REQUEST_METHOD'] ?? 'GET',
@@ -125,11 +125,26 @@ try {
             ]
         );
 
-        $title = '404';
-        ob_start();
-        require __DIR__ . '/../app/views/404.html.php';
-        $content = ob_get_clean();
-        require __DIR__ . '/../app/views/base.html.php';
+        $engine = new \app\Utils\TemplateEngine();
+        $uri = strtok($_SERVER['REQUEST_URI'], '?');
+        $redirectUrl = (isset($uri) && str_starts_with($uri, '/gestion')) ? '/gestion' : '/';
+
+        // Corps 404
+        $content404 = $engine->render(__DIR__ . '/../app/views/templates/errors/404.tpl', [
+            'uri' => $uri,
+            'redirectUrl' => $redirectUrl,
+            'is_gestion_page' => str_starts_with($uri, '/gestion'),
+            'load_ckeditor' => false
+        ]);
+
+        // Layout global
+        echo $engine->render(__DIR__ . '/../app/views/templates/layout/base.tpl', [
+            'title' => '404',
+            'content' => $content404,
+            'uri' => $uri,
+            'is_gestion_page' => str_starts_with($uri, '/gestion'),
+            'load_ckeditor' => false
+        ]);
         exit;
     }
     throw $e;

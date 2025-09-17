@@ -65,7 +65,10 @@ class User
 
     public function setDisplayName(?string $display_name): self
     {
-        $this->display_name = $display_name;
+        if ($display_name !== null) {
+            $display_name = trim($display_name);
+        }
+        $this->display_name = ($display_name === '' ? null : $display_name);
         return $this;
     }
 

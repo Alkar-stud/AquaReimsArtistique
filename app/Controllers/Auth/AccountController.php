@@ -5,19 +5,30 @@ use app\Attributes\Route;
 use app\Controllers\AbstractController;
 use app\Repository\User\UserRepository;
 use app\Services\Mails\MailPrepareService;
+use app\Utils\FlashMessageService;
 use DateMalformedStringException;
 use Exception;
 
 #[Route('/account', name: 'app_account')]
 class AccountController extends AbstractController
 {
+    private FlashMessageService $flashMessageService;
+
     public function __construct()
     {
         parent::__construct(false); // true = route publique, pas de vérif session pour éviter le TOO_MANY_REDIRECT
+        $this->flashMessageService = new FlashMessageService();
     }
     public function index(): void
     {
-        $this->render('auth/account', [], 'Mon compte');
+
+        // Récupérer le message flash s'il existe
+        $flashMessage = $this->flashMessageService->getFlashMessage();
+        $this->flashMessageService->unsetFlashMessage();
+
+        $this->render('auth/account', [
+            'flash_message' => $flashMessage
+        ], 'Mon compte');
     }
 
     /**

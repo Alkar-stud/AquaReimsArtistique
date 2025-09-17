@@ -6,9 +6,11 @@ use app\Repository\User\UserRepository;
 use app\Services\Logs\LogService;
 use app\Services\SessionValidationService;
 use app\Utils\CsrfHelper;
+use app\Utils\TemplateEngine;
 use DateMalformedStringException;
 use Exception;
 use JetBrains\PhpStorm\NoReturn;
+use Random\RandomException;
 use ReflectionClass;
 use RuntimeException;
 
@@ -36,8 +38,7 @@ abstract class AbstractController
     protected function render(string $view, array $data = [], string $title = '', bool $partial = false): void
     {
         $content = '';
-        $engine = new \app\Utils\TemplateEngine();
-
+        $engine = new TemplateEngine();
 
         // Préparation des variables pour les templates, afin d'éviter la logique PHP dans les vues.
         $uri = strtok($_SERVER['REQUEST_URI'], '?');
@@ -71,7 +72,7 @@ abstract class AbstractController
                 'title' => $title,
                 'content' => $content
             ]);
-            echo $engine->render(__DIR__ . '/../views/templates/base.tpl', $layoutData);
+            echo $engine->render(__DIR__ . '/../views/templates/layout/base.tpl', $layoutData);
         }
     }
 
@@ -283,6 +284,9 @@ abstract class AbstractController
     }
 
 
+    /**
+     * @throws RandomException
+     */
     protected function getCsrfToken(): string
     {
         return CsrfHelper::getToken();

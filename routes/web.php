@@ -5,7 +5,8 @@ use app\Attributes\Route;
 $routes = [];
 
 // Fonction récursive pour trouver tous les contrôleurs
-function findControllers($dir, &$controllers) {
+function findControllers($dir, &$controllers): void
+{
     foreach (glob("$dir/*.php") as $file) {
         $controllers[] = $file;
     }

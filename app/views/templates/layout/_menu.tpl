@@ -20,7 +20,6 @@
                     <a class="nav-link" href="/gestion">Gestion</a>
                 </li>
                 {% endif %}
-
                 {% if isset($_SESSION['user']['role']) and $_SESSION['user']['role']['level'] <= 2 and $is_gestion_page %}
                 <li class="nav-item">
                     <a class="navbar-brand nav-link" href="/gestion">Gestion</a>

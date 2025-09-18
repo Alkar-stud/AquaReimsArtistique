@@ -45,11 +45,16 @@ class AccueilController extends AbstractController
             }
         }
 
+        // Récupérer le message flash s'il existe
+        $flashMessage = $this->flashMessageService->getFlashMessage();
+        $this->flashMessageService->unsetFlashMessage();
+
         $this->render('/gestion/accueil', [
             'accueil' => $accueil,
             'events' => $events,
             'eventSessions' => $eventSessions,
-            'searchParam' => 'displayed'
+            'searchParam' => 'displayed',
+            'flash_message' => $flashMessage
         ], "Gestion de la page d'accueil");
     }
 
@@ -75,11 +80,16 @@ class AccueilController extends AbstractController
             }
         }
 
+        // Récupérer le message flash s'il existe
+        $flashMessage = $this->flashMessageService->getFlashMessage();
+        $this->flashMessageService->unsetFlashMessage();
+
         $this->render('/gestion/accueil', [
             'accueil' => $accueil,
             'events' => $events,
             'eventSessions' => $eventSessions,
-            'searchParam' => $search
+            'searchParam' => $search,
+            'flash_message' => $flashMessage
         ], "Gestion de la page d'accueil");
     }
 

@@ -281,30 +281,55 @@ class UsersController extends AbstractController
     }
 
     /**
+     * @throws DateMalformedStringException
      */
     #[Route('/gestion/users/delete', name: 'app_gestion_users_delete')]
     public function delete(): void
     {
-        $currentUser = $this->accessIsAllowed();
-        if ($currentUser) {
-            $this->userRepository->delete($currentUser->getId());
-            $this->flashMessageService->setFlashMessage('success', "Utilisateur supprimé.");
-        } else {
-            $this->flashMessageService->setFlashMessage('danger', "Utilisateur introuvable.");
+        $currentUser = $this->accessIsAllowed(); // Vérifie droits (level 0 ou 1)
+
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            header('Location: /gestion/users');
+            exit;
         }
+
+        $id = (int)($_POST['id'] ?? 0);
+        if ($id <= 0) {
+            $this->flashMessageService->setFlashMessage('danger', 'ID utilisateur manquant.');
+            header('Location: /gestion/users');
+            exit;
+        }
+
+        // Empêcher la suppression de son propre compte (optionnel mais recommandé)
+        if ($id === (int)$currentUser['id']) {
+            $this->flashMessageService->setFlashMessage('danger', "Vous ne pouvez pas supprimer votre propre compte.");
+            header('Location: /gestion/users');
+            exit;
+        }
+
+        $user = $this->userRepository->findById($id);
+        if (!$user) {
+            $this->flashMessageService->setFlashMessage('danger', "Utilisateur introuvable.");
+            header('Location: /gestion/users');
+            exit;
+        }
+
+        $this->userRepository->delete($id);
+        $this->flashMessageService->setFlashMessage('success', "Utilisateur supprimé.");
         header('Location: /gestion/users');
         exit;
     }
 
     /**
-     * @return User
+     * @return array
      */
-    private function accessIsAllowed(): User
+    private function accessIsAllowed(): array
     {
         $currentUser = $_SESSION['user'] ?? null;
         if (!$currentUser || !in_array($currentUser['role']['level'], [0, 1])) {
-            $this->flashMessageService->setFlashMessage('danger', "Accès refusé.");
-            header('Location: /gestion/users');
+            http_response_code(403);
+            header('Content-Type: application/json');
+            echo json_encode(['success' => false, 'message' => 'Accès refusé']);
             exit;
         }
 

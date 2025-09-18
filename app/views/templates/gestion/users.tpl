@@ -83,8 +83,11 @@
                     </td>
                     <td class="d-flex flex-column gap-1">
                         <button type="submit" class="btn btn-primary btn-sm w-100">Modifier</button>
-                        <button type="button" class="btn btn-danger btn-sm w-100"
-                                onclick="if(confirm('Supprimer cet utilisateur ?')){ window.location='/gestion/users/delete?id={{ $user->getId() }}'; }">
+                        <button type="submit"
+                                class="btn btn-danger btn-sm w-100"
+                                formaction="/gestion/users/delete"
+                                formmethod="POST"
+                                onclick="return confirm('Supprimer cet utilisateur ?');">
                             Supprimer
                         </button>
                     </td>
@@ -139,73 +142,53 @@
         </div>
 
         {% foreach $users as $user %}
-        <div class="card mb-3">
+        <div class="card mb-3 border-success">
             <div class="card-body">
-                <h5 class="card-title">{{ $user->getUsername() }}</h5>
-                <p class="mb-1"><strong>Email :</strong> {{ $user->getEmail() }}</p>
-                <p class="mb-1"><strong>Nom d'affichage :</strong> {{ $user->getDisplayName() }}</p>
-                <p class="mb-1"><strong>Rôle :</strong> {{ $user->getRole() ? $user->getRole()->getLibelle() : '' }}</p>
-                <p class="mb-2">
-                    <strong>Actif :</strong>
-                </p>
-                <div class="form-check form-switch mb-3">
-                    <input class="form-check-input user-status-toggle"
-                           type="checkbox"
-                           id="user-status-mobile-{{ $user->getId() }}"
-                           data-id="{{ $user->getId() }}"
-                            {{! $user->getIsActif() ? 'checked' : '' !}}>
-                </div>
-                <div class="d-flex flex-column gap-2">
-                    <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#editUserModal-{{ $user->getId() }}">Modifier</button>
-                    <button class="btn btn-danger btn-sm"
-                            onclick="if(confirm('Supprimer cet utilisateur ?')){ window.location='/gestion/users/delete?id={{ $user->getId() }}'; }">
-                        Supprimer
-                    </button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Modal édition -->
-        <div class="modal fade" id="editUserModal-{{ $user->getId() }}" tabindex="-1" aria-labelledby="editUserModalLabel-{{ $user->getId() }}" aria-hidden="true">
-            <div class="modal-dialog modal-dialog-centered">
-                <div class="modal-content">
-                    <form method="POST" action="/gestion/users/edit">
-                        <div class="modal-header">
-                            <h5 class="modal-title" id="editUserModalLabel-{{ $user->getId() }}">Modifier {{ $user->getUsername() }}</h5>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
-                        </div>
-                        <div class="modal-body">
-                            <input type="hidden" name="id" value="{{ $user->getId() }}">
-                            <div class="mb-3">
-                                <label class="form-label">Email</label>
-                                <input type="email" name="email" class="form-control" value="{{ $user->getEmail() }}" required>
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label">Nom d'affichage</label>
-                                <input type="text" name="display_name" class="form-control" value="{{ $user->getDisplayName() }}">
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label">Rôle</label>
-                                <select name="role" class="form-select" required>
-                                    <option>Choisissez le rôle</option>
-                                    {% foreach $roles as $role %}
-                                    {% if $role->getLevel() >= $_SESSION['user']['role']['level'] %}
-                                    <option value="{{ $role->getId() }}"
-                                            {{! ($user->getRole() && $user->getRole()->getId() === $role->getId()) ? 'selected' : '' !}}
-                                            {{! $role->getLevel() <= $_SESSION['user']['role']['level'] ? 'disabled' : '' !}}>
-                                        {{ $role->getLibelle() }}
-                                    </option>
-                                    {% endif %}
-                                    {% endforeach %}
-                                </select>
-                            </div>
-                        </div>
-                        <div class="modal-footer flex-column flex-sm-row">
-                            <button type="button" class="btn btn-warning w-100 mb-2" data-bs-dismiss="modal">Annuler</button>
-                            <button type="submit" class="btn btn-primary w-100">Enregistrer</button>
-                        </div>
-                    </form>
-                </div>
+                <form method="POST" action="/gestion/users/edit">
+                    <input type="hidden" name="id" value="{{ $user->getId() }}">
+                    <div class="mb-2">
+                        <input type="text" name="username" class="form-control" placeholder="Nom d'utilisateur *" value="{{ $user->getUsername() }}" required>
+                    </div>
+                    <div class="mb-2">
+                        <input type="email" name="email" class="form-control" placeholder="Email *" value="{{ $user->getEmail() }}" required>
+                    </div>
+                    <div class="mb-2">
+                        <input type="text" name="display_name" class="form-control" placeholder="Nom d'affichage" value="{{ $user->getDisplayName() }}">
+                    </div>
+                    <div class="mb-2">
+                        <select name="role" class="form-select" required>
+                            <option>Choisissez le rôle</option>
+                            {% foreach $roles as $role %}
+                            {% if $role->getLevel() >= $_SESSION['user']['role']['level'] %}
+                            <option
+                                    value="{{ $role->getId() }}"
+                                    {{! ($user->getRole() && $user->getRole()->getId() === $role->getId()) ? 'selected' : '' !}}
+                                    {{! $role->getLevel() <= $_SESSION['user']['role']['level'] ? 'disabled' : '' !}}
+                            >
+                                {{ $role->getLibelle() }}
+                            </option>
+                            {% endif %}
+                            {% endforeach %}
+                        </select>
+                    </div>
+                    <div class="form-check form-switch mb-3">
+                        <input class="form-check-input user-status-toggle"
+                               type="checkbox"
+                               id="user-status-mobile-{{ $user->getId() }}"
+                               data-id="{{ $user->getId() }}"
+                                {{! $user->getIsActif() ? 'checked' : '' !}}>
+                    </div>
+                    <div class="d-flex flex-column gap-2">
+                        <button type="submit" class="btn btn-primary btn-sm w-100">Modifier</button>
+                        <button type="submit"
+                                class="btn btn-danger btn-sm w-100"
+                                formaction="/gestion/users/delete"
+                                formmethod="POST"
+                                onclick="return confirm('Supprimer cet utilisateur ?');">
+                            Supprimer
+                        </button>
+                    </div>
+                </form>
             </div>
         </div>
         {% endforeach %}

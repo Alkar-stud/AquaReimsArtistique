@@ -30,7 +30,7 @@ class User
     //S'il n'y a pas de nom d'affichage renseigné, on retourne le nom d'utilisateur
     public function getDisplayName(): string { return $this->display_name ?: $this->getUsername(); }
     public function getRole(): ?Role { return $this->role; }
-    public function getIsActif(): bool { return (bool)$this->isActif; }
+    public function getIsActif(): bool { return $this->isActif; }
     public function getCreatedAt(): DateTimeInterface { return $this->created_at; }
     public function getUpdatedAt(): ?DateTimeInterface { return $this->updated_at; }
     public function getPasswordResetToken(): ?string { return $this->password_reset_token; }
@@ -78,9 +78,9 @@ class User
         return $this;
     }
 
-    public function setIsActif($isActif): self
+    public function setIsActif(bool $isActif): self
     {
-        $this->isActif = (bool)$isActif;
+        $this->isActif = $isActif;
         return $this;
     }
 

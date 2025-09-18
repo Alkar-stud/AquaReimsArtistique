@@ -7,7 +7,9 @@ use app\Controllers\AbstractController;
 use app\Models\User\User;
 use app\Repository\User\RoleRepository;
 use app\Repository\User\UserRepository;
+use app\Services\FlashMessageService;
 use app\Services\MailService;
+use DateMalformedStringException;
 use DateTime;
 use Exception;
 use Random\RandomException;
@@ -17,16 +19,18 @@ class UsersController extends AbstractController
 {
     private UserRepository $userRepository;
     private RoleRepository $roleRepository;
+    private FlashMessageService $flashMessageService;
 
     public function __construct()
     {
         parent::__construct(false);
         $this->userRepository = new UserRepository();
         $this->roleRepository = new RoleRepository();
+        $this->flashMessageService = new FlashMessageService();
     }
 
     /**
-     * @throws \DateMalformedStringException
+     * @throws DateMalformedStringException
      */
     public function index(): void
     {
@@ -38,15 +42,20 @@ class UsersController extends AbstractController
             $currentUser = $userRepository->findById($currentUser['id']);
         }
 
+        // Récupérer le message flash s'il existe
+        $flashMessage = $this->flashMessageService->getFlashMessage();
+        $this->flashMessageService->unsetFlashMessage();
+
         $this->render('/gestion/users', [
             'users' => $users,
             'roles' => $roles,
-            'currentUser' => $currentUser
+            'currentUser' => $currentUser,
+            'flash_message' => $flashMessage
         ], 'Gestion des utilisateurs');
     }
 
     /**
-     * @throws \DateMalformedStringException
+     * @throws DateMalformedStringException
      * @throws RandomException
      */
     #[Route('/gestion/users/add', name: 'app_gestion_users_add')]
@@ -54,7 +63,7 @@ class UsersController extends AbstractController
     {
         $currentUser = $_SESSION['user'] ?? null;
         if (!$currentUser || !in_array($currentUser['role']['level'], [0, 1])) {
-            $_SESSION['flash_message'] = ['type' => 'danger', 'message' => 'Accès refusé.'];
+            $this->flashMessageService->setFlashMessage('danger', "Accès refusé");
             header('Location: /gestion/users');
             exit;
         }
@@ -69,24 +78,21 @@ class UsersController extends AbstractController
 
             // Validation
             if (empty($username) || empty($email) || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
-                $_SESSION['flash_message'] = ['type' => 'danger', 'message' => 'Username et email obligatoires et valides.'];
+                $this->flashMessageService->setFlashMessage('danger', "Username et email sont obligatoires et doivent être valides.");
                 header('Location: /gestion/users/add');
                 exit;
             }
 
             //On vérifie que l'email n'existe pas déjà
             if ($this->userRepository->findByEmail($email)) {
-                $_SESSION['flash_message'] = [
-                    'type' => 'danger',
-                    'message' => 'Cette adresse email est déjà utilisée.'
-                ];
+                $this->flashMessageService->setFlashMessage('danger', "Cette adresse email est déjà utilisée.");
                 header('Location: /gestion/users');
                 exit;
             }
 
             $role = $this->roleRepository->findById($roleId);
             if (!$role || $role->getLevel() <= $currentUser['role']['level']) {
-                $_SESSION['flash_message'] = ['type' => 'danger', 'message' => 'Rôle non autorisé.'];
+                $this->flashMessageService->setFlashMessage('danger', "Rôle non autorisé.");
                 header('Location: /gestion/users/add');
                 exit;
             }
@@ -118,7 +124,7 @@ class UsersController extends AbstractController
             // Envoyer l'email
             try {
                 $mailService = new MailService();
-                $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? "https://" : "http://";
+                $protocol = "https://";
                 $resetLink = $protocol . $_SERVER['HTTP_HOST'] . '/reset-password?token=' . $token;
                 $mailService->send(
                     $email,
@@ -135,27 +141,32 @@ class UsersController extends AbstractController
                 error_log('Erreur MailService: ' . $e->getMessage());
             }
 
-            $_SESSION['flash_message'] = ['type' => 'success', 'message' => 'Utilisateur créé et email envoyé.'];
+            $this->flashMessageService->setFlashMessage('success', "Utilisateur créé et email envoyé.");
             header('Location: /gestion/users');
             exit;
         }
 
+        // Récupérer le message flash s'il existe
+        $flashMessage = $this->flashMessageService->getFlashMessage();
+        $this->flashMessageService->unsetFlashMessage();
+
         // Affichage du formulaire
         $this->render('/gestion/users', [
             'roles' => $roles,
-            'currentUser' => $currentUser
+            'currentUser' => $currentUser,
+            'flash_message' => $flashMessage
         ], 'Créer un utilisateur');
     }
 
     /**
-     * @throws \DateMalformedStringException
+     * @throws DateMalformedStringException
      */
     #[Route('/gestion/users/edit', name: 'app_gestion_users_edit')]
     public function edit(): void
     {
         $currentUser = $_SESSION['user'] ?? null;
         if (!$currentUser || !in_array($currentUser['role']['level'], [0, 1])) {
-            $_SESSION['flash_message'] = ['type' => 'danger', 'message' => 'Accès refusé.'];
+            $this->flashMessageService->setFlashMessage('danger', "Accès refusé");
             header('Location: /gestion/users');
             exit;
         }
@@ -166,39 +177,34 @@ class UsersController extends AbstractController
             $email = trim($_POST['email'] ?? '');
             $displayName = trim($_POST['display_name'] ?? '');
             $roleId = (int)($_POST['role'] ?? 0);
-            $isActif = false;
-            if (isset($_POST['is_actif']) && $_POST['is_actif'] === 'on') {
-                $isActif = true;
-            }
             $isActif = isset($_POST['is_actif']) && $_POST['is_actif'] === 'on' ? 1 : 0;
 
             // Validation
             if (empty($username) || empty($email) || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
-                $_SESSION['flash_message'] = ['type' => 'danger', 'message' => 'Username et email obligatoires et valides.'];
+                $this->flashMessageService->setFlashMessage('danger', "Username et email obligatoires et valides.");
                 header('Location: /gestion/users/add');
                 exit;
             }
 
-            //On vérifie que l'email n'existe pas déjà
-            if ($this->userRepository->findByEmail($email)) {
-                $_SESSION['flash_message'] = [
-                    'type' => 'danger',
-                    'message' => 'Cette adresse email est déjà utilisée.'
-                ];
+            //On récupère le user avant modification pour comparer
+            $user = $this->userRepository->findById($id);
+
+            if (!$user) {
+                $this->flashMessageService->setFlashMessage('danger', "Utilisateur introuvable.");
                 header('Location: /gestion/users');
                 exit;
             }
 
-            $user = $this->userRepository->findById($id);
-            if (!$user) {
-                $_SESSION['flash_message'] = ['type' => 'danger', 'message' => 'Utilisateur introuvable.'];
+            //On vérifie que l'email n'existe pas déjà
+            if ($this->userRepository->findByEmail($email) && $email != $user->getEmail()) {
+                $this->flashMessageService->setFlashMessage('danger', "Cette adresse email est déjà utilisée.");
                 header('Location: /gestion/users');
                 exit;
             }
 
             $role = $this->roleRepository->findById($roleId);
             if (!$role || $role->getLevel() <= $currentUser['role']['level']) {
-                $_SESSION['flash_message'] = ['type' => 'danger', 'message' => 'Rôle non autorisé.'];
+                $this->flashMessageService->setFlashMessage('danger', "Rôle non autorisé.");
                 header('Location: /gestion/users');
                 exit;
             }
@@ -211,7 +217,7 @@ class UsersController extends AbstractController
 
             $this->userRepository->update($user);
 
-            $_SESSION['flash_message'] = ['type' => 'success', 'message' => 'Utilisateur modifié.'];
+            $this->flashMessageService->setFlashMessage('success', "Utilisateur modifié.");
             header('Location: /gestion/users');
             exit;
         }
@@ -221,52 +227,89 @@ class UsersController extends AbstractController
     }
 
     /**
-     * @throws \DateMalformedStringException
      */
     #[Route('/gestion/users/suspend', name: 'app_gestion_users_suspend')]
     public function suspendOnOff(): void
     {
+        // Autorisation
         $currentUser = $_SESSION['user'] ?? null;
         if (!$currentUser || !in_array($currentUser['role']['level'], [0, 1])) {
-            $_SESSION['flash_message'] = ['type' => 'danger', 'message' => 'Accès refusé.'];
-            header('Location: /gestion/users');
+            http_response_code(403);
+            header('Content-Type: application/json');
+            echo json_encode(['success' => false, 'message' => 'Accès refusé']);
             exit;
         }
 
-        $id = (int)($_GET['id'] ?? 0);
-        if ($id > 0) {
-            $is_actif = (bool)($_GET['actif'] ?? false);
-            $this->userRepository->suspendOnOff($id, $is_actif);
-            $_SESSION['flash_message'] = ['type' => 'success', 'message' => 'Utilisateur ' . ($is_actif === true ? 'activé' : 'désactivé') . '.'];
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            http_response_code(405);
+            header('Allow: POST');
+            header('Content-Type: application/json');
+            echo json_encode(['success' => false, 'message' => 'Méthode non autorisée']);
+            exit;
+        }
+
+        $raw = file_get_contents('php://input');
+        $data = json_decode($raw, true);
+
+        $id = (int)($data['id'] ?? 0);
+        $actif = (bool)($data['actif'] ?? false);
+
+        if ($id <= 0) {
+            http_response_code(400);
+            header('Content-Type: application/json');
+            echo json_encode(['success' => false, 'message' => 'ID invalide']);
+            exit;
+        }
+
+        $user = $this->userRepository->findById($id);
+        if (!$user) {
+            http_response_code(404);
+            header('Content-Type: application/json');
+            echo json_encode(['success' => false, 'message' => 'Utilisateur introuvable']);
+            exit;
+        }
+
+        $this->userRepository->suspendOnOff($id, $actif);
+
+        header('Content-Type: application/json');
+        echo json_encode([
+            'success' => true,
+            'id' => $id,
+            'actif' => $actif
+        ]);
+        exit;
+    }
+
+    /**
+     */
+    #[Route('/gestion/users/delete', name: 'app_gestion_users_delete')]
+    public function delete(): void
+    {
+        $currentUser = $this->accessIsAllowed();
+        if ($currentUser) {
+            $this->userRepository->delete($currentUser->getId());
+            $this->flashMessageService->setFlashMessage('success', "Utilisateur supprimé.");
         } else {
-            $_SESSION['flash_message'] = ['type' => 'danger', 'message' => 'Utilisateur introuvable.'];
+            $this->flashMessageService->setFlashMessage('danger', "Utilisateur introuvable.");
         }
         header('Location: /gestion/users');
         exit;
     }
 
     /**
-     * @throws \DateMalformedStringException
+     * @return User
      */
-    #[Route('/gestion/users/delete', name: 'app_gestion_users_delete')]
-    public function delete(): void
+    private function accessIsAllowed(): User
     {
         $currentUser = $_SESSION['user'] ?? null;
         if (!$currentUser || !in_array($currentUser['role']['level'], [0, 1])) {
-            $_SESSION['flash_message'] = ['type' => 'danger', 'message' => 'Accès refusé.'];
+            $this->flashMessageService->setFlashMessage('danger', "Accès refusé.");
             header('Location: /gestion/users');
             exit;
         }
 
-        $id = (int)($_GET['id'] ?? 0);
-        if ($id > 0) {
-            $this->userRepository->delete($id);
-            $_SESSION['flash_message'] = ['type' => 'success', 'message' => 'Utilisateur supprimé.'];
-        } else {
-            $_SESSION['flash_message'] = ['type' => 'danger', 'message' => 'Utilisateur introuvable.'];
-        }
-        header('Location: /gestion/users');
-        exit;
+        return $currentUser;
     }
+
 
 }

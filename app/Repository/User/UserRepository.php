@@ -218,7 +218,7 @@ class UserRepository extends AbstractRepository
     public function suspendOnOff(int $id, bool $isActif): bool
     {
         $sql = "UPDATE $this->tableName SET is_actif = :is_actif WHERE id = :id;";
-        return $this->execute($sql, ['id' => $id, 'is_actif' => $isActif]);
+        return $this->execute($sql, ['id' => $id, 'is_actif' => (int)$isActif]);
     }
 
     // Supprime un utilisateur par son id

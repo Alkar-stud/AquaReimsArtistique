@@ -6,25 +6,35 @@ use app\Attributes\Route;
 use app\Controllers\AbstractController;
 use app\Models\Nageuse\GroupesNageuses;
 use app\Repository\Nageuse\GroupesNageusesRepository;
+use app\Services\FlashMessageService;
 
 #[Route('/gestion/groupes-nageuses', name: 'app_gestion_groupes_nageuses')]
 class GroupesNageusesController extends AbstractController
 {
     private GroupesNageusesRepository $repository;
+    private FlashMessageService $flashMessageService;
 
     public function __construct()
     {
         parent::__construct(false);
         $this->repository = new GroupesNageusesRepository();
+        $this->flashMessageService = new FlashMessageService();
     }
 
     public function index(): void
     {
         $groupes = $this->repository->findAll();
-        $this->render('/gestion/groupes_nageuses', ['groupes' => $groupes], 'Gestion des groupes nageuses');
+        // Récupérer le message flash s'il existe
+        $flashMessage = $this->flashMessageService->getFlashMessage();
+        $this->flashMessageService->unsetFlashMessage();
+
+        $this->render('/gestion/groupes_nageuses', [
+            'groupes' => $groupes,
+            'flash_message' => $flashMessage
+        ], 'Gestion des groupes nageuses');
     }
 
-    #[Route('/gestion/groupes-nageuses/add', name: 'app_gestion_groupes_nageuses_add')]
+    #[Route('/gestion/groupes-nageuses/add/{id}', name: 'app_gestion_groupes_nageuses_add')]
     public function add(): void
     {
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -35,7 +45,7 @@ class GroupesNageusesController extends AbstractController
                 ->setOrder((int)($_POST['order'] ?? 0))
                 ->setCreatedAt(date('Y-m-d H:i:s'));
             $this->repository->insert($groupe);
-            $_SESSION['flash_message'] = ['type' => 'success', 'message' => 'Groupe ajouté'];
+            $this->flashMessageService->setFlashMessage('success', "Groupe ajouté");
             header('Location: /gestion/groupes-nageuses');
             exit;
         }
@@ -52,7 +62,7 @@ class GroupesNageusesController extends AbstractController
                     ->setIsActive(isset($_POST['is_active']))
                     ->setOrder((int)($_POST['order'] ?? 0));
                 $this->repository->update($groupe);
-                $_SESSION['flash_message'] = ['type' => 'success', 'message' => 'Groupe modifié'];
+                $this->flashMessageService->setFlashMessage('success', "Groupe modifié");
             }
             header('Location: /gestion/groupes-nageuses');
             exit;
@@ -63,7 +73,7 @@ class GroupesNageusesController extends AbstractController
     public function delete($id)
     {
         $this->repository->delete((int)$id);
-        $_SESSION['flash_message'] = ['type' => 'success', 'message' => 'Groupe supprimé'];
+        $this->flashMessageService->setFlashMessage('success', "Groupe supprimé");
         header('Location: /gestion/groupes-nageuses');
         exit;
     }

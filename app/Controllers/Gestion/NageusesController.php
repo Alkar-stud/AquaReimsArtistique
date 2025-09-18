@@ -7,16 +7,19 @@ use app\Controllers\AbstractController;
 use app\Models\Nageuse\Nageuses;
 use app\Repository\Nageuse\GroupesNageusesRepository;
 use app\Repository\Nageuse\NageusesRepository;
+use app\Services\FlashMessageService;
 
 #[Route('/gestion/nageuses', name: 'app_gestion_nageuses')]
 class NageusesController extends AbstractController
 {
     private NageusesRepository $repository;
+    private FlashMessageService $flashMessageService;
 
     public function __construct()
     {
         parent::__construct(false);
         $this->repository = new NageusesRepository();
+        $this->flashMessageService = new FlashMessageService();
     }
 
     #[Route('/gestion/nageuses/add', name: 'app_gestion_nageuses_add')]
@@ -28,14 +31,11 @@ class NageusesController extends AbstractController
                 ->setGroupe(isset($_POST['groupe']) ? (int)$_POST['groupe'] : null)
                 ->setCreatedAt(date('Y-m-d H:i:s'));
             $this->repository->insert($nageuse);
-            $_SESSION['flash_message'] = ['type' => 'success', 'message' => 'Nageuse ajoutée'];
+            $this->flashMessageService->setFlashMessage('success', "Nageuse ajoutée");
             header('Location: /gestion/nageuses/' . $nageuse->getGroupe());
             exit;
         } else {
-            $_SESSION['flash_message'] = [
-                'type' => 'danger',
-                'message' => 'Erreur lors de l\'ajout.'
-            ];
+            $this->flashMessageService->setFlashMessage('danger', "Erreur lors de l'ajout");
 		}
     }
 
@@ -48,8 +48,10 @@ class NageusesController extends AbstractController
                 $nageuse->setName(mb_convert_case($_POST['name'], MB_CASE_TITLE, "UTF-8") ?? '')
                     ->setGroupe(isset($_POST['groupe']) ? (int)$_POST['groupe'] : null);
                 $this->repository->update($nageuse);
-                $_SESSION['flash_message'] = ['type' => 'success', 'message' => 'Nageuse modifiée'];
+                $this->flashMessageService->setFlashMessage('success', "Nageuse modifiée");
                 isset($_POST['origine-groupe']) ? $origineGroupe = $_POST['origine-groupe']:$origineGroupe = $nageuse->getGroupe();
+            } else {
+                $this->flashMessageService->setFlashMessage('danger', "Erreur lors de la modification");
             }
             header('Location: /gestion/nageuses/' . $origineGroupe);
             exit;
@@ -61,11 +63,11 @@ class NageusesController extends AbstractController
     {
         $nageuse = $this->repository->findById($id);
         $this->repository->delete((int)$id);
-        $_SESSION['flash_message'] = ['type' => 'success', 'message' => 'Nageuse supprimée'];
+        $this->flashMessageService->setFlashMessage('success', "Nageuse supprimée");
         header('Location: /gestion/nageuses/' . $nageuse->getGroupe());
         exit;
     }
-
+    //à la fin pour que la route avec add soit prise en compte
     #[Route('/gestion/nageuses/{groupId}', name: 'app_gestion_nageuses_group')]
     public function index($groupId): void
     {
@@ -79,16 +81,21 @@ class NageusesController extends AbstractController
             $groupeLibelle = $groupe?->getLibelle();
             $titre = $groupeLibelle ? "Nageuses du groupe « $groupeLibelle »" : "Nageuses du groupe";
         } else {
-            $_SESSION['flash_message'] = ['type' => 'danger', 'message' => 'Groupe invalide'];
+            $this->flashMessageService->setFlashMessage('danger', "Groupe invalide");
             header('Location: /gestion/groupes-nageuses');
             exit;
         }
         $groupes = (new GroupesNageusesRepository())->findAll();
+        // Récupérer le message flash s'il existe
+        $flashMessage = $this->flashMessageService->getFlashMessage();
+        $this->flashMessageService->unsetFlashMessage();
+
         $this->render('/gestion/nageuses', [
             'nageuses' => $nageuses,
             'groupId' => $groupId,
             'groupeLibelle' => $groupeLibelle,
-            'groupes' => $groupes
+            'groupes' => $groupes,
+            'flash_message' => $flashMessage
         ], $titre);
     }
 

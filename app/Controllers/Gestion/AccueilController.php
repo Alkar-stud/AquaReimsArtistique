@@ -11,7 +11,6 @@ use app\Repository\Event\EventSessionRepository;
 use app\Services\FlashMessageService;
 use app\Services\UploadService;
 use Exception;
-use JetBrains\PhpStorm\NoReturn;
 
 class AccueilController extends AbstractController
 {

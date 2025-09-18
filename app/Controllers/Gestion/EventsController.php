@@ -7,16 +7,19 @@ use app\Controllers\AbstractController;
 use app\Models\Event\EventInscriptionDates;
 use app\Models\Event\Events;
 use app\Services\EventsService;
+use app\Services\FlashMessageService;
 
 #[Route('/gestion/events', name: 'app_gestion_events')]
 class EventsController extends AbstractController
 {
     private EventsService $eventsService;
+    private FlashMessageService $flashMessageService;
 
     public function __construct()
     {
         parent::__construct(false);
         $this->eventsService = new EventsService();
+        $this->flashMessageService = new FlashMessageService();
     }
 
     public function index(): void
@@ -25,13 +28,60 @@ class EventsController extends AbstractController
         $piscines = $this->eventsService->getAllPiscines();
         $tarifs = $this->eventsService->getAllTarifs();
 
-        $viewData = [
+        // Récupérer le message flash s'il existe
+        $flashMessage = $this->flashMessageService->getFlashMessage();
+        $this->flashMessageService->unsetFlashMessage();
+
+        // Préparation des données à envoyer au JS
+        $eventsArray = array_map(function($e) {
+            $nextDate = null;
+            $now = new \DateTime();
+            foreach ($e->getInscriptionDates() as $date) {
+                if ($date->getStartRegistrationAt() > $now) {
+                    if (!$nextDate || $date->getStartRegistrationAt() < $nextDate->getStartRegistrationAt()) {
+                        $nextDate = $date;
+                    }
+                }
+            }
+
+            $sessions = $e->getSessions();
+            usort($sessions, fn($a,$b) => $a->getEventStartAt() <=> $b->getEventStartAt());
+
+            return [
+                'id' => $e->getId(),
+                'libelle' => $e->getLibelle(),
+                'lieu' => $e->getLieu(),
+                'limitation_per_swimmer' => $e->getLimitationPerSwimmer(),
+                'nextOpeningDate' => $nextDate ? $nextDate->getStartRegistrationAt()->format('Y-m-d\TH:i') : null,
+                'tarifCount' => count($e->getTarifs()),
+                'tarifs' => array_map(fn($t) => $t->getId(), $e->getTarifs()),
+                'inscription_dates' => array_map(function($d) {
+                    return [
+                        'id' => $d->getId(),
+                        'libelle' => $d->getLibelle(),
+                        'start_at' => $d->getStartRegistrationAt()->format('Y-m-d\TH:i'),
+                        'close_at' => $d->getCloseRegistrationAt()->format('Y-m-d\TH:i'),
+                        'access_code' => $d->getAccessCode()
+                    ];
+                }, $e->getInscriptionDates()),
+                'sessions' => array_map(function($s) {
+                    return [
+                        'id' => $s->getId(),
+                        'session_name' => $s->getSessionName(),
+                        'opening_doors_at' => $s->getOpeningDoorsAt()->format('Y-m-d\TH:i'),
+                        'event_start_at' => $s->getEventStartAt()->format('Y-m-d\TH:i')
+                    ];
+                }, $sessions),
+            ];
+        }, $events);
+
+        $this->render('/gestion/events', [
             'events' => $events,
             'piscines' => $piscines,
-            'tarifs' => $tarifs
-        ];
-
-        $this->render('/gestion/events', $viewData, 'Gestion des événements');
+            'tarifs' => $tarifs,
+            'events_array' => $eventsArray,
+            'flash_message' => $flashMessage
+        ], 'Gestion des événements');
     }
 
     #[Route('/gestion/events/add', name: 'app_gestion_events_add')]
@@ -69,9 +119,9 @@ class EventsController extends AbstractController
 
                 $this->eventsService->createEvent($event, $tarifs, $inscriptionDates, $sessions);
 
-                $_SESSION['flash_message'] = ['type' => 'success', 'message' => 'Événement ajouté avec succès'];
+                $this->flashMessageService->setFlashMessage('success', "Événement ajouté avec succès");
             } catch (\Exception $e) {
-                $_SESSION['flash_message'] = ['type' => 'danger', 'message' => 'Erreur lors de l\'ajout : ' . $e->getMessage()];
+                $this->flashMessageService->setFlashMessage('danger', "Erreur lors de l\'ajout : " . $e->getMessage());
             }
 
             header('Location: /gestion/events');
@@ -96,6 +146,7 @@ class EventsController extends AbstractController
 
                     $tarifs = $_POST['tarifs'] ?? [];
                     $inscriptionDates = [];
+
                     if (!empty($_POST['inscription_dates']) && is_array($_POST['inscription_dates'])) {
                         foreach ($_POST['inscription_dates'] as $dateData) {
                             if (!empty($dateData['libelle']) && !empty($dateData['start_at']) && !empty($dateData['close_at'])) {
@@ -104,6 +155,9 @@ class EventsController extends AbstractController
                                     ->setStartRegistrationAt($dateData['start_at'])
                                     ->setCloseRegistrationAt($dateData['close_at'])
                                     ->setAccessCode($dateData['access_code'] ?? null);
+                                if (isset($dateData['id']) && (int)$dateData['id'] > 0) {
+                                    $inscriptionDate->setId((int)$dateData['id']);
+                                } else { $inscriptionDate->setId(0); }
                                 $inscriptionDates[] = $inscriptionDate;
                             }
                         }
@@ -114,12 +168,12 @@ class EventsController extends AbstractController
 
                     $this->eventsService->updateEvent($event, $tarifs, $inscriptionDates, $sessions);
 
-                    $_SESSION['flash_message'] = ['type' => 'success', 'message' => 'Événement mis à jour'];
+                    $this->flashMessageService->setFlashMessage('success', "Événement mis à jour");
                 } else {
-                    $_SESSION['flash_message'] = ['type' => 'danger', 'message' => 'Événement non trouvé'];
+                    $this->flashMessageService->setFlashMessage('danger', "Événement non trouvé");
                 }
             } catch (\Exception $e) {
-                $_SESSION['flash_message'] = ['type' => 'danger', 'message' => 'Erreur lors de la mise à jour : ' . $e->getMessage()];
+                $this->flashMessageService->setFlashMessage('danger', "Erreur lors de la mise à jour : " . $e->getMessage());
             }
 
             header('Location: /gestion/events');
@@ -132,9 +186,9 @@ class EventsController extends AbstractController
     {
         try {
             $this->eventsService->deleteEvent($id);
-            $_SESSION['flash_message'] = ['type' => 'success', 'message' => 'Événement supprimé'];
+            $this->flashMessageService->setFlashMessage('success', "Événement supprimé");
         } catch (\Exception $e) {
-            $_SESSION['flash_message'] = ['type' => 'danger', 'message' => 'Erreur lors de la suppression : ' . $e->getMessage()];
+                $this->flashMessageService->setFlashMessage('danger', "Erreur lors de la suppression : " . $e->getMessage());
         }
 
         header('Location: /gestion/events');

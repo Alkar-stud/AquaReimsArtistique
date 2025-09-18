@@ -152,15 +152,19 @@ class EventsService
             $this->tarifsRepository->addEventTarif($eventId, (int)$tarifId);
         }
 
-        // Dates d'inscription
-        $this->inscriptionDatesRepository->deleteByEventId($eventId);
+        // Dates d'inscription arrivent en objet
+        //On boucle sur les dates d'inscription. S'il y a un ID on update, sinon on insert.
         foreach ($inscriptionDates as $inscriptionDate) {
             $inscriptionDate->setEvent($eventId);
-            $this->inscriptionDatesRepository->insert($inscriptionDate);
+            if ($inscriptionDate->getId() !== 0) {
+                $this->inscriptionDatesRepository->update($inscriptionDate);
+            } else {
+                $this->inscriptionDatesRepository->insert($inscriptionDate);
+            }
         }
 
-        // Sessions
-        $this->eventSessionRepository->delete($eventId);
+        // Sessions arrivent en array
+        //On boucle sur les sessions. S'il y a un ID on update, sinon on insert.
         foreach ($sessions as $sessionData) {
             $session = new EventSession();
             $session->setEventId($eventId)
@@ -168,7 +172,12 @@ class EventsService
                 ->setOpeningDoorsAt($sessionData['opening_doors_at'])
                 ->setEventStartAt($sessionData['event_start_at'])
                 ->setCreatedAt(date('Y-m-d H:i:s'));
-            $this->eventSessionRepository->insert($session);
+            if ($sessionData['id']) {
+                $session->setId((int)$sessionData['id']);
+                $this->eventSessionRepository->update($session);
+            } else {
+                $this->eventSessionRepository->insert($session);
+            }
         }
 
         return $result;

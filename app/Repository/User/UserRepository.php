@@ -175,13 +175,14 @@ class UserRepository extends AbstractRepository
     }
 
     /**
-     * Ajouter l'identifiant de session enregistré en BDD pour login
+     * Ajouter/mettre à jour l'identifiant de session enregistré en BDD pour login
      */
     public function addSessionId(int $userId, string $sessionId): bool
     {
         $sql = "UPDATE $this->tableName SET session_id = :sessionId WHERE id = :id;";
         return $this->execute($sql, ['sessionId' => $sessionId, 'id' => $userId]);
     }
+
 
     /**
      * Supprimer l'identifiant de session enregistré en BDD pour logout

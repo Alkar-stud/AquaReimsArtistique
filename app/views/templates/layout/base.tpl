@@ -62,9 +62,9 @@
         if (timeoutDisplay) {
             const timeoutDuration = {{ $session_timeout_duration }}; // en secondes
         const lastActivity = {{ $session_last_activity }}; // timestamp
-        const expirationTime = (lastActivity + timeoutDuration) * 1000; // en millisecondes
+    const expirationTime = (lastActivity + timeoutDuration) * 1000; // en millisecondes
 
-        const intervalId = setInterval(() => {
+    const intervalId = setInterval(() => {
         const now = new Date().getTime();
         const remaining = expirationTime - now;
 
@@ -73,7 +73,7 @@
             timeoutDisplay.style.color = '#ffc107';
             clearInterval(intervalId);
         } else {
-            const minutes = Math.floor((remaining % (1000 * 60 * 60)) / (1000 * 60));
+            const minutes = Math.floor(remaining / (1000 * 60));
             const seconds = Math.floor((remaining % (1000 * 60)) / 1000);
             timeoutDisplay.textContent = `Session: ${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
         }

@@ -1,18 +1,23 @@
 <?php
 
+// config/session.php
 return [
     'production' => [
-        'cookie_secure' => true,     // HTTPS uniquement
-        'cookie_httponly' => true,   // Pas d'accès JavaScript
-        'cookie_samesite' => 'Strict',
-        'use_strict_mode' => true,
-        'session_name' => 'AQUA_SESSION'
+        'name' => '__Host-SID', // Préfixe de sécurité
+        'cookie_lifetime' => 0, // Expire à la fermeture du navigateur
+        'cookie_path' => '/',
+        'cookie_domain' => '', // Vide pour le domaine actuel
+        'cookie_secure' => true, // Uniquement via HTTPS
+        'cookie_httponly' => true, // Inaccessible depuis JavaScript
+        'cookie_samesite' => 'Strict' // Protection CSRF maximale
     ],
     'local' => [
-        'cookie_secure' => false,    // HTTP autorisé en dev
+        'name' => 'LOCAL_SID',
+        'cookie_lifetime' => 0,
+        'cookie_path' => '/',
+        'cookie_domain' => '',
+        'cookie_secure' => false, // false pour le développement en local (http)
         'cookie_httponly' => true,
-        'cookie_samesite' => 'Strict',
-        'use_strict_mode' => true,
-        'session_name' => 'AQUA_SESSION_DEV'
+        'cookie_samesite' => 'Lax' // Lax est plus permissif pour le dev
     ]
 ];

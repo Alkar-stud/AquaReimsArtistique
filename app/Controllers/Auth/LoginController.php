@@ -119,7 +119,16 @@ class LoginController extends AbstractController
                 'session_regenerated' => true
             ]);
 
-            header('Location: /');
+            // Vérifier s'il y a une URL de redirection en attente
+            $redirectUrl = $_SESSION['redirect_after_login'] ?? '/';
+            unset($_SESSION['redirect_after_login']); // On nettoie la session
+
+            // Sécurité : S'assurer que la redirection est locale
+            if (!$this->isValidInternalRedirect($redirectUrl)) {
+                $redirectUrl = '/'; // Rediriger vers la page d'accueil par défaut en cas de doute
+            }
+
+            header('Location: ' . $redirectUrl);
             exit;
         }
 
@@ -154,5 +163,17 @@ class LoginController extends AbstractController
 
         header('Location: /');
         exit;
+    }
+
+    /**
+     * Valide si une URL est une redirection interne sûre.
+     * @param string $url
+     * @return bool
+     */
+    private function isValidInternalRedirect(string $url): bool
+    {
+        // Doit être un chemin relatif (commencer par /) et ne pas contenir de "://"
+        // pour éviter les redirections vers des domaines externes.
+        return str_starts_with($url, '/') && !str_contains($url, '://');
     }
 }

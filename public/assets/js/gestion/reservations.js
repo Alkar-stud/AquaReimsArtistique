@@ -139,6 +139,12 @@ document.addEventListener('DOMContentLoaded', () => {
             const reservationId = button.dataset.reservationId;
             const tabKey = button.closest('.tab-pane').id.replace('tab-', ''); // 'upcoming' ou 'past'
 
+            // Mettre à jour le titre de la modale avec le numéro de réservation
+            const modalTitle = detailModal.querySelector('.modal-title');
+            if (modalTitle) {
+                modalTitle.textContent = `Détails de la réservation ARA-${reservationId.padStart(5, '0')}`;
+            }
+
             const modalBody = detailModal.querySelector('.modal-body');
             modalBody.innerHTML = '<div class="text-center"><div class="spinner-border" role="status"><span class="visually-hidden">Chargement...</span></div></div>';
 
@@ -164,4 +170,34 @@ document.addEventListener('DOMContentLoaded', () => {
     const initialParams = new URLSearchParams(window.location.search);
     const initialTabKey = initialParams.get('tab') || 'upcoming';
     loadTabContent(initialTabKey, initialParams);
+
+
+    document.body.addEventListener('click', function (e) {
+        if (e.target.matches('.view-details-btn')) {
+            e.preventDefault();
+            const detailsModal = new bootstrap.Modal(document.getElementById('reservation-details-modal'));
+            const modalBody = document.getElementById('reservation-details-modal-body');
+            const reservationId = e.target.dataset.id;
+            const context = e.target.dataset.context;
+
+            fetch(`/gestion/reservations/details/${reservationId}?context=${context}`)
+                .then(response => response.text())
+                .then(html => {
+                    modalBody.innerHTML = html;
+                    detailsModal.show();
+
+                    // Initialise les écouteurs pour les champs de contact
+                    // Cette fonction est définie dans reservation_modif_data.js
+                    if (typeof initContactFieldListeners === 'function') {
+                        initContactFieldListeners();
+                    }
+                    // Vous pouvez faire de même pour les autres types de champs (details, complements)
+                })
+                .catch(error => {
+                    console.error('Erreur lors du chargement des détails:', error);
+                    modalBody.innerHTML = '<div class="alert alert-danger">Impossible de charger les détails.</div>';
+                    detailsModal.show();
+                });
+        }
+    });
 });

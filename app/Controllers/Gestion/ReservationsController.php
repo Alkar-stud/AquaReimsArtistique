@@ -7,6 +7,7 @@ use app\Controllers\AbstractController;
 use app\Repository\Event\EventsRepository;
 use app\Repository\Reservation\ReservationsRepository;
 use app\Services\FlashMessageService;
+use app\Utils\CsrfHelper;
 
 class ReservationsController extends AbstractController
 {
@@ -129,7 +130,9 @@ class ReservationsController extends AbstractController
         // Rendre un template partiel pour le contenu de la modale
         $this->render('/gestion/reservations/_modal_content', [
             'reservation' => $reservation,
-            'isReadOnly' => $isReadOnly
+            'isReadOnly' => $isReadOnly,
+            'csrf_token' => CsrfHelper::getToken(),
+            'token' => $reservation->getToken()
         ], '', true);
     }
 

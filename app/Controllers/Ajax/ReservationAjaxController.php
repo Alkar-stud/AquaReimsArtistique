@@ -1,5 +1,5 @@
 <?php
-namespace app\Controllers\Reservation;
+namespace app\Controllers\Ajax;
 
 use app\Attributes\Route;
 use app\Controllers\AbstractController;

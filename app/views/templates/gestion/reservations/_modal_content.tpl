@@ -1,25 +1,32 @@
+<!--
+<pre>{{ print_r($reservation) }}</pre>
+-->
+<div class="container"
+     id="reservation-data-container"
+     data-reservation-id="{{ $reservation->getId() }}"
+     data-is-read-only="{{ $isReadOnly ? 'true' : 'false' }}"
+>
 <form id="reservationDetailForm">
     <input type="hidden" name="reservation_id" value="{{ $reservation->getId() }}">
-
     <h4>Acheteur</h4>
     <div class="row mb-3">
         <div class="col-md-6">
             <label class="form-label">Prénom</label>
-            <input type="text" class="form-control" value="{{ $reservation->getPrenom() }}" {{ $isReadOnly ? 'disabled' : '' }}>
+            <input type="text" class="form-control editable-contact" value="{{ $reservation->getPrenom() }}" {{ $isReadOnly ? 'disabled' : '' }}>
         </div>
         <div class="col-md-6">
             <label class="form-label">Nom</label>
-            <input type="text" class="form-control" value="{{ $reservation->getNom() }}" {{ $isReadOnly ? 'disabled' : '' }}>
+            <input type="text" class="form-control editable-contact" value="{{ $reservation->getNom() }}" {{ $isReadOnly ? 'disabled' : '' }}>
         </div>
     </div>
     <div class="row mb-4">
         <div class="col-md-6">
             <label class="form-label">Email</label>
-            <input type="email" class="form-control" value="{{ $reservation->getEmail() }}" {{ $isReadOnly ? 'disabled' : '' }}>
+            <input type="email" class="form-control editable-contact" value="{{ $reservation->getEmail() }}" {{ $isReadOnly ? 'disabled' : '' }}>
         </div>
         <div class="col-md-6">
             <label class="form-label">Téléphone</label>
-            <input type="tel" class="form-control" value="{{ $reservation->getPhone() }}" {{ $isReadOnly ? 'disabled' : '' }}>
+            <input type="tel" class="form-control editable-contact" value="{{ $reservation->getPhone() }}" {{ $isReadOnly ? 'disabled' : '' }}>
         </div>
     </div>
 
@@ -86,4 +93,5 @@
     {% if !$isReadOnly %}
     <button type="button" class="btn btn-primary" id="saveReservationDetails">Enregistrer les modifications</button>
     {% endif %}
+</div>
 </div>

@@ -3,6 +3,7 @@
 namespace app\Models\Reservation;
 
 use app\Models\Event\Events;
+use app\Models\Event\EventSession;
 use app\Models\Nageuse\Nageuses;
 use DateMalformedStringException;
 use DateTime;
@@ -15,7 +16,7 @@ class Reservations
     private int $event; // ID de l'événement
     private ?Events $eventObject = null; // Objet Events lié
     private int $event_session; // ID de la session de l'événement
-    private ?Events $eventSessionObject = null; // Objet EventSession lié
+    private ?EventSession $eventSessionObject = null; // Objet EventSession lié
     private string $reservation_mongo_id;
     private string $nom;
     private string $prenom;
@@ -32,6 +33,8 @@ class Reservations
     private ?string $comments = null;
     private DateTimeInterface $created_at;
     private ?DateTimeInterface $updated_at = null;
+    private array $details = []; // Pour stocker les objets ReservationsDetails
+    private array $complements = []; // Pour stocker les objets ReservationsComplements
 
     // --- GETTERS ---
 
@@ -40,7 +43,7 @@ class Reservations
     public function getEvent(): int { return $this->event; }
     public function getEventObject(): ?Events { return $this->eventObject; }
     public function getEventSession(): int { return $this->event_session; }
-    public function getEventSessionObject(): ?Events { return $this->eventSessionObject; }
+    public function getEventSessionObject(): EventSession { return $this->eventSessionObject; }
     public function getReservationMongoId(): string { return $this->reservation_mongo_id; }
     public function getNom(): string { return $this->nom; }
     public function getPrenom(): string { return $this->prenom; }
@@ -57,6 +60,9 @@ class Reservations
     public function getComments(): ?string { return $this->comments; }
     public function getCreatedAt(): DateTimeInterface { return $this->created_at; }
     public function getUpdatedAt(): ?DateTimeInterface { return $this->updated_at; }
+    public function getDetails(): array { return $this->details; }
+    public function getComplements(): array { return $this->complements; }
+
 
     // --- SETTERS ---
 
@@ -93,7 +99,7 @@ class Reservations
         return $this;
     }
 
-    public function setEventSessionObject(?Events $eventSessionObject): self
+    public function setEventSessionObject(?EventSession $eventSessionObject): self
     {
         $this->eventSessionObject = $eventSessionObject;
         if ($eventSessionObject) {
@@ -209,4 +215,17 @@ class Reservations
         $this->updated_at = $updated_at ? new DateTime($updated_at) : null;
         return $this;
     }
+
+    public function setDetails(array $details): self
+    {
+        $this->details = $details;
+        return $this;
+    }
+
+    public function setComplements(array $complements): self
+    {
+        $this->complements = $complements;
+        return $this;
+    }
+
 }

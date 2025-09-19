@@ -5,6 +5,7 @@ namespace app\Repository\Reservation;
 use app\Models\Reservation\ReservationsComplements;
 use app\Repository\AbstractRepository;
 use DateMalformedStringException;
+use app\Repository\TarifsRepository;
 
 class ReservationsComplementsRepository extends AbstractRepository
 {
@@ -46,12 +47,31 @@ class ReservationsComplementsRepository extends AbstractRepository
      * Trouve tous les compléments pour une réservation
      * @param int $reservationId
      * @return ReservationsComplements[]
+     * @throws DateMalformedStringException
      */
     public function findByReservation(int $reservationId): array
     {
         $sql = "SELECT * FROM $this->tableName WHERE reservation = :reservationId ORDER BY created_at";
         $results = $this->query($sql, ['reservationId' => $reservationId]);
-        return array_map([$this, 'hydrate'], $results);
+        return $this->hydrateWithRelations($results);
+    }
+
+    /**
+     * Trouve tous les compléments pour une liste d'IDs de réservation.
+     * @param array $reservationIds
+     * @return ReservationsComplements[]
+     */
+    public function findByReservations(array $reservationIds): array
+    {
+        if (empty($reservationIds)) {
+            return [];
+        }
+        // Crée une chaîne de placeholders (?, ?, ?) pour la clause IN
+        $placeholders = implode(',', array_fill(0, count($reservationIds), '?'));
+
+        $sql = "SELECT * FROM $this->tableName WHERE reservation IN ($placeholders) ORDER BY created_at";
+        $results = $this->query($sql, $reservationIds);
+        return $this->hydrateWithRelations($results);
     }
 
     /**
@@ -170,5 +190,40 @@ class ReservationsComplementsRepository extends AbstractRepository
             ->setUpdatedAt($data['updated_at']);
 
         return $complement;
+    }
+
+    /**
+     * Hydrate une liste de compléments avec leurs relations (tarif).
+     * @param array $complementsData
+     * @return ReservationsComplements[]
+     * @throws DateMalformedStringException
+     */
+    private function hydrateWithRelations(array $complementsData): array
+    {
+        if (empty($complementsData)) {
+            return [];
+        }
+
+        $complements = array_map([$this, 'hydrate'], $complementsData);
+
+        // Récupérer tous les IDs de tarifs nécessaires
+        $tarifIds = array_values(array_unique(array_column($complementsData, 'tarif')));
+
+        // Charger tous les objets tarifs en une seule requête
+        $tarifsRepository = new TarifsRepository();
+        $tarifs = $tarifsRepository->findByIds($tarifIds); // Vous devrez peut-être créer cette méthode
+
+        // Mapper les tarifs par leur ID pour un accès facile
+        $tarifsById = [];
+        foreach ($tarifs as $tarif) {
+            $tarifsById[$tarif->getId()] = $tarif;
+        }
+
+        // Attacher l'objet tarif à chaque complément
+        foreach ($complements as $complement) {
+            $complement->setTarifObject($tarifsById[$complement->getTarif()] ?? null);
+        }
+
+        return $complements;
     }
 }

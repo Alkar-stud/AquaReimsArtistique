@@ -48,7 +48,7 @@ class EventsRepository extends AbstractRepository
      * @param bool $upComing Si true, retourne les événements à venir, sinon les événements passés
      * @return Events[]
      */
-    public function findSortByDate($upComing = true): array
+    public function findSortByDate(bool $upComing = true): array
     {
         $sql = "SELECT e.* FROM $this->tableName e
             INNER JOIN event_sessions s ON s.event_id = e.id

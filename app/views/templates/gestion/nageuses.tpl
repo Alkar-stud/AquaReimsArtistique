@@ -1,4 +1,3 @@
-<!-- Message flash -->
 {% if $flash_message %}
 <div class="alert alert-{{ $flash_message['type'] ?? 'danger' }}">
     {{ $flash_message['message'] ?? '' }}

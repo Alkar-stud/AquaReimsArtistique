@@ -39,7 +39,11 @@ class ReservationsRepository extends AbstractRepository
             return null;
         }
 
-        return $this->hydrate($result[0]);
+        $reservation = $this->hydrate($result[0]);
+
+        // On passe un tableau contenant un seul élément et on récupère le premier
+        $hydratedReservation = $this->hydrateRelations([$reservation]);
+        return $hydratedReservation[0];
     }
 
     /**
@@ -118,6 +122,44 @@ class ReservationsRepository extends AbstractRepository
         $sql = "SELECT * FROM $this->tableName WHERE event = :eventId AND is_canceled = 0 ORDER BY created_at DESC";
         $results = $this->query($sql, ['eventId' => $eventId]);
         return array_map([$this, 'hydrate'], $results);
+    }
+
+    /**
+     * Trouve toutes les réservations actives (non annulées) pour une session
+     * @param int $sessionId
+     * @param int|null $limit
+     * @param int|null $offset
+     * @return Reservations[]
+     */
+    public function findActiveBySession(int $sessionId, ?int $limit = null, ?int $offset = null): array
+    {
+        $sql = "SELECT * FROM $this->tableName WHERE event_session = :sessionId AND is_canceled = 0 ORDER BY created_at";
+        if ($limit !== null && $offset !== null) {
+            $sql .= " LIMIT $limit OFFSET $offset";
+        }
+        $results = $this->query($sql, ['sessionId' => $sessionId]);
+
+        if (empty($results)) {
+            return [];
+        }
+
+        // Hydrater les objets de réservation de base
+        $reservations = array_map([$this, 'hydrate'], $results);
+
+        // Hydrater toutes les relations en une seule fois
+        return $this->hydrateRelations($reservations);
+    }
+
+    /**
+     * Compte le nombre de réservations actives pour une session.
+     * @param int $sessionId
+     * @return int
+     */
+    public function countActiveBySession(int $sessionId): int
+    {
+        $sql = "SELECT COUNT(*) as count FROM $this->tableName WHERE event_session = :sessionId AND is_canceled = 0";
+        $result = $this->query($sql, ['sessionId' => $sessionId]);
+        return (int)$result[0]['count'];
     }
 
     /**
@@ -326,6 +368,43 @@ class ReservationsRepository extends AbstractRepository
 
         $result = $this->query($sql, $params);
         return (int)$result[0]['count'];
+    }
+
+    /**
+     * Hydrate les relations (détails, compléments) pour une liste de réservations.
+     * @param Reservations[] $reservations
+     * @return Reservations[]
+     */
+    private function hydrateRelations(array $reservations): array
+    {
+        if (empty($reservations)) {
+            return [];
+        }
+
+        $reservationIds = array_map(fn($r) => $r->getId(), $reservations);
+
+        // Hydrater les détails
+        $detailsRepository = new ReservationsDetailsRepository();
+        $allDetails = $detailsRepository->findByReservations($reservationIds);
+        $detailsByReservationId = [];
+        foreach ($allDetails as $detail) {
+            $detailsByReservationId[$detail->getReservation()][] = $detail;
+        }
+
+        // Hydrater les compléments
+        $complementsRepository = new ReservationsComplementsRepository();
+        $allComplements = $complementsRepository->findByReservations($reservationIds);
+        $complementsByReservationId = [];
+        foreach ($allComplements as $complement) {
+            $complementsByReservationId[$complement->getReservation()][] = $complement;
+        }
+
+        foreach ($reservations as $reservation) {
+            $reservation->setDetails($detailsByReservationId[$reservation->getId()] ?? []);
+            $reservation->setComplements($complementsByReservationId[$reservation->getId()] ?? []);
+        }
+
+        return $reservations;
     }
 
     /**

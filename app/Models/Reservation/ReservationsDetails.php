@@ -17,8 +17,8 @@ class ReservationsDetails
     private ?object $tarifObject = null;
     private ?string $tarif_access_code = null;
     private ?string $justificatif_name = null;
-    private ?int $place_number = null;
-    private ?object $placeObject = null;
+    private ?string $place_number = null;
+    private ?\app\Models\Piscine\PiscineGradinsPlaces $placeObject = null;
     private DateTimeInterface $created_at;
     private ?DateTimeInterface $updated_at = null;
 
@@ -32,8 +32,8 @@ class ReservationsDetails
     public function getTarifObject(): ?object { return $this->tarifObject; }
     public function getTarifAccessCode(): ?string { return $this->tarif_access_code; }
     public function getJustificatifName(): ?string { return $this->justificatif_name; }
-    public function getPlaceNumber(): ?int { return $this->place_number; }
-    public function getPlaceObject(): ?object { return $this->placeObject; }
+    public function getPlaceNumber(): ?string { return $this->place_number; }
+    public function getPlaceObject(): ?\app\Models\Piscine\PiscineGradinsPlaces { return $this->placeObject; }
     public function getCreatedAt(): DateTimeInterface { return $this->created_at; }
     public function getUpdatedAt(): ?DateTimeInterface { return $this->updated_at; }
 
@@ -96,13 +96,13 @@ class ReservationsDetails
         return $this;
     }
 
-    public function setPlaceNumber(?int $place_number): self
+    public function setPlaceNumber(?string $place_number): self
     {
         $this->place_number = $place_number;
         return $this;
     }
 
-    public function setPlaceObject(?object $placeObject): self
+    public function setPlaceObject(?\app\Models\Piscine\PiscineGradinsPlaces $placeObject): self
     {
         $this->placeObject = $placeObject;
         return $this;

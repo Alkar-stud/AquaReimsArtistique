@@ -67,6 +67,22 @@ class TarifsRepository extends AbstractRepository
         return array_map([$this, 'hydrate'], $results);
     }
 
+    /**
+     * Trouve plusieurs tarifs par leurs IDs.
+     * @param array $ids
+     * @return Tarifs[]
+     */
+    public function findByIds(array $ids): array
+    {
+        if (empty($ids)) {
+            return [];
+        }
+        $placeholders = implode(',', array_fill(0, count($ids), '?'));
+        $sql = "SELECT * FROM $this->tableName WHERE id IN ($placeholders)";
+        $results = $this->query($sql, $ids);
+        return array_map([$this, 'hydrate'], $results);
+    }
+
     public function insert(Tarifs $tarif): void
     {
         $sql = "INSERT INTO $this->tableName 

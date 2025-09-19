@@ -6,13 +6,13 @@ use DateMalformedStringException;
 use DateTime;
 use DateTimeInterface;
 
-class ReservationsComplements extends \app\Repository\Reservation\ReservationsComplementsRepository
+class ReservationsComplements
 {
     private int $id;
     private int $reservation;
     private ?Reservations $reservationObject = null;
     private int $tarif;
-    private ?object $tarifObject = null; // Could be a Tarifs model object
+    private ?object $tarifObject = null;
     private ?string $tarif_access_code = null;
     private int $qty;
     private DateTimeInterface $created_at;

@@ -3,6 +3,7 @@
     {{ $flash_message['message'] ?? '' }}
 </div>
 {% endif %}
+
 <div class="container">
     <h2 class="mb-4">Mon compte</h2>
     {% if $_SESSION['user']['role']['level'] > 0 %}

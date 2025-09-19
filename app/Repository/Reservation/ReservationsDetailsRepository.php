@@ -5,6 +5,7 @@ namespace app\Repository\Reservation;
 use app\Models\Reservation\ReservationsDetails;
 use app\Repository\Piscine\PiscineGradinsPlacesRepository;
 use app\Repository\AbstractRepository;
+use app\Repository\TarifsRepository;
 use DateMalformedStringException;
 
 class ReservationsDetailsRepository extends AbstractRepository
@@ -86,7 +87,7 @@ class ReservationsDetailsRepository extends AbstractRepository
     }
 
     /**
-     * Compte le nombre de détails pour une réservation
+     * Compte le nombre de détails (donc de places) pour une réservation
      * @param int $reservationId
      * @return int
      */
@@ -98,24 +99,21 @@ class ReservationsDetailsRepository extends AbstractRepository
     }
 
     /**
-     * Compte le nombre de places déjà réservées par nageuse et événement
-     * @param int $eventId
-     * @param int $nageuseId
-     * @return int
+     * Trouve tous les détails pour une liste d'IDs de réservation.
+     * @param array $reservationIds
+     * @return ReservationsDetails[]
      */
-    public function countPlacesForNageuseAndEvent(int $eventId, int $nageuseId): int
+    public function findByReservations(array $reservationIds): array
     {
-        $sql = "SELECT COUNT(rd.id) as count
-            FROM reservations_details rd
-            INNER JOIN reservations r ON rd.reservation = r.id
-            WHERE r.event = :eventId
-              AND r.nageuse_si_limitation = :nageuseId
-              AND r.is_canceled = 0";
-        $result = $this->query($sql, [
-            'eventId' => $eventId,
-            'nageuseId' => $nageuseId
-        ]);
-        return (int)($result[0]['count'] ?? 0);
+        if (empty($reservationIds)) {
+            return [];
+        }
+        // Crée une chaîne de placeholders (?, ?, ?) pour la clause IN
+        $placeholders = implode(',', array_fill(0, count($reservationIds), '?'));
+
+        $sql = "SELECT * FROM $this->tableName WHERE reservation IN ($placeholders) ORDER BY created_at";
+        $results = $this->query($sql, $reservationIds);
+        return $this->hydrateWithRelations($results);
     }
 
     /**
@@ -136,7 +134,7 @@ class ReservationsDetailsRepository extends AbstractRepository
             'tarif' => $detail->getTarif(),
             'tarif_access_code' => $detail->getTarifAccessCode(),
             'justificatif_name' => $detail->getJustificatifName(),
-            'place_number' => $detail->getPlaceNumber(),
+            'place_number' => $detail->getPlaceObject()?->getId(),
             'created_at' => $detail->getCreatedAt()->format('Y-m-d H:i:s')
         ]);
 
@@ -169,7 +167,7 @@ class ReservationsDetailsRepository extends AbstractRepository
             'tarif' => $detail->getTarif(),
             'tarif_access_code' => $detail->getTarifAccessCode(),
             'justificatif_name' => $detail->getJustificatifName(),
-            'place_number' => $detail->getPlaceNumber()
+            'place_number' => $detail->getPlaceObject()?->getId()
         ]);
     }
 
@@ -245,18 +243,47 @@ class ReservationsDetailsRepository extends AbstractRepository
             ->setTarif($data['tarif'])
             ->setTarifAccessCode($data['tarif_access_code'])
             ->setJustificatifName($data['justificatif_name'])
-            ->setPlaceNumber($data['place_number'])
             ->setCreatedAt($data['created_at'])
             ->setUpdatedAt($data['updated_at']);
 
-        // Charger l'objet Place si un numéro de place est défini
-        if ($data['place_number']) {
+        // Charger l'objet Place si un ID de place est défini
+        if ($data['place_number']) { // La colonne contient l'ID de la place.
             $placeRepository = new PiscineGradinsPlacesRepository();
-            $place = $placeRepository->findById($data['place_number']);
+            $place = $placeRepository->findById((int)$data['place_number']);
             if ($place) {
+                $detail->setPlaceNumber($place->getPlaceNumber()); // On stocke le numéro (string)
                 $detail->setPlaceObject($place);
             }
         }
         return $detail;
+    }
+
+    private function hydrateWithRelations(array $detailsData): array
+    {
+        if (empty($detailsData)) {
+            return [];
+        }
+
+        $details = array_map([$this, 'hydrate'], $detailsData);
+
+        // Récupérer tous les IDs de tarifs nécessaires
+        $tarifIds = array_values(array_unique(array_column($detailsData, 'tarif')));
+
+        // Charger tous les objets tarifs en une seule requête
+        $tarifsRepository = new TarifsRepository();
+        $tarifs = $tarifsRepository->findByIds($tarifIds); // Vous devrez peut-être créer cette méthode
+
+        // Mapper les tarifs par leur ID pour un accès facile
+        $tarifsById = [];
+        foreach ($tarifs as $tarif) {
+            $tarifsById[$tarif->getId()] = $tarif;
+        }
+
+        // Attacher l'objet tarif à chaque complément
+        foreach ($details as $detail) {
+            $detail->setTarifObject($tarifsById[$detail->getTarif()] ?? null);
+        }
+
+        return $details;
     }
 }

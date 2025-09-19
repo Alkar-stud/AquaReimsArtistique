@@ -99,9 +99,12 @@ class TemplateEngine
 
     private function resolveInclude(string $path): string
     {
+        // Si le chemin commence par '/', on le considère relatif à la racine des templates.
         if (str_starts_with($path, '/')) {
-            return $path;
+            // On retire le premier '/' et on préfixe avec le chemin de base des templates.
+            return __DIR__ . '/../views/templates' . $path;
         }
+        // Sinon, c'est un chemin relatif au template courant.
         return rtrim($this->baseDir, '/\\') . DIRECTORY_SEPARATOR . $path;
     }
 

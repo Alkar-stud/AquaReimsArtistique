@@ -12,7 +12,7 @@ class PiscineGradinsPlaces
     private int $zone; // ID de la zone
     private ?PiscineGradinsZones $zoneObject = null; // Objet PiscineGradinsZones lié
     private string $rankInZone;
-    private int $place_number;
+    private string $place_number;
     private bool $is_pmr = false;
     private bool $is_vip = false;
     private bool $is_volunteer = false;
@@ -42,7 +42,7 @@ class PiscineGradinsPlaces
         return $this->rankInZone;
     }
 
-    public function getPlaceNumber(): int
+    public function getPlaceNumber(): string
     {
         return $this->place_number;
     }
@@ -115,10 +115,19 @@ class PiscineGradinsPlaces
         return $this;
     }
 
-    public function setPlaceNumber(int $place_number): self
+    public function setPlaceNumber(string $place_number): self
     {
         $this->place_number = $place_number;
         return $this;
+    }
+
+    /**
+     * Pour récupérer le nom court de la place (Rang + Numéro)
+     * ex : 201 pour rang 2, place 1
+     */
+    public function getShortPlaceName(): string
+    {
+        return $this->getRankInZone() . $this->getPlaceNumber();
     }
 
     public function setIsPmr(bool $is_pmr): self

@@ -6,6 +6,7 @@ use app\Repository\User\UserRepository;
 use app\Services\Logs\LogService;
 use app\Services\SessionValidationService;
 use app\Utils\CsrfHelper;
+use app\Utils\DurationHelper;
 use app\Utils\TemplateEngine;
 use DateMalformedStringException;
 use Exception;
@@ -44,6 +45,7 @@ abstract class AbstractController
      * @param string $title
      * @param bool $partial
      * @return void
+     * @throws Exception
      */
     protected function render(string $view, array $data = [], string $title = '', bool $partial = false): void
     {
@@ -55,6 +57,21 @@ abstract class AbstractController
         $data['uri'] = $uri;
         $data['is_gestion_page'] = str_starts_with($uri, '/gestion');
         $data['load_ckeditor'] = $data['is_gestion_page'] && (str_starts_with($uri, '/gestion/mail_templates') || str_starts_with($uri, '/gestion/accueil'));
+
+        if (($_ENV['APP_DEBUG'] ?? 'false') === 'true') {
+            $timeoutValue = defined('TIMEOUT_SESSION') ? TIMEOUT_SESSION : 0;
+            $durationInSeconds = 0;
+
+            if (is_numeric($timeoutValue)) {
+                $durationInSeconds = (int)$timeoutValue;
+            } elseif (is_string($timeoutValue) && str_starts_with($timeoutValue, 'PT')) {
+                // On utilise le helper existant pour la conversion
+                $durationInSeconds = DurationHelper::iso8601ToSeconds($timeoutValue);
+            }
+            $data['session_timeout_duration'] = $durationInSeconds;
+            $data['session_last_activity'] = $_SESSION['user']['LAST_ACTIVITY'] ?? time();
+            $data['user_is_authenticated'] = isset($_SESSION['user']['id']);
+        }
 
         $templateTpl = __DIR__ . '/../views/templates/' . $view . '.tpl';
 

@@ -39,19 +39,48 @@
 <script type="module" src="/assets/js/ckeditor.js"></script>
 {% endif %}
 {% if $_ENV['APP_DEBUG'] == "true" %}
-<!-- Outil de débogage pour afficher les dimensions de la fenêtre -->
-<div id="screen-dimensions-display" style="position: fixed; bottom: 10px; right: 10px; background-color: rgba(0,0,0,0.7); color: white; padding: 5px 10px; border-radius: 5px; font-family: monospace; z-index: 9999; font-size: 14px;"></div>
+<!-- Outils de débogage -->
+<div id="debug-bar" style="position: fixed; bottom: 10px; right: 10px; background-color: rgba(0,0,0,0.7); color: white; padding: 5px 10px; border-radius: 5px; font-family: monospace; z-index: 9999; font-size: 12px; display: flex; flex-direction: row; align-items: center; gap: 10px;">
+    <div id="screen-dimensions-display"></div>
+    {% if $user_is_authenticated and $session_timeout_duration > 0 %}
+    <span style="color: #888;">|</span>
+    <div id="session-timeout-display"></div>
+    {% endif %}
+</div>
 <script>
     document.addEventListener('DOMContentLoaded', function() {
+        // --- Affichage du Viewport ---
         const dimensionsDisplay = document.getElementById('screen-dimensions-display');
         function updateDimensions() {
-            dimensionsDisplay.textContent = `Viewport: ${window.innerWidth}px x ${window.innerHeight}px`;
+            if(dimensionsDisplay) dimensionsDisplay.textContent = `Viewport: ${window.innerWidth}px x ${window.innerHeight}px`;
         }
         updateDimensions();
         window.addEventListener('resize', updateDimensions);
+
+        // --- Compte à rebours de la session ---
+        const timeoutDisplay = document.getElementById('session-timeout-display');
+        if (timeoutDisplay) {
+            const timeoutDuration = {{ $session_timeout_duration }}; // en secondes
+        const lastActivity = {{ $session_last_activity }}; // timestamp
+        const expirationTime = (lastActivity + timeoutDuration) * 1000; // en millisecondes
+
+        const intervalId = setInterval(() => {
+        const now = new Date().getTime();
+        const remaining = expirationTime - now;
+
+        if (remaining <= 0) {
+            timeoutDisplay.textContent = 'Session: Expirée';
+            timeoutDisplay.style.color = '#ffc107';
+            clearInterval(intervalId);
+        } else {
+            const minutes = Math.floor((remaining % (1000 * 60 * 60)) / (1000 * 60));
+            const seconds = Math.floor((remaining % (1000 * 60)) / 1000);
+            timeoutDisplay.textContent = `Session: ${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+        }
+    }, 1000);
+    }
     });
 </script>
-<pre>{{ print_r($_SESSION, true) }}</pre>
 {% endif %}
 </body>
 </html>

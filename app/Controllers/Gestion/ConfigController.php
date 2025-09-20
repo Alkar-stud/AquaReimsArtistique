@@ -4,6 +4,7 @@ namespace app\Controllers\Gestion;
 
 use app\Attributes\Route;
 use app\Controllers\AbstractController;
+use app\Models\Config;
 use app\Repository\ConfigRepository;
 
 #[Route('/gestion/configuration/configs', name: 'app_gestion_configs')]
@@ -34,8 +35,8 @@ class ConfigController extends AbstractController
     public function add(): void
     {
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $config = new \app\Models\Config();
-            $config->setLibelle($_POST['libelle'] ?? '')
+            $config = new Config();
+            $config->setLabel($_POST['label'] ?? '')
                 ->setConfigKey($_POST['config_key'] ?? '')
                 ->setConfigValue($_POST['config_value'] ?? '')
                 ->setConfigType($_POST['config_type'] ?? null)
@@ -53,7 +54,7 @@ class ConfigController extends AbstractController
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $config = $this->repository->findById($id);
             if ($config) {
-                $config->setLibelle($_POST['libelle'] ?? $config->getLibelle())
+                $config->setLabel($_POST['label'] ?? $config->getLabel())
                     ->setConfigKey($_POST['config_key'] ?? $config->getConfigKey())
                     ->setConfigValue($_POST['config_value'] ?? $config->getConfigValue())
                     ->setConfigType($_POST['config_type'] ?? $config->getConfigType());

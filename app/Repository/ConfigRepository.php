@@ -35,10 +35,10 @@ class ConfigRepository extends AbstractRepository
 
     public function insert(Config $config): void
     {
-        $sql = "INSERT INTO $this->tableName (libelle, config_key, config_value, config_type, created_at) 
-            VALUES (:libelle, :config_key, :config_value, :config_type, :created_at)";
+        $sql = "INSERT INTO $this->tableName (label, config_key, config_value, config_type, created_at) 
+            VALUES (:label, :config_key, :config_value, :config_type, :created_at)";
         $this->execute($sql, [
-            'libelle' => $config->getLibelle(),
+            'label' => $config->getLabel(),
             'config_key' => $config->getConfigKey(),
             'config_value' => $config->getConfigValue(),
             'config_type' => $config->getConfigType(),
@@ -48,11 +48,11 @@ class ConfigRepository extends AbstractRepository
     public function update(Config $config): void
     {
         $sql = "UPDATE $this->tableName SET 
-            libelle = :libelle, config_key = :config_key, config_value = :config_value, config_type = :config_type, updated_at = NOW()
+            label = :label, config_key = :config_key, config_value = :config_value, config_type = :config_type, updated_at = NOW()
             WHERE id = :id";
         $this->execute($sql, [
             'id' => $config->getId(),
-            'libelle' => $config->getLibelle(),
+            'label' => $config->getLabel(),
             'config_key' => $config->getConfigKey(),
             'config_value' => $config->getConfigValue(),
             'config_type' => $config->getConfigType(),
@@ -103,7 +103,7 @@ class ConfigRepository extends AbstractRepository
         }
 
         $config->setId($data['id'])
-            ->setLibelle($data['libelle'])
+            ->setLabel($data['label'])
             ->setConfigKey($data['config_key'])
             ->setConfigValue($value)
             ->setConfigType($type)

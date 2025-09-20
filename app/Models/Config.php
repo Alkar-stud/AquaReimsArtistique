@@ -8,7 +8,7 @@ use DateTimeInterface;
 class Config
 {
     private int $id;
-    private string $libelle;
+    private string $label;
     private string $config_key;
     private string $config_value;
     private ?string $config_type = null;
@@ -16,7 +16,7 @@ class Config
     private ?DateTimeInterface $updated_at = null;
 
     public function getId(): int { return $this->id; }
-    public function getLibelle(): string { return $this->libelle; }
+    public function getLabel(): string { return $this->label; }
     public function getConfigKey(): string { return $this->config_key; }
     public function getConfigValue(): string { return $this->config_value; }
     public function getConfigType(): ?string { return $this->config_type; }
@@ -24,7 +24,7 @@ class Config
     public function getUpdatedAt(): ?DateTimeInterface { return $this->updated_at; }
 
     public function setId(int $id): self { $this->id = $id; return $this; }
-    public function setLibelle(string $libelle): self { $this->libelle = $libelle; return $this; }
+    public function setLabel(string $label): self { $this->label = $label; return $this; }
     public function setConfigKey(string $config_key): self { $this->config_key = $config_key; return $this; }
     public function setConfigValue(string $config_value): self { $this->config_value = $config_value; return $this; }
     public function setConfigType(?string $config_type): self { $this->config_type = $config_type; return $this; }

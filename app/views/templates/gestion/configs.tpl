@@ -14,10 +14,10 @@
             <li class="list-group-item">
                 <form action="/gestion/configuration/configs/update/{{ $config->getId() }}" method="POST" class="d-flex flex-column gap-2">
                     <div>
-                        <strong>{{ $config->getLibelle() }}</strong>
+                        <strong>{{ $config->getLabel() }}</strong>
                         <span class="text-muted">[{{ $config->getConfigKey() }}]</span>
                     </div>
-                    <input type="text" name="libelle" class="form-control" value="{{ $config->getLibelle() }}" required>
+                    <input type="text" name="libelle" class="form-control" value="{{ $config->getLabel() }}" required>
                     <input type="text" name="config_key" class="form-control" value="{{ $config->getConfigKey() }}" required>
                     <input type="text" name="config_value" class="form-control" value="{{ $config->getConfigValue() }}">
                     <div class="input-group">
@@ -151,7 +151,7 @@
             {% foreach $data as $config %}
             <tr>
                 <form action="/gestion/configuration/configs/update/{{ $config->getId() }}" method="POST">
-                    <td><input type="text" name="libelle" class="form-control" value="{{ $config->getLibelle() }}" required></td>
+                    <td><input type="text" name="libelle" class="form-control" value="{{ $config->getLabel() }}" required></td>
                     <td><input type="text" name="config_key" class="form-control" value="{{ $config->getConfigKey() }}" required></td>
                     <td><input type="text" name="config_value" class="form-control" value="{{ $config->getConfigValue() }}"></td>
                     <td>

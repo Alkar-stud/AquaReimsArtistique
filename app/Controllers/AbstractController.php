@@ -21,10 +21,6 @@ abstract class AbstractController
     protected SessionValidationService $sessionValidationService;
     protected FlashMessageService $flashMessageService;
 
-    /**
-     * @throws DateMalformedStringException
-     * @throws RandomException
-     */
     public function __construct(bool $isPublicRoute = false)
     {
         $this->configureSession();
@@ -39,7 +35,12 @@ abstract class AbstractController
         $this->logUrlAccess();
         $this->logRouteAccess();
 
-        $this->checkUserSession($isPublicRoute);
+        try {
+            $this->checkUserSession($isPublicRoute);
+        } catch (\Throwable $e) {
+            $this->logService->error('Session check failed', ['exception' => $e]);
+            $this->logoutAndRedirect('Une erreur de session est survenue. Veuillez vous reconnecter.');
+        }
 
     }
 
@@ -51,7 +52,6 @@ abstract class AbstractController
      * @param string $title
      * @param bool $partial
      * @return void
-     * @throws Exception
      */
     protected function render(string $view, array $data = [], string $title = '', bool $partial = false): void
     {
@@ -143,7 +143,6 @@ abstract class AbstractController
     /**
      * Vérifie la session de l'utilisation
      * @throws DateMalformedStringException
-     * @throws Exception
      */
     public function checkUserSession(bool $isPublicRoute = false): void
     {
@@ -239,7 +238,6 @@ abstract class AbstractController
     /**
      * Journalise l'accès à la route
      * @return void
-     * @throws RandomException
      */
     private function logRouteAccess(): void
     {
@@ -247,13 +245,18 @@ abstract class AbstractController
         $controller = static::class;
         $action = $this->getCurrentAction();
 
-        $requestId = $_SERVER['REQUEST_ID'] ?? bin2hex(random_bytes(8));
-        $_SERVER['REQUEST_ID'] = $requestId;
+        if (!isset($_SERVER['REQUEST_ID'])) {
+            try {
+                $_SERVER['REQUEST_ID'] = bin2hex(random_bytes(8));
+            } catch (\Throwable) {
+                $_SERVER['REQUEST_ID'] = uniqid('req_', true);
+            }
+        }
 
         $context = [
             'route_params' => $this->getSanitizedRouteParams(),
             'execution_time_start' => microtime(true),
-            'request_id' => $requestId,
+            'request_id' => $_SERVER['REQUEST_ID'],
             'user_id' => $_SESSION['user']['id'] ?? null
         ];
 
@@ -408,7 +411,7 @@ abstract class AbstractController
     private function isValidInternalRedirect(string $url): bool
     {
         // Doit être un chemin relatif (commencer par /) et ne pas contenir de "://" ou de double slash au début.
-        // pour éviter les redirections vers des domaines externes (ex: //evil.com).
+        // Pour éviter les redirections vers des domaines externes (ex: //evil.com).
         return str_starts_with($url, '/') && !str_starts_with($url, '//') && !str_contains($url, '://');
     }
 

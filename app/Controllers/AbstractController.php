@@ -7,7 +7,7 @@ use app\Services\Logs\LogService;
 use app\Services\SessionValidationService;
 use app\Utils\CsrfHelper;
 use app\Utils\DurationHelper;
-use app\Utils\TemplateEngine;
+use app\Core\TemplateEngine;
 use DateMalformedStringException;
 use Exception;
 use Random\RandomException;

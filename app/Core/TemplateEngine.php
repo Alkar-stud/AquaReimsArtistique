@@ -1,5 +1,5 @@
 <?php
-namespace app\Utils;
+namespace app\Core;
 
 use RuntimeException;
 use Throwable;
@@ -108,12 +108,11 @@ class TemplateEngine
 
     private function resolveInclude(string $path): string
     {
-        // Si le chemin commence par '/', on le considère relatif à la racine des templates.
+        // Chemin absolu (à partir de la racine des templates)
         if (str_starts_with($path, '/')) {
-            // On retire le premier '/' et on préfixe avec le chemin de base des templates.
             return __DIR__ . '/../views/templates' . $path;
         }
-        // Sinon, c'est un chemin relatif au template courant.
+        // Chemin relatif au template courant
         return rtrim($this->baseDir, '/\\') . DIRECTORY_SEPARATOR . $path;
     }
 

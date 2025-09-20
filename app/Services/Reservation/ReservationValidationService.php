@@ -6,7 +6,7 @@ use app\DTO\ReservationDetailItemDTO;
 use app\DTO\ReservationUserDTO;
 use app\Repository\Event\EventsRepository;
 use app\Repository\Reservation\ReservationsPlacesTempRepository;
-use app\Repository\TarifsRepository;
+use app\Repository\TarifRepository;
 use app\Services\Logs\LogService;
 use app\Services\NageuseService;
 use app\Services\UploadService;
@@ -17,7 +17,7 @@ class ReservationValidationService
 {
     private EventsRepository $eventsRepository;
     private NageuseService $nageuseService;
-    private TarifsRepository $tarifsRepository;
+    private TarifRepository $tarifsRepository;
     private ReservationSessionService $reservationSessionService;
     private UploadService $uploadService;
     private ReservationsPlacesTempRepository $tempRepo;
@@ -27,7 +27,7 @@ class ReservationValidationService
     {
         $this->eventsRepository = new EventsRepository();
         $this->nageuseService = new NageuseService();
-        $this->tarifsRepository = new TarifsRepository();
+        $this->tarifsRepository = new TarifRepository();
         $this->reservationSessionService = new ReservationSessionService();
         $this->uploadService = new UploadService();
         $this->tempRepo = new ReservationsPlacesTempRepository();

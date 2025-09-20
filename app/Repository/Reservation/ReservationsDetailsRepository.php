@@ -5,7 +5,7 @@ namespace app\Repository\Reservation;
 use app\Models\Reservation\ReservationsDetails;
 use app\Repository\Piscine\PiscineGradinsPlacesRepository;
 use app\Repository\AbstractRepository;
-use app\Repository\TarifsRepository;
+use app\Repository\TarifRepository;
 use DateMalformedStringException;
 
 class ReservationsDetailsRepository extends AbstractRepository
@@ -270,7 +270,7 @@ class ReservationsDetailsRepository extends AbstractRepository
         $tarifIds = array_values(array_unique(array_column($detailsData, 'tarif')));
 
         // Charger tous les objets tarifs en une seule requête
-        $tarifsRepository = new TarifsRepository();
+        $tarifsRepository = new TarifRepository();
         $tarifs = $tarifsRepository->findByIds($tarifIds); // Vous devrez peut-être créer cette méthode
 
         // Mapper les tarifs par leur ID pour un accès facile

@@ -6,7 +6,7 @@ use app\Models\Reservation\Reservations;
 use app\Repository\Event\EventsRepository;
 use app\Repository\Reservation\ReservationsComplementsRepository;
 use app\Repository\Reservation\ReservationsDetailsRepository;
-use app\Repository\TarifsRepository;
+use app\Repository\TarifRepository;
 use app\Services\MailService;
 use DateMalformedStringException;
 
@@ -93,7 +93,7 @@ class MailPrepareService
         // Pour construire le récapitulatif, nous avons besoin des détails et des tarifs
         $detailsRepository = new ReservationsDetailsRepository();
         $complementsRepository = new ReservationsComplementsRepository();
-        $tarifsRepository = new TarifsRepository();
+        $tarifsRepository = new TarifRepository();
 
         $details = $detailsRepository->findByReservation($reservation->getId());
         $complements = $complementsRepository->findByReservation($reservation->getId());
@@ -133,7 +133,7 @@ class MailPrepareService
         }
 
         if (!empty($complements)) {
-            $recapHtml .= '<h4 style="margin-top: 15px; margin-bottom: 5px;">Tarifs sans places assises</h4>';
+            $recapHtml .= '<h4 style="margin-top: 15px; margin-bottom: 5px;">Tarif sans places assises</h4>';
             $recapHtml .= '<table cellpadding="5" cellspacing="0" style="width: 100%; border-collapse: collapse;">';
             foreach ($complements as $complement) {
                 $tarif = $tarifsById[$complement->getTarif()] ?? null;

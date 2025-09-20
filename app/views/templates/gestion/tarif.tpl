@@ -24,7 +24,7 @@
             {% foreach $data as $tarif %}
             <li class="list-group-item d-flex justify-content-between align-items-center"
                 data-id="{{ $tarif->getId() }}"
-                data-libelle="{{ $tarif->getLibelle() }}"
+                data-label="{{ $tarif->getLabel() }}"
                 data-description="{{ $tarif->getDescription() }}"
                 data-nb_place="{{ $tarif->getNbPlace() ?? '' }}"
                 data-age_min="{{ $tarif->getAgeMin() ?? '' }}"
@@ -36,7 +36,7 @@
                 data-access_code="{{ $tarif->getAccessCode() !== null ? $tarif->getAccessCode() : '' }}"
                 data-is_active="{{ $tarif->getIsActive() ? '1' : '0' }}"
                 onclick="openTarifModal('edit', this.dataset)">
-                <span>{{ $tarif->getLibelle() }}</span>
+                <span>{{ $tarif->getLabel() }}</span>
                 <span>{{ number_format($tarif->getPrice() / 100, 2, ',', ' ') }} €</span>
                 <a href="/gestion/tarifs/delete/{{ $tarif->getId() }}" class="btn btn-danger btn-sm" onclick="return confirm('Supprimer ce tarif ?');">Supprimer</a>
             </li>
@@ -58,7 +58,7 @@
             <tbody>
             <tr>
                 <form action="/gestion/tarifs/add" method="POST">
-                    <td><input type="text" name="libelle" class="form-control" required></td>
+                    <td><input type="text" name="label" class="form-control" required></td>
                     <td><input type="text" name="description" class="form-control"></td>
                     <td><input type="number" min="0" name="nb_place" class="form-control"></td>
                     <td><input type="number" min="0" name="age_min" class="form-control"></td>
@@ -76,7 +76,7 @@
             {% foreach $data as $tarif %}
             <tr>
                 <form action="/gestion/tarifs/update/{{ $tarif->getId() }}" method="POST">
-                    <td><input type="text" name="libelle" class="form-control" required value="{{ $tarif->getLibelle() ?? '' }}" size="50"></td>
+                    <td><input type="text" name="label" class="form-control" required value="{{ $tarif->getLabel() ?? '' }}" size="50"></td>
                     <td><input type="text" name="description" class="form-control" value="{{ $tarif->getDescription() ?? '' }}" size="100"></td>
                     <td><input type="number" name="nb_place" min="0" class="form-control" value="{{ $tarif->getNbPlace() ?? '' }}"></td>
                     <td><input type="number" name="age_min" min="0" class="form-control" value="{{ $tarif->getAgeMin() ?? '' }}"></td>

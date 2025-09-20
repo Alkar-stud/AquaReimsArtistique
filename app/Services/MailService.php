@@ -8,7 +8,7 @@ use app\Repository\Event\EventsRepository;
 use app\Repository\MailTemplateRepository;
 use app\Repository\Reservation\ReservationsComplementsRepository;
 use app\Repository\Reservation\ReservationsDetailsRepository;
-use app\Repository\TarifsRepository;
+use app\Repository\TarifRepository;
 use DateMalformedStringException;
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;

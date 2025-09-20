@@ -3,7 +3,7 @@ namespace app\Utils;
 
 use app\Repository\Event\EventsRepository;
 use app\Repository\Nageuse\NageusesRepository;
-use app\Repository\TarifsRepository;
+use app\Repository\TarifRepository;
 
 /*
  * Pour afficher le petit encart récapitulatif des réservations tout au long du parcours
@@ -12,8 +12,8 @@ class ReservationContextHelper
 {
     public static function getContext(
         EventsRepository $eventsRepository,
-        TarifsRepository $tarifsRepository,
-        ?array $reservation
+        TarifRepository  $tarifsRepository,
+        ?array           $reservation
     ): array {
         $event = $session = $nageuse = null;
         $tarifs = $tarifsById = [];

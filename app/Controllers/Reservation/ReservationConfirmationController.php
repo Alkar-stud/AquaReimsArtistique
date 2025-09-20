@@ -12,7 +12,7 @@ use app\Repository\Reservation\ReservationsComplementsRepository;
 use app\Repository\Reservation\ReservationsDetailsRepository;
 use app\Repository\Reservation\ReservationsPlacesTempRepository;
 use app\Repository\Reservation\ReservationsRepository;
-use app\Repository\TarifsRepository;
+use app\Repository\TarifRepository;
 use app\Services\HelloAssoService;
 use app\Services\MongoReservationStorage;
 use app\Services\Payment\PaymentService;
@@ -68,7 +68,7 @@ class ReservationConfirmationController extends AbstractController
     {
         $reservation = $_SESSION['reservation'][session_id()] ?? [];
         $eventsRepository = new EventsRepository();
-        $tarifsRepository = new TarifsRepository();
+        $tarifsRepository = new TarifRepository();
         $nageusesRepository = new NageusesRepository();
 
         $event = null;
@@ -415,7 +415,7 @@ class ReservationConfirmationController extends AbstractController
 
         // Récupération des données associées pour l'affichage du récapitulatif
         $eventsRepository = new EventsRepository();
-        $tarifsRepository = new TarifsRepository();
+        $tarifsRepository = new TarifRepository();
         $nageusesRepository = new NageusesRepository();
         $detailsRepository = new ReservationsDetailsRepository();
         $complementsRepository = new ReservationsComplementsRepository();

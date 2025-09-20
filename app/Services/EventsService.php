@@ -8,7 +8,7 @@ use app\Repository\Event\EventsRepository;
 use app\Models\Event\EventSession;
 use app\Repository\Event\EventSessionRepository;
 use app\Repository\Piscine\PiscinesRepository;
-use app\Repository\TarifsRepository;
+use app\Repository\TarifRepository;
 use DateMalformedStringException;
 use DateTime;
 use Exception;
@@ -17,7 +17,7 @@ class EventsService
 {
     private EventsRepository $eventsRepository;
     private PiscinesRepository $piscinesRepository;
-    private TarifsRepository $tarifsRepository;
+    private TarifRepository $tarifsRepository;
     private EventInscriptionDatesRepository $inscriptionDatesRepository;
     private EventSessionRepository $eventSessionRepository;
 
@@ -26,15 +26,15 @@ class EventsService
      * Constructeur du service avec injection des repositories nécessaires
      */
     public function __construct(
-        ?EventsRepository $eventsRepository = null,
-        ?PiscinesRepository $piscinesRepository = null,
-        ?TarifsRepository $tarifsRepository = null,
+        ?EventsRepository                $eventsRepository = null,
+        ?PiscinesRepository              $piscinesRepository = null,
+        ?TarifRepository                 $tarifsRepository = null,
         ?EventInscriptionDatesRepository $inscriptionDatesRepository = null,
-        ?EventSessionRepository $eventSessionRepository = null
+        ?EventSessionRepository          $eventSessionRepository = null
     ) {
         $this->eventsRepository = $eventsRepository ?? new EventsRepository();
         $this->piscinesRepository = $piscinesRepository ?? new PiscinesRepository();
-        $this->tarifsRepository = $tarifsRepository ?? new TarifsRepository();
+        $this->tarifsRepository = $tarifsRepository ?? new TarifRepository();
         $this->inscriptionDatesRepository = $inscriptionDatesRepository ?? new EventInscriptionDatesRepository();
         $this->eventSessionRepository = $eventSessionRepository ?? new EventSessionRepository();
     }
@@ -107,7 +107,7 @@ class EventsService
     {
         $eventId = $this->eventsRepository->insert($event);
 
-        // Tarifs
+        // Tarif
         foreach ($tarifs as $tarifId) {
             $this->tarifsRepository->addEventTarif($eventId, (int)$tarifId);
         }
@@ -146,7 +146,7 @@ class EventsService
 
         $eventId = $event->getId();
 
-        // Tarifs
+        // Tarif
         $this->tarifsRepository->deleteEventTarifs($eventId);
         foreach ($tarifs as $tarifId) {
             $this->tarifsRepository->addEventTarif($eventId, (int)$tarifId);

@@ -4,7 +4,7 @@ namespace app\Controllers\Reservation;
 use app\Attributes\Route;
 use app\Controllers\AbstractController;
 use app\Repository\Event\EventsRepository;
-use app\Repository\TarifsRepository;
+use app\Repository\TarifRepository;
 use app\Services\EventsService;
 use app\Services\NageuseService;
 use app\Services\Reservation\ReservationService;
@@ -20,7 +20,7 @@ class ReservationController extends AbstractController
 {
     private ReservationSessionService $reservationSessionService;
     private EventsRepository $eventsRepository;
-    private TarifsRepository $tarifsRepository;
+    private TarifRepository $tarifsRepository;
     private NageuseService $nageuseService;
     private EventsService $eventsService;
     private ReservationService $reservationService;
@@ -31,7 +31,7 @@ class ReservationController extends AbstractController
         parent::__construct(true); // route publique
         $this->reservationSessionService = new ReservationSessionService();
         $this->eventsRepository = new EventsRepository();
-        $this->tarifsRepository = new TarifsRepository();
+        $this->tarifsRepository = new TarifRepository();
         $this->nageuseService = new NageuseService();
         $this->eventsService = new EventsService();
         $this->reservationService = new ReservationService();

@@ -1,4 +1,4 @@
--- Ajout des mails_templates
+-- Ajout des mail_template
 CREATE TABLE IF NOT EXISTS `mail_template` (
     `id` bigint NOT NULL AUTO_INCREMENT PRIMARY KEY,
     `code` char(64)  NOT NULL UNIQUE,

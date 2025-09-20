@@ -5,7 +5,7 @@ namespace app\Repository\Reservation;
 use app\Models\Reservation\ReservationsComplements;
 use app\Repository\AbstractRepository;
 use DateMalformedStringException;
-use app\Repository\TarifsRepository;
+use app\Repository\TarifRepository;
 
 class ReservationsComplementsRepository extends AbstractRepository
 {
@@ -210,7 +210,7 @@ class ReservationsComplementsRepository extends AbstractRepository
         $tarifIds = array_values(array_unique(array_column($complementsData, 'tarif')));
 
         // Charger tous les objets tarifs en une seule requête
-        $tarifsRepository = new TarifsRepository();
+        $tarifsRepository = new TarifRepository();
         $tarifs = $tarifsRepository->findByIds($tarifIds); // Vous devrez peut-être créer cette méthode
 
         // Mapper les tarifs par leur ID pour un accès facile

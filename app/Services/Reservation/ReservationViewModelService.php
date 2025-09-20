@@ -8,7 +8,7 @@ use app\Repository\Piscine\PiscineGradinsPlacesRepository;
 use app\Repository\Piscine\PiscineGradinsZonesRepository;
 use app\Repository\Reservation\ReservationsDetailsRepository;
 use app\Repository\Reservation\ReservationsPlacesTempRepository;
-use app\Repository\TarifsRepository;
+use app\Repository\TarifRepository;
 use app\Services\NageuseService;
 use app\Services\TarifService;
 use DateInterval;
@@ -19,7 +19,7 @@ class ReservationViewModelService
 {
     private EventsRepository $eventsRepository;
     private NageusesRepository $nageusesRepository;
-    private TarifsRepository $tarifsRepository;
+    private TarifRepository $tarifsRepository;
     private ReservationsDetailsRepository $reservationsDetailsRepository;
     private ReservationsPlacesTempRepository $tempRepo;
     private PiscineGradinsZonesRepository $zonesRepository;
@@ -33,7 +33,7 @@ class ReservationViewModelService
     {
         $this->eventsRepository = new EventsRepository();
         $this->nageusesRepository = new NageusesRepository();
-        $this->tarifsRepository = new TarifsRepository();
+        $this->tarifsRepository = new TarifRepository();
         $this->reservationsDetailsRepository = new ReservationsDetailsRepository();
         $this->tempRepo = new ReservationsPlacesTempRepository();
         $this->zonesRepository = new PiscineGradinsZonesRepository();

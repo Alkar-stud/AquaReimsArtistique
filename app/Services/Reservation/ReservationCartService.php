@@ -2,15 +2,15 @@
 
 namespace app\Services\Reservation;
 
-use app\Repository\TarifsRepository;
+use app\Repository\TarifRepository;
 
 class ReservationCartService
 {
-    private TarifsRepository $tarifsRepository;
+    private TarifRepository $tarifsRepository;
 
     public function __construct()
     {
-        $this->tarifsRepository = new TarifsRepository();
+        $this->tarifsRepository = new TarifRepository();
     }
     /**
      * Calcule le montant total de la réservation en se basant sur les quantités de chaque tarif.

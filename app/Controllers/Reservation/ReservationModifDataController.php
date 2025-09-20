@@ -16,7 +16,7 @@ use app\Services\HelloAssoService;
 use app\Services\Payment\PaymentService;
 use app\Services\Payment\PaymentWebhookService;
 use app\Services\Reservation\ReservationCartService;
-use app\Repository\TarifsRepository;
+use app\Repository\TarifRepository;
 use app\Services\Reservation\ReservationService;
 use app\Services\Reservation\ReservationUpdateService;
 use app\Services\Reservation\ReservationTokenService;
@@ -29,7 +29,7 @@ class ReservationModifDataController extends AbstractController
     private EventSessionRepository $eventSessionRepository;
     private ReservationsDetailsRepository $reservationsDetailsRepository;
     private ReservationsComplementsRepository $reservationsComplementsRepository;
-    private TarifsRepository $tarifsRepository;
+    private TarifRepository $tarifsRepository;
     private ReservationCartService $reservationCartService;
     private ReservationTokenService $reservationTokenService;
     private PaymentService $paymentService;
@@ -46,7 +46,7 @@ class ReservationModifDataController extends AbstractController
         $this->eventSessionRepository = new EventSessionRepository();
         $this->reservationsDetailsRepository = new ReservationsDetailsRepository();
         $this->reservationsComplementsRepository = new ReservationsComplementsRepository();
-        $this->tarifsRepository = new TarifsRepository();
+        $this->tarifsRepository = new TarifRepository();
         $this->reservationCartService = new ReservationCartService();
         $this->reservationTokenService = new ReservationTokenService();
         $this->reservationService = new ReservationService();

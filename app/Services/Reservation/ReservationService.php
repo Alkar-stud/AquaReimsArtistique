@@ -8,7 +8,7 @@ use app\Repository\MailTemplateRepository;
 use app\Repository\Reservation\ReservationMailsSentRepository;
 use app\Repository\Reservation\ReservationsDetailsRepository;
 use app\Repository\Reservation\ReservationsRepository;
-use app\Repository\TarifsRepository;
+use app\Repository\TarifRepository;
 use app\Services\Logs\LogService;
 use app\Services\Mails\MailPrepareService;
 use app\Services\SessionValidationService;
@@ -21,7 +21,7 @@ class ReservationService
     private EventsRepository $eventsRepository;
     private ReservationsRepository $reservationsRepository;
     private ReservationsDetailsRepository $reservationsDetailsRepository;
-    private TarifsRepository $tarifsRepository;
+    private TarifRepository $tarifsRepository;
     private MailTemplateRepository $mailTemplateRepository;
     private ReservationMailsSentRepository $reservationMailsSentRepository;
     private MailPrepareService $mailPrepareService;
@@ -37,7 +37,7 @@ class ReservationService
         $this->eventsRepository = new EventsRepository();
         $this->reservationsRepository = new ReservationsRepository();
         $this->reservationsDetailsRepository = new ReservationsDetailsRepository();
-        $this->tarifsRepository = new TarifsRepository();
+        $this->tarifsRepository = new TarifRepository();
         $this->mailTemplateRepository = new MailTemplateRepository();
         $this->reservationMailsSentRepository = new ReservationMailsSentRepository();
         $this->mailPrepareService = new MailPrepareService();

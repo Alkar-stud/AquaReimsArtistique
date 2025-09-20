@@ -3,7 +3,7 @@
 namespace app\Models\Event;
 
 use app\Models\Piscine\Piscines;
-use app\Models\Tarifs;
+use app\Models\Tarif;
 use DateMalformedStringException;
 use DateTime;
 use DateTimeInterface;
@@ -150,7 +150,7 @@ class Events
     }
 
     // Méthodes utilitaires pour les tarifs et dates d'inscription (conservées)
-    public function addTarif(Tarifs $tarif): self
+    public function addTarif(Tarif $tarif): self
     {
         foreach ($this->tarifs as $existingTarif) {
             if ($existingTarif->getId() === $tarif->getId()) {

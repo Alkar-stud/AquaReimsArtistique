@@ -14,7 +14,7 @@ use Exception;
 use Random\RandomException;
 
 #[Route('/gestion/users', name: 'app_gestion_users')]
-class UsersController extends AbstractController
+class UserController extends AbstractController
 {
     private UserRepository $userRepository;
     private RoleRepository $roleRepository;
@@ -43,7 +43,7 @@ class UsersController extends AbstractController
         $flashMessage = $this->flashMessageService->getFlashMessage();
         $this->flashMessageService->unsetFlashMessage();
 
-        $this->render('/gestion/users', [
+        $this->render('/gestion/user', [
             'users' => $users,
             'roles' => $roles,
             'currentUser' => $currentUser,
@@ -148,7 +148,7 @@ class UsersController extends AbstractController
         $this->flashMessageService->unsetFlashMessage();
 
         // Affichage du formulaire
-        $this->render('/gestion/users', [
+        $this->render('/gestion/user', [
             'roles' => $roles,
             'currentUser' => $currentUser,
             'flash_message' => $flashMessage

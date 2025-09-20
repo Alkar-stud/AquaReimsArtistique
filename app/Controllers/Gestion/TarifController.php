@@ -4,19 +4,19 @@ namespace app\Controllers\Gestion;
 
 use app\Attributes\Route;
 use app\Controllers\AbstractController;
-use app\Models\Tarifs;
-use app\Repository\TarifsRepository;
+use app\Models\Tarif;
+use app\Repository\TarifRepository;
 use DateMalformedStringException;
 
 #[Route('/gestion/tarifs', name: 'app_gestion_tarifs')]
-class TarifsController extends AbstractController
+class TarifController extends AbstractController
 {
-    private TarifsRepository $repository;
+    private TarifRepository $repository;
 
     public function __construct()
     {
         parent::__construct(false);
-        $this->repository = new TarifsRepository();
+        $this->repository = new TarifRepository();
     }
 
     public function index(): void
@@ -28,7 +28,7 @@ class TarifsController extends AbstractController
         $flashMessage = $this->flashMessageService->getFlashMessage();
         $this->flashMessageService->unsetFlashMessage();
 
-        $this->render('/gestion/tarifs', [
+        $this->render('/gestion/tarif', [
             'data' => $tarifs,
             'flash_message' => $flashMessage,
             'onglet' => $onglet
@@ -42,9 +42,9 @@ class TarifsController extends AbstractController
     public function add(): void
     {
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $tarif = new Tarifs();
+            $tarif = new Tarif();
             $tarif->setId((int)($_POST['id'] ?? 0))
-                ->setLibelle($_POST['libelle'] ?? '')
+                ->setLabel($_POST['label'] ?? '')
                 ->setDescription($_POST['description'] ?? null)
                 ->setNbPlace(isset($_POST['nb_place']) && $_POST['nb_place'] !== '' ? (int)$_POST['nb_place'] : null)
                 ->setAgeMin(isset($_POST['age_min']) && $_POST['age_min'] !== '' ? (int)$_POST['age_min'] : null)
@@ -73,7 +73,7 @@ class TarifsController extends AbstractController
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $tarif = $this->repository->findById($id);
             if ($tarif) {
-                $tarif->setLibelle($_POST['libelle'] ?? '')
+                $tarif->setLabel($_POST['label'] ?? '')
                     ->setDescription($_POST['description'] ?? null)
                     ->setNbPlace(isset($_POST['nb_place']) && $_POST['nb_place'] !== '' ? (int)$_POST['nb_place'] : null)
                     ->setAgeMin(isset($_POST['age_min']) && $_POST['age_min'] !== '' ? (int)$_POST['age_min'] : null)

@@ -10,7 +10,7 @@ use app\Repository\Piscine\PiscineGradinsPlacesRepository;
 use app\Repository\Piscine\PiscineGradinsZonesRepository;
 use app\Repository\Reservation\ReservationsDetailsRepository;
 use app\Repository\Reservation\ReservationsPlacesTempRepository;
-use app\Repository\TarifsRepository;
+use app\Repository\TarifRepository;
 use app\Services\EventsService;
 use app\Services\NageuseService;
 use app\Services\Reservation\ReservationSeatService;
@@ -27,7 +27,7 @@ class ReservationAjaxController extends AbstractController
 {
     private NageuseService $nageuseService;
     private ReservationSessionService $reservationSessionService;
-    private TarifsRepository $tarifsRepository;
+    private TarifRepository $tarifsRepository;
     private ReservationService $reservationService;
     private EventsService $eventsService;
     private TarifService $tarifService;
@@ -43,7 +43,7 @@ class ReservationAjaxController extends AbstractController
         parent::__construct(true); // route publique
         $this->reservationSessionService = new ReservationSessionService();
         $this->nageuseService = new NageuseService();
-        $this->tarifsRepository = new TarifsRepository();
+        $this->tarifsRepository = new TarifRepository();
         $this->reservationService = new ReservationService();
         $this->eventsService = new EventsService();
         $this->tarifService = new TarifService();

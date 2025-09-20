@@ -2,14 +2,14 @@
 
 namespace app\Repository;
 
-use app\Models\Tarifs;
+use app\Models\Tarif;
 use DateMalformedStringException;
 
-class TarifsRepository extends AbstractRepository
+class TarifRepository extends AbstractRepository
 {
     public function __construct()
     {
-        parent::__construct('tarifs');
+        parent::__construct('tarif');
     }
 
     /*
@@ -23,7 +23,7 @@ class TarifsRepository extends AbstractRepository
             $where = 'WHERE nb_place IS NOT NULL';
         } elseif ($filter === 'autres') {
             $where = 'WHERE nb_place IS NULL';
-            $orderby = 'ORDER BY libelle ASC';
+            $orderby = 'ORDER BY label ASC';
         } else {
             $orderby = 'ORDER BY nb_place DESC';
         }
@@ -43,7 +43,7 @@ class TarifsRepository extends AbstractRepository
     /**
      * @throws DateMalformedStringException
      */
-    public function findById(int $id): ?Tarifs
+    public function findById(int $id): ?Tarif
     {
         $sql = "SELECT * FROM $this->tableName WHERE id = :id;";
         $result = $this->query($sql, ['id' => $id]);
@@ -54,14 +54,14 @@ class TarifsRepository extends AbstractRepository
      * Récupère tous les tarifs associés à un événement spécifique
      *
      * @param int $eventId ID de l'événement
-     * @return Tarifs[] Tableau d'objets Tarifs
+     * @return Tarif[] Tableau d'objets Tarif
      */
     public function findByEventId(int $eventId): array
     {
         $sql = "SELECT t.* FROM $this->tableName t
             INNER JOIN events_tarifs et ON t.id = et.tarif
             WHERE et.event = :event_id
-            ORDER BY t.nb_place DESC, t.libelle";
+            ORDER BY t.nb_place DESC, t.label";
 
         $results = $this->query($sql, ['event_id' => $eventId]);
         return array_map([$this, 'hydrate'], $results);
@@ -70,7 +70,7 @@ class TarifsRepository extends AbstractRepository
     /**
      * Trouve plusieurs tarifs par leurs IDs.
      * @param array $ids
-     * @return Tarifs[]
+     * @return Tarif[]
      */
     public function findByIds(array $ids): array
     {
@@ -83,14 +83,14 @@ class TarifsRepository extends AbstractRepository
         return array_map([$this, 'hydrate'], $results);
     }
 
-    public function insert(Tarifs $tarif): void
+    public function insert(Tarif $tarif): void
     {
         $sql = "INSERT INTO $this->tableName 
-            (id, libelle, description, nb_place, age_min, age_max, max_tickets, price, is_program_show_include, is_proof_required, access_code, is_active, created_at) 
-            VALUES (:id, :libelle, :description, :nb_place, :age_min, :age_max, :max_tickets, :price, :is_program_show_include, :is_proof_required, :access_code, :is_active, :created_at)";
+            (id, label, description, nb_place, age_min, age_max, max_tickets, price, is_program_show_include, is_proof_required, access_code, is_active, created_at) 
+            VALUES (:id, :label, :description, :nb_place, :age_min, :age_max, :max_tickets, :price, :is_program_show_include, :is_proof_required, :access_code, :is_active, :created_at)";
         $this->execute($sql, [
             'id' => $tarif->getId(),
-            'libelle' => $tarif->getLibelle(),
+            'label' => $tarif->getLabel(),
             'description' => $tarif->getDescription(),
             'nb_place' => $tarif->getNbPlace(),
             'age_min' => $tarif->getAgeMin(),
@@ -118,16 +118,16 @@ class TarifsRepository extends AbstractRepository
         return $this->execute($sql, ['event_id' => $eventId, 'tarif_id' => $tarifId]);
     }
 
-    public function update(Tarifs $tarif): void
+    public function update(Tarif $tarif): void
     {
         $sql = "UPDATE $this->tableName SET 
-            libelle = :libelle, description = :description, nb_place = :nb_place, age_min = :age_min, age_max = :age_max, 
+            label = :label, description = :description, nb_place = :nb_place, age_min = :age_min, age_max = :age_max, 
             max_tickets = :max_tickets, price = :price, is_program_show_include = :is_program_show_include, 
             is_proof_required = :is_proof_required, access_code = :access_code, is_active = :is_active, updated_at = NOW()
             WHERE id = :id";
         $this->execute($sql, [
             'id' => $tarif->getId(),
-            'libelle' => $tarif->getLibelle(),
+            'label' => $tarif->getLabel(),
             'description' => $tarif->getDescription(),
             'nb_place' => $tarif->getNbPlace(),
             'age_min' => $tarif->getAgeMin(),
@@ -163,11 +163,11 @@ class TarifsRepository extends AbstractRepository
     /**
      * @throws DateMalformedStringException
      */
-    public function hydrate(array $data): Tarifs
+    public function hydrate(array $data): Tarif
     {
-        $tarif = new Tarifs();
+        $tarif = new Tarif();
         $tarif->setId($data['id'])
-            ->setLibelle($data['libelle'])
+            ->setLabel($data['label'])
             ->setDescription($data['description'])
             ->setNbPlace($data['nb_place'])
             ->setAgeMin($data['age_min'])

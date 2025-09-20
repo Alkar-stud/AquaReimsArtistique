@@ -1,5 +1,5 @@
--- Ajout de la table roles
-CREATE TABLE IF NOT EXISTS `roles` (
+-- Ajout de la table role
+CREATE TABLE IF NOT EXISTS `role` (
     `id` bigint NOT NULL AUTO_INCREMENT PRIMARY KEY,
     `label` char(64) NOT NULL,
     `level` tinyint NOT NULL UNIQUE,
@@ -8,8 +8,8 @@ CREATE TABLE IF NOT EXISTS `roles` (
 );
 
 
--- Ajout des roles
-INSERT IGNORE INTO `roles` (`label`, `level`) VALUES
+-- Ajout des role
+INSERT IGNORE INTO `role` (`label`, `level`) VALUES
     ( 'Super administrateur', 0),
     ( 'Administrateur', 1),
     ( 'Bureau', 2),

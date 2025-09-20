@@ -1,7 +1,7 @@
--- Création de la table tarifs
-CREATE TABLE IF NOT EXISTS `tarifs` (
+-- Création de la table tarif
+CREATE TABLE IF NOT EXISTS `tarif` (
     `id` bigint NOT NULL AUTO_INCREMENT PRIMARY KEY,
-    `libelle` VARCHAR(255) NOT NULL,
+    `label` VARCHAR(255) NOT NULL,
     `description` VARCHAR(255) NULL,
     `nb_place` INT NULL,
     `age_min` INT NULL,

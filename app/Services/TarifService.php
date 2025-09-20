@@ -2,15 +2,15 @@
 
 namespace app\Services;
 
-use app\Repository\TarifsRepository;
+use app\Repository\TarifRepository;
 
 class TarifService
 {
-    private TarifsRepository $tarifsRepository;
+    private TarifRepository $tarifsRepository;
 
     public function __construct()
     {
-        $this->tarifsRepository = new TarifsRepository();
+        $this->tarifsRepository = new TarifRepository();
     }
 
     /**

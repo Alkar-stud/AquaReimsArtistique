@@ -162,7 +162,7 @@ class EventsRepository extends AbstractRepository
         $event->setSessions($sessions);
 
         // Charger les tarifs
-        $tarifsRepository = new \app\Repository\TarifsRepository();
+        $tarifsRepository = new \app\Repository\TarifRepository();
         $tarifs = $tarifsRepository->findByEventId($data['id']);
         $event->setTarifs($tarifs);
 

@@ -6,10 +6,10 @@ use DateMalformedStringException;
 use DateTime;
 use DateTimeInterface;
 
-class Tarifs
+class Tarif
 {
     private int $id;
-    private string $libelle;
+    private string $label;
     private ?string $description = null;
     private ?int $nb_place = null;
     private ?int $age_min = null;
@@ -25,7 +25,7 @@ class Tarifs
 
     // --- GETTERS ---
     public function getId(): int { return $this->id; }
-    public function getLibelle(): string { return $this->libelle; }
+    public function getLabel(): string { return $this->label; }
     public function getDescription(): ?string { return $this->description; }
     public function getNbPlace(): ?int { return $this->nb_place; }
     public function getAgeMin(): ?int { return $this->age_min; }
@@ -46,9 +46,9 @@ class Tarifs
         return $this;
     }
 
-    public function setLibelle(string $libelle): self
+    public function setLabel(string $label): self
     {
-        $this->libelle = $libelle;
+        $this->label = $label;
         return $this;
     }
 

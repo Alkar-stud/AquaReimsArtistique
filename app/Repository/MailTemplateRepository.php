@@ -9,7 +9,7 @@ class MailTemplateRepository extends AbstractRepository
 {
     public function __construct()
     {
-        parent::__construct('mails_templates');
+        parent::__construct('mail_template');
     }
 
     /**

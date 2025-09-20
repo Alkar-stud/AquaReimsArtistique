@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS `config` (
 
 -- Ajout de la config de base
 INSERT IGNORE INTO `config` (`label`, `config_key`, `config_value`, `config_type`) VALUES
-('Maintenance', 'MAINTENANCE', '0', 'bool', '2025-07-25 17:33:54', '2025-09-17 23:04:15'),
+('Maintenance', 'MAINTENANCE', '0', 'bool'),
 ('Email du club Aqua Reims Artistique', 'EMAIL_CLUB', 'aquareimsartistique@gmail.com', 'email'),
 ('Email des galas Aqua Reims Artistique', 'EMAIL_GALA', 'gala@aquareimsartistique.fr', 'email'),
 ('Temps pour le timeout de session', 'TIMEOUT_SESSION', 'PT30M', 'string'),

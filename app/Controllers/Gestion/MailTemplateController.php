@@ -8,7 +8,7 @@ use app\Models\MailTemplate;
 use app\Repository\MailTemplateRepository;
 
 #[Route('/gestion/mail_templates', name: 'app_gestion_mail_templates')]
-class MailTemplatesController extends AbstractController
+class MailTemplateController extends AbstractController
 {
     private MailTemplateRepository $mailTemplateRepository;
 

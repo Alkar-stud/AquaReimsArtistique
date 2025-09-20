@@ -1,3 +1,5 @@
+import { updateReservationField } from './reservationUpdater.js';
+
 document.addEventListener('DOMContentLoaded', () => {
     const tabsContainer = document.getElementById('reservations-tabs');
 
@@ -164,6 +166,39 @@ document.addEventListener('DOMContentLoaded', () => {
                 modalBody.innerHTML = '<div class="alert alert-danger">Impossible de charger les détails. Veuillez réessayer.</div>';
             }
         });
+
+        // Utiliser la délégation d'événements pour les champs éditables dans la modale
+        detailModal.addEventListener('blur', async (event) => {
+            // S'assurer que l'événement vient bien d'un champ éditable
+            if (event.target && event.target.matches('.editable-field')) {
+                const input = event.target;
+                const feedbackSpan = input.parentElement.querySelector('.feedback-span');
+
+                const data = {
+                    typeField: input.dataset.type, // 'contact' ou 'detail'
+                    reservationId: input.dataset.reservationId,
+                    detailId: input.dataset.detailId, // Sera undefined pour les champs 'contact'
+                    field: input.dataset.field,
+                    value: input.value,
+                    csrf_token: document.getElementById('csrf_token_modal').value,
+                    feedbackSpan: feedbackSpan // Passer le span pour le feedback visuel
+                };
+
+                try {
+                    const result = await updateReservationField(data);
+                    // Si la mise à jour nécessite un rechargement (ex: changement de nom qui affecte l'affichage principal)
+                    if (result.reload) {
+                        // On pourrait afficher un toast avant de recharger
+                        // showToast('Mise à jour réussie, rechargement...');
+                        setTimeout(() => window.location.reload(), 1000);
+                    }
+                } catch (error) {
+                    // L'erreur est déjà logguée dans `updateReservationField`
+                    // On pourrait afficher un message plus global à l'utilisateur ici si besoin.
+                }
+
+            }
+        });
     }
 
     // Charger le contenu de l'onglet actif par défaut au chargement de la page
@@ -172,32 +207,4 @@ document.addEventListener('DOMContentLoaded', () => {
     loadTabContent(initialTabKey, initialParams);
 
 
-    document.body.addEventListener('click', function (e) {
-        if (e.target.matches('.view-details-btn')) {
-            e.preventDefault();
-            const detailsModal = new bootstrap.Modal(document.getElementById('reservation-details-modal'));
-            const modalBody = document.getElementById('reservation-details-modal-body');
-            const reservationId = e.target.dataset.id;
-            const context = e.target.dataset.context;
-
-            fetch(`/gestion/reservations/details/${reservationId}?context=${context}`)
-                .then(response => response.text())
-                .then(html => {
-                    modalBody.innerHTML = html;
-                    detailsModal.show();
-
-                    // Initialise les écouteurs pour les champs de contact
-                    // Cette fonction est définie dans reservation_modif_data.js
-                    if (typeof initContactFieldListeners === 'function') {
-                        initContactFieldListeners();
-                    }
-                    // Vous pouvez faire de même pour les autres types de champs (details, complements)
-                })
-                .catch(error => {
-                    console.error('Erreur lors du chargement des détails:', error);
-                    modalBody.innerHTML = '<div class="alert alert-danger">Impossible de charger les détails.</div>';
-                    detailsModal.show();
-                });
-        }
-    });
 });

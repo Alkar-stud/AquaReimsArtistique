@@ -5,8 +5,10 @@ namespace app\Controllers\Gestion;
 use app\Attributes\Route;
 use app\Controllers\AbstractController;
 use app\Repository\Event\EventsRepository;
+use app\Repository\Reservation\ReservationsDetailsRepository;
 use app\Repository\Reservation\ReservationsRepository;
 use app\Services\FlashMessageService;
+use app\Services\Reservation\ReservationUpdateService;
 use app\Utils\CsrfHelper;
 
 class ReservationsController extends AbstractController
@@ -14,6 +16,7 @@ class ReservationsController extends AbstractController
     private FlashMessageService $flashMessageService;
     private EventsRepository $eventsRepository;
     private ReservationsRepository $reservationsRepository;
+    private ReservationUpdateService $reservationUpdateService;
 
     function __construct()
     {
@@ -21,6 +24,7 @@ class ReservationsController extends AbstractController
         $this->flashMessageService = new FlashMessageService();
         $this->eventsRepository = new EventsRepository();
         $this->reservationsRepository = new ReservationsRepository();
+        $this->reservationUpdateService = new ReservationUpdateService();
 
     }
 
@@ -122,18 +126,53 @@ class ReservationsController extends AbstractController
         // Récupérer la réservation et ses détails
         $reservation = $this->reservationsRepository->findById($id);
         if (!$reservation) {
-            // Gérer le cas où la réservation n'est pas trouvée
             echo '<div class="alert alert-danger">Réservation non trouvée.</div>';
             return;
         }
 
+        $details = (new ReservationsDetailsRepository())->findByReservation($id);
+
         // Rendre un template partiel pour le contenu de la modale
         $this->render('/gestion/reservations/_modal_content', [
             'reservation' => $reservation,
+            'details' => $details,
             'isReadOnly' => $isReadOnly,
-            'csrf_token' => CsrfHelper::getToken(),
-            'token' => $reservation->getToken()
+            'csrf_token' => CsrfHelper::getToken('gestion_update_reservation'),
         ], '', true);
     }
 
+    #[Route('/gestion/reservations/update', name: 'app_gestion_reservations_update', methods: ['POST'])]
+    public function updateReservation(): void
+    {
+        $this->checkCsrfOrExit('gestion_update_reservation');
+
+        $data = json_decode(file_get_contents('php://input'), true);
+        $typeField = $data['typeField'] ?? null;
+        $reservationId = $data['reservationId'] ?? null;
+        $detailId = $data['detailId'] ?? null;
+        $field = $data['field'] ?? null;
+        $value = $data['value'] ?? null;
+
+        if (!$typeField || !$reservationId) {
+            $this->json(['success' => false, 'message' => 'Données de requête invalides.']);
+            return;
+        }
+
+        $return = ['success' => false, 'message' => 'Type de champ non reconnu.'];
+
+        if ($typeField === 'contact') {
+            $return = $this->reservationUpdateService->updateContactField((int)$reservationId, $field, $value);
+        } elseif ($typeField === 'detail') {
+            if (!$detailId) {
+                $this->json(['success' => false, 'message' => 'ID de participant manquant.']);
+                return;
+            }
+            $return = $this->reservationUpdateService->updateDetailField((int)$detailId, $field, $value);
+        }
+
+        // Pour l'instant, on ne recharge la page qu'en cas de succès pour refléter les changements.
+        $return['reload'] = $return['success'];
+
+        $this->json($return);
+    }
 }

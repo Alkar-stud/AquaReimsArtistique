@@ -82,5 +82,6 @@
     });
 </script>
 {% endif %}
+
 </body>
 </html>

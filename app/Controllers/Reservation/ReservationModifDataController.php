@@ -6,18 +6,19 @@ use app\Attributes\Route;
 use app\Controllers\AbstractController;
 use app\DTO\HelloAssoCartDTO;
 use app\Models\Reservation\Reservations;
-use app\Models\Reservation\ReservationsComplements;
-use app\Models\Reservation\ReservationsDetails;
 use app\Repository\Event\EventSessionRepository;
 use app\Repository\Event\EventsRepository;
+use app\Repository\Reservation\ReservationPaymentsRepository;
 use app\Repository\Reservation\ReservationsComplementsRepository;
 use app\Repository\Reservation\ReservationsDetailsRepository;
 use app\Repository\Reservation\ReservationsRepository;
 use app\Services\HelloAssoService;
 use app\Services\Payment\PaymentService;
+use app\Services\Payment\PaymentWebhookService;
 use app\Services\Reservation\ReservationCartService;
 use app\Repository\TarifsRepository;
 use app\Services\Reservation\ReservationService;
+use app\Services\Reservation\ReservationUpdateService;
 use app\Services\Reservation\ReservationTokenService;
 use DateMalformedStringException;
 
@@ -34,6 +35,7 @@ class ReservationModifDataController extends AbstractController
     private PaymentService $paymentService;
     private HelloAssoService $helloAssoService;
     private ReservationService $reservationService;
+    private ReservationUpdateService $reservationUpdateService;
 
 
     public function __construct()
@@ -50,6 +52,7 @@ class ReservationModifDataController extends AbstractController
         $this->reservationService = new ReservationService();
         $this->paymentService = new PaymentService();
         $this->helloAssoService = new HelloAssoService();
+        $this->reservationUpdateService = new ReservationUpdateService();
     }
 
     /**
@@ -158,90 +161,32 @@ class ReservationModifDataController extends AbstractController
             $this->json(['success' => false, 'message' => 'La modification n\'est plus autorisée.']);
         }
 
-        // On applique les règles de casse pour champs pour lesquels c'est nécessaire
-        $value = $this->reservationService->normalizeFieldValue($field, $value);
-
-
         if ($typeField == 'contact') {
             //Pour les infos de contact de la réservation
-            $return = $this->updateContact($reservation, $field, $value);
+            $return = $this->reservationUpdateService->updateContactField($reservation->getId(), $field, $value);
 
         } elseif ($typeField == 'detail') {
             //Pour les infos des participants
-            $detail = $this->reservationsDetailsRepository->findById((int)$fieldId);
-            if (!$detail) {
-                $this->json(['success' => false, 'message' => 'Participant non trouvé.']);
-                return;
-            }
-            $return = $this->updateDetail($reservation, $detail, $field, $value);
+            $return = $this->reservationUpdateService->updateDetailField((int)$fieldId, $field, $value);
 
         } elseif ($typeField == 'complement') {
-            $return = [];
             //Pour les infos des compléments
             if ($fieldId) { // Mise à jour d'un complément existant
-                // $value contient le code d'accès au tarif si besoin. Sinon la valeur est nulle
-                $return = $this->updateComplements($reservation, $value, $fieldId, $action);
-
+                $return = $this->reservationUpdateService->updateComplementQuantity($reservation->getId(), (int)$fieldId, $action);
             } elseif ($tarifId) { // Ajout d'un nouveau complément
-                // On vérifie si un complément avec ce tarif n'existe pas déjà
-                $existingComplement = $this->reservationsComplementsRepository->findByReservationAndTarif($reservation->getId(), (int)$tarifId);
-                if ($existingComplement) {
-                    // Si oui, on incrémente sa quantité
-                    $return = $this->updateComplements($reservation, $value, $fieldId, 'plus'); // On met plus car l'intention est d'ajouter
-                } else {
-                    // Sinon, on le crée
-                    $newComplement = new ReservationsComplements();
-                    $newComplement->setReservation($reservation->getId())->setTarif((int)$tarifId)->setQty(1)->setCreatedAt(date('Y-m-d H:i:s'));
-                    $this->reservationsComplementsRepository->insert($newComplement);
-                    $return = ['success' => true, 'message' => 'Article ajouté.'];
-                }
-            }
-
-            if ($return['success'] === true) {
-                // Recalculer le total de la réservation
-                $allReservationDetails = $this->reservationsDetailsRepository->findByReservation($reservation->getId());
-                $allReservationComplements = $this->reservationsComplementsRepository->findByReservation($reservation->getId());
-
-                $detailsAsArray = array_map(fn($d) => ['tarif_id' => $d->getTarif()], $allReservationDetails);
-                $complementsAsArray = array_map(fn($c) => ['tarif_id' => $c->getTarif(), 'qty' => $c->getQty()], $allReservationComplements);
-                $newTotalAmount = $this->reservationCartService->calculateTotalAmount(['reservation_detail' => $detailsAsArray, 'reservation_complement' => $complementsAsArray, 'event_id' => $reservation->getEvent()]);
-
-                // Mettre à jour le montant total dans la base de données
-                $this->reservationsRepository->updateSingleField($reservation->getId(), 'total_amount', (string)$newTotalAmount);
-
-                // Ajouter le nouveau total à la réponse JSON pour le client
-                $return['newTotalAmount'] = $newTotalAmount;
-
+                $return = $this->reservationUpdateService->addComplement($reservation->getId(), (int)$tarifId);
+            } else {
+                $return = ['success' => false, 'message' => 'Action sur complément non valide.'];
             }
         } elseif ($typeField == 'cancel') {
-            $return = $this->cancel($reservation);
+            // La logique d'annulation est plus complexe, on la laisse ici pour l'instant
+            // ou on la déplace dans le service si elle devient réutilisable.
+            $return = $this->cancel($reservation->getId(), $reservation->getToken());
         } else {
             $return = ['success' => false, 'message' => 'Erreur lors de la mise à jour.'];
         }
 
         $this->json($return);
-    }
-
-    public function updateContact(Reservations $reservation, $field, $value): array
-    {
-        $success = $this->reservationsRepository->updateSingleField($reservation->getId(), $field, $value);
-
-        if ($success) {
-            return ['success' => true, 'message' => 'Informations mises à jour.'];
-        } else {
-            return ['success' => false, 'message' => 'Erreur lors de la mise à jour.'];
-        }
-    }
-
-    public function updateDetail(Reservations $reservation, ReservationsDetails $detail, string $field, string $value): array
-    {
-        $success = $this->reservationsDetailsRepository->updateSingleField($detail->getId(), $field, $value);
-
-        if ($success) {
-            return ['success' => true, 'message' => 'Participant mis à jour.'];
-        } else {
-            return ['success' => false, 'message' => 'Erreur lors de la mise à jour.'];
-        }
     }
 
     /**
@@ -271,11 +216,11 @@ class ReservationModifDataController extends AbstractController
 
     }
 
-    public function cancel($reservation): array
+    public function cancel(int $reservationId, string $token): array
     {
-        $return = $this->reservationsRepository->cancelByToken($reservation->getToken());
+        $return = $this->reservationsRepository->cancelByToken($token);
         if ($return) {
-            $return = $this->reservationsDetailsRepository->cancelByReservation($reservation->getId());
+            $return = $this->reservationsDetailsRepository->cancelByReservation($reservationId);
             if ($return) {
                 return ['success' => true, 'message' => 'Réservation annulée.'];
             } else {
@@ -367,7 +312,7 @@ class ReservationModifDataController extends AbstractController
         }
 
         // Étape 1 : Vérifier si le webhook n'a pas déjà traité ce paiement entre-temps
-        $payment = (new \app\Repository\Reservation\ReservationPaymentsRepository())->findByCheckoutId($checkoutIntentId);
+        $payment = (new ReservationPaymentsRepository())->findByCheckoutId($checkoutIntentId);
         if ($payment) {
             $this->json(['success' => true]); // Le paiement est déjà là, tout va bien.
             return;
@@ -383,14 +328,14 @@ class ReservationModifDataController extends AbstractController
             $paymentInfo->metadata->context === 'balance_payment' &&
             $paymentInfo->order->items[0]->state === 'Processed'
         ) {
-            // La logique est la même que dans le webhook, on pourrait la factoriser
-            // mais pour l'instant on la duplique pour la clarté.
+            // La logique est la même que dans le webhook, on pourrait la factoriser,
+            // mais pour l'instant, on la duplique pour la clarté.
             $reservationId = $paymentInfo->metadata->reservationId;
             $orderData = $paymentInfo->order;
-            $orderData->checkoutIntentId = $paymentInfo->id; // Important: l'ID est à la racine
+            $orderData->checkoutIntentId = $paymentInfo->id; // Important : l'ID est à la racine
 
             // On simule l'action du webhook
-            $webhookService = new \app\Services\Payment\PaymentWebhookService();
+            $webhookService = new PaymentWebhookService();
             $webhookService->handleWebhook($paymentInfo, json_encode($paymentInfo));
 
             $this->json(['success' => true]);

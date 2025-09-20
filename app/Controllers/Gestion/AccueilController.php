@@ -53,7 +53,11 @@ class AccueilController extends AbstractController
             'events' => $events,
             'eventSessions' => $eventSessions,
             'searchParam' => 'displayed',
-            'flash_message' => $flashMessage
+            'flash_message' => $flashMessage,
+            'js_data' => [
+                'eventSessions' => $eventSessions,
+                'delaiToDisplay' => 1
+            ]
         ], "Gestion de la page d'accueil");
     }
 
@@ -88,7 +92,11 @@ class AccueilController extends AbstractController
             'events' => $events,
             'eventSessions' => $eventSessions,
             'searchParam' => $search,
-            'flash_message' => $flashMessage
+            'flash_message' => $flashMessage,
+            'js_data' => [
+                'eventSessions' => $eventSessions,
+                'delaiToDisplay' => 1
+            ]
         ], "Gestion de la page d'accueil");
     }
 

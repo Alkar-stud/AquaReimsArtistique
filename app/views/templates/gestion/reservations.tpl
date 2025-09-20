@@ -40,6 +40,10 @@
 
 {% include '/gestion/reservations/_modal_details.tpl' %}
 
-<script src="/assets/js/gestion/reservations.js" defer></script>
 <script src="/assets/js/reservation_common.js" defer></script>
 <script src="/assets/js/reservation_modif_data.js" defer></script>
+
+
+{% if str_starts_with($uri, '/gestion/reservations') %}
+<script type="module" src="/assets/js/gestion/reservations.js" defer></script>
+{% endif %}

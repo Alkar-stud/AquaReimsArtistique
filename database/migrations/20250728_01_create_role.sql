@@ -1,7 +1,7 @@
 -- Ajout de la table roles
 CREATE TABLE IF NOT EXISTS `roles` (
     `id` bigint NOT NULL AUTO_INCREMENT PRIMARY KEY,
-    `libelle` char(64) NOT NULL,
+    `label` char(64) NOT NULL,
     `level` tinyint NOT NULL UNIQUE,
     `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
     `updated_at` datetime DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP
@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS `roles` (
 
 
 -- Ajout des roles
-INSERT IGNORE INTO `roles` (`libelle`, `level`) VALUES
+INSERT IGNORE INTO `roles` (`label`, `level`) VALUES
     ( 'Super administrateur', 0),
     ( 'Administrateur', 1),
     ( 'Bureau', 2),

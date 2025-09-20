@@ -4,12 +4,13 @@ namespace app\Repository\User;
 
 use app\Models\User\Role;
 use app\Repository\AbstractRepository;
+use DateMalformedStringException;
 
 class RoleRepository extends AbstractRepository
 {
     public function __construct()
     {
-        parent::__construct('roles');
+        parent::__construct('role');
     }
 
     /*
@@ -34,12 +35,13 @@ class RoleRepository extends AbstractRepository
 
     /**
      * Crée et remplit un objet Role à partir d'un tableau de données.
+     * @throws DateMalformedStringException
      */
     private function hydrate(array $data): Role
     {
         $role = new Role();
         $role->setId($data['id'])
-            ->setLibelle($data['libelle'])
+            ->setLabel($data['label'])
             ->setLevel($data['level'])
             ->setCreatedAt($data['created_at'])
             ->setUpdatedAt($data['updated_at']);

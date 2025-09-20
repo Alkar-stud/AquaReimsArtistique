@@ -6,20 +6,17 @@ use app\Attributes\Route;
 use app\Controllers\AbstractController;
 use app\Models\Piscine\Piscines;
 use app\Repository\Piscine\PiscinesRepository;
-use app\Services\FlashMessageService;
 use DateMalformedStringException;
 
 #[Route('/gestion/piscines', name: 'app_gestion_piscines')]
 class PiscinesController extends AbstractController
 {
     private PiscinesRepository $repository;
-    private FlashMessageService $flashMessageService;
 
     public function __construct()
     {
         parent::__construct(false); // true = route publique, pas de vérif session pour éviter le TOO_MANY_REDIRECT
         $this->repository = new PiscinesRepository();
-        $this->flashMessageService = new FlashMessageService();
     }
 
     // Affiche la liste des piscines

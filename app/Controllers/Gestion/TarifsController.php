@@ -6,20 +6,17 @@ use app\Attributes\Route;
 use app\Controllers\AbstractController;
 use app\Models\Tarifs;
 use app\Repository\TarifsRepository;
-use app\Services\FlashMessageService;
 use DateMalformedStringException;
 
 #[Route('/gestion/tarifs', name: 'app_gestion_tarifs')]
 class TarifsController extends AbstractController
 {
     private TarifsRepository $repository;
-    private FlashMessageService $flashMessageService;
 
     public function __construct()
     {
         parent::__construct(false);
         $this->repository = new TarifsRepository();
-        $this->flashMessageService = new FlashMessageService();
     }
 
     public function index(): void

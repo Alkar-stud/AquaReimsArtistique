@@ -7,13 +7,11 @@ use app\Controllers\AbstractController;
 use app\Repository\Event\EventsRepository;
 use app\Repository\Reservation\ReservationsDetailsRepository;
 use app\Repository\Reservation\ReservationsRepository;
-use app\Services\FlashMessageService;
 use app\Services\Reservation\ReservationUpdateService;
 use app\Utils\CsrfHelper;
 
 class ReservationsController extends AbstractController
 {
-    private FlashMessageService $flashMessageService;
     private EventsRepository $eventsRepository;
     private ReservationsRepository $reservationsRepository;
     private ReservationUpdateService $reservationUpdateService;
@@ -21,7 +19,6 @@ class ReservationsController extends AbstractController
     function __construct()
     {
         parent::__construct(false);
-        $this->flashMessageService = new FlashMessageService();
         $this->eventsRepository = new EventsRepository();
         $this->reservationsRepository = new ReservationsRepository();
         $this->reservationUpdateService = new ReservationUpdateService();

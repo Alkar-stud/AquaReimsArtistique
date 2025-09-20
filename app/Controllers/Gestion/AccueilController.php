@@ -8,7 +8,6 @@ use app\Models\Accueil;
 use app\Repository\AccueilRepository;
 use app\Repository\Event\EventsRepository;
 use app\Repository\Event\EventSessionRepository;
-use app\Services\FlashMessageService;
 use app\Services\UploadService;
 use Exception;
 
@@ -17,7 +16,6 @@ class AccueilController extends AbstractController
     private AccueilRepository $repository;
     private EventsRepository $eventsRepository;
     private EventSessionRepository $eventSessionRepository;
-    private FlashMessageService $flashMessageService;
 
     function __construct()
     {
@@ -25,7 +23,6 @@ class AccueilController extends AbstractController
         $this->repository = new AccueilRepository();
         $this->eventsRepository = new EventsRepository();
         $this->eventSessionRepository = new EventSessionRepository();
-        $this->flashMessageService = new FlashMessageService();
     }
 
     #[Route('/gestion/accueil', name: 'app_gestion_accueil')]

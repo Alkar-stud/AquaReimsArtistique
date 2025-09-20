@@ -5,29 +5,24 @@ use app\Attributes\Route;
 use app\Controllers\AbstractController;
 use app\Repository\User\UserRepository;
 use app\Services\Mails\MailPrepareService;
-use app\Services\FlashMessageService;
 use DateMalformedStringException;
 use Exception;
 
 #[Route('/account', name: 'app_account')]
 class AccountController extends AbstractController
 {
-    private FlashMessageService $flashMessageService;
 
     public function __construct()
     {
         parent::__construct(false); // true = route publique, pas de vérif session pour éviter le TOO_MANY_REDIRECT
-        $this->flashMessageService = new FlashMessageService();
-    }
+     }
     public function index(): void
     {
         // Récupérer le message flash s'il existe
         $flashMessage = $this->flashMessageService->getFlashMessage();
         $this->flashMessageService->unsetFlashMessage();
 
-        $this->render('auth/account', [
-            'flash_message' => $flashMessage
-        ], 'Mon compte');
+        $this->render('auth/account', [], 'Mon compte');
     }
 
     /**
@@ -36,8 +31,8 @@ class AccountController extends AbstractController
     #[Route('/account/update', name: 'app_account_update')]
     public function updateData(): void
     {
-        $displayname = htmlspecialchars(trim($_POST['displayname'] ?? ''));
-        $email = $_POST['email'] ?? '';
+        $displayName = htmlspecialchars(trim(filter_input(INPUT_POST, 'displayname') ?? ''));
+        $email = filter_input(INPUT_POST, 'email', FILTER_VALIDATE_EMAIL);
 
         if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
             $this->flashMessageService->setFlashMessage('danger', "L'adresse email saisie est invalide.");
@@ -48,34 +43,36 @@ class AccountController extends AbstractController
         //On met à jour les champs concernés, displayname à NULL si vide
         $userRepository = new UserRepository();
         $userId = $_SESSION['user']['id'] ?? null;
-        if ($userId) {
-            //on vérifie si l'adresse mail n'est pas utilisée par quelqu'un d'autre
-            $userEmailTarget = $userRepository->findByEmail($email);
-
-            if ($userEmailTarget && $userEmailTarget->getId() != $userId) {
-                $this->flashMessageService->setFlashMessage('danger', "Il est impossible de mettre à jour cette adresse email.");
-                header('Location: /account');
-                exit;
-            }
-            if ($displayname == '') {
-                $displayName = null;
-            }
-            //Si l'adresse mail et displayname sont identiques, on ne met pas à jour, mais on met quand même le message.
-            if ($displayname == $_SESSION['user']['displayname'] && $email == $_SESSION['user']['email']) {
-                $this->flashMessageService->setFlashMessage('info', "Vos informations n'ont pas été modifiées.");
-                header('Location: /account');
-                exit;
-            }
-            if ($userRepository->updateData($userId, $displayname, $email)) {
-                $_SESSION['user']['displayname'] = $displayname;
-                $_SESSION['user']['email'] = $email;
-                $this->flashMessageService->setFlashMessage('success', "Vos informations ont bien été mise à jour.");
-                header('Location: /account');
-                exit;
-            } else {
-                $this->flashMessageService->setFlashMessage('info', "Erreur lors de la mise à jour de vos informations.");
-            }
+        if (!$userId) {
+            $this->flashMessageService->setFlashMessage('danger', "Votre session est invalide. Veuillez vous reconnecter.");
+            header('Location: /login');
+            exit;
         }
+
+        // Si l'adresse mail et displayname sont identiques, on ne met pas à jour.
+        if ($displayName === ($_SESSION['user']['displayname'] ?? '') && $email === $_SESSION['user']['email']) {
+            $this->flashMessageService->setFlashMessage('info', "Vos informations n'ont pas été modifiées.");
+            header('Location: /account');
+            exit;
+        }
+
+        // On vérifie si l'adresse mail n'est pas déjà utilisée par un autre utilisateur.
+        $userWithSameEmail = $userRepository->findByEmail($email);
+        if ($userWithSameEmail && $userWithSameEmail->getId() !== $userId) {
+            $this->flashMessageService->setFlashMessage('danger', "Cette adresse email est déjà utilisée par un autre compte.");
+            header('Location: /account');
+            exit;
+        }
+
+        if ($userRepository->updateData($userId, $displayName, $email)) {
+            $_SESSION['user']['displayname'] = $displayName;
+            $_SESSION['user']['email'] = $email;
+            $this->flashMessageService->setFlashMessage('success', "Vos informations ont bien été mises à jour.");
+        } else {
+            $this->flashMessageService->setFlashMessage('danger', "Une erreur est survenue lors de la mise à jour de vos informations.");
+        }
+        header('Location: /account');
+        exit;
 
     }
 

@@ -5,19 +5,16 @@ namespace app\Controllers\Gestion;
 use app\Attributes\Route;
 use app\Controllers\AbstractController;
 use app\Repository\ConfigRepository;
-use app\Services\FlashMessageService;
 
 #[Route('/gestion/configuration/configs', name: 'app_gestion_configs')]
 class ConfigController extends AbstractController
 {
     private ConfigRepository $repository;
-    private FlashMessageService $flashMessageService;
 
     public function __construct()
     {
         parent::__construct(false);
         $this->repository = new ConfigRepository();
-        $this->flashMessageService = new FlashMessageService();
     }
 
     public function index(): void

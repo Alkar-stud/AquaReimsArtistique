@@ -7,7 +7,6 @@ use app\Controllers\AbstractController;
 use app\Models\User\User;
 use app\Repository\User\RoleRepository;
 use app\Repository\User\UserRepository;
-use app\Services\FlashMessageService;
 use app\Services\MailService;
 use DateMalformedStringException;
 use DateTime;
@@ -19,14 +18,12 @@ class UsersController extends AbstractController
 {
     private UserRepository $userRepository;
     private RoleRepository $roleRepository;
-    private FlashMessageService $flashMessageService;
 
     public function __construct()
     {
         parent::__construct(false);
         $this->userRepository = new UserRepository();
         $this->roleRepository = new RoleRepository();
-        $this->flashMessageService = new FlashMessageService();
     }
 
     /**

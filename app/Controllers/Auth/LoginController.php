@@ -5,19 +5,15 @@ use app\Attributes\Route;
 use app\Controllers\AbstractController;
 use app\Enums\LogType;
 use app\Repository\User\UserRepository;
-use app\Services\FlashMessageService;
 use DateMalformedStringException;
 use Random\RandomException;
 
 #[Route('/login', name: 'app_login')]
 class LoginController extends AbstractController
 {
-    private FlashMessageService $flashMessageService;
-
     public function __construct()
     {
         parent::__construct(true); // true = route publique, pas de vérif session
-        $this->flashMessageService = new FlashMessageService();
     }
 
     /**

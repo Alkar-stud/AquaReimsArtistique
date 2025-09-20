@@ -5,7 +5,6 @@ use app\Attributes\Route;
 use app\Controllers\AbstractController;
 use app\Enums\LogType;
 use app\Repository\User\UserRepository;
-use app\Services\FlashMessageService;
 use app\Services\Mails\MailPrepareService;
 use DateMalformedStringException;
 use DateTime;
@@ -14,11 +13,9 @@ use Random\RandomException;
 
 class PasswordResetController extends AbstractController
 {
-    private FlashMessageService $flashMessageService;
     public function __construct()
     {
         parent::__construct(true); // true = route publique, pas de vérif session pour éviter le TOO_MANY_REDIRECT
-        $this->flashMessageService = new FlashMessageService();
     }
     /**
      * Gère l'affichage (GET) et le traitement (POST) du formulaire de mot de passe oublié.

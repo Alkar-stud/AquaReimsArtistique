@@ -7,19 +7,16 @@ use app\Controllers\AbstractController;
 use app\Models\Event\EventInscriptionDates;
 use app\Models\Event\Events;
 use app\Services\EventsService;
-use app\Services\FlashMessageService;
 
 #[Route('/gestion/events', name: 'app_gestion_events')]
 class EventsController extends AbstractController
 {
     private EventsService $eventsService;
-    private FlashMessageService $flashMessageService;
 
     public function __construct()
     {
         parent::__construct(false);
         $this->eventsService = new EventsService();
-        $this->flashMessageService = new FlashMessageService();
     }
 
     public function index(): void

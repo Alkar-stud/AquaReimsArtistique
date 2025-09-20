@@ -7,19 +7,16 @@ use app\Controllers\AbstractController;
 use app\Models\Nageuse\Nageuses;
 use app\Repository\Nageuse\GroupesNageusesRepository;
 use app\Repository\Nageuse\NageusesRepository;
-use app\Services\FlashMessageService;
 
 #[Route('/gestion/nageuses', name: 'app_gestion_nageuses')]
 class NageusesController extends AbstractController
 {
     private NageusesRepository $repository;
-    private FlashMessageService $flashMessageService;
 
     public function __construct()
     {
         parent::__construct(false);
         $this->repository = new NageusesRepository();
-        $this->flashMessageService = new FlashMessageService();
     }
 
     #[Route('/gestion/nageuses/add', name: 'app_gestion_nageuses_add')]

@@ -3,6 +3,7 @@
 namespace app\Controllers;
 
 use app\Repository\User\UserRepository;
+use app\Services\FlashMessageService;
 use app\Services\Logs\LogService;
 use app\Services\SessionValidationService;
 use app\Utils\CsrfHelper;
@@ -18,6 +19,7 @@ abstract class AbstractController
 {
     protected LogService $logService;
     protected SessionValidationService $sessionValidationService;
+    protected FlashMessageService $flashMessageService;
 
     /**
      * @throws DateMalformedStringException
@@ -26,8 +28,13 @@ abstract class AbstractController
     public function __construct(bool $isPublicRoute = false)
     {
         $this->configureSession();
+        // Démarrer la session ici si elle n'est pas déjà démarrée
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
         $this->logService = new LogService();
         $this->sessionValidationService = new SessionValidationService();
+        $this->flashMessageService = new FlashMessageService();
         // Log URL et Route
         $this->logUrlAccess();
         $this->logRouteAccess();
@@ -56,6 +63,10 @@ abstract class AbstractController
         $data['uri'] = $uri;
         $data['is_gestion_page'] = str_starts_with($uri, '/gestion');
         $data['load_ckeditor'] = $data['is_gestion_page'] && (str_starts_with($uri, '/gestion/mail_templates') || str_starts_with($uri, '/gestion/accueil'));
+
+        // Centralisation de la récupération des messages flash
+        $data['flash_message'] = $this->flashMessageService->getFlashMessage();
+        $this->flashMessageService->unsetFlashMessage();
 
         if (($_ENV['APP_DEBUG'] ?? 'false') === 'true') {
             $timeoutValue = defined('TIMEOUT_SESSION') ? TIMEOUT_SESSION : 0;
@@ -193,8 +204,7 @@ abstract class AbstractController
         $_SESSION = [];
         session_destroy();
         session_start();
-        $flashMessageService = new \app\Services\FlashMessageService();
-        $flashMessageService->setFlashMessage('warning', $message);
+        $this->flashMessageService->setFlashMessage('warning', $message);
 
         // Si demandé, on sauvegarde l'URL actuelle pour la redirection après connexion
         if ($saveRedirectUrl && isset($_SERVER['REQUEST_URI'])) {

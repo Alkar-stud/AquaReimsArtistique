@@ -5,8 +5,8 @@ CREATE TABLE IF NOT EXISTS `users` (
     `password` varchar(255) NOT NULL,
     `email` varchar(128) NOT NULL UNIQUE,
     `display_name` varchar(128) DEFAULT NULL,
-    `roles` bigint DEFAULT NULL,
-    FOREIGN KEY (`roles`) REFERENCES `roles`(`id`),
+    `role` bigint DEFAULT NULL,
+    FOREIGN KEY (`role`) REFERENCES `role`(`id`),
     `is_actif` tinyint(1) NOT NULL DEFAULT '1',
     `password_reset_token` varchar(255) DEFAULT NULL,
     `password_reset_expires_at` datetime DEFAULT NULL,
@@ -17,5 +17,5 @@ CREATE TABLE IF NOT EXISTS `users` (
 );
 
 -- Ajout du super admin
-INSERT IGNORE INTO `users` (`id`, `username`, `password`, `email`, `roles`) VALUES
+INSERT IGNORE INTO `users` (`id`, `username`, `password`, `email`, `role`) VALUES
 (1, 'Aradmin', 'MdpBidonAChangerAlInstall', 'example@email.com', 1);

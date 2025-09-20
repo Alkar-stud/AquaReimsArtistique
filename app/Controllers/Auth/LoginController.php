@@ -103,7 +103,7 @@ class LoginController extends AbstractController
                 'email' => $user->getEmail(),
                 'role' => [
                     'id' => $user->getRole()->getId(),
-                    'name' => $user->getRole()->getLibelle(),
+                    'label' => $user->getRole()->getLabel(),
                     'level' => $user->getRole()->getLevel()
                 ],
                 'LAST_ACTIVITY' => time(),

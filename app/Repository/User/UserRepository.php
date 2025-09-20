@@ -10,7 +10,7 @@ class UserRepository extends AbstractRepository
 {
     public function __construct()
     {
-        parent::__construct('users');
+        parent::__construct('user');
     }
 
 
@@ -20,18 +20,18 @@ class UserRepository extends AbstractRepository
     public function insert(User $user): bool
     {
         $sql = "INSERT INTO $this->tableName 
-        (username, password, email, display_name, roles, is_actif, created_at, password_reset_token, password_reset_expires_at)
-        VALUES (:username, :password, :email, :display_name, :roles, :is_actif, :created_at, :token, :expires_at)";
+        (username, password, email, display_name, role, is_actif, created_at, password_reset_token, password_reset_expires_at)
+        VALUES (:username, :password, :email, :display_name, :role, :is_actif, :created_at, :token, :expires_at)";
         return $this->execute($sql, [
             'username' => $user->getUsername(),
             'password' => $user->getPassword(),
             'email' => $user->getEmail(),
             'display_name' => $user->getDisplayName(),
-            'roles' => $user->getRole() ? $user->getRole()->getId() : null,
+            'role' => $user->getRole()?->getId(),
             'is_actif' => $user->getIsActif(),
             'created_at' => $user->getCreatedAt()->format('Y-m-d H:i:s'),
             'token' => $user->getPasswordResetToken(),
-            'expires_at' => $user->getPasswordResetExpiresAt() ? $user->getPasswordResetExpiresAt()->format('Y-m-d H:i:s') : null,
+            'expires_at' => $user->getPasswordResetExpiresAt()?->format('Y-m-d H:i:s'),
         ]);
     }
 
@@ -91,14 +91,6 @@ class UserRepository extends AbstractRepository
         return $result ? $this->hydrate($result[0]) : false;
     }
 
-    /**
-     * Met à jour les champs displayname et email d'un utilisateur, sauf si celui-ci est d'un level 0 (superadmin modifiable qu'en BDD à la main)
-     */
-    public function updateData(int $userId, string $newDisplayName, string $newEmail): bool
-    {
-        $sql = "UPDATE $this->tableName SET display_name = :display_name, email = :email WHERE id = :id;";
-        return $this->execute($sql, ['display_name' => $newDisplayName, 'email' => $newEmail, 'id' => $userId]);
-    }
 
     /*
      * Récupère tous les utilisateurs de la table qui ont un role plus bas.
@@ -111,11 +103,20 @@ class UserRepository extends AbstractRepository
             $level = $currentUser['role']['level'];
         }
         $sql = "SELECT u.* FROM {$this->tableName} u
-            INNER JOIN roles r ON u.roles = r.id
+            INNER JOIN role r ON u.role = r.id
             WHERE r.level > :level
             ORDER BY r.level, u.username;";
         $results = $this->query($sql, ['level' => $level]);
         return array_map([$this, 'hydrate'], $results);
+    }
+
+    /**
+     * Met à jour les champs displayname et email d'un utilisateur, sauf si celui-ci est d'un level 0 (superadmin modifiable qu'en BDD à la main)
+     */
+    public function updateData(int $userId, string $newDisplayName, string $newEmail): bool
+    {
+        $sql = "UPDATE $this->tableName SET display_name = :display_name, email = :email WHERE id = :id;";
+        return $this->execute($sql, ['display_name' => $newDisplayName, 'email' => $newEmail, 'id' => $userId]);
     }
 
     /**
@@ -165,9 +166,9 @@ class UserRepository extends AbstractRepository
             ->setSessionId($data['session_id']);
 
         // Hydratation de la relation avec le rôle
-        if (!empty($data['roles'])) {
+        if (!empty($data['role'])) {
             $roleRepository = new RoleRepository();
-            $role = $roleRepository->findById($data['roles']);
+            $role = $roleRepository->findById($data['role']);
             $user->setRole($role);
         }
 
@@ -200,7 +201,7 @@ class UserRepository extends AbstractRepository
         username = :username,
         email = :email,
         display_name = :display_name,
-        roles = :roles,
+        role = :role,
         is_actif = :is_actif,
         updated_at = :updated_at
         WHERE id = :id;";
@@ -208,7 +209,7 @@ class UserRepository extends AbstractRepository
             'username' => $user->getUsername(),
             'email' => $user->getEmail(),
             'display_name' => $user->getDisplayName(),
-            'roles' => $user->getRole()?->getId(),
+            'role' => $user->getRole()?->getId(),
             'is_actif' => (int)$user->getIsActif(), //forcer passage en int pour éviter erreur SQL General error: 1366 Incorrect integer value: '' for column 'is_actif' lors de la désactivation
             'updated_at' => date('Y-m-d H:i:s'),
             'id' => $user->getId()

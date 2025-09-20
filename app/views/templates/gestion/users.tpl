@@ -33,7 +33,8 @@
                             {% foreach $roles as $role %}
                             {% if $role->getLevel() >= $_SESSION['user']['role']['level'] %}
                             <option value="{{ $role->getId() }}" {{! $role->getLevel() <= $_SESSION['user']['role']['level'] ? 'disabled' : '' !}}>
-                                {{ $role->getLibelle() }}
+                                {{ $role->getLabel() }}
+                                {{ $role->getLabel() }}
                             </option>
                             {% endif %}
                             {% endforeach %}
@@ -66,7 +67,7 @@
                             <option value="{{ $role->getId() }}"
                                     {{! ($user->getRole() && $user->getRole()->getId() === $role->getId()) ? 'selected' : '' !}}
                                     {{! $role->getLevel() <= $_SESSION['user']['role']['level'] ? 'disabled' : '' !}}>
-                                {{ $role->getLibelle() }}
+                                {{ $role->getLabel() }}
                             </option>
                             {% endif %}
                             {% endforeach %}
@@ -124,7 +125,7 @@
                             {% foreach $roles as $role %}
                             {% if $role->getLevel() >= $_SESSION['user']['role']['level'] %}
                             <option value="{{ $role->getId() }}" {{! $role->getLevel() <= $_SESSION['user']['role']['level'] ? 'disabled' : '' !}}>
-                                {{ $role->getLibelle() }}
+                                {{ $role->getLabel() }}
                             </option>
                             {% endif %}
                             {% endforeach %}
@@ -165,7 +166,7 @@
                                     {{! ($user->getRole() && $user->getRole()->getId() === $role->getId()) ? 'selected' : '' !}}
                                     {{! $role->getLevel() <= $_SESSION['user']['role']['level'] ? 'disabled' : '' !}}
                             >
-                                {{ $role->getLibelle() }}
+                                {{ $role->getLabel() }}
                             </option>
                             {% endif %}
                             {% endforeach %}

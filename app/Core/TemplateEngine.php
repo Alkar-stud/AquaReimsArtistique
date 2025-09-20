@@ -63,9 +63,6 @@ class TemplateEngine
         // Isoler les blocs PHP bruts pour les protéger des autres regex
         $template = $this->compilePhpBlocks($template);
 
-        // Le reste du processus de compilation
-        // ...
-
         // Enlever les commentaires (sans toucher aux échos bruts `{{! ... !}}`)
         $template = $this->compileComments($template);
 

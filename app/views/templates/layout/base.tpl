@@ -20,7 +20,11 @@
     <script type="text/javascript" src="/assets/js/scripts.js" charset="UTF8"></script>
     <title>{{ ($_ENV['APP_NAME'] ?? 'Titre') . ' - ' . ($title ?? '') }}</title>
 </head>
-<body class="d-flex flex-column min-vh-100">
+<body class="d-flex flex-column min-vh-100"
+        {% if isset($js_data) %}
+      data-js-vars='{{! json_encode($js_data, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) !}}'
+        {% endif %}
+>
 {% include 'header.tpl' %}
 <main id="main-page" class="flex-grow-1">
     {{! $content !}}
@@ -60,25 +64,25 @@
         // --- Compte à rebours de la session ---
         const timeoutDisplay = document.getElementById('session-timeout-display');
         if (timeoutDisplay) {
-            const timeoutDuration = {{ $session_timeout_duration }}; // en secondes
-        const lastActivity = {{ $session_last_activity }}; // timestamp
-    const expirationTime = (lastActivity + timeoutDuration) * 1000; // en millisecondes
+            const timeoutDuration = {{! $session_timeout_duration ?? 0 !}}; // en secondes
+            const lastActivity = {{! $session_last_activity ?? time() !}}; // timestamp
+            const expirationTime = (lastActivity + timeoutDuration) * 1000; // en millisecondes
 
-    const intervalId = setInterval(() => {
-        const now = new Date().getTime();
-        const remaining = expirationTime - now;
+            const intervalId = setInterval(() => {
+                const now = new Date().getTime();
+                const remaining = expirationTime - now;
 
-        if (remaining <= 0) {
-            timeoutDisplay.textContent = 'Session: Expirée';
-            timeoutDisplay.style.color = '#ffc107';
-            clearInterval(intervalId);
-        } else {
-            const minutes = Math.floor(remaining / (1000 * 60));
-            const seconds = Math.floor((remaining % (1000 * 60)) / 1000);
-            timeoutDisplay.textContent = `Session: ${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+                if (remaining <= 0) {
+                    timeoutDisplay.textContent = 'Session: Expirée';
+                    timeoutDisplay.style.color = '#ffc107';
+                    clearInterval(intervalId);
+                } else {
+                    const minutes = Math.floor(remaining / (1000 * 60));
+                    const seconds = Math.floor((remaining % (1000 * 60)) / 1000);
+                    timeoutDisplay.textContent = `Session: ${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+                }
+            }, 1000);
         }
-    }, 1000);
-    }
     });
 </script>
 {% endif %}

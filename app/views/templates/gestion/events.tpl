@@ -319,7 +319,4 @@
     </div>
 </div>
 
-<script>
-    window.eventsArray = {{! json_encode($events_array, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) !}};
-</script>
 <script src="/assets/js/gestion/events.js"></script>

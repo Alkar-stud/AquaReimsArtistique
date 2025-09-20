@@ -7,6 +7,7 @@ use Throwable;
 class TemplateEngine
 {
     private string $baseDir = '';
+    private array $phpBlocks = [];
     private array $baseDirStack = [];
 
     public function render(string $templatePath, array $data = []): string
@@ -31,7 +32,6 @@ class TemplateEngine
         if (!isset($is_gestion_page)) {
             $is_gestion_page = false;
         }
-
 
         ob_start();
         try {
@@ -60,8 +60,20 @@ class TemplateEngine
 
     private function compile(string $template): string
     {
+        // Isoler les blocs PHP bruts pour les protéger des autres regex
+        $template = $this->compilePhpBlocks($template);
+
+        // Le reste du processus de compilation
+        // ...
+
         // Enlever les commentaires (sans toucher aux échos bruts `{{! ... !}}`)
         $template = $this->compileComments($template);
+
+        // Échos bruts (non échappés)
+        $template = $this->compileRawEchos($template);
+
+        // Échos échappés
+        $template = $this->compileEchos($template);
 
         // Includes
         $template = $this->compileIncludes($template);
@@ -69,11 +81,8 @@ class TemplateEngine
         // Structures de contrôle
         $template = $this->compileControlStructures($template);
 
-        // Échos bruts (non échappés)
-        $template = $this->compileRawEchos($template);
-
-        // Échos échappés
-        return $this->compileEchos($template);
+        // Restaurer les blocs PHP bruts
+        return str_replace(array_keys($this->phpBlocks), array_values($this->phpBlocks), $template);
     }
 
     private function compileComments(string $template): string
@@ -111,12 +120,12 @@ class TemplateEngine
     private function compileControlStructures(string $template): string
     {
         $patterns = [
-            '/\{% if (.+?) %\}/'               => '<?php if ($1): ?>',
-            '/\{% elseif (.+?) %\}/'           => '<?php elseif ($1): ?>',
-            '/\{% else %\}/'                   => '<?php else: ?>',
-            '/\{% endif %\}/'                  => '<?php endif; ?>',
-            '/\{% foreach (.+?) as (.+?) %\}/' => '<?php foreach ($1 as $2): ?>',
-            '/\{% endforeach %\}/'             => '<?php endforeach; ?>',
+            '/\{%\s*if\s+(.+?)\s*%\}/'                  => '<?php if ($1): ?>',
+            '/\{%\s*elseif\s+(.+?)\s*%\}/'              => '<?php elseif ($1): ?>',
+            '/\{%\s*else\s*%\}/'                   => '<?php else: ?>',
+            '/\{%\s*endif\s*%\}/'                  => '<?php endif; ?>',
+            '/\{%\s*foreach\s+(.+?)\s+as\s+(.+?)\s*%\}/' => '<?php foreach ($1 as $2): ?>',
+            '/\{%\s*endforeach\s*%\}/'             => '<?php endforeach; ?>',
         ];
         return preg_replace(array_keys($patterns), array_values($patterns), $template);
     }
@@ -130,8 +139,23 @@ class TemplateEngine
     private function compileEchos(string $template): string
     {
         return preg_replace(
-            '/\{\{\s*(.+?)\s*}}/s',
+            '/\{\{(.+?)\}\}/s',
             '<?= htmlspecialchars((string)($1), ENT_QUOTES | ENT_SUBSTITUTE, "UTF-8") ?>',
+            $template
+        );
+    }
+
+    private function compilePhpBlocks(string $template): string
+    {
+        return preg_replace_callback(
+            '/\{%\s*php\s*%\}(.*?)\{%\s*endphp\s*%\}/s',
+            function ($matches) {
+                $phpCode = $matches[1];
+                $placeholder = '___PHP_BLOCK_' . count($this->phpBlocks) . '___';
+                // On encapsule le code dans les balises PHP pour l'eval() final
+                $this->phpBlocks[$placeholder] = '<?php ' . $phpCode . ' ?>';
+                return $placeholder;
+            },
             $template
         );
     }

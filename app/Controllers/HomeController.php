@@ -14,6 +14,10 @@ class HomeController extends AbstractController
     {
         parent::__construct(true); // true = route publique, pas de vérif session pour éviter le TOO_MANY_REDIRECT
     }
+
+    /**
+     * @throws Exception
+     */
     public function index(): void
     {
         $accueilRepository = new AccueilRepository();

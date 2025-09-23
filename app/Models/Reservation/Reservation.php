@@ -1,0 +1,124 @@
+<?php
+namespace app\Models\Reservation;
+
+use app\Models\AbstractModel;
+use app\Models\Event\Event;
+use app\Models\Event\EventSession;
+use app\Models\Swimmer\Swimmer;
+use DateTime;
+use DateTimeInterface;
+
+class Reservation extends AbstractModel
+{
+    private ?string $uuid = null;
+    // FK vers event
+    private int $event;
+    private ?Event $eventObject = null;
+    // FK vers event_session
+    private int $event_session;
+    private ?EventSession $eventSessionObject = null;
+    private ?string $reservation_temp_id = null;
+    private string $name;
+    private string $firstname;
+    private string $email;
+    private ?string $phone = null;
+
+    // FK nageuse si limitation active
+    private ?int $nageuse_si_limitation = null;
+    private ?Swimmer $nageuse = null;
+
+    private int $total_amount = 0;
+    private int $total_amount_paid = 0;
+
+    private ?string $token = null;
+    private DateTimeInterface $token_expire_at;
+
+    private bool $is_canceled = false;
+    private bool $is_checked = false;
+
+    private ?string $comments = null;
+
+    // Relations enfants
+    private array $details = [];
+    private array $complements = [];
+    private array $payments = [];
+
+    // --- GETTERS ---
+    public function getUuid(): ?string { return $this->uuid; }
+    public function getEvent(): int { return $this->event; }
+    public function getEventObject(): ?Event { return $this->eventObject; }
+    public function getEventSession(): int { return $this->event_session; }
+    public function getEventSessionObject(): ?EventSession { return $this->eventSessionObject; }
+    public function getReservationTempId(): ?string { return $this->reservation_temp_id; }
+    public function getName(): string { return $this->name; }
+    public function getFirstName(): string { return $this->firstname; }
+    public function getEmail(): string { return $this->email; }
+    public function getPhone(): ?string { return $this->phone; }
+    public function getSwimmerId(): ?int { return $this->nageuse_si_limitation; }
+    public function getSwimmer(): ?Swimmer { return $this->nageuse; }
+    public function getTotalAmount(): int { return $this->total_amount; }
+    public function getTotalAmountPaid(): int { return $this->total_amount_paid; }
+    public function getToken(): ?string { return $this->token; }
+    public function getTokenExpireAt(): DateTimeInterface { return $this->token_expire_at; }
+    public function isCanceled(): bool { return $this->is_canceled; }
+    public function isChecked(): bool { return $this->is_checked; }
+    public function getComments(): ?string { return $this->comments; }
+    public function getDetails(): array { return $this->details; }
+    public function getComplements(): array { return $this->complements; }
+    public function getPayments(): array { return $this->payments; }
+
+    // --- SETTERS ---
+    public function setUuid(?string $uuid): self { $this->uuid = $uuid; return $this; }
+
+    public function setEvent(int $event): self { $this->event = $event; return $this; }
+    public function setEventObject(?Event $eventObject): self {
+        $this->eventObject = $eventObject;
+        if ($eventObject) { $this->event = $eventObject->getId(); }
+        return $this;
+    }
+
+    public function setEventSession(int $event_session): self { $this->event_session = $event_session; return $this; }
+    public function setEventSessionObject(?EventSession $eventSessionObject): self {
+        $this->eventSessionObject = $eventSessionObject;
+        if ($eventSessionObject) {
+            $this->event_session = $eventSessionObject->getId();
+            // Propager l'event si connu via la session
+            if (method_exists($eventSessionObject, 'getEventId')) {
+                $this->event = $eventSessionObject->getEventId();
+            }
+        }
+        return $this;
+    }
+
+    public function setReservationTempId(?string $reservation_temp_id): self { $this->reservation_temp_id = $reservation_temp_id; return $this; }
+
+    public function setName(string $name): self { $this->name = $name; return $this; }
+    public function setFirstName(string $firstname): self { $this->firstname = $firstname; return $this; }
+    public function setEmail(string $email): self { $this->email = $email; return $this; }
+    public function setPhone(?string $phone): self { $this->phone = ($phone === '' ? null : $phone); return $this; }
+
+    public function setSwimmerId(?int $nageuse_si_limitation): self { $this->nageuse_si_limitation = $nageuse_si_limitation; return $this; }
+    public function setSwimmer(?Swimmer $nageuse): self {
+        $this->nageuse = $nageuse;
+        if ($nageuse) { $this->nageuse_si_limitation = $nageuse->getId(); }
+        return $this;
+    }
+
+    public function setTotalAmount(int $total_amount): self { $this->total_amount = $total_amount; return $this; }
+    public function setTotalAmountPaid(int $total_amount_paid): self { $this->total_amount_paid = $total_amount_paid; return $this; }
+
+    public function setToken(?string $token): self { $this->token = $token; return $this; }
+    public function setTokenExpireAt(string $token_expire_at): self {
+        $this->token_expire_at = new DateTime($token_expire_at);
+        return $this;
+    }
+
+    public function setIsCanceled(bool $is_canceled): self { $this->is_canceled = $is_canceled; return $this; }
+    public function setIsChecked(bool $is_checked): self { $this->is_checked = $is_checked; return $this; }
+
+    public function setComments(?string $comments): self { $this->comments = ($comments === '' ? null : $comments); return $this; }
+
+    public function setDetails(array $details): self { $this->details = $details; return $this; }
+    public function setComplements(array $complements): self { $this->complements = $complements; return $this; }
+    public function setPayments(array $payments): self { $this->payments = $payments; return $this; }
+}

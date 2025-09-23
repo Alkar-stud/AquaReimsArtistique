@@ -6,12 +6,3 @@ CREATE TABLE IF NOT EXISTS `role` (
     `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
     `updated_at` datetime DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP
 );
-
-
--- Ajout des role
-INSERT IGNORE INTO `role` (`label`, `level`) VALUES
-    ( 'Super administrateur', 0),
-    ( 'Administrateur', 1),
-    ( 'Bureau', 2),
-    ( 'CoDir', 3),
-    ( 'Bénévole', 4);

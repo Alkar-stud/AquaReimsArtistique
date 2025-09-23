@@ -1,0 +1,144 @@
+<?php
+
+namespace app\Repository\Tarif;
+
+use app\Models\Tarif\Tarif;
+use app\Repository\AbstractRepository;
+
+class TarifRepository extends AbstractRepository
+{
+    public function __construct()
+    {
+        parent::__construct('tarif');
+    }
+
+    /**
+     * @return Tarif[]
+     */
+    public function findAll(): array
+    {
+        $sql = "SELECT * FROM $this->tableName ORDER BY name";
+        $rows = $this->query($sql);
+        return array_map([$this, 'hydrate'], $rows);
+    }
+
+    public function findById(int $id): ?Tarif
+    {
+        $sql = "SELECT * FROM $this->tableName WHERE id = :id";
+        $rows = $this->query($sql, ['id' => $id]);
+        return $rows ? $this->hydrate($rows[0]) : null;
+    }
+
+    /**
+     * @param int[] $ids
+     * @return Tarif[]
+     */
+    public function findByIds(array $ids): array
+    {
+        if (!$ids) return [];
+        $ids = array_values(array_unique(array_map('intval', $ids)));
+        $ph = implode(',', array_map(fn($i) => ":id$i", array_keys($ids)));
+        $params = [];
+        foreach ($ids as $k => $v) { $params["id$k"] = $v; }
+
+        $sql = "SELECT * FROM $this->tableName WHERE id IN ($ph)";
+        $rows = $this->query($sql, $params);
+        return array_map([$this, 'hydrate'], $rows);
+    }
+
+    /**
+     * Récupère tous les tarifs associés à un événement spécifique
+     *
+     * @param int $eventId ID de l'événement
+     * @return Tarif[] Tableau d'objets Tarif
+     */
+    public function findByEventId(int $eventId): array
+    {
+        $sql = "SELECT t.* FROM {$this->tableName} t
+            INNER JOIN event_tarif et ON t.id = et.tarif
+            WHERE et.event = :event_id
+            ORDER BY t.seat_count DESC, t.name";
+        $results = $this->query($sql, ['event_id' => $eventId]);
+        return array_map([$this, 'hydrate'], $results);
+    }
+
+    /**
+     * @return int ID inséré (0 si échec)
+     */
+    public function insert(Tarif $tarif): int
+    {
+        $sql = "INSERT INTO {$this->tableName}
+            (name, description, seat_count, min_age, max_age, max_tickets, price, includes_program, requires_proof, access_code, is_active, created_at)
+            VALUES
+            (:name, :description, :seat_count, :min_age, :max_age, :max_tickets, :price, :includes_program, :requires_proof, :access_code, :is_active, :created_at)";
+        $ok = $this->execute($sql, [
+            'name' => $tarif->getName(),
+            'description' => $tarif->getDescription(),
+            'seat_count' => $tarif->getSeatCount(),
+            'min_age' => $tarif->getMinAge(),
+            'max_age' => $tarif->getMaxAge(),
+            'max_tickets' => $tarif->getMaxTickets(),
+            'price' => $tarif->getPrice(),
+            'includes_program' => $tarif->getIncludesProgram() ? 1 : 0,
+            'requires_proof' => $tarif->getRequiresProof() ? 1 : 0,
+            'access_code' => $tarif->getAccessCode(),
+            'is_active' => $tarif->getIsActive() ? 1 : 0,
+            'created_at' => $tarif->getCreatedAt()->format('Y-m-d H:i:s'),
+        ]);
+        return $ok ? $this->getLastInsertId() : 0;
+    }
+
+    public function update(Tarif $tarif): bool
+    {
+        $sql = "UPDATE $this->tableName SET
+            name = :name,
+            description = :description,
+            seat_count = :seat_count,
+            min_age = :min_age,
+            max_age = :max_age,
+            max_tickets = :max_tickets,
+            price = :price,
+            includes_program = :includes_program,
+            requires_proof = :requires_proof,
+            access_code = :access_code,
+            is_active = :is_active,
+            updated_at = NOW()
+            WHERE id = :id";
+        return $this->execute($sql, [
+            'id' => $tarif->getId(),
+            'name' => $tarif->getName(),
+            'description' => $tarif->getDescription(),
+            'seat_count' => $tarif->getSeatCount(),
+            'min_age' => $tarif->getMinAge(),
+            'max_age' => $tarif->getMaxAge(),
+            'max_tickets' => $tarif->getMaxTickets(),
+            'price' => $tarif->getPrice(),
+            'includes_program' => $tarif->getIncludesProgram() ? 1 : 0,
+            'requires_proof' => $tarif->getRequiresProof() ? 1 : 0,
+            'access_code' => $tarif->getAccessCode(),
+            'is_active' => $tarif->getIsActive() ? 1 : 0,
+        ]);
+    }
+
+    /**
+     * @param array<string,mixed> $data
+     */
+    protected function hydrate(array $data): Tarif
+    {
+        $t = new Tarif();
+        $t->setId((int)$data['id'])
+            ->setName($data['name'])
+            ->setDescription($data['description'] ?? null)
+            ->setSeatCount(isset($data['seat_count']) ? (int)$data['seat_count'] : null)
+            ->setMinAge(isset($data['min_age']) ? (int)$data['min_age'] : null)
+            ->setMaxAge(isset($data['max_age']) ? (int)$data['max_age'] : null)
+            ->setMaxTickets(isset($data['max_tickets']) ? (int)$data['max_tickets'] : null)
+            ->setPrice((int)$data['price'])
+            ->setIncludesProgram((bool)$data['includes_program'])
+            ->setRequiresProof((bool)$data['requires_proof'])
+            ->setAccessCode($data['access_code'] ?? null)
+            ->setIsActive((bool)$data['is_active']);
+
+        return $t;
+    }
+}

@@ -5,30 +5,25 @@ use app\Attributes\Route;
 use app\Controllers\AbstractController;
 use app\Repository\User\UserRepository;
 use app\Services\Mails\MailPrepareService;
-use DateMalformedStringException;
 use Exception;
 
-#[Route('/account', name: 'app_account')]
 class AccountController extends AbstractController
 {
-
     public function __construct()
     {
         parent::__construct(false); // true = route publique, pas de vérif session pour éviter le TOO_MANY_REDIRECT
-     }
-    public function index(): void
-    {
-        // Récupérer le message flash s'il existe
-        $flashMessage = $this->flashMessageService->getFlashMessage();
-        $this->flashMessageService->unsetFlashMessage();
-
-        $this->render('auth/account', [], 'Mon compte');
     }
 
-    /**
-     * @throws DateMalformedStringException
-     */
-    #[Route('/account/update', name: 'app_account_update')]
+    #[Route('/account', name: 'app_account', methods: ['GET'])]
+    public function index(): void
+    {
+        $this->render('auth/account', [
+            'csrf_token_update' => $this->csrfService->getToken('/account/update'),
+            'csrf_token_password' => $this->csrfService->getToken('/account/password'),
+        ], 'Mon compte');
+    }
+
+    #[Route('/account/update', name: 'app_account_update', methods: ['POST'])]
     public function updateData(): void
     {
         $displayName = htmlspecialchars(trim(filter_input(INPUT_POST, 'displayname') ?? ''));
@@ -45,23 +40,20 @@ class AccountController extends AbstractController
         $userId = $_SESSION['user']['id'] ?? null;
         if (!$userId) {
             $this->flashMessageService->setFlashMessage('danger', "Votre session est invalide. Veuillez vous reconnecter.");
-            header('Location: /login');
-            exit;
+            $this->redirect('/login');
         }
 
         // Si l'adresse mail et displayname sont identiques, on ne met pas à jour.
         if ($displayName === ($_SESSION['user']['displayname'] ?? '') && $email === $_SESSION['user']['email']) {
             $this->flashMessageService->setFlashMessage('info', "Vos informations n'ont pas été modifiées.");
-            header('Location: /account');
-            exit;
+            $this->redirect('/account');
         }
 
         // On vérifie si l'adresse mail n'est pas déjà utilisée par un autre utilisateur.
         $userWithSameEmail = $userRepository->findByEmail($email);
         if ($userWithSameEmail && $userWithSameEmail->getId() !== $userId) {
             $this->flashMessageService->setFlashMessage('danger', "Cette adresse email est déjà utilisée par un autre compte.");
-            header('Location: /account');
-            exit;
+            $this->redirect('/account');
         }
 
         if ($userRepository->updateData($userId, $displayName, $email)) {
@@ -71,14 +63,9 @@ class AccountController extends AbstractController
         } else {
             $this->flashMessageService->setFlashMessage('danger', "Une erreur est survenue lors de la mise à jour de vos informations.");
         }
-        header('Location: /account');
-        exit;
-
+        $this->redirect('/account');
     }
 
-    /**
-     * @throws DateMalformedStringException
-     */
     #[Route('/account/password', name: 'app_account_password')]
     public function updatePassword(): void
     {

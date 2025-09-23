@@ -2,7 +2,7 @@
 
 namespace app\Repository;
 
-use app\Services\Logs\LogService;
+use app\Services\Log\Logger;
 use app\Traits\HasPdoConnection;
 use PDOStatement;
 
@@ -11,13 +11,11 @@ abstract class AbstractRepository
     use HasPdoConnection;
 
     protected string $tableName;
-    protected LogService $logService;
     private ?PDOStatement $lastStatement = null;
 
     public function __construct(string $tableName)
     {
         $this->tableName = $tableName;
-        $this->logService = new LogService();
         $this->initPdo();
     }
 
@@ -36,7 +34,7 @@ abstract class AbstractRepository
      * @param int $id
      * @return bool
      */
-    public function delete(int $id): bool
+    final public function delete(int $id): bool
     {
         $sql = "DELETE FROM $this->tableName WHERE id = :id";
         return $this->execute($sql, ['id' => $id]);
@@ -86,41 +84,9 @@ abstract class AbstractRepository
         return $result;
     }
 
-    /**
-     * Raccourci pour préparer une requête.
-     *
-     * @param string $sql
-     * @return PDOStatement
-     */
-    protected function prepare(string $sql): PDOStatement
-    {
-        return $this->pdo->prepare($sql);
-    }
-
     protected function fetchAll(string $sql, array $params = []): array
     {
         return $this->query($sql, $params);
-    }
-
-    private function logDatabaseOperation(string $sql, array $params, string $operation): void
-    {
-        $context = [
-            'sql' => $this->sanitizeSql($sql),
-            'params' => $this->sanitizeParams($params),
-            'affected_table' => $this->tableName
-        ];
-
-        $this->logService->logDatabase($operation, $this->tableName, $context);
-    }
-
-    private function detectSqlOperation(string $sql): string
-    {
-        $sql = trim(strtoupper($sql));
-        if (strpos($sql, 'INSERT') === 0) return 'INSERT';
-        if (strpos($sql, 'UPDATE') === 0) return 'UPDATE';
-        if (strpos($sql, 'DELETE') === 0) return 'DELETE';
-        if (strpos($sql, 'SELECT') === 0) return 'SELECT';
-        return 'UNKNOWN';
     }
 
     private function sanitizeSql(string $sql): string
@@ -143,17 +109,18 @@ abstract class AbstractRepository
         }
         return $sanitized;
     }
-    // UNE SEULE méthode de logging - celle qui utilise logDatabase
+
     private function logQuery(string $operation, string $sql, array $params, float $startTime, int $affectedRows): void
     {
-        $context = [
-            'query' => $sql,
-            'params' => $params,
-            'execution_time' => round((microtime(true) - $startTime) * 1000, 2) . 'ms',
-            'affected_rows' => $affectedRows
-        ];
+        $safeSql = $this->sanitizeSql($sql);
+        $safeParams = $this->sanitizeParams($params);
 
-        $this->logService->logDatabase($operation, $this->tableName, $context);
+        Logger::get()->db($operation, $this->tableName, [
+            'query' => $safeSql,
+            'params' => $safeParams,
+            'execution_ms' => round((microtime(true) - $startTime) * 1000, 2),
+            'affected' => $affectedRows,
+        ]);
     }
 
     private function getOperationType(string $sql): string

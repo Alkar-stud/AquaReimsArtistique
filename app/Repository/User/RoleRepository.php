@@ -4,7 +4,6 @@ namespace app\Repository\User;
 
 use app\Models\User\Role;
 use app\Repository\AbstractRepository;
-use DateMalformedStringException;
 
 class RoleRepository extends AbstractRepository
 {
@@ -13,10 +12,11 @@ class RoleRepository extends AbstractRepository
         parent::__construct('role');
     }
 
-    /*
-     * Retourne les rôles triés par level
+    /**
+     * Retourne tous les rôles ordonnés par niveau.
+     * @return Role[]
      */
-    public function findAllByLevel(): array
+    public function findAll(): array
     {
         $sql = "SELECT * FROM $this->tableName ORDER BY `level`;";
         $results = $this->query($sql);
@@ -34,17 +34,14 @@ class RoleRepository extends AbstractRepository
     }
 
     /**
-     * Crée et remplit un objet Role à partir d'un tableau de données.
-     * @throws DateMalformedStringException
+     * Hydrate un objet Role depuis une ligne BDD.
      */
-    private function hydrate(array $data): Role
+    protected function hydrate(array $data): Role
     {
         $role = new Role();
         $role->setId($data['id'])
             ->setLabel($data['label'])
-            ->setLevel($data['level'])
-            ->setCreatedAt($data['created_at'])
-            ->setUpdatedAt($data['updated_at']);
+            ->setLevel($data['level']);
         return $role;
     }
 }

@@ -11,7 +11,7 @@ class MaintenanceController extends AbstractController
     {
         //Si le user est role <= 1, il peut accéder à la page /gestion
         if (isset($_SESSION['user']['role']['level']) && $_SESSION['user']['role']['level'] <= 1 && $_SERVER['REQUEST_URI'] == '/gestion') {
-            $this->render('gestion/gestion', [], 'Gestion');
+            $this->render('gestion/gestion', [], 'gestion');
             exit;
         } else {
             // On appelle la méthode render héritée

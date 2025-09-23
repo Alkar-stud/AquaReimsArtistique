@@ -15,7 +15,3 @@ CREATE TABLE IF NOT EXISTS `user` (
     `updated_at` datetime DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
     INDEX idx_email (`email`)
 );
-
--- Ajout du super admin
-INSERT IGNORE INTO `user` (`id`, `username`, `password`, `email`, `role`) VALUES
-(1, 'Aradmin', 'MdpBidonAChangerAlInstall', 'example@email.com', 1);

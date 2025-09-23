@@ -135,7 +135,7 @@ class TemplateEngine
     private function compileEchos(string $template): string
     {
         return preg_replace(
-            '/\{\{(.+?)\}\}/s',
+            '/\{\{(.+?)}}/s',
             '<?= htmlspecialchars((string)($1), ENT_QUOTES | ENT_SUBSTITUTE, "UTF-8") ?>',
             $template
         );
@@ -144,7 +144,7 @@ class TemplateEngine
     private function compilePhpBlocks(string $template): string
     {
         return preg_replace_callback(
-            '/\{%\s*php\s*%\}(.*?)\{%\s*endphp\s*%\}/s',
+            '/\{%\s*php\s*%}(.*?)\{%\s*endphp\s*%}/s',
             function ($matches) {
                 $phpCode = $matches[1];
                 $placeholder = '___PHP_BLOCK_' . count($this->phpBlocks) . '___';

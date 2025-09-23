@@ -11,6 +11,10 @@ class ConfigRepository extends AbstractRepository
         parent::__construct('config');
     }
 
+    /**
+     * Retourne toutes les clés et valeurs de configuration.
+     * @return array<string, mixed>
+     */
     public function findAllAsKeyValue(): array
     {
         $configs = [];
@@ -19,6 +23,11 @@ class ConfigRepository extends AbstractRepository
         }
         return $configs;
     }
+
+    /**
+     * Retourne toutes les clés et valeurs de configuration.
+     * @return Config[]
+     */
     public function findAll(): array
     {
         $sql = "SELECT * FROM $this->tableName ORDER BY config_key;";
@@ -26,6 +35,10 @@ class ConfigRepository extends AbstractRepository
         return array_map([$this, 'hydrate'], $results);
     }
 
+    /**
+     * @param int $id
+     * @return Config|null
+     */
     public function findById(int $id): ?Config
     {
         $sql = "SELECT * FROM $this->tableName WHERE id = :id;";
@@ -33,24 +46,35 @@ class ConfigRepository extends AbstractRepository
         return $result ? $this->hydrate($result[0]) : null;
     }
 
-    public function insert(Config $config): void
+    /**
+     * Insère une nouvelle configuration.
+     * @return int ID inséré (0 si échec)
+     */
+    public function insert(Config $config): int
     {
-        $sql = "INSERT INTO $this->tableName (label, config_key, config_value, config_type, created_at) 
-            VALUES (:label, :config_key, :config_value, :config_type, :created_at)";
-        $this->execute($sql, [
+        $sql = "INSERT INTO $this->tableName (label, config_key, config_value, config_type, created_at)
+                VALUES (:label, :config_key, :config_value, :config_type, :created_at)";
+        $ok = $this->execute($sql, [
             'label' => $config->getLabel(),
             'config_key' => $config->getConfigKey(),
             'config_value' => $config->getConfigValue(),
             'config_type' => $config->getConfigType(),
             'created_at' => $config->getCreatedAt()->format('Y-m-d H:i:s'),
         ]);
+        return $ok ? $this->getLastInsertId() : 0;
     }
-    public function update(Config $config): void
+
+    /**
+     * Met à jour une configuration existante.
+     * @param Config $config
+     * @return bool
+     */
+    public function update(Config $config): bool
     {
-        $sql = "UPDATE $this->tableName SET 
+        $sql = "UPDATE $this->tableName SET
             label = :label, config_key = :config_key, config_value = :config_value, config_type = :config_type, updated_at = NOW()
             WHERE id = :id";
-        $this->execute($sql, [
+        return $this->execute($sql, [
             'id' => $config->getId(),
             'label' => $config->getLabel(),
             'config_key' => $config->getConfigKey(),
@@ -59,20 +83,17 @@ class ConfigRepository extends AbstractRepository
         ]);
     }
 
-    public function delete(int $id): bool
-    {
-        $sql = "DELETE FROM $this->tableName WHERE id = :id";
-        $this->execute($sql, ['id' => $id]);
-        return true;
-    }
-
-    public function hydrate(array $data): Config
+    /**
+     * Hydrate une configuration depuis une ligne BDD.
+     * @param array $data
+     * @return Config
+     */
+    protected function hydrate(array $data): Config
     {
         $config = new Config();
         $value = $data['config_value'];
         $type = $data['config_type'];
 
-        // Conversion du type
         switch ($type) {
             case 'bool':
             case 'boolean':
@@ -106,10 +127,7 @@ class ConfigRepository extends AbstractRepository
             ->setLabel($data['label'])
             ->setConfigKey($data['config_key'])
             ->setConfigValue($value)
-            ->setConfigType($type)
-            ->setCreatedAt($data['created_at'])
-            ->setUpdatedAt($data['updated_at']);
+            ->setConfigType($type);
         return $config;
     }
-
 }

@@ -1,10 +1,10 @@
 <?php
-
+// php
 namespace app\Repository\Piscine;
 
+use app\Models\Piscine\Piscine;
 use app\Models\Piscine\PiscineGradinsZones;
 use app\Repository\AbstractRepository;
-use DateMalformedStringException;
 
 class PiscineGradinsZonesRepository extends AbstractRepository
 {
@@ -14,89 +14,88 @@ class PiscineGradinsZonesRepository extends AbstractRepository
     }
 
     /**
-     * Trouve toutes les zones de gradins
+     * Retourne toutes les zones ordonnées par nom.
      * @return PiscineGradinsZones[]
      */
     public function findAll(): array
     {
-        $sql = "SELECT * FROM $this->tableName ORDER BY zone_name ASC";
-        $results = $this->query($sql);
-        return array_map([$this, 'hydrate'], $results);
+        $sql = "SELECT * FROM $this->tableName ORDER BY zone_name";
+        $rows = $this->query($sql);
+        return array_map([$this, 'hydrate'], $rows);
     }
 
     /**
-     * Trouve une zone de gradins par son ID
+     * Trouve une zone par son ID.
      * @param int $id
+     * @param bool $withPiscine
      * @return PiscineGradinsZones|null
-     * @throws DateMalformedStringException
      */
-    public function findById(int $id): ?PiscineGradinsZones
+    public function findById(int $id, bool $withPiscine = false): ?PiscineGradinsZones
     {
         $sql = "SELECT * FROM $this->tableName WHERE id = :id";
-        $result = $this->query($sql, ['id' => $id]);
+        $rows = $this->query($sql, ['id' => $id]);
+        if (!$rows) return null;
 
-        if (!$result) {
-            return null;
+        $piscine = null;
+        if ($withPiscine) {
+            $piscineRepo = new PiscineRepository();
+            $piscine = $piscineRepo->findById((int)$rows[0]['piscine']);
+        }
+        return $this->hydrate($rows[0], $piscine);
+    }
+
+    /**
+     * Retourne les zones d'une piscine ordonnées par nom
+     * @return PiscineGradinsZones[]
+     */
+    public function findByPiscine(int $piscineId, bool $withPiscine = false): array
+    {
+        $sql = "SELECT * FROM $this->tableName WHERE piscine = :piscineId ORDER BY zone_name";
+        $rows = $this->query($sql, ['piscineId' => $piscineId]);
+
+        $piscine = null;
+        if ($withPiscine) {
+            $piscineRepo = new PiscineRepository();
+            $piscine = $piscineRepo->findById($piscineId);
         }
 
-        return $this->hydrate($result[0]);
+        return array_map(function(array $r) use ($piscine) {
+            return $this->hydrate($r, $piscine);
+        }, $rows);
     }
 
     /**
-     * Trouve toutes les zones de gradins pour une piscine
-     * @param int $piscineId
-     * @return PiscineGradinsZones[]
-     */
-    public function findByPiscine(int $piscineId): array
-    {
-        $sql = "SELECT * FROM $this->tableName WHERE piscine = :piscineId ORDER BY zone_name ASC";
-        $results = $this->query($sql, ['piscineId' => $piscineId]);
-        return array_map([$this, 'hydrate'], $results);
-    }
-
-    /**
-     * Trouve toutes les zones ouvertes pour une piscine
-     * @param int $piscineId
-     * @return PiscineGradinsZones[]
-     */
-    public function findOpenZonesByPiscine(int $piscineId): array
-    {
-        $sql = "SELECT * FROM $this->tableName WHERE piscine = :piscineId AND is_open = 1 ORDER BY zone_name ASC";
-        $results = $this->query($sql, ['piscineId' => $piscineId]);
-        return array_map([$this, 'hydrate'], $results);
-    }
-
-    /**
-     * Trouve une zone par son nom et l'ID de la piscine
+     * Trouve une zone par son nom et son ID de piscine.
      * @param string $zoneName
      * @param int $piscineId
+     * @param bool $withPiscine
      * @return PiscineGradinsZones|null
-     * @throws DateMalformedStringException
      */
-    public function findByNameAndPiscine(string $zoneName, int $piscineId): ?PiscineGradinsZones
+    public function findByNameAndPiscine(string $zoneName, int $piscineId, bool $withPiscine = false): ?PiscineGradinsZones
     {
         $sql = "SELECT * FROM $this->tableName WHERE zone_name = :zoneName AND piscine = :piscineId";
-        $result = $this->query($sql, ['zoneName' => $zoneName, 'piscineId' => $piscineId]);
+        $rows = $this->query($sql, ['zoneName' => $zoneName, 'piscineId' => $piscineId]);
+        if (!$rows) return null;
 
-        if (!$result) {
-            return null;
+        $piscine = null;
+        if ($withPiscine) {
+            $piscineRepo = new PiscineRepository();
+            $piscine = $piscineRepo->findById($piscineId);
         }
-
-        return $this->hydrate($result[0]);
+        return $this->hydrate($rows[0], $piscine);
     }
 
     /**
-     * Insère une nouvelle zone de gradins
-     * @param PiscineGradinsZones $zone
-     * @return int ID de la zone insérée
+     * Ajoute une zone
+     * @return int ID inséré (0 si échec)
      */
     public function insert(PiscineGradinsZones $zone): int
     {
         $sql = "INSERT INTO $this->tableName
-            (piscine, zone_name, nb_seats_vertically, nb_seats_horizontally, is_open, is_stairs_after, created_at)
-            VALUES (:piscine, :zone_name, :nb_seats_vertically, :nb_seats_horizontally, :is_open, :is_stairs_after, :created_at)";
+            (piscine, zone_name, nb_seats_vertically, nb_seats_horizontally, is_open, is_stairs_after, comments, created_at)
+            VALUES (:piscine, :zone_name, :nb_seats_vertically, :nb_seats_horizontally, :is_open, :is_stairs_after, :comments, :created_at)";
 
-        $this->execute($sql, [
+        $ok = $this->execute($sql, [
             'piscine' => $zone->getPiscine(),
             'zone_name' => $zone->getZoneName(),
             'nb_seats_vertically' => $zone->getNbSeatsVertically(),
@@ -107,25 +106,26 @@ class PiscineGradinsZonesRepository extends AbstractRepository
             'created_at' => $zone->getCreatedAt()->format('Y-m-d H:i:s')
         ]);
 
-        return $this->getLastInsertId();
+        return $ok ? $this->getLastInsertId() : 0;
     }
 
     /**
-     * Met à jour une zone de gradins
+     * Met à jour une zone
      * @param PiscineGradinsZones $zone
-     * @return bool Succès de la mise à jour
+     * @return bool
      */
     public function update(PiscineGradinsZones $zone): bool
     {
         $sql = "UPDATE $this->tableName SET
-        piscine = :piscine,
-        zone_name = :zone_name,
-        nb_seats_vertically = :nb_seats_vertically,
-        nb_seats_horizontally = :nb_seats_horizontally,
-        is_open = :is_open,
-        is_stairs_after = :is_stairs_after,
-        updated_at = NOW()
-        WHERE id = :id";
+            piscine = :piscine,
+            zone_name = :zone_name,
+            nb_seats_vertically = :nb_seats_vertically,
+            nb_seats_horizontally = :nb_seats_horizontally,
+            is_open = :is_open,
+            is_stairs_after = :is_stairs_after,
+            comments = :comments,
+            updated_at = NOW()
+            WHERE id = :id";
 
         return $this->execute($sql, [
             'id' => $zone->getId(),
@@ -139,41 +139,56 @@ class PiscineGradinsZonesRepository extends AbstractRepository
         ]);
     }
 
+
     /**
-     * Met à jour le statut d'ouverture d'une zone
-     * @param int $id
-     * @param bool $isOpen
-     * @return bool
+     * Patch générique de colonnes (mise à jour partielle, ajoute toujours updated_at).
+     * Les booléens sont convertis en 0/1.
      */
-    public function updateOpenStatus(int $id, bool $isOpen): bool
+    public function updateFields(int $id, array $fields): bool
     {
-        $sql = "UPDATE $this->tableName SET is_open = :is_open, updated_at = NOW() WHERE id = :id";
-        return $this->execute($sql, ['id' => $id, 'is_open' => $isOpen ? 1 : 0]);
+        if (!$fields) return false;
+
+        $sets = [];
+        $params = ['id' => $id];
+
+        foreach ($fields as $col => $val) {
+            $sets[] = "$col = :$col";
+            $params[$col] = is_bool($val) ? ($val ? 1 : 0) : $val;
+        }
+        $sets[] = "updated_at = NOW()";
+
+        $sql = "UPDATE $this->tableName SET " . implode(', ', $sets) . " WHERE id = :id";
+        return $this->execute($sql, $params);
     }
 
     /**
-     * Hydrate un objet PiscineGradinsZones à partir d'un tableau de données
-     * @param array $data
-     * @return PiscineGradinsZones
-     * @throws DateMalformedStringException
+     * Wrapper explicite pour la bascule d'ouverture.
      */
-    protected function hydrate(array $data): PiscineGradinsZones
+    public function updateOpenStatus(int $id, bool $isOpen): bool
+    {
+        return $this->updateFields($id, ['is_open' => $isOpen]);
+    }
+
+    /**
+     * Hydrate une zone depuis une ligne BDD.
+     * @param array<string,mixed> $data
+     */
+    protected function hydrate(array $data, ?Piscine $piscine = null): PiscineGradinsZones
     {
         $zone = new PiscineGradinsZones();
-        $zone->setId($data['id'])
-            ->setPiscine($data['piscine'])
+        $zone->setId((int)$data['id'])
+            ->setPiscine((int)$data['piscine'])
             ->setZoneName($data['zone_name'])
-            ->setNbSeatsVertically($data['nb_seats_vertically'])
-            ->setNbSeatsHorizontally($data['nb_seats_horizontally'])
+            ->setNbSeatsVertically((int)$data['nb_seats_vertically'])
+            ->setNbSeatsHorizontally((int)$data['nb_seats_horizontally'])
             ->setIsOpen((bool)$data['is_open'])
-            ->setComments($data['comments'])
             ->setIsStairsAfter((bool)$data['is_stairs_after'])
+            ->setComments($data['comments'] ?? null)
             ->setCreatedAt($data['created_at']);
 
-        if (isset($data['updated_at'])) {
-            $zone->setUpdatedAt($data['updated_at']);
+        if ($piscine) {
+            $zone->setPiscineObject($piscine);
         }
-
         return $zone;
     }
 }

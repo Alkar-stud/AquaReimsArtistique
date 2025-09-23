@@ -2,6 +2,7 @@
 
 namespace app\Repository\Event;
 
+use app\Models\Event\Event;
 use app\Models\Event\EventSession;
 use app\Repository\AbstractRepository;
 
@@ -9,109 +10,130 @@ class EventSessionRepository extends AbstractRepository
 {
     public function __construct()
     {
-        parent::__construct('event_sessions');
+        parent::__construct('event_session');
     }
 
     /**
-     * Trouve une session par son ID
-     * @param int $sessionId
+     * Retourne une session d'événement par son ID
+     * @param int $id
+     * @param bool $withEvent
      * @return EventSession|null
      */
-    public function findById(int $sessionId): ?EventSession
+    public function findById(int $id, bool $withEvent = false): ?EventSession
     {
         $sql = "SELECT * FROM $this->tableName WHERE id = :id";
-        $result = $this->query($sql, ['id' => $sessionId]);
-        if (empty($result)) {
-            return null;
+        $rows = $this->query($sql, ['id' => $id]);
+        if (!$rows) return null;
+
+        $event = null;
+        if ($withEvent) {
+            $eventRepo = new EventRepository();
+            $event = $eventRepo->findById((int)$rows[0]['event_id']);
         }
-        return $this->hydrate($result[0]);
+        return $this->hydrate($rows[0], $event);
     }
 
     /**
-     * Trouve toutes les sessions d'un événement
-     * @param int $eventId
-     * @return array
+     * Retourne toutes les sessions par événement, ordonnées par date de début
+     * @return EventSession[]
      */
-    public function findByEventId(int $eventId): array
+    public function findByEventId(int $eventId, bool $withEvent = false): array
     {
-        $sql = "SELECT * FROM $this->tableName WHERE event_id = :event_id ORDER BY event_start_at ASC";
-        $results = $this->query($sql, ['event_id' => $eventId]);
-        return array_map([$this, 'hydrate'], $results);
+        $sql = "SELECT * FROM $this->tableName WHERE event_id = :event_id ORDER BY event_start_at";
+        $rows = $this->query($sql, ['event_id' => $eventId]);
+
+        $event = null;
+        if ($withEvent) {
+            $eventRepo = new EventRepository();
+            $event = $eventRepo->findById($eventId);
+        }
+
+        return array_map(fn(array $r) => $this->hydrate($r, $event), $rows);
     }
 
     /**
-     * Trouve la dernière session d'un événement
+     * Retourne la dernière session d'événement d'un événement par sa date de début
      * @param int $eventId
-     * @return array|null Tableau contenant les informations de la dernière session ou null
+     * @return array|null
      */
     public function findLastSessionByEventId(int $eventId): ?array
     {
-        $sql = "SELECT * FROM $this->tableName 
-            WHERE event_id = :event_id 
-            ORDER BY event_start_at DESC 
-            LIMIT 1";
-
-        $result = $this->query($sql, ['event_id' => $eventId]);
-
-        if (empty($result)) {
-            return null;
-        }
-
-        return $result[0];
+        $sql = "SELECT * FROM $this->tableName WHERE event_id = :event_id ORDER BY event_start_at DESC LIMIT 1";
+        $rows = $this->query($sql, ['event_id' => $eventId]);
+        return $rows[0] ?? null;
     }
 
-
+    /**
+     * Ajoute une session d'événement
+     * @param EventSession $session
+     * @return int
+     */
     public function insert(EventSession $session): int
     {
-        $sql = "INSERT INTO $this->tableName 
+        $sql = "INSERT INTO $this->tableName
             (event_id, session_name, opening_doors_at, event_start_at, created_at)
             VALUES (:event_id, :session_name, :opening_doors_at, :event_start_at, :created_at)";
-
-        $this->execute($sql, [
+        $ok = $this->execute($sql, [
             'event_id' => $session->getEventId(),
             'session_name' => $session->getSessionName(),
             'opening_doors_at' => $session->getOpeningDoorsAt()->format('Y-m-d H:i:s'),
             'event_start_at' => $session->getEventStartAt()->format('Y-m-d H:i:s'),
-            'created_at' => $session->getCreatedAt()->format('Y-m-d H:i:s')
+            'created_at' => $session->getCreatedAt()->format('Y-m-d H:i:s'),
         ]);
-
-        return $this->getLastInsertId();
+        return $ok ? $this->getLastInsertId() : 0;
     }
 
+    /**
+     * Mise à jour d'une session d'événement
+     * @param EventSession $session
+     * @return bool
+     */
     public function update(EventSession $session): bool
     {
         $sql = "UPDATE $this->tableName SET
-        session_name = :session_name,
-        opening_doors_at = :opening_doors_at,
-        event_start_at = :event_start_at,
-        updated_at = NOW()
-        WHERE id = :id";
-
+            session_name = :session_name,
+            opening_doors_at = :opening_doors_at,
+            event_start_at = :event_start_at,
+            updated_at = NOW()
+            WHERE id = :id";
         return $this->execute($sql, [
             'id' => $session->getId(),
             'session_name' => $session->getSessionName(),
             'opening_doors_at' => $session->getOpeningDoorsAt()->format('Y-m-d H:i:s'),
-            'event_start_at' => $session->getEventStartAt()->format('Y-m-d H:i:s')
+            'event_start_at' => $session->getEventStartAt()->format('Y-m-d H:i:s'),
         ]);
     }
 
-    public function delete(int $eventId): bool
+    /**
+     * Supprime toutes les sessions d'un événement
+     * @param int $eventId
+     * @return bool
+     */
+    public function deleteByEventId(int $eventId): bool
     {
         $sql = "DELETE FROM $this->tableName WHERE event_id = :event_id";
         return $this->execute($sql, ['event_id' => $eventId]);
     }
 
-    protected function hydrate(array $data): EventSession
+    /**
+     * Hydrate une session d'événement
+     * @param array $data
+     * @param Event|null $event
+     * @return EventSession
+     */
+    protected function hydrate(array $data, ?Event $event = null): EventSession
     {
-        $session = new EventSession();
-        $session->setId($data['id'])
-            ->setEventId($data['event_id'])
+        $s = new EventSession();
+        $s->setId((int)$data['id'])
+            ->setEventId((int)$data['event_id'])
             ->setSessionName($data['session_name'])
             ->setOpeningDoorsAt($data['opening_doors_at'])
             ->setEventStartAt($data['event_start_at'])
-            ->setCreatedAt($data['created_at'])
-            ->setUpdatedAt($data['updated_at']);
+            ->setCreatedAt($data['created_at']);
 
-        return $session;
+        if (!empty($data['updated_at'])) { $s->setUpdatedAt($data['updated_at']); }
+        if ($event) { $s->setEventObject($event); }
+
+        return $s;
     }
 }

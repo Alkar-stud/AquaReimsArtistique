@@ -4,7 +4,6 @@ namespace app\Repository\User;
 
 use app\Models\User\User;
 use app\Repository\AbstractRepository;
-use DateMalformedStringException;
 
 class UserRepository extends AbstractRepository
 {
@@ -13,16 +12,27 @@ class UserRepository extends AbstractRepository
         parent::__construct('user');
     }
 
-
-    /*
-     * Insère un nouvel utilisateur dans la base de données.
+    /**
+     * Retourne tous les utilisateurs ordonnés par nom d'utilisateur.
+     * @return User[]
      */
-    public function insert(User $user): bool
+    public function findAll(): array
+    {
+        $sql = "SELECT * FROM $this->tableName ORDER BY username;";
+        $results = $this->query($sql);
+        return array_map([$this, 'hydrate'], $results);
+    }
+
+    /**
+     * Insère un nouvel utilisateur.
+     * @return int ID inséré (0 si échec)
+     */
+    public function insert(User $user): int
     {
         $sql = "INSERT INTO $this->tableName 
         (username, password, email, display_name, role, is_actif, created_at, password_reset_token, password_reset_expires_at)
         VALUES (:username, :password, :email, :display_name, :role, :is_actif, :created_at, :token, :expires_at)";
-        return $this->execute($sql, [
+        $ok = $this->execute($sql, [
             'username' => $user->getUsername(),
             'password' => $user->getPassword(),
             'email' => $user->getEmail(),
@@ -33,85 +43,80 @@ class UserRepository extends AbstractRepository
             'token' => $user->getPasswordResetToken(),
             'expires_at' => $user->getPasswordResetExpiresAt()?->format('Y-m-d H:i:s'),
         ]);
+        return $ok ? $this->getLastInsertId() : 0;
     }
 
-
     /**
-     * Trouve un utilisateur par son nom d'utilisateur.
-     *
+     * Retourne un utilisateur par son nom d'utilisateur.
      * @param string $username
-     * @return User|false
-     * @throws DateMalformedStringException
+     * @return User|null
      */
-    public function findByUsername(string $username): User|false
+    public function findByUsername(string $username): ?User
     {
         $sql = "SELECT * FROM $this->tableName WHERE username = :username";
         $result = $this->query($sql, ['username' => $username]);
-        return $result ? $this->hydrate($result[0]) : false;
+        return $result ? $this->hydrate($result[0]) : null;
     }
 
     /**
-     * Trouve un utilisateur par son email.
-     *
+     * Retourne un utilisateur par son email.
      * @param string $email
-     * @return User|false
-     * @throws DateMalformedStringException
+     * @return User|null
      */
-    public function findByEmail(string $email): User|false
+    public function findByEmail(string $email): ?User
     {
         $sql = "SELECT * FROM $this->tableName WHERE email = :email";
         $result = $this->query($sql, ['email' => $email]);
-        return $result ? $this->hydrate($result[0]) : false;
+        return $result ? $this->hydrate($result[0]) : null;
     }
 
     /**
-     * Trouve un utilisateur par son id.
-     *
+     * Retourne un utilisateur par son ID.
      * @param int $id
-     * @return User|false
-     * @throws DateMalformedStringException
+     * @return User|null
      */
-    public function findById(int $id): User|false
+    public function findById(int $id): ?User
     {
         $sql = "SELECT * FROM $this->tableName WHERE id = :id";
         $result = $this->query($sql, ['id' => $id]);
-        return $result ? $this->hydrate($result[0]) : false;
+        return $result ? $this->hydrate($result[0]) : null;
     }
 
     /**
-     * Trouve un utilisateur par son token de réinitialisation valide si actif.
+     * Retourne un utilisateur par son token de réinitialisation de mot de passe.
      * @param string $token
-     * @return User|false
-     * @throws DateMalformedStringException
+     * @return User|null
      */
-    public function findByValidResetToken(string $token): User|false
+    public function findByValidResetToken(string $token): ?User
     {
-        $sql = "SELECT * FROM $this->tableName WHERE password_reset_token = :token AND password_reset_expires_at > NOW() AND is_actif = 1;";
+        $sql = "SELECT * FROM $this->tableName 
+                WHERE password_reset_token = :token 
+                  AND password_reset_expires_at > NOW() 
+                  AND is_actif = 1;";
         $result = $this->query($sql, ['token' => $token]);
-        return $result ? $this->hydrate($result[0]) : false;
+        return $result ? $this->hydrate($result[0]) : null;
     }
 
-
-    /*
-     * Récupère tous les utilisateurs de la table qui ont un role plus bas.
+    /**
+     * Retourne les utilisateurs dont le rôle a un niveau strictement inférieur à $level.
+     * @return User[]
      */
-    public function findAllByLevel(): array
+    public function findAllWithRoleLevelLowerThan(int $level): array
     {
-        $currentUser = $_SESSION['user'] ?? null;
-        $level = 5;
-        if ($currentUser && isset($currentUser['role']['level'])) {
-            $level = $currentUser['role']['level'];
-        }
-        $sql = "SELECT u.* FROM {$this->tableName} u
+        $sql = "SELECT u.* FROM $this->tableName u
             INNER JOIN role r ON u.role = r.id
-            WHERE r.level > :level
+            WHERE r.level < :level
             ORDER BY r.level, u.username;";
         $results = $this->query($sql, ['level' => $level]);
         return array_map([$this, 'hydrate'], $results);
     }
 
     /**
-     * Met à jour les champs displayname et email d'un utilisateur, sauf si celui-ci est d'un level 0 (superadmin modifiable qu'en BDD à la main)
+     * Mise à jour des données d'un utilisateur.
+     * @param int $userId
+     * @param string $newDisplayName
+     * @param string $newEmail
+     * @return bool
      */
     public function updateData(int $userId, string $newDisplayName, string $newEmail): bool
     {
@@ -120,7 +125,10 @@ class UserRepository extends AbstractRepository
     }
 
     /**
-     * Met à jour le mot de passe d'un utilisateur.
+     * Mise à jour du mot de passe d'un utilisateur.
+     * @param int $userId
+     * @param string $newHashedPassword
+     * @return bool
      */
     public function updatePassword(int $userId, string $newHashedPassword): bool
     {
@@ -129,7 +137,11 @@ class UserRepository extends AbstractRepository
     }
 
     /**
-     * Sauvegarde le token de réinitialisation et sa date d'expiration pour un utilisateur.
+     * Mise à jour du token de réinitialisation de mot de passe d'un utilisateur.
+     * @param int $userId
+     * @param string $token
+     * @param string $expiresAt
+     * @return bool
      */
     public function savePasswordResetToken(int $userId, string $token, string $expiresAt): bool
     {
@@ -138,7 +150,9 @@ class UserRepository extends AbstractRepository
     }
 
     /**
-     * Invalide le token de réinitialisation pour un utilisateur en le mettant à NULL.
+     * Supprime le token de réinitialisation de mot de passe d'un utilisateur (une fois utilisé)
+     * @param int $userId
+     * @return bool
      */
     public function clearResetToken(int $userId): bool
     {
@@ -147,10 +161,9 @@ class UserRepository extends AbstractRepository
     }
 
     /**
-     * Crée et remplit un objet User à partir d'un tableau de données (BDD).
-     * @throws DateMalformedStringException
+     * Hydrate un User depuis une ligne BDD.
      */
-    private function hydrate(array $data): User
+    protected function hydrate(array $data): User
     {
         $user = new User();
         $user->setId($data['id'])
@@ -159,16 +172,13 @@ class UserRepository extends AbstractRepository
             ->setEmail($data['email'])
             ->setDisplayName($data['display_name'])
             ->setIsActif($data['is_actif'])
-            ->setCreatedAt($data['created_at'])
-            ->setUpdatedAt($data['updated_at'])
             ->setPasswordResetToken($data['password_reset_token'])
             ->setPasswordResetExpiresAt($data['password_reset_expires_at'])
             ->setSessionId($data['session_id']);
 
-        // Hydratation de la relation avec le rôle
         if (!empty($data['role'])) {
             $roleRepository = new RoleRepository();
-            $role = $roleRepository->findById($data['role']);
+            $role = $roleRepository->findById((int)$data['role']);
             $user->setRole($role);
         }
 
@@ -176,7 +186,10 @@ class UserRepository extends AbstractRepository
     }
 
     /**
-     * Ajouter/mettre à jour l'identifiant de session enregistré en BDD pour login
+     * Enregistre le session ID d'un utilisateur.
+     * @param int $userId
+     * @param string $sessionId
+     * @return bool
      */
     public function addSessionId(int $userId, string $sessionId): bool
     {
@@ -184,9 +197,11 @@ class UserRepository extends AbstractRepository
         return $this->execute($sql, ['sessionId' => $sessionId, 'id' => $userId]);
     }
 
-
     /**
-     * Supprimer l'identifiant de session enregistré en BDD pour logout
+     * Supprime le session ID d'un utilisateur.
+     * @param int $userId
+     * @param string $sessionId
+     * @return bool
      */
     public function removeSessionId(int $userId, string $sessionId): bool
     {
@@ -194,7 +209,11 @@ class UserRepository extends AbstractRepository
         return $this->execute($sql, ['id' => $userId, 'sessionId' => $sessionId]);
     }
 
-    // Met à jour les informations principales d'un utilisateur
+    /**
+     * Met à jour les données d'un utilisateur.
+     * @param User $user
+     * @return bool
+     */
     public function update(User $user): bool
     {
         $sql = "UPDATE $this->tableName SET 
@@ -210,24 +229,22 @@ class UserRepository extends AbstractRepository
             'email' => $user->getEmail(),
             'display_name' => $user->getDisplayName(),
             'role' => $user->getRole()?->getId(),
-            'is_actif' => (int)$user->getIsActif(), //forcer passage en int pour éviter erreur SQL General error: 1366 Incorrect integer value: '' for column 'is_actif' lors de la désactivation
+            'is_actif' => (int)$user->getIsActif(),
             'updated_at' => date('Y-m-d H:i:s'),
             'id' => $user->getId()
         ]);
     }
 
-    // Suspend ou réactive un utilisateur par son id
+    /**
+     * Met à jour l'état d'un utilisateur.
+     * @param int $id
+     * @param bool $isActif
+     * @return bool
+     */
     public function suspendOnOff(int $id, bool $isActif): bool
     {
         $sql = "UPDATE $this->tableName SET is_actif = :is_actif WHERE id = :id;";
         return $this->execute($sql, ['id' => $id, 'is_actif' => (int)$isActif]);
-    }
-
-    // Supprime un utilisateur par son id
-    public function delete(int $id): bool
-    {
-        $sql = "DELETE FROM $this->tableName WHERE id = :id;";
-        return $this->execute($sql, ['id' => $id]);
     }
 
 }

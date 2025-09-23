@@ -3,203 +3,139 @@ namespace app\Controllers\Auth;
 
 use app\Attributes\Route;
 use app\Controllers\AbstractController;
-use app\Enums\LogType;
+use app\Models\User\User;
 use app\Repository\User\UserRepository;
 use app\Services\Mails\MailPrepareService;
-use DateMalformedStringException;
-use DateTime;
+use app\Services\Security\PasswordPolicyService;
+use app\Services\Security\TokenGenerateService;
+use app\Utils\BuildLink;
 use Exception;
-use Random\RandomException;
+
 
 class PasswordResetController extends AbstractController
 {
+    private TokenGenerateService $tokenGenerate;
+    private UserRepository $userRepository;
+    private PasswordPolicyService $passwordPolicyService;
+    private BuildLink $buildLink;
+    private string $successMessage = 'Si votre email est connu de notre système, vous allez recevoir sous peu un email vous permettant de changer votre mot de passe.';
+
     public function __construct()
     {
-        parent::__construct(true); // true = route publique, pas de vérif session pour éviter le TOO_MANY_REDIRECT
+        parent::__construct(true);
+        $this->tokenGenerate = new TokenGenerateService();
+        $this->userRepository = new UserRepository();
+        $this->passwordPolicyService = new PasswordPolicyService();
+        $this->buildLink = new BuildLink();
     }
-    /**
-     * Gère l'affichage (GET) et le traitement (POST) du formulaire de mot de passe oublié.
-     * @throws RandomException
-     * @throws DateMalformedStringException
-     */
-    #[Route('/forgot-password', name: 'app_forgot_password')]
-    public function forgotPassword(): void
+
+    // --- FORGOT PASSWORD (GET) ---
+    #[Route('/forgot-password', name: 'app_forgot_password', methods: ['GET'])]
+    public function showForgotForm(): void
     {
-        // On vérifie la méthode de la requête
-        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            // Vérifier le token CSRF
-            $submittedToken = $_POST['csrf_token'] ?? '';
-            $sessionToken = $_SESSION['csrf_token'] ?? '';
+        $csrf = $this->csrfService->getToken('/forgot-password-submit');
 
-            if (empty($submittedToken) || empty($sessionToken) || !hash_equals($sessionToken, $submittedToken)) {
-                $this->logService->log(LogType::ACCESS, 'Tentative de soumission forgot-password avec token CSRF invalide', [
-                    'email' => $_POST['email'] ?? '',
-                    'submitted_token_length' => strlen($submittedToken),
-                    'session_token_exists' => !empty($sessionToken),
-                    'ip' => $_SERVER['REMOTE_ADDR'] ?? '',
-                    'user_agent' => $_SERVER['HTTP_USER_AGENT'] ?? ''
-                ], 'DANGER');
-
-                $this->flashMessageService->setFlashMessage('danger', "Token de sécurité invalide. Veuillez réessayer.");
-                header('Location: /forgot-password');
-                exit;
-            }
-
-            unset($_SESSION['csrf_token']);
-
-            $email = trim($_POST['email'] ?? '');
-            if (empty($email) || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
-                $this->flashMessageService->setFlashMessage('danger', "Veuillez fournir une adresse email valide.");
-                header('Location: /forgot-password');
-                exit;
-            }
-
-            $userRepository = new UserRepository();
-            $user = $userRepository->findByEmail($email);
-
-            if ($user) {
-                // Générer un token sécurisé
-                $token = bin2hex(random_bytes(32));
-
-                // Définir une date d'expiration (ex : 1 heure)
-                $date = new DateTime();
-                $date->modify('+1 hour');
-                $expiresAt = $date->format('Y-m-d H:i:s');
-
-                // Sauvegarder le token et la date dans la BDD
-                $userRepository->savePasswordResetToken($user->getId(), $token, $expiresAt);
-
-                // Envoyer l'email avec le lien de réinitialisation
-                try {
-                    $mailPrepareService = new MailPrepareService();
-                    $protocol = "https://";
-                    $resetLink = $protocol . $_SERVER['HTTP_HOST'] . '/reset-password?token=' . $token;
-
-                    $mailPrepareService->sendPasswordResetEmail(
-                        $user->getEmail(),
-                        $user->getDisplayName(),
-                        $resetLink
-                    );
-                } catch (Exception $e) {
-                    error_log('Erreur critique du service Mail: ' . $e->getMessage());
-                }
-            }
-
-            // Afficher un message de succès générique.
-            $this->flashMessageService->setFlashMessage('success', "Si votre adresse email est dans notre système, vous recevrez un lien pour réinitialiser votre mot de passe.");
-            header('Location: /forgot-password');
-            exit;
-
-        } else {
-            // Générer token CSRF pour GET
-            if (!isset($_SESSION['csrf_token'])) {
-                $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
-            }
-
-            // Récupérer le message flash s'il existe
-            $flashMessage = $this->flashMessageService->getFlashMessage();
-            $this->flashMessageService->unsetFlashMessage();
-
-            $this->render('password/forgot', [
-                'csrf_token' => $_SESSION['csrf_token'],
-                'flash_message' => $flashMessage
-            ], 'Mot de passe oublié');
-        }
+        $this->render('password/forgot', [
+            'csrf_token' => $csrf
+        ], 'Mot de passe oublié');
     }
 
-    /**
-     * Gère l'affichage (GET) et le traitement (POST) du formulaire de réinitialisation.
-     * @throws DateMalformedStringException
-     * @throws RandomException
-     */
+    #[Route('/forgot-password-submit', name: 'app_forgot_password-submit', methods: ['POST'])]
+    public function submitForgotForm(): void
+    {
+        $email = trim($_POST['email'] ?? '');
+        if (empty($email) || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            $this->flashMessageService->setFlashMessage('danger', "Veuillez fournir une adresse email valide.");
+            $this->redirect('/forgot-password');
+        }
+
+        //On tente de récupérer User via son email
+        $user = $this->userRepository->findByEmail($email);
+        if (!$user) {
+            $this->flashMessageService->setFlashMessage('success', $this->successMessage);
+            $this->redirect('/forgot-password');
+        }
+
+        //Génération du token
+        $token = $this->tokenGenerate->generateToken($_ENV['NB_CARACTERE_TOKEN'], 'PT1H');
+
+        // Sauvegarder le token et la date dans la BDD
+        $this->userRepository->savePasswordResetToken($user->getId(), $token['token'], $token['expires_at_str']);
+
+        // Envoyer l'email avec le lien de réinitialisation
+        $resetLink = $this->buildLink::buildResetLink('/reset-password', $token['token']);
+
+        try {
+            (new MailPrepareService())->sendPasswordResetEmail(
+                $user->getEmail(),
+                $user->getDisplayName(),
+                $resetLink
+            );
+        } catch (Exception $e) {
+            error_log('Erreur critique du service Mail: ' . $e->getMessage());
+        }
+
+        $this->flashMessageService->setFlashMessage('success', $this->successMessage);
+        $this->redirect('/forgot-password');
+    }
+
     #[Route('/reset-password', name: 'app_reset_password')]
-    public function resetPassword(): void
+    public function showResetPassword(): void
     {
-        $userRepository = new UserRepository();
+        $token = $_GET['token'] ?? '';
+        $this->checkReinitTokenUser($token);
+        //Pour envoyer le bon contexte
+        $csrf = $this->csrfService->getToken('/reset-password-submit');
+        $this->render('password/reset', [
+            'token' => $token,
+            'csrf_token' => $csrf,
+            'password_rules' => $this->passwordPolicyService->getRulesAsText(),
+        ], 'Réinitialiser le mot de passe');
+    }
 
-        // --- Logique pour la requête POST (soumission du formulaire) ---
-        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            // Vérifier le token CSRF
-            $submittedToken = $_POST['csrf_token'] ?? '';
-            $sessionToken = $_SESSION['csrf_token'] ?? '';
+    #[Route('/reset-password-submit', name: 'app_reset_password-submit', methods: ['POST'])]
+    public function resetPasswordSubmit(): void
+    {
+        $token = trim($_POST['token'] ?? '');
+        $user = $this->checkReinitTokenUser($token);
 
-            if (empty($submittedToken) || empty($sessionToken) || !hash_equals($sessionToken, $submittedToken)) {
-                $token = $_POST['token'] ?? '';
-
-                $this->logService->log(LogType::ACCESS, 'Tentative de soumission reset-password avec token CSRF invalide', [
-                    'reset_token' => substr($token, 0, 8) . '...',
-                    'submitted_token_length' => strlen($submittedToken),
-                    'session_token_exists' => !empty($sessionToken),
-                    'ip' => $_SERVER['REMOTE_ADDR'] ?? '',
-                    'user_agent' => $_SERVER['HTTP_USER_AGENT'] ?? ''
-                ], 'DANGER');
-
-                $this->flashMessageService->setFlashMessage('danger', "Token de sécurité invalide. Veuillez réessayer.");
-                header('Location: /reset-password?token=' . $token);
-                exit;
-            }
-
-            unset($_SESSION['csrf_token']);
-
-            $token = $_POST['token'] ?? '';
-            $password = $_POST['password'] ?? '';
-            $passwordConfirm = $_POST['password_confirm'] ?? '';
-
-            // Valider le token une nouvelle fois
-            $user = $userRepository->findByValidResetToken($token);
-
-            if (!$user) {
-                // Si le token est devenu invalide entre-temps
-                $this->flashMessageService->setFlashMessage('danger', "Ce lien de réinitialisation est invalide ou a expiré. Veuillez refaire une demande.");
-                header('Location: /forgot-password');
-                exit;
-            }
-
-            // Valider les mots de passe
-            if (empty($password) || $password !== $passwordConfirm) {
-                $this->flashMessageService->setFlashMessage('danger', "Les mots de passe ne correspondent pas ou sont vides.");
-                // On redirige vers la même page pour que l'utilisateur puisse réessayer
-                header('Location: /reset-password?token=' . $token);
-                exit;
-            }
-
-            // Tout est bon : on met à jour le mot de passe
-            $newHashedPassword = password_hash($password, PASSWORD_DEFAULT, ['cost' => (int)$_ENV['BCRYPT_ROUNDS']]);
-            $userRepository->updatePassword($user->getId(), $newHashedPassword);
-
-            // IMPORTANT : On invalide le token pour qu'il ne soit pas réutilisé
-            $userRepository->clearResetToken($user->getId());
-
-            // On redirige vers la page de connexion avec un message de succès
-            $this->flashMessageService->setFlashMessage('success', "Votre mot de passe a été réinitialisé avec succès. Vous pouvez maintenant vous connecter.");
-            header('Location: /login');
-            exit;
-        } else {
-            // Générer token CSRF pour GET
-            if (!isset($_SESSION['csrf_token'])) {
-                $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
-            }
-
-            $token = $_GET['token'] ?? '';
-            $user = $userRepository->findByValidResetToken($token);
-
-            if (!$user) {
-                $this->flashMessageService->setFlashMessage('danger', "Ce lien de réinitialisation est invalide ou a expiré.");
-                header('Location: /forgot-password');
-                exit;
-            }
-
-            // Récupérer le message flash s'il existe
-            $flashMessage = $this->flashMessageService->getFlashMessage();
-            $this->flashMessageService->unsetFlashMessage();
-
-            $this->render('password/reset', [
-                'token' => $token,
-                'csrf_token' => $_SESSION['csrf_token'],
-                'flash_message' => $flashMessage
-            ], 'Réinitialiser le mot de passe');
+        $password = $_POST['password'] ?? '';
+        $passwordConfirm = $_POST['password_confirm'] ?? '';
+        // Valider les mots de passe
+        if (empty($password) || $password !== $passwordConfirm) {
+            $this->flashMessageService->setFlashMessage('danger', "Les mots de passe ne correspondent pas ou sont vides.");
+            // On redirige vers la même page pour que l'utilisateur puisse réessayer
+            $this->redirect('/reset-password?token=' . $token);
         }
 
+        // Valider la complexité du mot de passe
+        $policyErrors = $this->passwordPolicyService->validate($password);
+        if (!empty($policyErrors)) {
+            $this->flashMessageService->setFlashMessage('danger', implode("\n", $policyErrors));
+            $this->redirect('/reset-password?token=' . rawurlencode($token));
+        }
+
+        // Tout est bon : on met à jour le mot de passe
+        $cost = (int)($_ENV['BCRYPT_ROUNDS'] ?? 12);
+        $newHashedPassword = password_hash($password, PASSWORD_DEFAULT, ['cost' => $cost]);
+        $this->userRepository->updatePassword($user->getId(), $newHashedPassword);
+
+        // IMPORTANT : On invalide le token pour qu'il ne soit pas réutilisé
+        $this->userRepository->clearResetToken($user->getId());
+
+        $this->flashMessageService->setFlashMessage('success', "Votre mot de passe a été réinitialisé avec succès. Vous pouvez maintenant vous connecter.");
+        $this->redirect('/login');
     }
+
+    private function checkReinitTokenUser(string $token): ?User
+    {
+        $user = $this->userRepository->findByValidResetToken($token);
+        if (!$user) {
+            $this->flashMessageService->setFlashMessage('danger', "Ce lien de réinitialisation est invalide ou a expiré.");
+            $this->redirect('/forgot-password');
+        }
+        return $user;
+    }
+
 
 }

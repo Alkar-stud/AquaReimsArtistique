@@ -1,18 +1,17 @@
 <?php
 
+use app\Controllers\ErrorController;
 use app\Core\Database;
 use app\Core\Router;
-use app\Services\Logs\LogService;
+use app\Services\Log\Logger;
 use Dotenv\Dotenv;
 use Dotenv\Exception\InvalidPathException;
+use app\Services\Log\RequestContext;
 
 date_default_timezone_set('Europe/Paris');
-session_start();
-$session_id = session_id();
 
 //Chargement des dépendances
 require_once __DIR__ . '/../vendor/autoload.php';
-
 
 try {
     // On charge d'abord le fichier le plus spécifique (.env.local) s'il existe.
@@ -20,17 +19,15 @@ try {
     if (file_exists(__DIR__ . '/../.env.local')) {
         Dotenv::createImmutable(__DIR__ . '/../', '.env.local')->load();
     }
-
     if (file_exists(__DIR__ . '/../.env.prod')) {
         Dotenv::createImmutable(__DIR__ . '/../', '.env.prod')->load();
     }
-
     if (file_exists(__DIR__ . '/../.env.docker')) {
         Dotenv::createImmutable(__DIR__ . '/../', '.env.docker')->load();
     }
 
     // ENSUITE, on charge le fichier de base .env.
-    //    La méthode load() ne remplacera PAS les variables déjà chargées depuis .env.local.
+    //    La méthode load() ne remplacera PAS les variables déjà chargées depuis .env.*.
     //    Elle lèvera une exception si .env est manquant
     Dotenv::createImmutable(__DIR__ . '/../', '.env')->load();
 
@@ -62,6 +59,27 @@ if ($appEnv === 'prod') {
     error_reporting(E_ALL);
 }
 
+// Context de requête
+RequestContext::boot();
+
+// Init logger depuis config
+$sec = require __DIR__ . '/../config/security.php';
+$cfg = require __DIR__ . '/../config/logging.php';
+$handlers = [];
+foreach ($cfg['handlers'] as $def) {
+    $class = $def['class'];
+    $args = $def['args'] ?? [];
+    try { $handlers[] = new $class(...$args); } catch (Throwable) { /* ignore */ }
+}
+Logger::init($handlers, $sec['sensitive_data_keys'] ?? []);
+
+// Log d'accès en fin de requête
+register_shutdown_function(static function () {
+    Logger::get()->access([
+        'status' => http_response_code(),
+        'route' => $_SERVER['REQUEST_URI'] ?? '/',
+    ]);
+});
 
 //On récupère la route courante
 $uri = strtok($_SERVER['REQUEST_URI'], '?');
@@ -83,7 +101,7 @@ if ($uri !== '/install' && !str_starts_with($uri, '/install/')) {
             die(
                 '<div style="font-family: sans-serif; margin: 2em; padding: 2em; border: 2px solid #033BA8; border-radius: 5px; background: #E8F8FF; color: #2A2A2A; text-align: center;">' .
                 '<h2>Application non installée</h2>' .
-                '<p>L\'application ne semble pas encore être installée car les tables de la base de données sont manquantes.</p>' .
+                '<p>L\'application ne semble pas encore être installée.</p>' .
                 '<p>Veuillez suivre le lien ci-dessous pour finaliser la configuration.</p>' .
                 '<p style="margin-top: 1.5em;"><a href="/install" style="padding: 10px 20px; background-color: #033BA8; color: #fff; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block; transition: background-color 0.2s;">Lancer l\'installation</a></p>' .
                 '</div>'
@@ -112,40 +130,8 @@ try {
     $router->dispatch($uri);
 } catch (Exception $e) {
     if ($e->getMessage() === '404') {
-        http_response_code(404);
-
-        $logService = new \app\Services\Logs\LogService();
-        $logService->logUrlError(
-            $_SERVER['REQUEST_URI'] ?? 'unknown',
-            $_SERVER['REQUEST_METHOD'] ?? 'GET',
-            404,
-            [
-                'query_string' => $_SERVER['QUERY_STRING'] ?? null,
-                'http_accept' => $_SERVER['HTTP_ACCEPT'] ?? null
-            ]
-        );
-
-        $engine = new \app\Utils\TemplateEngine();
-        $uri = strtok($_SERVER['REQUEST_URI'], '?');
-        $redirectUrl = (isset($uri) && str_starts_with($uri, '/gestion')) ? '/gestion' : '/';
-
-        // Corps 404
-        $content404 = $engine->render(__DIR__ . '/../app/views/templates/errors/404.tpl', [
-            'uri' => $uri,
-            'redirectUrl' => $redirectUrl,
-            'is_gestion_page' => str_starts_with($uri, '/gestion'),
-            'load_ckeditor' => false
-        ]);
-
-        // Layout global
-        echo $engine->render(__DIR__ . '/../app/views/templates/layout/base.tpl', [
-            'title' => '404',
-            'content' => $content404,
-            'uri' => $uri,
-            'is_gestion_page' => str_starts_with($uri, '/gestion'),
-            'load_ckeditor' => false
-        ]);
+        $controller = new ErrorController();
+        $controller->notFound();
         exit;
     }
-    throw $e;
 }

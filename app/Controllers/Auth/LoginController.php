@@ -3,173 +3,77 @@ namespace app\Controllers\Auth;
 
 use app\Attributes\Route;
 use app\Controllers\AbstractController;
-use app\Enums\LogType;
 use app\Repository\User\UserRepository;
-use DateMalformedStringException;
-use Random\RandomException;
+use app\Services\Auth\UserSessionService;
+use app\Services\Log\Logger;
 
-#[Route('/login', name: 'app_login')]
 class LoginController extends AbstractController
 {
+    private UserRepository $userRepository;
+    private UserSessionService $userSessionService;
+
     public function __construct()
     {
-        parent::__construct(true); // true = route publique, pas de vérif session
+        parent::__construct(true);
+        $this->userRepository = new UserRepository();
+        $this->userSessionService = new UserSessionService($this->userRepository);
     }
 
-    /**
-     * @throws DateMalformedStringException
-     * @throws RandomException
-     */
+    #[Route('/login', name: 'app_login', methods: ['GET'])]
     public function index(): void
     {
-        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $this->login();
-        } else {
-            // Générer un token CSRF pour le formulaire
-            if (!isset($_SESSION['csrf_token'])) {
-                $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
-            }
-
-            // Récupérer le message flash s'il existe
-            $flashMessage = $this->flashMessageService->getFlashMessage();
-            $this->flashMessageService->unsetFlashMessage();
-
-            $this->render('auth/login', [
-                'csrf_token' => $_SESSION['csrf_token'],
-                'flash_message' => $flashMessage
-            ], 'Connexion');
-        }
+        // Genère un token CSRF pour le contexte POST cible
+        $csrf = $this->csrfService->getToken('/login-check');
+        $this->render('auth/login', ['csrf_token' => $csrf], 'Connexion');
     }
 
-    /**
-     * @throws DateMalformedStringException
-     */
-    private function login(): void
+    #[Route('/login-check', name: 'app_login_check', methods: ['POST'])]
+    public function login(): void
     {
-        // Vérifier le token CSRF avec protection contre null
-        $submittedToken = $_POST['csrf_token'] ?? '';
-        $sessionToken = $_SESSION['csrf_token'] ?? '';
-
-        if (empty($submittedToken) || empty($sessionToken) || !hash_equals($sessionToken, $submittedToken)) {
-            $this->logService->log(LogType::ACCESS, 'Tentative de connexion avec token CSRF invalide', [
-                'username' => $_POST['username'] ?? '',
-                'submitted_token_length' => strlen($submittedToken),
-                'session_token_exists' => !empty($sessionToken),
-                'ip' => $_SERVER['REMOTE_ADDR'] ?? '',
-                'user_agent' => $_SERVER['HTTP_USER_AGENT'] ?? ''
-            ], 'DANGER');
-
-            $this->flashMessageService->setFlashMessage('danger', 'Token de sécurité invalide. Veuillez réessayer.');
-
-            header('Location: /login');
-            exit;
-        }
-
-        // Supprimer le token après utilisation
-        unset($_SESSION['csrf_token']);
-
         $username = trim($_POST['username'] ?? '');
         $password = $_POST['password'] ?? '';
 
-        if (empty($username) || empty($password)) {
-            $this->logService->logAccess('LOGIN_ATTEMPT_EMPTY_FIELDS', ['username' => $username]);
-            $this->flashMessageService->setFlashMessage('danger', "Veuillez remplir tous les champs.");
-            header('Location: /login');
-            exit;
+        if ($username === '' || $password === '') {
+            $this->flashMessageService->setFlashMessage('danger', 'Veuillez remplir tous les champs.');
+            $this->redirect('/login');
         }
 
-        $userRepository = new UserRepository();
-        $user = $userRepository->findByUsername($username);
+        $user = $this->userRepository->findByUsername($username);
 
         if ($user && password_verify($password, $user->getPassword())) {
+            Logger::get()->security('login_success', ['username' => $username, 'user_id' => $user->getId()]);
+
             if (password_needs_rehash($user->getPassword(), PASSWORD_DEFAULT, ['cost' => (int)$_ENV['BCRYPT_ROUNDS']])) {
                 $newHash = password_hash($password, PASSWORD_DEFAULT, ['cost' => (int)$_ENV['BCRYPT_ROUNDS']]);
-                $userRepository->updatePassword($user->getId(), $newHash);
+                $this->userRepository->updatePassword($user->getId(), $newHash);
             }
 
-            $this->flashMessageService->unsetFlashMessage();
+            $this->userSessionService->login($user);
 
-            // Régénérer l'ID de session après connexion réussie
-            session_regenerate_id(true);
-
-            // On stocke les informations de l'utilisateur en session
-            $_SESSION['user'] = [
-                'id' => $user->getId(),
-                'username' => $user->getUsername(),
-                'email' => $user->getEmail(),
-                'role' => [
-                    'id' => $user->getRole()->getId(),
-                    'label' => $user->getRole()->getLabel(),
-                    'level' => $user->getRole()->getLevel()
-                ],
-                'LAST_ACTIVITY' => time(),
-                'LAST_REGENERATION' => time()
-            ];
-
-            // Une seule fois l'ajout de session
-            $userRepository->addSessionId($user->getId(), session_id());
-
-            $this->logService->logAccess('LOGIN_SUCCESS', [
-                'user_id' => $user->getId(),
-                'username' => $user->getUsername(),
-                'session_regenerated' => true
-            ]);
-
-            // Vérifier s'il y a une URL de redirection en attente
             $redirectUrl = $_SESSION['redirect_after_login'] ?? '/';
-            unset($_SESSION['redirect_after_login']); // On nettoie la session
-
-            // Sécurité : S'assurer que la redirection est locale
+            unset($_SESSION['redirect_after_login']);
             if (!$this->isValidInternalRedirect($redirectUrl)) {
-                $redirectUrl = '/'; // Rediriger vers la page d'accueil par défaut en cas de doute
+                $redirectUrl = '/';
             }
 
-            header('Location: ' . $redirectUrl);
-            exit;
+            $this->redirect($redirectUrl);
+        } else {
+            Logger::get()->security('login_fail', ['username' => $username]);
         }
 
-        $this->logService->logAccess('LOGIN_FAILED', [
-            'username' => $username,
-            'user_exists' => $user !== null
-        ]);
-
         $this->flashMessageService->setFlashMessage('danger', 'Identifiants incorrects.');
-        header('Location: /login');
-        exit;
+        $this->redirect('/login');
     }
 
     #[Route('/logout', name: 'app_logout')]
     public function logout(): void
     {
-        if (session_status() === PHP_SESSION_NONE) {
-            session_start();
-        }
-
-        // Si l'utilisateur avait un token de session, on le supprime
-        if (isset($_SESSION['user']['id'])) {
-            $userRepository = new UserRepository();
-            $userRepository->removeSessionId($_SESSION['user']['id'], session_id());
-            $this->logService->logAccess('LOGOUT', [
-                'user_id' => $_SESSION['user']['id'],
-                'session_destroyed' => true
-            ]);
-        }
-        $_SESSION = [];
-        session_destroy();
-
-        header('Location: /');
-        exit;
+        $this->userSessionService->logout();
+        $this->redirect('/');
     }
 
-    /**
-     * Valide si une URL est une redirection interne sûre.
-     * @param string $url
-     * @return bool
-     */
     private function isValidInternalRedirect(string $url): bool
     {
-        // Doit être un chemin relatif (commencer par /) et ne pas contenir de "://"
-        // pour éviter les redirections vers des domaines externes.
         return str_starts_with($url, '/') && !str_contains($url, '://');
     }
 }

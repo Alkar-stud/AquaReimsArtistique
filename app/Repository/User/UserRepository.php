@@ -98,14 +98,16 @@ class UserRepository extends AbstractRepository
     }
 
     /**
-     * Retourne les utilisateurs dont le rôle a un niveau strictement inférieur à $level.
+     * Retourne les utilisateurs dont le rôle a un niveau strictement supérieur à $level.
+     * Donc avec moins de droits
+     * @param int $level
      * @return User[]
      */
     public function findAllWithRoleLevelLowerThan(int $level): array
     {
         $sql = "SELECT u.* FROM $this->tableName u
             INNER JOIN role r ON u.role = r.id
-            WHERE r.level < :level
+            WHERE r.level > :level
             ORDER BY r.level, u.username;";
         $results = $this->query($sql, ['level' => $level]);
         return array_map([$this, 'hydrate'], $results);
@@ -222,6 +224,7 @@ class UserRepository extends AbstractRepository
         display_name = :display_name,
         role = :role,
         is_actif = :is_actif,
+        session_id = :session_id,
         updated_at = :updated_at
         WHERE id = :id;";
         return $this->execute($sql, [
@@ -230,6 +233,7 @@ class UserRepository extends AbstractRepository
             'display_name' => $user->getDisplayName(),
             'role' => $user->getRole()?->getId(),
             'is_actif' => (int)$user->getIsActif(),
+            'session_id' => $user->getSessionId(),
             'updated_at' => date('Y-m-d H:i:s'),
             'id' => $user->getId()
         ]);

@@ -66,7 +66,7 @@ class AccountController extends AbstractController
         $this->redirect('/account');
     }
 
-    #[Route('/account/password', name: 'app_account_password')]
+    #[Route('/account/password', name: 'app_account_password', methods: ['POST'])]
     public function updatePassword(): void
     {
         $current_password = $_POST['current_password'] ?? '';

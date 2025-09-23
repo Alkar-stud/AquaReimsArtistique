@@ -24,8 +24,7 @@
             <!-- Ajout -->
             <tr>
                 <form method="POST" action="/gestion/users/add">
-                    <!-- Token CSRF -->
-                    <input type="hidden" name="csrf_token" value="{{ $csrf_token ?? '' }}">
+                    <input type="hidden" name="csrf_token" value="{{ $csrf_token_add }}">
                     <td><input type="text" name="username" class="form-control" required></td>
                     <td><input type="email" name="email" class="form-control" required></td>
                     <td><input type="text" name="display_name" class="form-control"></td>
@@ -34,7 +33,7 @@
                             <option>Choisissez le rôle</option>
                             {% foreach $roles as $role %}
                             {% if $role->getLevel() >= $_SESSION['user']['role']['level'] %}
-                            <option value="{{ $role->getId() }}" {{! $role->getLevel() <= $_SESSION['user']['role']['level'] ? 'disabled' : '' !}}>
+                            <option value="{{ $role->getId() }}" {{ ($role->getLevel() <= $_SESSION['user']['role']['level']) ? 'disabled' : '' }}>
                                 {{ $role->getLabel() }}
                             </option>
                             {% endif %}
@@ -43,7 +42,9 @@
                     </td>
                     <td class="text-center">
                         <div class="form-check form-switch d-flex justify-content-center">
-                            <input class="form-check-input" type="checkbox" disabled checked>
+                            <!-- Ajout: default actif -->
+                            <input type="hidden" name="is_active" value="1">
+                            <input class="form-check-input" type="checkbox" checked disabled>
                         </div>
                     </td>
                     <td>
@@ -56,9 +57,8 @@
             {% foreach $users as $user %}
             <tr>
                 <form method="POST" action="/gestion/users/edit">
-                    <!-- Token CSRF -->
-                    <input type="hidden" name="csrf_token" value="{{ $csrf_token ?? '' }}">
-                    <input type="hidden" name="id" value="{{ $user->getId() }}">
+                    <input type="hidden" name="csrf_token" value="{{ $csrf_token_edit }}">
+                    <input type="hidden" name="user_id" value="{{ $user->getId() }}">
                     <td><input type="text" name="username" class="form-control" value="{{ $user->getUsername() }}" required></td>
                     <td><input type="email" name="email" class="form-control" value="{{ $user->getEmail() }}" required></td>
                     <td><input type="text" name="display_name" class="form-control" value="{{ $user->getDisplayName() }}"></td>
@@ -68,8 +68,8 @@
                             {% foreach $roles as $role %}
                             {% if $role->getLevel() >= $_SESSION['user']['role']['level'] %}
                             <option value="{{ $role->getId() }}"
-                                    {{! ($user->getRole() && $user->getRole()->getId() === $role->getId()) ? 'selected' : '' !}}
-                                    {{! $role->getLevel() <= $_SESSION['user']['role']['level'] ? 'disabled' : '' !}}>
+                                    {{ ($user->getRole() && $user->getRole()->getId() === $role->getId()) ? 'selected' : '' }}
+                                    {{ ($role->getLevel() <= $_SESSION['user']['role']['level']) ? 'disabled' : '' }}>
                                 {{ $role->getLabel() }}
                             </option>
                             {% endif %}
@@ -78,11 +78,14 @@
                     </td>
                     <td class="text-center">
                         <div class="form-check form-switch d-flex justify-content-center">
+                            <input type="hidden" name="is_active" value="0">
                             <input class="form-check-input user-status-toggle"
                                    type="checkbox"
+                                   name="is_active"
+                                   value="1"
                                    id="user-status-{{ $user->getId() }}"
                                    data-id="{{ $user->getId() }}"
-                                    {{! $user->getIsActif() ? 'checked' : '' !}}>
+                                   {{ $user->getIsActif() ? 'checked' : '' }}>
                         </div>
                     </td>
                     <td class="d-flex flex-column gap-1">
@@ -113,6 +116,7 @@
         <div class="card mb-3 border-success">
             <div class="card-body">
                 <form method="POST" action="/gestion/users/add">
+                    <input type="hidden" name="csrf_token" value="{{ $csrf_token_add }}">
                     <div class="mb-2">
                         <input type="text" name="username" class="form-control" placeholder="Nom d'utilisateur *" required>
                     </div>
@@ -127,7 +131,7 @@
                             <option>Choisissez le rôle</option>
                             {% foreach $roles as $role %}
                             {% if $role->getLevel() >= $_SESSION['user']['role']['level'] %}
-                            <option value="{{ $role->getId() }}" {{! $role->getLevel() <= $_SESSION['user']['role']['level'] ? 'disabled' : '' !}}>
+                            <option value="{{ $role->getId() }}" {{ ($role->getLevel() <= $_SESSION['user']['role']['level']) ? 'disabled' : '' }}>
                                 {{ $role->getLabel() }}
                             </option>
                             {% endif %}
@@ -137,7 +141,9 @@
                     <div class="mb-2">
                         <label class="form-label d-block">Actif :</label>
                         <div class="form-check form-switch">
-                            <input class="form-check-input" type="checkbox" disabled checked>
+                            <!-- Ajout: default actif -->
+                            <input type="hidden" name="is_active" value="1">
+                            <input class="form-check-input" type="checkbox" checked disabled>
                         </div>
                     </div>
                     <button type="submit" class="btn btn-success w-100">Ajouter</button>
@@ -149,7 +155,8 @@
         <div class="card mb-3 border-success">
             <div class="card-body">
                 <form method="POST" action="/gestion/users/edit">
-                    <input type="hidden" name="id" value="{{ $user->getId() }}">
+                    <input type="hidden" name="csrf_token" value="{{ $csrf_token_edit }}">
+                    <input type="hidden" name="user_id" value="{{ $user->getId() }}">
                     <div class="mb-2">
                         <input type="text" name="username" class="form-control" placeholder="Nom d'utilisateur *" value="{{ $user->getUsername() }}" required>
                     </div>
@@ -166,8 +173,8 @@
                             {% if $role->getLevel() >= $_SESSION['user']['role']['level'] %}
                             <option
                                     value="{{ $role->getId() }}"
-                                    {{! ($user->getRole() && $user->getRole()->getId() === $role->getId()) ? 'selected' : '' !}}
-                                    {{! $role->getLevel() <= $_SESSION['user']['role']['level'] ? 'disabled' : '' !}}
+                                    {{ ($user->getRole() && $user->getRole()->getId() === $role->getId()) ? 'selected' : '' }}
+                                    {{ ($role->getLevel() <= $_SESSION['user']['role']['level']) ? 'disabled' : '' }}
                             >
                                 {{ $role->getLabel() }}
                             </option>
@@ -176,11 +183,14 @@
                         </select>
                     </div>
                     <div class="form-check form-switch mb-3">
+                        <input type="hidden" name="is_active" value="0">
                         <input class="form-check-input user-status-toggle"
                                type="checkbox"
+                               name="is_active"
+                               value="1"
                                id="user-status-mobile-{{ $user->getId() }}"
                                data-id="{{ $user->getId() }}"
-                                {{! $user->getIsActif() ? 'checked' : '' !}}>
+                               {{ $user->getIsActif() ? 'checked' : '' }}>
                     </div>
                     <div class="d-flex flex-column gap-2">
                         <button type="submit" class="btn btn-primary btn-sm w-100">Modifier</button>

@@ -40,7 +40,7 @@
                     <a class="nav-link {{ $uri == '/gestion/events' ? 'active-link' : '' }}" href="/gestion/events">Évènements</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link {{ $uri == '/gestion/groupes-nageuses' ? 'active-link' : '' }}" href="/gestion/swimmers">Nageuses</a>
+                    <a class="nav-link {{ $uri == '/gestion/swimmers-groups' ? 'active-link' : '' }}" href="/gestion/swimmers-groups">Nageuses</a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link {{ $uri == '/gestion/mail_templates' ? 'active-link' : '' }}" href="/gestion/mails_templates">Mails</a>

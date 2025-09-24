@@ -23,6 +23,7 @@ class ConfigController extends AbstractController
     #[Route('/gestion/configs', name: 'app_gestion_configs')]
     public function index(): void
     {
+        //Puis, on récupère toutes les configs
         $configs = $this->configRepository->findAll();
 
         $this->render('/gestion/configs', [
@@ -38,7 +39,7 @@ class ConfigController extends AbstractController
     public function add(): void
     {
         //On vérifie que le CurrentUser a bien le droit de faire ça
-        $this->checkIfCurrentUserIsAllowedToManagedOthersUsers();
+        $this->checkIfCurrentUserIsAllowedToManagedThis(1, 'configs');
 
         // Validation des données centralisée
         $error = $this->configDataValidationService->checkData($_POST);
@@ -63,7 +64,7 @@ class ConfigController extends AbstractController
     public function update(): void
     {
         //On vérifie que le CurrentUser a bien le droit de faire ça
-        $this->checkIfCurrentUserIsAllowedToManagedOthersUsers();
+        $this->checkIfCurrentUserIsAllowedToManagedThis(1, 'configs');
 
         //On récupère la config.
         $configId = (int)($_POST['config_id'] ?? 0);
@@ -96,7 +97,7 @@ class ConfigController extends AbstractController
     public function delete(): void
     {
         //On vérifie que le CurrentUser a bien le droit de faire ça
-        $this->checkIfCurrentUserIsAllowedToManagedOthersUsers();
+        $this->checkIfCurrentUserIsAllowedToManagedThis(1, 'configs');
 
         $configId = (int)($_POST['config_id'] ?? 0);
         $this->configRepository->delete($configId);

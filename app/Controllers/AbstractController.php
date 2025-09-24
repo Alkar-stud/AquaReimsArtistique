@@ -288,13 +288,23 @@ abstract class AbstractController
     /**
      * Vérifie si l'utilisateur courant a les droits de faire ce qui est demandé.
      * Redirige si false sinon retourne true
+     * @param int $minLevel
+     * @param string|null $urlReturn
      * @return void
      */
-    protected function checkIfCurrentUserIsAllowedToManagedOthersUsers(): void
+    protected function checkIfCurrentUserIsAllowedToManagedThis(int $minLevel = 99, ?string $urlReturn = null): void
     {
-        if (!$this->currentUser || !in_array($this->currentUser->getRole()->getLevel(), [0, 1])) {
+        if ($urlReturn !== null && !preg_match('/^[a-z]*$/', $urlReturn)) {
+            http_response_code(404);
+            exit;
+        }
+
+        if (!$this->currentUser || $this->currentUser->getRole()->getLevel() > $minLevel) {
             $this->flashMessageService->setFlashMessage('danger', "Accès refusé");
-            $this->redirect('/gestion/users');
+            if ($urlReturn !== null) {
+                $urlReturn = '/' . $urlReturn;
+            }
+            $this->redirect('/gestion' . $urlReturn);
         }
     }
 
@@ -308,6 +318,8 @@ abstract class AbstractController
      * Redirige vers une URL en ajoutant une ancre si elle est présente dans POST.
      * @param string $url
      * @param string $anchorKey La clé POST contenant l'ancre.
+     * @param int $id
+     * @param string|null $context
      */
     protected function redirectWithAnchor(string $url, string $anchorKey = 'form_anchor', int $id = 0, ?string $context = null): void
     {

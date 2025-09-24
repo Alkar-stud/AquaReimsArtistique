@@ -122,7 +122,7 @@ class UserController extends AbstractController
     public function delete(): void
     {
         //On vérifie que le CurrentUser a bien le droit de faire ça
-        $this->checkIfCurrentUserIsAllowedToManagedOthersUsers();
+        $this->checkIfCurrentUserIsAllowedToManagedThis(1, 'users');
 
         //On récupère le user.
         $userId = (int)($_POST['user_id'] ?? 0);
@@ -148,7 +148,7 @@ class UserController extends AbstractController
     private function checksForUser(string $action, ?User $user): void
     {
         //On vérifie que le CurrentUser a bien le droit de faire ça
-        $this->checkIfCurrentUserIsAllowedToManagedOthersUsers();
+        $this->checkIfCurrentUserIsAllowedToManagedThis(1, 'users');
 
         // Validation des données centralisée
         $error = $this->userDataValidationService->checkData($_POST);

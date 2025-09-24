@@ -59,7 +59,7 @@ class ConfigController extends AbstractController
         $this->redirectWithAnchor('/gestion/configs', 'form_anchor', $configId, $context);
     }
 
-    #[Route('/gestion/configs/update', name: 'app_gestion_configs_update')]
+    #[Route('/gestion/configs/update', name: 'app_gestion_configs_update', methods: ['POST'])]
     public function update(): void
     {
         //On vérifie que le CurrentUser a bien le droit de faire ça
@@ -92,7 +92,16 @@ class ConfigController extends AbstractController
 
     }
 
+    #[Route('/gestion/configs/delete', name: 'app_gestion_configs_delete', methods: ['POST'])]
+    public function delete(): void
+    {
+        //On vérifie que le CurrentUser a bien le droit de faire ça
+        $this->checkIfCurrentUserIsAllowedToManagedOthersUsers();
 
-
+        $configId = (int)($_POST['config_id'] ?? 0);
+        $this->configRepository->delete($configId);
+        $this->flashMessageService->setFlashMessage('success', "Configuration supprimée.");
+        $this->redirect('/gestion/configs');
+    }
 
 }

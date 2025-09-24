@@ -39,7 +39,8 @@ class UserController extends AbstractController
             'roles' => $this->roleRepository->findAll(),
             'currentUser' => $this->currentUser,
             'csrf_token_add' => $this->csrfService->getToken('/gestion/users/add'),
-            'csrf_token_edit' => $this->csrfService->getToken('/gestion/users/edit')
+            'csrf_token_edit' => $this->csrfService->getToken('/gestion/users/edit'),
+            'csrf_token_delete' => $this->csrfService->getToken('/gestion/users/delete')
         ], 'gestion des utilisateurs');
     }
 
@@ -98,7 +99,7 @@ class UserController extends AbstractController
         $user = $this->userRepository->findById($userId);
         if (!$user) {
             $this->flashMessageService->setFlashMessage('danger', "Utilisateur non trouvé.");
-            $this->redirect('/gestion/users');
+            $this->redirectWithAnchor('/gestion/users');
         }
         //Vérifications d'usage
         $this->checksForUser('update', $user);
@@ -114,17 +115,26 @@ class UserController extends AbstractController
         $this->flashMessageService->setFlashMessage('success','Utilisateur modifié.');
 
         $this->userRepository->update($user);
+        $this->redirectWithAnchor('/gestion/users');
+    }
+
+    #[Route('/gestion/users/delete', name: 'app_gestion_users_delete', methods : ['POST'])]
+    public function delete(): void
+    {
+        //On vérifie que le CurrentUser a bien le droit de faire ça
+        $this->checkIfCurrentUserIsAllowedToManagedOthersUsers();
+
+        //On récupère le user.
+        $userId = (int)($_POST['user_id'] ?? 0);
+        $user = $this->userRepository->findById($userId);
+        if (!$user) {
+            $this->flashMessageService->setFlashMessage('danger', "Utilisateur non trouvé.");
+            $this->redirect('/gestion/users');
+        }
+
+        $this->userRepository->delete($userId);
+        $this->flashMessageService->setFlashMessage('success', "Utilisateur supprimé.");
         $this->redirect('/gestion/users');
-    }
-
-    public function suspend()
-    {
-
-    }
-
-    public function delete()
-    {
-
     }
 
     /**

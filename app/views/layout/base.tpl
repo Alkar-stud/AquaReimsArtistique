@@ -45,45 +45,32 @@
 
 {% if $_ENV['APP_DEBUG'] == "true" %}
 <!-- Outils de débogage -->
-<div id="debug-bar" style="position: fixed; bottom: 10px; right: 10px; background-color: rgba(0,0,0,0.7); color: white; padding: 5px 10px; border-radius: 5px; font-family: monospace; z-index: 9999; font-size: 12px; display: flex; flex-direction: row; align-items: center; gap: 10px;">
-    <div id="screen-dimensions-display"></div>
-    {% if ($user_is_authenticated ?? false) and (($session_timeout_duration ?? 0) > 0) %}
-    <span style="color: #888;">|</span>
-    <div id="session-timeout-display"></div>
-    {% endif %}
+<link rel="stylesheet" href="/assets/css/debug-bar.css">
+<div id="debug-container">
+    <div id="debug-toggle" title="Afficher/Masquer le bandeau de débogage">
+        <i class="bi bi-bug-fill"></i>
+    </div>
+    <div id="debug-bar">
+        <div id="screen-dimensions-display"></div>
+        {% if ($user_is_authenticated ?? false) %}
+        <span style="color: #666;">|</span>
+        <div>
+            <span style="color: #aaa;">User:</span> {{ $debug_user_info['name'] }} ({{ $debug_user_info['id'] }})
+        </div>
+        <span style="color: #666;">|</span>
+        <div>
+            <span style="color: #aaa;">Role:</span> {{ $debug_user_info['role_label'] }} ({{ $debug_user_info['role_id'] }})
+        </div>
+        <span style="color: #666;">|</span>
+        <div title="Session ID">
+            <span style="color: #aaa;">SID:</span> <span style="font-size: 10px;">{{ $debug_user_info['session_id'] }}</span>
+        </div>
+        <span style="color: #666;">|</span>
+        <div id="session-timeout-display"></div>
+        {% endif %}
+    </div>
 </div>
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const dimensionsDisplay = document.getElementById('screen-dimensions-display');
-        function updateDimensions() {
-            if(dimensionsDisplay) dimensionsDisplay.textContent = `Viewport: ${window.innerWidth}px x ${window.innerHeight}px`;
-        }
-        updateDimensions();
-        window.addEventListener('resize', updateDimensions);
-
-        const timeoutDisplay = document.getElementById('session-timeout-display');
-        if (timeoutDisplay) {
-            const timeoutDuration = {{! $session_timeout_duration ?? 0 !}}; // en secondes
-            const lastActivity = {{! $session_last_activity ?? time() !}};   // timestamp
-            const expirationTime = (lastActivity + timeoutDuration) * 1000;
-
-            const intervalId = setInterval(() => {
-                const now = new Date().getTime();
-                const remaining = expirationTime - now;
-
-                if (remaining <= 0) {
-                    timeoutDisplay.textContent = 'Session: Expirée';
-                    timeoutDisplay.style.color = '#ffc107';
-                    clearInterval(intervalId);
-                } else {
-                    const minutes = Math.floor(remaining / (1000 * 60));
-                    const seconds = Math.floor((remaining % (1000 * 60)) / 1000);
-                    timeoutDisplay.textContent = `Session: ${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
-                }
-            }, 1000);
-        }
-    });
-</script>
+<script src="/assets/js/debug-bar.js" defer></script>
 {% endif %}
 
 </body>

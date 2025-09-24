@@ -57,6 +57,17 @@ abstract class AbstractController
         $this->flashMessageService->unsetFlashMessage();
 
         if (($_ENV['APP_DEBUG'] ?? 'false') === 'true') {
+            $data['user_is_authenticated'] = isset($_SESSION['user']['id']);
+            $data['debug_user_info'] = null;
+            if ($data['user_is_authenticated']) {
+                $data['debug_user_info'] = [
+                    'name' => $_SESSION['user']['username'] ?? 'N/A',
+                    'id' => $_SESSION['user']['id'],
+                    'role_label' => $_SESSION['user']['role']['label'] ?? 'N/A',
+                    'role_id' => $_SESSION['user']['role']['id'] ?? 'N/A',
+                    'session_id' => session_id()
+                ];
+            }
             $timeoutValue = defined('TIMEOUT_SESSION') ? TIMEOUT_SESSION : 0;
             $durationInSeconds = 0;
 
@@ -65,9 +76,8 @@ abstract class AbstractController
             } elseif (is_string($timeoutValue) && str_starts_with($timeoutValue, 'PT')) {
                 $durationInSeconds = DurationHelper::iso8601ToSeconds($timeoutValue);
             }
-            $data['session_timeout_duration'] = $durationInSeconds;
-            $data['session_last_activity'] = $_SESSION['user']['LAST_ACTIVITY'] ?? time();
-            $data['user_is_authenticated'] = isset($_SESSION['user']['id']);
+            $data['js_data']['debug']['sessionTimeoutDuration'] = $durationInSeconds;
+            $data['js_data']['debug']['sessionLastActivity'] = $_SESSION['user']['LAST_ACTIVITY'] ?? time();
         }
 
         $templateTpl = __DIR__ . '/../views/' . $view . '.tpl';
@@ -279,6 +289,19 @@ abstract class AbstractController
     {
         header('Location: ' . $url);
         exit;
+    }
+
+    /**
+     * Redirige vers une URL en ajoutant une ancre si elle est présente dans POST.
+     * @param string $url
+     * @param string $anchorKey La clé POST contenant l'ancre.
+     */
+    protected function redirectWithAnchor(string $url, string $anchorKey = 'form_anchor'): void
+    {
+        if (!empty($_POST[$anchorKey])) {
+            $url .= '#' . $_POST[$anchorKey];
+        }
+        $this->redirect($url);
     }
 
 }

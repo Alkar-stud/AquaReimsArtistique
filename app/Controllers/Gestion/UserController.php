@@ -9,7 +9,7 @@ use app\Repository\User\RoleRepository;
 use app\Repository\User\UserRepository;
 use app\Services\Mails\MailPrepareService;
 use app\Services\Security\TokenGenerateService;
-use app\Services\User\UserDataValidationService;
+use app\Services\DataValidation\UserDataValidationService;
 use app\Utils\BuildLink;
 use Exception;
 
@@ -137,18 +137,6 @@ class UserController extends AbstractController
         $this->redirect('/gestion/users');
     }
 
-    /**
-     * Vérifie si l'utilisateur courant a les droits pour gérer les autres utilisateurs.
-     * Redirige si false sinon retourne true
-     * @return void
-     */
-    private function checkIfCurrentUserIsAllowedToManagedOthersUsers(): void
-    {
-        if (!$this->currentUser || !in_array($this->currentUser->getRole()->getLevel(), [0, 1])) {
-            $this->flashMessageService->setFlashMessage('danger', "Accès refusé");
-            $this->redirect('/gestion/users');
-        }
-    }
 
     /**
      * Vérifications d'usage pour l'ajout ou la modification d'un utilisateur

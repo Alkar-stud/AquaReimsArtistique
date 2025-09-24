@@ -285,6 +285,19 @@ abstract class AbstractController
         }
     }
 
+    /**
+     * Vérifie si l'utilisateur courant a les droits de faire ce qui est demandé.
+     * Redirige si false sinon retourne true
+     * @return void
+     */
+    protected function checkIfCurrentUserIsAllowedToManagedOthersUsers(): void
+    {
+        if (!$this->currentUser || !in_array($this->currentUser->getRole()->getLevel(), [0, 1])) {
+            $this->flashMessageService->setFlashMessage('danger', "Accès refusé");
+            $this->redirect('/gestion/users');
+        }
+    }
+
     protected function redirect(string $url): void
     {
         header('Location: ' . $url);
@@ -296,12 +309,19 @@ abstract class AbstractController
      * @param string $url
      * @param string $anchorKey La clé POST contenant l'ancre.
      */
-    protected function redirectWithAnchor(string $url, string $anchorKey = 'form_anchor'): void
+    protected function redirectWithAnchor(string $url, string $anchorKey = 'form_anchor', int $id = 0, ?string $context = null): void
     {
-        if (!empty($_POST[$anchorKey])) {
-            $url .= '#' . $_POST[$anchorKey];
+        $anchor = '';
+        if ($id != 0) {
+            // Déduire le préfixe selon le contexte
+            $prefix = $context === 'desktop' ? 'config-row-' : 'config-card-';
+            $anchor = $prefix . $id;
+        } elseif (!empty($_POST[$anchorKey])) {
+            $anchor = $_POST[$anchorKey];
+        }
+        if ($anchor) {
+            $url .= '#' . $anchor;
         }
         $this->redirect($url);
     }
-
 }

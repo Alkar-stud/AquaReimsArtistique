@@ -1,5 +1,5 @@
 <?php
-namespace app\Services\User;
+namespace app\Services\DataValidation;
 
 class UserDataValidationService
 {

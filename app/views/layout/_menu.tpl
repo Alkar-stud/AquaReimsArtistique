@@ -55,9 +55,9 @@
                         Configuration
                     </a>
                     <ul class="dropdown-menu" aria-labelledby="configDropdown">
-                        <li><a class="dropdown-item {{ $uri == '/gestion/configuration/configs' ? 'active-link' : '' }}" href="/gestion/configuration/configs">Configs</a></li>
-                        <li><a class="dropdown-item {{ $uri == '/gestion/configuration/pages' ? 'active-link' : '' }}" href="/gestion/configuration/pages">Pages (à venir)</a></li>
-                        <li><a class="dropdown-item {{ $uri == '/gestion/configuration/erreurs' ? 'active-link' : '' }}" href="/gestion/configuration/erreurs">Messages d'erreur (à venir)</a></li>
+                        <li><a class="dropdown-item {{ $uri == '/gestion/configuration/configs' ? 'active-link' : '' }}" href="/gestion/configs">Configs</a></li>
+                        <li><a class="dropdown-item {{ $uri == '/gestion/configuration/pages' ? 'active-link' : '' }}" href="/gestion/pages">Pages (à venir)</a></li>
+                        <li><a class="dropdown-item {{ $uri == '/gestion/configuration/erreurs' ? 'active-link' : '' }}" href="/gestion/erreurs">Messages d'erreur (à venir)</a></li>
                     </ul>
                 </li>
                 <li class="nav-item">

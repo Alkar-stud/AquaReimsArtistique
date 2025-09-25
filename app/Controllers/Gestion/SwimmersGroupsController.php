@@ -41,11 +41,21 @@ class SwimmersGroupsController extends AbstractController
     #[Route('/gestion/swimmers-groups/add', name: 'app_gestion_swimmers_groups_add', methods: ['POST'])]
     public function add(): void
     {
+        //On vérifie que le CurrentUser a bien le droit de faire ça
+        $this->checkIfCurrentUserIsAllowedToManagedThis(2, 'swimmers-groups');
+
+        // Validation des données centralisée
+        $error = $this->swimmerGroupDataValidationService->checkData($_POST);
+        if ($error) {
+            $this->flashMessageService->setFlashMessage('danger', $error);
+            $this->redirect('/gestion/swimmers-groups');
+        }
+
         $groupe = new SwimmerGroup();
-        $groupe->setName($_POST['name'] ?? '')
-            ->setCoach(isset($_POST['coach']) && $_POST['coach'] !== '' ? mb_convert_case($_POST['coach'], MB_CASE_TITLE, "UTF-8") : null)
-            ->setIsActive(isset($_POST['is_active']))
-            ->setOrder((int)($_POST['order'] ?? 0));
+        $groupe->setName($this->swimmerGroupDataValidationService->getName())
+            ->setCoach($this->swimmerGroupDataValidationService->getCoach())
+            ->setIsActive($this->swimmerGroupDataValidationService->getIsActive())
+            ->setOrder($this->swimmerGroupDataValidationService->getOrder());
         $this->swimmerGroupRepository->insert($groupe);
         $this->flashMessageService->setFlashMessage('success', "Groupe ajouté");
         $this->redirect('/gestion/swimmers-groups');

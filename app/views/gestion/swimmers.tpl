@@ -7,102 +7,48 @@
 <div class="container-fluid">
     <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
         <h2 class="mb-0">
-            {% if $groupeLibelle %}
-            Nageuses du groupe « {{ $groupeLibelle }} »
+            {% if $GroupName %}
+            Nageurs du groupe « {{ $GroupName }} »
             {% elseif $groupId == 'all' %}
-            Toutes les nageuses
+            Tous les nageurs
             {% else %}
-            Nageuses
+            Nageurs sans groupe
             {% endif %}
         </h2>
         <form method="GET" onsubmit="if(this.g.value){ window.location='/gestion/swimmers/'+this.g.value; return false; }">
             <div class="input-group">
                 <select name="g" class="form-select" onchange="if(this.value){ window.location='/gestion/swimmers/'+this.value; }">
-                    <option value="all" {{ $groupId == 'all' ? 'selected' : '' }}>Tous les groupes</option>
+                    <option value="all" selected>Tous les groupes</option>
+                    <option value="0" {{ $groupId == 0 ? 'selected' : '' }}>Aucun groupe</option>
                     {% foreach $groupes as $g %}
                     <option value="{{ $g->getId() }}" {{ (string)$groupId === (string)$g->getId() ? 'selected' : '' }}>
-                        {{ $g->getLibelle() }}
+                        {{ $g->getName() }}
                     </option>
                     {% endforeach %}
                 </select>
-                <button class="btn btn-outline-secondary" type="button" onclick="window.location='/gestion/groupes-nageuses'">Gérer groupes</button>
+                <button class="btn btn-outline-secondary" type="button" onclick="window.location='/gestion/swimmers-groups'">Gérer groupes</button>
             </div>
         </form>
     </div>
 
     <!-- Mobile -->
     <div class="d-md-none mb-4">
-        {% if !empty($nageuses) %}
-        <ul class="list-group mb-3">
-            {% foreach $nageuses as $nageuse %}
-            <li class="list-group-item">
-                <div class="d-flex justify-content-between align-items-start">
-                    <div>
-                        <strong>{{ $nageuse->getName() }}</strong><br>
-                        <small class="text-muted">
-                            Groupe:
-                            {% set current = null %}
-                            {% foreach $groupes as $g %}
-                            {% if $g->getId() == $nageuse->getGroupe() %}
-                            {% set current = $g %}
-                            {% endif %}
-                            {% endforeach %}
-                            {{ $current ? $current->getLibelle() : '—' }}
-                        </small>
-                    </div>
-                    <div class="btn-group btn-group-sm">
-                        <button class="btn btn-secondary" type="button"
-                                onclick="const f=this.parentElement.parentElement.nextElementSibling; f.style.display=f.style.display==='none'?'block':'none'">
-                            Éditer
-                        </button>
-                        <a class="btn btn-danger"
-                           onclick="return confirm('Supprimer cette nageuse ?')"
-                           href="/gestion/nageuses/delete/{{ $nageuse->getId() }}">X</a>
-                    </div>
-                </div>
-                <form action="/gestion/nageuses/update/{{ $nageuse->getId() }}" method="POST" class="mt-2" style="display:none">
-                    <input type="hidden" name="origine-groupe" value="{{ $groupId }}">
-                    <div class="mb-2">
-                        <input type="text" name="name" class="form-control form-control-sm" required value="{{ $nageuse->getName() }}">
-                    </div>
-                    <div class="mb-2">
-                        <select name="groupe" class="form-select form-select-sm">
-                            <option value="">(Aucun)</option>
-                            {% foreach $groupes as $g %}
-                            <option value="{{ $g->getId() }}" {{ $nageuse->getGroupe() == $g->getId() ? 'selected' : '' }}>
-                                {{ $g->getLibelle() }}
-                            </option>
-                            {% endforeach %}
-                        </select>
-                    </div>
-                    <div class="d-flex gap-2">
-                        <button type="submit" class="btn btn-success btn-sm">Enregistrer</button>
-                        <button type="button" class="btn btn-outline-secondary btn-sm"
-                                onclick="this.closest('form').style.display='none'">Annuler</button>
-                    </div>
-                </form>
-            </li>
-            {% endforeach %}
-        </ul>
-        {% else %}
-        <p class="text-center text-muted">Aucune nageuse trouvée</p>
-        {% endif %}
-
         <div class="card">
             <div class="card-body">
-                <h6 class="card-title">Ajouter une nageuse</h6>
-                <form action="/gestion/nageuses/add" method="POST">
+                <h6 class="card-title">Ajouter un nageur</h6>
+                <form action="/gestion/swimmers/add" method="POST">
+                    <input type="hidden" name="csrf_token" value="{{ $csrf_token }}">
                     <div class="mb-2">
                         <label class="form-label">Nom</label>
                         <input type="text" name="name" class="form-control form-control-sm" required>
                     </div>
                     <div class="mb-2">
                         <label class="form-label">Groupe</label>
-                        <select name="groupe" class="form-select form-select-sm">
-                            <option value="">(Aucun)</option>
+                        <select name="group" class="form-select form-select-sm">
+                            <option value="">(Aucun, il faut en choisir un)</option>
                             {% foreach $groupes as $g %}
                             <option value="{{ $g->getId() }}" {{ (string)$groupId === (string)$g->getId() ? 'selected' : '' }}>
-                                {{ $g->getLibelle() }}
+                                {{ $g->getName() }}
                             </option>
                             {% endforeach %}
                         </select>
@@ -111,6 +57,66 @@
                 </form>
             </div>
         </div>
+
+        {% if !empty($swimmers) %}
+        <ul class="list-group mb-3">
+            {% foreach $swimmers as $swimmer %}
+            <li class="list-group-item">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <strong>{{ $swimmer->getName() }}</strong><br>
+                        {% if $groupId == 'all' %}
+                        <small class="text-muted">
+                            Groupe:
+                            {% if $swimmer->getGroupObject() %}
+                            {{ $swimmer->getGroupObject()->getName() }}
+                            {% else %}
+                            Aucun
+                            {% endif %}
+                        </small>
+                        {% endif %}
+                    </div>
+                    <div class="btn-group btn-group-sm">
+                        <button class="btn btn-secondary" type="button"
+                                onclick="const f=this.parentElement.parentElement.nextElementSibling; f.style.display=f.style.display==='none'?'block':'none'">
+                            Éditer
+                        </button>
+                        <a class="btn btn-danger"
+                           onclick="return confirm('Supprimer ce swimmer ?')"
+                           href="/gestion/swimmers/delete/{{ $swimmer->getId() }}">X</a>
+                    </div>
+                </div>
+                <form action="/gestion/swimmers/update" method="POST" class="mt-2" style="display:none">
+                    <input type="hidden" name="csrf_token" value="{{ $csrf_token }}">
+                    <input type="hidden" name="form_anchor" value="config-card-{{ $swimmer->getId() }}">
+                    <input type="hidden" name="swimmer_id" value="{{ $swimmer->getId() }}">
+                    <input type="hidden" name="context" value="mobile">
+                    <div class="mb-2">
+                        <input type="text" name="name" class="form-control form-control-sm" required value="{{ $swimmer->getName() }}">
+                    </div>
+                    <div class="mb-2">
+                        <select name="group" class="form-select form-select-sm">
+                            <option value="">(Aucun)</option>
+                            {% foreach $groupes as $g %}
+                            <option value="{{ $g->getId() }}" {{ $swimmer->getGroup() == $g->getId() ? 'selected' : '' }}>
+                                {{ $g->getName() }}
+                            </option>
+                            {% endforeach %}
+                        </select>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-secondary btn-sm">Enregistrer</button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm"
+                                onclick="this.closest('form').style.display='none'">Annuler</button>
+                    </div>
+                </form>
+            </li>
+            {% endforeach %}
+        </ul>
+        {% else %}
+        <p class="text-center text-muted">Aucun nageur trouvé</p>
+        {% endif %}
+
     </div>
 
     <!-- Desktop -->
@@ -125,16 +131,17 @@
             </thead>
             <tbody>
             <tr>
-                <form action="/gestion/nageuses/add" method="POST">
+                <form action="/gestion/swimmers/add" method="POST">
+                    <input type="hidden" name="csrf_token" value="{{ $csrf_token }}">
                     <td>
                         <input type="text" name="name" class="form-control" required>
                     </td>
                     <td>
-                        <select name="groupe" class="form-select">
-                            <option value="">(Aucun)</option>
+                        <select name="group" class="form-select">
+                            <option value="">(Aucun, il faut en choisir un)</option>
                             {% foreach $groupes as $g %}
                             <option value="{{ $g->getId() }}" {{ (string)$groupId === (string)$g->getId() ? 'selected' : '' }}>
-                                {{ $g->getLibelle() }}
+                                {{ $g->getName() }}
                             </option>
                             {% endforeach %}
                         </select>
@@ -144,36 +151,40 @@
                     </td>
                 </form>
             </tr>
-            {% if !empty($nageuses) %}
-            {% foreach $nageuses as $nageuse %}
+            {% if !empty($swimmers) %}
+            {% foreach $swimmers as $swimmer %}
             <tr>
-                <form action="/gestion/nageuses/update/{{ $nageuse->getId() }}" method="POST">
-                    <input type="hidden" name="origine-groupe" value="{{ $groupId }}">
+                <form action="/gestion/swimmers/update" method="POST">
+                    <input type="hidden" name="csrf_token" value="{{ $csrf_token }}">
+                    <input type="hidden" name="form_anchor" value="config-row-{{ $swimmer->getId() }}">
+                    <input type="hidden" name="swimmer_id" value="{{ $swimmer->getId() }}">
+                    <input type="hidden" name="context" value="desktop">
                     <td>
-                        <input type="text" name="name" class="form-control" required value="{{ $nageuse->getName() }}">
+                        <input type="text" name="name" class="form-control" required value="{{ $swimmer->getName() }}">
                     </td>
                     <td>
-                        <select name="groupe" class="form-select">
+                        <select name="group" class="form-select">
                             <option value="">(Aucun)</option>
                             {% foreach $groupes as $g %}
-                            <option value="{{ $g->getId() }}" {{ $nageuse->getGroupe() == $g->getId() ? 'selected' : '' }}>
-                                {{ $g->getLibelle() }}
+                            <option value="{{ $g->getId() }}" {{ $swimmer->getGroup() == $g->getId() ? 'selected' : '' }}>
+                                {{ $g->getName() }}
                             </option>
                             {% endforeach %}
                         </select>
                     </td>
                     <td class="d-flex gap-2">
                         <button type="submit" class="btn btn-secondary btn-sm">Enregistrer</button>
-                        <a href="/gestion/nageuses/delete/{{ $nageuse->getId() }}"
-                           onclick="return confirm('Supprimer cette nageuse ?')"
-                           class="btn btn-danger btn-sm">Supprimer</a>
-                    </td>
+                    </form>
+                <form method="POST" action="/gestion/swimmers/delete" onsubmit="return confirm('Supprimer ce groupe ?');" class="d-inline">
+                    <input type="hidden" name="csrf_token" value="{{ $csrf_token }}">
+                    <button type="submit" class="btn btn-danger btn-sm">Supprimer</button>
                 </form>
+                    </td>
             </tr>
             {% endforeach %}
             {% else %}
             <tr>
-                <td colspan="3" class="text-center text-muted">Aucune nageuse</td>
+                <td colspan="3" class="text-center text-muted">Aucun nageur</td>
             </tr>
             {% endif %}
             </tbody>

@@ -6,7 +6,7 @@ use app\Models\AbstractModel;
 class Swimmer extends AbstractModel
 {
     private string $name;
-    private ?int $group = null; // FK swimmer_group.id
+    private ?int $group = null; // FK swimmer_group.id, peut être null si un (ancien) nageur ne fait plus partie d'aucun groupe
     private ?SwimmerGroup $groupObject = null;
 
     // --- GETTERS ---

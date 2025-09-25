@@ -54,6 +54,8 @@ class SwimmerRepository extends AbstractRepository
 
     /**
      * Retourne tous les nageurs d'un groupe
+     * @param int $groupId
+     * @param bool $withGroup
      * @return Swimmer[]
      */
     public function findByGroupId(int $groupId, bool $withGroup = false): array
@@ -68,6 +70,18 @@ class SwimmerRepository extends AbstractRepository
         }
 
         return array_map(fn(array $r) => $this->hydrate($r, $group), $rows);
+    }
+
+    /**
+     * Retourne les nageurs sans groupe
+     * @return Swimmer[]
+     */
+    public function findWithoutGroup(): array
+    {
+        $sql = "SELECT * FROM $this->tableName WHERE `group` IS NULL ORDER BY name";
+        $rows = $this->query($sql);
+
+        return array_map([$this, 'hydrate'], $rows);
     }
 
     /**

@@ -14,7 +14,7 @@ class SwimmerGroupDataValidationService
     {
         // Normalisation
         $this->name = htmlspecialchars(trim($data['name'] ?? ''));
-        $coachValue = isset($data['coach']) ? trim($data['coach']) : '';
+        $coachValue = isset($data['coach']) ? mb_convert_case((trim($data['coach']) ?? ''), MB_CASE_TITLE, "UTF-8") : '';
         $this->coach = $coachValue !== '' ? htmlspecialchars($coachValue) : null;
         $this->is_active = isset($data['is_active']) ? filter_var($data['is_active'], FILTER_VALIDATE_BOOLEAN) : true;
         $this->order = isset($data['order']) && is_numeric($data['order']) ? (int)$data['order'] : 0;

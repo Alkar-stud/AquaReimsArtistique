@@ -7,56 +7,118 @@ use app\Controllers\AbstractController;
 use app\Models\Swimmer\Swimmer;
 use app\Repository\Swimmer\SwimmerGroupRepository;
 use app\Repository\Swimmer\SwimmerRepository;
+use app\Services\DataValidation\SwimmerDataValidationService;
 
 class SwimmerController extends AbstractController
 {
     private SwimmerGroupRepository $swimmerGroupRepository;
     private SwimmerRepository $swimmerRepository;
+    private SwimmerDataValidationService $swimmerDataValidationService;
 
     public function __construct()
     {
         parent::__construct(false);
         $this->swimmerGroupRepository = new SwimmerGroupRepository();
         $this->swimmerRepository = new SwimmerRepository();
+        $this->swimmerDataValidationService = new SwimmerDataValidationService();
     }
 
-    #[Route('/gestion/swimmers/{groupId}', name: 'app_gestion_swimmers_group')]
-    public function index(int $groupId = 0): void
+    #[Route('/gestion/swimmers/{groupId}', name: 'app_gestion_swimmers_group', requirements: ['groupId' => 'all|0|\d+'])]
+    public function index(mixed $groupId = 'all'): void
     {
-        //On récupère tous les groupes
         $swimmersGroups = $this->swimmerGroupRepository->findAll();
 
-        if ($groupId == 0) {
-
-
+        if ($groupId === 'all') {
+            $groupName = 'tous les groupes';
+            $swimmers = $this->swimmerRepository->findAll(true);
+        } elseif ($groupId == 0) {
+            $this->flashMessageService->setFlashMessage('warning', 'Vous n\'avez ici que les nageuses sans groupe');
+            $groupName = 'sans groupe';
+            $swimmers = $this->swimmerRepository->findWithoutGroup();
+        } elseif (!is_numeric($groupId)) {
+            $this->flashMessageService->setFlashMessage('danger', 'Ce groupe n\'existe pas');
+            $this->render('/gestion/swimmers', [
+                'swimmers' => [],
+                'groupes' => $swimmersGroups,
+                'groupId' => $groupId,
+                'GroupName' => '',
+                'flash_message' => $this->flashMessageService->getFlashMessage(),
+                'currentUser' => $this->currentUser
+            ], 'Gestion des nageurs');
+            return;
+        } else {
+            $swimmersInGroup = $this->swimmerGroupRepository->findById((int)$groupId, true);
+            $groupName = $swimmersInGroup->getName();
+            $swimmers = $swimmersInGroup->getSwimmers();
         }
 
-
-
         $this->render('/gestion/swimmers', [
-            'data' => $swimmersGroups,
-            'currentUser' => $this->currentUser,
-            'csrf_token_add' => $this->csrfService->getToken('/gestion/swimmers/add'),
-            'csrf_token_edit' => $this->csrfService->getToken('/gestion/swimmers/update'),
-            'csrf_token_delete' => $this->csrfService->getToken('/gestion/swimmers/delete')
-        ], 'Gestion des ' . $titre);
+            'swimmers' => $swimmers,
+            'groupes' => $swimmersGroups,
+            'groupId' => $groupId,
+            'GroupName' => $groupName,
+            'flash_message' => $this->flashMessageService->getFlashMessage(),
+            'currentUser' => $this->currentUser
+        ], 'Gestion du groupe  ' . $groupName);
     }
 
 
     #[Route('/gestion/swimmers/add', name: 'app_gestion_swimmers_add', methods: ['POST'])]
     public function add(): void
     {
-        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $nageuse = new Swimmer();
-            $nageuse->setName(mb_convert_case($_POST['name'], MB_CASE_TITLE, "UTF-8") ?? '')
-                ->setGroupe(isset($_POST['groupe']) ? (int)$_POST['groupe'] : null)
-                ->setCreatedAt(date('Y-m-d H:i:s'));
-            $this->swimmerRepository->insert($nageuse);
-            $this->flashMessageService->setFlashMessage('success', "Nageuse ajoutée");
-            header('Location: /gestion/nageuses/' . $nageuse->getGroupe());
-            exit;
-        } else {
-            $this->flashMessageService->setFlashMessage('danger', "Erreur lors de l'ajout");
+        //On vérifie que le CurrentUser a bien le droit de faire ça
+        $this->checkIfCurrentUserIsAllowedToManagedThis(2, 'swimmers');
+
+        // Validation des données centralisée
+        $error = $this->swimmerDataValidationService->checkData($_POST);
+        if ($error) {
+            $this->flashMessageService->setFlashMessage('danger', $error);
+            $this->redirect('/gestion/swimmers');
         }
+
+        $swimmer = new Swimmer();
+        $swimmer->setName($this->swimmerDataValidationService->getName())
+            ->setGroup($this->swimmerDataValidationService->getGroup());
+        $this->swimmerRepository->insert($swimmer);
+        $this->flashMessageService->setFlashMessage('success', "Nageur ajouté");
+        $this->redirect('/gestion/swimmers/' . $swimmer->getGroup());
     }
+
+    #[Route('/gestion/swimmers/update', name: 'app_gestion_swimmers_update', methods: ['POST'])]
+    public function update(): void
+    {
+        //On vérifie que le CurrentUser a bien le droit de faire ça
+        $this->checkIfCurrentUserIsAllowedToManagedThis(2, 'swimmers-groups');
+
+        //On récupère le nageur et le groupe d'origine
+        $swimmerId = (int)($_POST['swimmer_id'] ?? 0);
+        $swimmer = $this->swimmerRepository->findById($swimmerId);
+
+        if (!$swimmer) {
+            $this->flashMessageService->setFlashMessage('danger', "Nageur non trouvé.");
+            $this->redirect('/gestion/swimmers');
+        }
+
+        // Validation des données centralisée
+        $error = $this->swimmerDataValidationService->checkData($_POST);
+        if ($error) {
+            $this->flashMessageService->setFlashMessage('danger', $error);
+            $this->redirect('/gestion/swimmers');
+        }
+
+        $originGroupId = $swimmer->getGroup();
+
+        $swimmer->setName($this->swimmerDataValidationService->getName())
+            ->setGroup($this->swimmerDataValidationService->getGroup());
+
+        $this->swimmerRepository->update($swimmer);
+        $this->flashMessageService->setFlashMessage('success', "Nageur modifié et/ou déplacé.");
+        $originGroupId !== $swimmer->getGroup() ? $group = $originGroupId: $group = $swimmer->getGroup();
+        $context = htmlspecialchars($_POST['context']) ?? 'desktop';
+
+        $this->redirectWithAnchor('/gestion/swimmers/' . $group, 'form_anchor', $swimmer->getId(), $context);
+    }
+
+
+
 }

@@ -51,12 +51,12 @@ class SwimmersGroupsController extends AbstractController
             $this->redirect('/gestion/swimmers-groups');
         }
 
-        $groupe = new SwimmerGroup();
-        $groupe->setName($this->swimmerGroupDataValidationService->getName())
+        $group = new SwimmerGroup();
+        $group->setName($this->swimmerGroupDataValidationService->getName())
             ->setCoach($this->swimmerGroupDataValidationService->getCoach())
             ->setIsActive($this->swimmerGroupDataValidationService->getIsActive())
             ->setOrder($this->swimmerGroupDataValidationService->getOrder());
-        $this->swimmerGroupRepository->insert($groupe);
+        $this->swimmerGroupRepository->insert($group);
         $this->flashMessageService->setFlashMessage('success', "Groupe ajouté");
         $this->redirect('/gestion/swimmers-groups');
     }
@@ -83,10 +83,10 @@ class SwimmersGroupsController extends AbstractController
             $this->redirect('/gestion/swimmers-groups');
         }
 
-        $group->setName($_POST['name'] ?? '')
-            ->setCoach(isset($_POST['coach']) && $_POST['coach'] !== '' ? mb_convert_case($_POST['coach'], MB_CASE_TITLE, "UTF-8") : null)
-            ->setIsActive(isset($_POST['is_active']))
-            ->setOrder((int)($_POST['order'] ?? 0));
+        $group->setName($this->swimmerGroupDataValidationService->getName())
+            ->setCoach($this->swimmerGroupDataValidationService->getCoach())
+            ->setIsActive($this->swimmerGroupDataValidationService->getIsActive())
+            ->setOrder($this->swimmerGroupDataValidationService->getOrder());
 
         $this->swimmerGroupRepository->update($group);
         $this->flashMessageService->setFlashMessage('success', "Groupe modifié.");

@@ -18,7 +18,7 @@ class PiscineRepository extends AbstractRepository
      */
     public function findAll(): array
     {
-        $sql = "SELECT * FROM $this->tableName ORDER BY libelle";
+        $sql = "SELECT * FROM $this->tableName ORDER BY label";
         $rows = $this->query($sql);
         return array_map([$this, 'hydrate'], $rows);
     }
@@ -41,11 +41,11 @@ class PiscineRepository extends AbstractRepository
      */
     public function insert(Piscine $piscine): int
     {
-        $sql = "INSERT INTO $this->tableName (libelle, adresse, max_places, numbered_seats)
-                VALUES (:libelle, :adresse, :max_places, :numbered_seats)";
+        $sql = "INSERT INTO $this->tableName (label, address, max_places, numbered_seats)
+                VALUES (:label, :address, :max_places, :numbered_seats)";
         $ok = $this->execute($sql, [
-            'libelle' => $piscine->getLibelle(),
-            'adresse' => $piscine->getAdresse(),
+            'label' => $piscine->getLabel(),
+            'address' => $piscine->getAddress(),
             'max_places' => $piscine->getMaxPlaces(),
             'numbered_seats' => $piscine->getNumberedSeats() ? 1 : 0,
         ]);
@@ -60,15 +60,15 @@ class PiscineRepository extends AbstractRepository
     public function update(Piscine $piscine): bool
     {
         $sql = "UPDATE {$this->tableName}
-                SET libelle = :libelle,
-                    adresse = :adresse,
+                SET label = :label,
+                    address = :address,
                     max_places = :max_places,
                     numbered_seats = :numbered_seats,
                     updated_at = NOW()
                 WHERE id = :id";
         return $this->execute($sql, [
-            'libelle' => $piscine->getLibelle(),
-            'adresse' => $piscine->getAdresse(),
+            'label' => $piscine->getLabel(),
+            'address' => $piscine->getAddress(),
             'max_places' => $piscine->getMaxPlaces(),
             'numbered_seats' => $piscine->getNumberedSeats() ? 1 : 0,
             'id' => $piscine->getId(),
@@ -83,8 +83,8 @@ class PiscineRepository extends AbstractRepository
     {
         $piscine = new Piscine();
         $piscine->setId((int)$data['id'])
-            ->setLibelle($data['libelle'])
-            ->setAdresse($data['adresse'])
+            ->setLabel($data['label'])
+            ->setAddress($data['address'] ?? null) // Utilisation de l'opérateur de coalescence pour gérer les NULL
             ->setMaxPlaces((int)$data['max_places'])
             ->setNumberedSeats($data['numbered_seats']);
 

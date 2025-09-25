@@ -22,6 +22,10 @@ class TarifRepository extends AbstractRepository
         return array_map([$this, 'hydrate'], $rows);
     }
 
+    /**
+     * @param int $id
+     * @return Tarif|null
+     */
     public function findById(int $id): ?Tarif
     {
         $sql = "SELECT * FROM $this->tableName WHERE id = :id";
@@ -63,6 +67,34 @@ class TarifRepository extends AbstractRepository
     }
 
     /**
+     * Retourne les tarifs en fonction de la présence de places assises.
+     * @param bool $hasSeats true pour les tarifs avec places, false pour les autres.
+     * @return Tarif[]
+     */
+    public function findBySeatType(bool $hasSeats): array
+    {
+        if ($hasSeats) {
+            $sql = "SELECT * FROM $this->tableName WHERE seat_count IS NOT NULL AND seat_count > 0 ORDER BY name";
+        } else {
+            $sql = "SELECT * FROM $this->tableName WHERE seat_count IS NULL OR seat_count = 0 ORDER BY name";
+        }
+        $rows = $this->query($sql);
+        return array_map([$this, 'hydrate'], $rows);
+    }
+
+    /**
+     * Trouve si le tarif est utilisé dans au moins un event
+     * @param int $id
+     * @return bool
+     */
+    public function isUsed(int $id): bool
+    {
+        $sql = "SELECT COUNT(*) FROM event_tarif WHERE tarif = :id";
+        $result = $this->query($sql, ['id' => $id]);
+        return $result[0]['COUNT(*)'] > 0;
+    }
+
+    /**
      * @return int ID inséré (0 si échec)
      */
     public function insert(Tarif $tarif): int
@@ -88,6 +120,11 @@ class TarifRepository extends AbstractRepository
         return $ok ? $this->getLastInsertId() : 0;
     }
 
+    /**
+     * Met à jour
+     * @param Tarif $tarif
+     * @return bool
+     */
     public function update(Tarif $tarif): bool
     {
         $sql = "UPDATE $this->tableName SET

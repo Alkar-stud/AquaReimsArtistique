@@ -120,5 +120,26 @@ class SwimmerController extends AbstractController
     }
 
 
+    #[Route('/gestion/swimmers/delete', name: 'app_gestion_swimmers_delete', methods: ['POST'])]
+    public function delete(): void
+    {
+        //On vérifie que le CurrentUser a bien le droit de faire ça
+        $this->checkIfCurrentUserIsAllowedToManagedThis(2, 'swimmers-groups');
+
+        //On récupère le nageur et le groupe d'origine
+        $swimmerId = (int)($_POST['swimmer_id'] ?? 0);
+        $swimmer = $this->swimmerRepository->findById($swimmerId);
+
+        if (!$swimmer) {
+            $this->flashMessageService->setFlashMessage('danger', "Nageur non trouvé.");
+            $this->redirect('/gestion/swimmers');
+        }
+
+
+        $this->swimmerRepository->delete($swimmerId);
+
+        $this->flashMessageService->setFlashMessage('success', "Nageur supprimé.");
+        $this->redirect('/gestion/swimmers/' . $swimmer->getGroup() );
+    }
 
 }

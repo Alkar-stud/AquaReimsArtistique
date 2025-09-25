@@ -76,14 +76,16 @@
                         </small>
                         {% endif %}
                     </div>
-                    <div class="btn-group btn-group-sm">
-                        <button class="btn btn-secondary" type="button"
-                                onclick="const f=this.parentElement.parentElement.nextElementSibling; f.style.display=f.style.display==='none'?'block':'none'">
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-secondary btn-sm" type="button"
+                                onclick="const f=this.closest('.list-group-item').querySelector('form[action*=\'update\']'); f.style.display=f.style.display==='none'?'block':'none'">
                             Éditer
                         </button>
-                        <a class="btn btn-danger"
-                           onclick="return confirm('Supprimer ce swimmer ?')"
-                           href="/gestion/swimmers/delete/{{ $swimmer->getId() }}">X</a>
+                        <form method="POST" action="/gestion/swimmers/delete" onsubmit="return confirm('Supprimer ce nageur ?');">
+                            <input type="hidden" name="csrf_token" value="{{ $csrf_token }}">
+                            <input type="hidden" name="swimmer_id" value="{{ $swimmer->getId() }}">
+                            <button type="submit" class="btn btn-danger btn-sm">Supprimer</button>
+                        </form>
                     </div>
                 </div>
                 <form action="/gestion/swimmers/update" method="POST" class="mt-2" style="display:none">
@@ -177,6 +179,7 @@
                     </form>
                 <form method="POST" action="/gestion/swimmers/delete" onsubmit="return confirm('Supprimer ce groupe ?');" class="d-inline">
                     <input type="hidden" name="csrf_token" value="{{ $csrf_token }}">
+                    <input type="hidden" name="swimmer_id" value="{{ $swimmer->getId() }}">
                     <button type="submit" class="btn btn-danger btn-sm">Supprimer</button>
                 </form>
                     </td>

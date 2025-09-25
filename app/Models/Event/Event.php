@@ -4,17 +4,18 @@ namespace app\Models\Event;
 
 use app\Models\AbstractModel;
 use app\Models\Piscine\Piscine;
+use app\Models\Tarif\Tarif;
 
 class Event extends AbstractModel
 {
     private string $name;
     private int $place; // FK piscine.id
     private ?Piscine $piscine = null;
-    private ?int $limitation_per_swimmer = null;
+    private ?int $limitationPerSwimmer = null;
 
     /** @var EventSession[] */
     private array $sessions = [];
-    /** @var \app\Models\Tarif\Tarif[] */
+    /** @var Tarif[] */
     private array $tarifs = [];
     /** @var EventInscriptionDate[] */
     private array $inscriptionDates = [];
@@ -25,7 +26,7 @@ class Event extends AbstractModel
     public function getName(): string { return $this->name; }
     public function getPlace(): int { return $this->place; }
     public function getPiscine(): ?Piscine { return $this->piscine; }
-    public function getLimitationPerSwimmer(): ?int { return $this->limitation_per_swimmer; }
+    public function getLimitationPerSwimmer(): ?int { return $this->limitationPerSwimmer; }
     public function getSessions(): array { return $this->sessions; }
     public function getTarifs(): array { return $this->tarifs; }
     public function getInscriptionDates(): array { return $this->inscriptionDates; }
@@ -39,8 +40,8 @@ class Event extends AbstractModel
         if ($piscine) { $this->place = $piscine->getId(); }
         return $this;
     }
-    public function setLimitationPerSwimmer(?int $limitation_per_swimmer): self {
-        $this->limitation_per_swimmer = $limitation_per_swimmer; return $this;
+    public function setLimitationPerSwimmer(?int $limitationPerSwimmer): self {
+        $this->limitationPerSwimmer = $limitationPerSwimmer; return $this;
     }
 
     public function setSessions(array $sessions): self { $this->sessions = $sessions; return $this; }
@@ -50,7 +51,7 @@ class Event extends AbstractModel
     }
 
     public function setTarifs(array $tarifs): self { $this->tarifs = $tarifs; return $this; }
-    public function addTarif(\app\Models\Tarif\Tarif $tarif): self {
+    public function addTarif(Tarif $tarif): self {
         foreach ($this->tarifs as $t) { if ($t->getId() === $tarif->getId()) { return $this; } }
         $this->tarifs[] = $tarif; return $this;
     }

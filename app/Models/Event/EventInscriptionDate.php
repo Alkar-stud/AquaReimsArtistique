@@ -7,30 +7,30 @@ use DateTime;
 
 class EventInscriptionDate extends AbstractModel
 {
-    private int $event;
+    private int $eventId;
     private ?Event $eventObject = null;
     private string $name;
-    private \DateTimeInterface $start_registration_at;
-    private \DateTimeInterface $close_registration_at;
-    private ?string $access_code = null;
+    private \DateTimeInterface $startRegistrationAt;
+    private \DateTimeInterface $closeRegistrationAt;
+    private ?string $accessCode = null;
 
     // --- GETTERS ---
-    public function getEvent(): int { return $this->event; }
+    public function getEventId(): int { return $this->eventId; }
     public function getEventObject(): ?Event { return $this->eventObject; }
     public function getName(): string { return $this->name; }
-    public function getStartRegistrationAt(): \DateTimeInterface { return $this->start_registration_at; }
-    public function getCloseRegistrationAt(): \DateTimeInterface { return $this->close_registration_at; }
-    public function getAccessCode(): ?string { return $this->access_code; }
+    public function getStartRegistrationAt(): \DateTimeInterface { return $this->startRegistrationAt; }
+    public function getCloseRegistrationAt(): \DateTimeInterface { return $this->closeRegistrationAt; }
+    public function getAccessCode(): ?string { return $this->accessCode; }
 
     // --- SETTERS ---
-    public function setEvent(int $event): self { $this->event = $event; return $this; }
+    public function setEventId(int $eventId): self { $this->eventId = $eventId; return $this; }
     public function setEventObject(?Event $eventObject): self {
         $this->eventObject = $eventObject;
-        if ($eventObject) { $this->event = $eventObject->getId(); }
+        if ($eventObject) { $this->eventId = $eventObject->getId(); }
         return $this;
     }
     public function setName(string $name): self { $this->name = $name; return $this; }
-    public function setStartRegistrationAt(string $dt): self { $this->start_registration_at = new DateTime($dt); return $this; }
-    public function setCloseRegistrationAt(string $dt): self { $this->close_registration_at = new DateTime($dt); return $this; }
-    public function setAccessCode(?string $code): self { $this->access_code = ($code === '' ? null : $code); return $this; }
+    public function setStartRegistrationAt(string $dt): self { $this->startRegistrationAt = new DateTime($dt); return $this; }
+    public function setCloseRegistrationAt(string $dt): self { $this->closeRegistrationAt = new DateTime($dt); return $this; }
+    public function setAccessCode(?string $code): self { $this->accessCode = ($code === '' ? null : $code); return $this; }
 }

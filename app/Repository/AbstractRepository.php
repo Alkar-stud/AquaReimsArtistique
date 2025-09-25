@@ -105,17 +105,30 @@ use PDOStatement;
     }
 
 
+    /**
+     * @param string $sql
+     * @param array $params
+     * @return array
+     */
     protected function fetchAll(string $sql, array $params = []): array
     {
         return $this->query($sql, $params);
     }
 
+    /**
+     * @param string $sql
+     * @return string
+     */
     private function sanitizeSql(string $sql): string
     {
         // Remplacer les valeurs sensibles par des placeholders
         return preg_replace('/\s+/', ' ', trim($sql));
     }
 
+    /**
+     * @param array $params
+     * @return array
+     */
     private function sanitizeParams(array $params): array
     {
         // Masquer les mots de passe et données sensibles
@@ -131,6 +144,14 @@ use PDOStatement;
         return $sanitized;
     }
 
+    /**
+     * @param string $operation
+     * @param string $sql
+     * @param array $params
+     * @param float $startTime
+     * @param int $affectedRows
+     * @return void
+     */
     private function logQuery(string $operation, string $sql, array $params, float $startTime, int $affectedRows): void
     {
         $safeSql = $this->sanitizeSql($sql);
@@ -144,6 +165,10 @@ use PDOStatement;
         ]);
     }
 
+    /**
+     * @param string $sql
+     * @return string
+     */
     private function getOperationType(string $sql): string
     {
         $sql = trim(strtoupper($sql));
@@ -165,9 +190,37 @@ use PDOStatement;
         return (int)$this->pdo->lastInsertId();
     }
 
+    /**
+     * @return string|null
+     */
     public function getLastError(): ?string
     {
         return $this->lastError ?? null;
     }
+
+    /**
+     * Démarre une transaction.
+     */
+    public function beginTransaction(): void
+    {
+        $this->pdo->beginTransaction();
+    }
+
+    /**
+     * Valide une transaction.
+     */
+    public function commit(): void
+    {
+        $this->pdo->commit();
+    }
+
+    /**
+     * Annule une transaction.
+     */
+    public function rollBack(): void
+    {
+        $this->pdo->rollBack();
+    }
+
 
 }

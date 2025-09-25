@@ -49,31 +49,34 @@ class EventRepository extends AbstractRepository
         if (!$rows) return null;
 
         $row = $rows[0];
+        // On hydrate l'objet Event de base en premier
+        $event = $this->hydrate($row);
+
         $piscine = null;
         $sessions = [];
         $inscDates = [];
         $tarifs = [];
         $presentations = [];
 
-        if ($withPiscine && !empty($row['place'])) {
+        if ($withPiscine && $event->getPlace()) {
             $piscineRepo = new PiscineRepository();
-            $piscine = $piscineRepo->findById((int)$row['place']);
+            $piscine = $piscineRepo->findById($event->getPlace());
         }
         if ($withSessions) {
             $sessionRepo = new EventSessionRepository();
-            $sessions = $sessionRepo->findByEventId((int)$row['id']);
+            $sessions = $sessionRepo->findByEventId($event->getId(), false, $event);
         }
         if ($withInscriptionDates) {
             $inscRepo = new EventInscriptionDateRepository();
-            $inscDates = $inscRepo->findByEventId((int)$row['id']);
+            $inscDates = $inscRepo->findByEventId($event->getId(), false, $event);
         }
         if ($withTarifs) {
             $tarifRepo = new TarifRepository();
-            $tarifs = $tarifRepo->findByEventId((int)$row['id']);
+            $tarifs = $tarifRepo->findByEventId($event->getId());
         }
         if ($withPresentations) {
             $presRepo = new EventPresentationsRepository();
-            $presentations = $presRepo->findByEventId((int)$row['id']);
+            $presentations = $presRepo->findByEventId($event->getId(), false, $event);
         }
 
         return $this->hydrate($row, $piscine, $sessions, $inscDates, $tarifs, $presentations);
@@ -81,16 +84,16 @@ class EventRepository extends AbstractRepository
 
     /**
      * Retourne tous les événements à venir ou passés ordonnés par date de début
-     * @param bool $upComing
      * @return array
      */
-    public function findSortByDate(bool $upComing = true): array
+    public function findAllSortByDate(): array
     {
         $sql = "SELECT e.* FROM $this->tableName e
-            INNER JOIN event_session s ON s.event_id = e.id
-            WHERE s.event_start_at " . ($upComing ? ">" : "<=") . " NOW()
+            LEFT JOIN (
+                SELECT event_id, MIN(event_start_at) as first_session_date FROM event_session GROUP BY event_id
+            ) s ON s.event_id = e.id
             GROUP BY e.id
-            ORDER BY MIN(s.event_start_at) ASC";
+            ORDER BY s.first_session_date DESC, e.created_at DESC";
         $rows = $this->query($sql);
         return array_map([$this, 'hydrate'], $rows);
     }
@@ -156,16 +159,16 @@ class EventRepository extends AbstractRepository
         $e = new Event();
         $e->setId((int)$data['id'])
             ->setName($data['name'])
-            ->setPlace((int)$data['place'])
-            ->setLimitationPerSwimmer(isset($data['limitation_per_swimmer']) ? (int)$data['limitation_per_swimmer'] : null)
+            ->setPlace((int)$data['place']) // place est NOT NULL
+            ->setLimitationPerSwimmer(isset($data['limitation_per_swimmer']) ? (int)$data['limitation_per_swimmer'] : null) // Correction du nom
             ->setCreatedAt($data['created_at']);
 
         if (!empty($data['updated_at'])) { $e->setUpdatedAt($data['updated_at']); }
-        if ($piscine) { $e->setPiscine($piscine); }
-        if ($sessions) { $e->setSessions($sessions); }
-        if ($tarifs) { $e->setTarifs($tarifs); }
-        if ($inscriptionDates) { $e->setInscriptionDates($inscriptionDates); }
-        if ($presentations) { $e->setPresentations($presentations); }
+        if ($piscine !== null) { $e->setPiscine($piscine); }
+        if (!empty($sessions)) { $e->setSessions($sessions); }
+        if (!empty($tarifs)) { $e->setTarifs($tarifs); }
+        if (!empty($inscriptionDates)) { $e->setInscriptionDates($inscriptionDates); }
+        if (!empty($presentations)) { $e->setPresentations($presentations); }
 
         return $e;
     }

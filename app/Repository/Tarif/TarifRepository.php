@@ -34,6 +34,16 @@ class TarifRepository extends AbstractRepository
     }
 
     /**
+     * @return Tarif[]
+     */
+    public function findAllActive(): array
+    {
+        $sql = "SELECT * FROM $this->tableName WHERE is_active = 1 ORDER BY name";
+        $rows = $this->query($sql);
+        return array_map([$this, 'hydrate'], $rows);
+    }
+
+    /**
      * @param int[] $ids
      * @return Tarif[]
      */
@@ -58,12 +68,63 @@ class TarifRepository extends AbstractRepository
      */
     public function findByEventId(int $eventId): array
     {
-        $sql = "SELECT t.* FROM {$this->tableName} t
+        $sql = "SELECT t.* FROM $this->tableName t
             INNER JOIN event_tarif et ON t.id = et.tarif
             WHERE et.event = :event_id
             ORDER BY t.seat_count DESC, t.name";
         $results = $this->query($sql, ['event_id' => $eventId]);
         return array_map([$this, 'hydrate'], $results);
+    }
+
+    /**
+     * Retourne tous les tarifs pour une liste d'événements, groupés par event_id
+     * @param int[] $eventIds
+     * @return array<int, Tarif[]>
+     */
+    public function findByEventIds(array $eventIds): array
+    {
+        if (empty($eventIds)) {
+            return [];
+        }
+        $placeholders = implode(',', array_fill(0, count($eventIds), '?'));
+
+        $sql = "SELECT t.*, et.event as event_id
+                 FROM tarif t
+                 INNER JOIN event_tarif et ON et.tarif = t.id
+                 WHERE et.event IN ($placeholders)";
+
+        $rows = $this->query($sql, $eventIds);
+        $tarifs = array_map([$this, 'hydrate'], $rows);
+
+        $result = [];
+        foreach ($tarifs as $index => $tarif) {
+            // L'event_id a été ajouté par la jointure
+            $eventId = (int)$rows[$index]['event_id'];
+            if (!isset($result[$eventId])) {
+                $result[$eventId] = [];
+            }
+            $result[$eventId][] = $tarif;
+        }
+        return $result;
+    }
+
+    /**
+     * Vérifie si une liste d'IDs de tarifs contient au moins un tarif avec des places.
+     * @param int[] $tarifIds
+     * @return bool
+     */
+    public function hasSeatedTarif(array $tarifIds): bool
+    {
+        if (empty($tarifIds)) {
+            return false;
+        }
+        $placeholders = implode(',', array_fill(0, count($tarifIds), '?'));
+
+        $sql = "SELECT COUNT(*) as count FROM $this->tableName 
+                 WHERE id IN ($placeholders) AND seat_count IS NOT NULL AND seat_count > 0";
+
+        $result = $this->query($sql, $tarifIds);
+        return isset($result[0]['count']) && $result[0]['count'] > 0;
     }
 
     /**

@@ -53,36 +53,15 @@ class EventPresentationsRepository extends AbstractRepository
     }
 
     /**
-     * Retourne toutes les présentations à afficher
-     * @return EventPresentations[]
-     */
-    public function findDisplayed(bool $onlyDisplayed = true, bool $withEvent = false): array
-    {
-        $sql = "SELECT * FROM $this->tableName WHERE display_until >= NOW()"
-            . ($onlyDisplayed ? " AND is_displayed = 1" : "")
-            . " ORDER BY display_until";
-        $rows = $this->query($sql);
-
-        return array_map(function (array $r) use ($withEvent) {
-            $event = null;
-            if ($withEvent && !empty($r['event'])) {
-                $eventRepo = new EventRepository();
-                $event = $eventRepo->findById((int)$r['event']);
-            }
-            return $this->hydrate($r, $event);
-        }, $rows);
-    }
-
-    /**
      * Retourne la/les présentations par event
      * @return EventPresentations[]
      */
-    public function findByEventId(int $eventId, bool $withEvent = false): array
+    public function findByEventId(int $eventId, bool $withEvent = false, ?Event $eventObject = null): array
     {
         $sql = "SELECT * FROM $this->tableName WHERE event = :event ORDER BY display_until";
         $rows = $this->query($sql, ['event' => $eventId]);
 
-        $event = null;
+        $event = $eventObject;
         if ($withEvent) {
             $eventRepo = new EventRepository();
             $event = $eventRepo->findById($eventId);
@@ -102,7 +81,7 @@ class EventPresentationsRepository extends AbstractRepository
             (event, is_displayed, display_until, content, created_at)
             VALUES (:event, :is_displayed, :display_until, :content, :created_at)";
         $ok = $this->execute($sql, [
-            'event' => $p->getEvent(),
+            'event' => $p->getEventId(),
             'is_displayed' => $p->getIsDisplayed() ? 1 : 0,
             'display_until' => $p->getDisplayUntil()->format('Y-m-d H:i:s'),
             'content' => $p->getContent(),
@@ -127,7 +106,7 @@ class EventPresentationsRepository extends AbstractRepository
             WHERE id = :id";
         return $this->execute($sql, [
             'id' => $p->getId(),
-            'event' => $p->getEvent(),
+            'event' => $p->getEventId(),
             'is_displayed' => $p->getIsDisplayed() ? 1 : 0,
             'display_until' => $p->getDisplayUntil()->format('Y-m-d H:i:s'),
             'content' => $p->getContent(),
@@ -168,7 +147,7 @@ class EventPresentationsRepository extends AbstractRepository
     {
         $p = new EventPresentations();
         $p->setId((int)$data['id'])
-            ->setEvent((int)$data['event'])
+            ->setEventId((int)$data['event'])
             ->setIsDisplayed((bool)$data['is_displayed'])
             ->setDisplayUntil($data['display_until'])
             ->setContent($data['content'] ?? null)

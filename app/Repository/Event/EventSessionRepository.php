@@ -37,18 +37,45 @@ class EventSessionRepository extends AbstractRepository
      * Retourne toutes les sessions par événement, ordonnées par date de début
      * @return EventSession[]
      */
-    public function findByEventId(int $eventId, bool $withEvent = false): array
+    public function findByEventId(int $eventId, bool $withEvent = false, ?Event $eventObject = null): array
     {
         $sql = "SELECT * FROM $this->tableName WHERE event_id = :event_id ORDER BY event_start_at";
         $rows = $this->query($sql, ['event_id' => $eventId]);
 
-        $event = null;
+        $event = $eventObject;
         if ($withEvent) {
             $eventRepo = new EventRepository();
             $event = $eventRepo->findById($eventId);
         }
 
         return array_map(fn(array $r) => $this->hydrate($r, $event), $rows);
+    }
+
+    /**
+     * Retourne toutes les sessions pour une liste d'IDs d'événements, groupées par event_id
+     * @param int[] $eventIds
+     * @return array<int, EventSession[]>
+     */
+    public function findByEventIds(array $eventIds): array
+    {
+        if (empty($eventIds)) {
+            return [];
+        }
+        $placeholders = implode(',', array_fill(0, count($eventIds), '?'));
+
+        $sql = "SELECT * FROM $this->tableName WHERE event_id IN ($placeholders) ORDER BY event_id, event_start_at";
+        $rows = $this->query($sql, $eventIds);
+
+        $result = [];
+        foreach ($rows as $row) {
+            $eventId = (int)$row['event_id'];
+            if (!isset($result[$eventId])) {
+                $result[$eventId] = [];
+            }
+            $result[$eventId][] = $this->hydrate($row);
+        }
+
+        return $result;
     }
 
     /**

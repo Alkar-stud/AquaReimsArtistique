@@ -8,29 +8,29 @@ use DateTimeInterface;
 
 class EventPresentations extends AbstractModel
 {
-    private int $event;
+    private int $eventId;
     private ?Event $eventObject = null;
-    private bool $is_displayed = false;
-    private DateTimeInterface $display_until;
+    private bool $isDisplayed = false;
+    private DateTimeInterface $displayUntil;
     private ?string $content = null;
 
     // --- GETTERS ---
-    public function getEvent(): int { return $this->event; }
+    public function getEventId(): int { return $this->eventId; }
     public function getEventObject(): ?Event { return $this->eventObject; }
-    public function getIsDisplayed(): bool { return $this->is_displayed; }
-    public function getDisplayUntil(): DateTimeInterface { return $this->display_until; }
+    public function getIsDisplayed(): bool { return $this->isDisplayed; }
+    public function getDisplayUntil(): DateTimeInterface { return $this->displayUntil; }
     public function getContent(): ?string { return $this->content; }
 
     // --- SETTERS ---
-    public function setEvent(int $event): self { $this->event = $event; return $this; }
+    public function setEventId(int $eventId): self { $this->eventId = $eventId; return $this; }
     public function setEventObject(?Event $eventObject): self {
         $this->eventObject = $eventObject;
-        if ($eventObject) { $this->event = $eventObject->getId(); }
+        if ($eventObject) { $this->eventId = $eventObject->getId(); }
         return $this;
     }
-    public function setIsDisplayed(bool $is_displayed): self { $this->is_displayed = $is_displayed; return $this; }
-    public function setDisplayUntil(string $display_until): self {
-        $this->display_until = new DateTime($display_until); return $this;
+    public function setIsDisplayed(bool $isDisplayed): self { $this->isDisplayed = $isDisplayed; return $this; }
+    public function setDisplayUntil(string $displayUntil): self {
+        $this->displayUntil = new DateTime($displayUntil); return $this;
     }
     public function setContent(?string $content): self {
         $this->content = ($content === '' ? null : $content); return $this;

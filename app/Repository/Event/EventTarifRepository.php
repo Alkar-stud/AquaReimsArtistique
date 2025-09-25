@@ -3,6 +3,7 @@
 namespace app\Repository\Event;
 
 use app\Repository\AbstractRepository;
+use Throwable;
 
 class EventTarifRepository extends AbstractRepository
 {
@@ -19,7 +20,7 @@ class EventTarifRepository extends AbstractRepository
      */
     public function attach(int $eventId, int $tarifId): bool
     {
-        $sql = "INSERT INTO {$this->tableName} (`event`, `tarif`) VALUES (:event, :tarif)";
+        $sql = "INSERT INTO $this->tableName (`event`, `tarif`) VALUES (:event, :tarif)";
         return $this->execute($sql, ['event' => $eventId, 'tarif' => $tarifId]);
     }
 
@@ -31,7 +32,7 @@ class EventTarifRepository extends AbstractRepository
      */
     public function detach(int $eventId, int $tarifId): bool
     {
-        $sql = "DELETE FROM {$this->tableName} WHERE `event` = :event AND `tarif` = :tarif";
+        $sql = "DELETE FROM $this->tableName WHERE `event` = :event AND `tarif` = :tarif";
         return $this->execute($sql, ['event' => $eventId, 'tarif' => $tarifId]);
     }
 
@@ -42,8 +43,8 @@ class EventTarifRepository extends AbstractRepository
      */
     public function detachAllForEvent(int $eventId): bool
     {
-        $sql = "DELETE FROM {$this->tableName} WHERE `event` = :event_id";
-        return $this->execute($sql, ['event_id' => $eventId]);
+        $sql = "DELETE FROM $this->tableName WHERE `event` = :event";
+        return $this->execute($sql, ['event' => $eventId]);
     }
 
     /**
@@ -52,7 +53,7 @@ class EventTarifRepository extends AbstractRepository
      */
     public function listTarifIdsForEvent(int $eventId): array
     {
-        $sql = "SELECT `tarif` FROM {$this->tableName} WHERE `event` = :event ORDER BY `tarif`";
+        $sql = "SELECT `tarif` FROM $this->tableName WHERE `event` = :event ORDER BY `tarif`";
         $rows = $this->query($sql, ['event' => $eventId]);
         return array_map(fn($r) => (int)$r['tarif'], $rows);
     }
@@ -65,7 +66,7 @@ class EventTarifRepository extends AbstractRepository
      */
     public function exists(int $eventId, int $tarifId): bool
     {
-        $sql = "SELECT 1 FROM {$this->tableName} WHERE `event` = :event AND `tarif` = :tarif";
+        $sql = "SELECT 1 FROM $this->tableName WHERE `event` = :event AND `tarif` = :tarif";
         return !empty($this->query($sql, ['event' => $eventId, 'tarif' => $tarifId]));
     }
 
@@ -76,26 +77,17 @@ class EventTarifRepository extends AbstractRepository
     {
         $tarifIds = array_values(array_unique(array_map('intval', $tarifIds)));
 
-        try {
-            $this->pdo->beginTransaction();
+        // 1. Purger les anciens tarifs pour cet événement.
+        $this->detachAllForEvent($eventId);
 
-            // purge
-            $this->detachAllForEvent($eventId);
-
-            // ré‑attache
-            if ($tarifIds) {
-                $sql = "INSERT INTO {$this->tableName} (`event`, `tarif`) VALUES (:event, :tarif)";
-                $stmt = $this->pdo->prepare($sql);
-                foreach ($tarifIds as $tid) {
-                    $stmt->execute(['event' => $eventId, 'tarif' => $tid]);
-                }
+        // 2. Ré-attacher les nouveaux tarifs.
+        if (!empty($tarifIds)) {
+            $sql = "INSERT INTO $this->tableName (`event`, `tarif`) VALUES (:event, :tarif)";
+            $stmt = $this->pdo->prepare($sql);
+            foreach ($tarifIds as $tid) {
+                $stmt->execute(['event' => $eventId, 'tarif' => $tid]);
             }
-
-            $this->pdo->commit();
-            return true;
-        } catch (\Throwable $e) {
-            $this->pdo->rollBack();
-            return false;
         }
+        return true;
     }
 }

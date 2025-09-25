@@ -36,6 +36,26 @@ class PiscineRepository extends AbstractRepository
     }
 
     /**
+     * Retourne plusieurs piscines par leurs IDs
+     * @param int[] $ids
+     * @return Piscine[]
+     */
+    public function findByIds(array $ids): array
+    {
+        if (empty($ids)) {
+            return [];
+        }
+        // Assure que les IDs sont des entiers pour la sécurité
+        $ids = array_map('intval', $ids);
+        $placeholders = implode(',', array_fill(0, count($ids), '?'));
+
+        $sql = "SELECT * FROM $this->tableName WHERE id IN ($placeholders)";
+        $rows = $this->query($sql, $ids);
+
+        return array_map([$this, 'hydrate'], $rows);
+    }
+
+    /**
      * Ajoute une nouvelle piscine.
      * @return int ID inséré (0 si échec)
      */

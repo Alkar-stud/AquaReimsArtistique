@@ -7,31 +7,31 @@ use DateTime;
 
 class EventSession extends AbstractModel
 {
-    private int $event_id;
+    private int $eventId;
     private ?Event $eventObject = null;
-    private ?string $session_name = null;
-    private \DateTimeInterface $opening_doors_at;
-    private \DateTimeInterface $event_start_at;
+    private ?string $sessionName = null;
+    private \DateTimeInterface $openingDoorsAt;
+    private \DateTimeInterface $eventStartAt;
 
     // --- GETTERS ---
-    public function getEventId(): int { return $this->event_id; }
+    public function getEventId(): int { return $this->eventId; }
     public function getEventObject(): ?Event { return $this->eventObject; }
-    public function getSessionName(): ?string { return $this->session_name; }
-    public function getOpeningDoorsAt(): \DateTimeInterface { return $this->opening_doors_at; }
-    public function getEventStartAt(): \DateTimeInterface { return $this->event_start_at; }
+    public function getSessionName(): ?string { return $this->sessionName; }
+    public function getOpeningDoorsAt(): \DateTimeInterface { return $this->openingDoorsAt; }
+    public function getEventStartAt(): \DateTimeInterface { return $this->eventStartAt; }
 
     // --- SETTERS ---
-    public function setEventId(int $event_id): self { $this->event_id = $event_id; return $this; }
+    public function setEventId(int $eventId): self { $this->eventId = $eventId; return $this; }
     public function setEventObject(?Event $event): self {
         $this->eventObject = $event;
-        if ($event) { $this->event_id = $event->getId(); }
+        if ($event) { $this->eventId = $event->getId(); }
         return $this;
     }
-    public function setSessionName(?string $session_name): self { $this->session_name = $session_name; return $this; }
-    public function setOpeningDoorsAt(string $opening_doors_at): self {
-        $this->opening_doors_at = new DateTime($opening_doors_at); return $this;
+    public function setSessionName(?string $sessionName): self { $this->sessionName = ($sessionName === '' ? null : $sessionName); return $this; }
+    public function setOpeningDoorsAt(string $openingDoorsAt): self {
+        $this->openingDoorsAt = new DateTime($openingDoorsAt); return $this;
     }
-    public function setEventStartAt(string $event_start_at): self {
-        $this->event_start_at = new DateTime($event_start_at); return $this;
+    public function setEventStartAt(string $eventStartAt): self {
+        $this->eventStartAt = new DateTime($eventStartAt); return $this;
     }
 }

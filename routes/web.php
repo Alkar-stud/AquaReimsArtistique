@@ -37,9 +37,11 @@ foreach ($controllers as $file) {
 
         foreach ($classAttributes as $attribute) {
             $instance = $attribute->newInstance();
-            $routes[$instance->path] = [
+            $routes[] = [
+                'path' => $instance->path,
                 'controller' => $className,
-                'method' => 'index'
+                'method' => 'index',
+                'requirements' => $instance->requirements
             ];
         }
 
@@ -48,9 +50,11 @@ foreach ($controllers as $file) {
             $attributes = $method->getAttributes('app\\Attributes\\Route');
             foreach ($attributes as $attribute) {
                 $instance = $attribute->newInstance();
-                $routes[$instance->path] = [
+                $routes[] = [
+                    'path' => $instance->path,
                     'controller' => $className,
-                    'method' => $method->getName()
+                    'method' => $method->getName(),
+                    'requirements' => $instance->requirements
                 ];
             }
         }

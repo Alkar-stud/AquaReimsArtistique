@@ -18,28 +18,31 @@ class Router
      */
     public function dispatch(string $uri): void
     {
+        foreach ($this->routes as $route) {
+            // Remplace les placeholders comme {id} par une expression régulière.
+            // Utilise les 'requirements' si elles sont définies, sinon utilise [^/]+ (tout sauf un slash).
+            $pattern = preg_replace_callback(
+                '#\{([a-zA-Z0-9_]+)}#',
+                function ($matches) use ($route) {
+                    $paramName = $matches[1];
+                    $requirement = $route['requirements'][$paramName] ?? '[^/]+';
+                    return '(?P<' . $paramName . '>' . $requirement . ')';
+                },
+                $route['path']
+            );
 
-        $found = false;
-
-        foreach ($this->routes as $routePath => $routeInfo) {
-            $pattern = preg_replace('#\{([a-zA-Z0-9_]+)}#', '(?P<$1>[^/]+)', $routePath);
             $pattern = '#^' . $pattern . '$#';
 
             if (preg_match($pattern, $uri, $matches)) {
-                $found = true;
-                $controllerClass = $routeInfo['controller'];
-                $methodName = $routeInfo['method'];
+                $controllerClass = $route['controller'];
+                $methodName = $route['method'];
 
                 if (class_exists($controllerClass)) {
                     $controller = new $controllerClass();
 
                     if (method_exists($controller, $methodName)) {
-                        $params = [];
-                        foreach ($matches as $key => $value) {
-                            if (!is_int($key)) {
-                                $params[$key] = $value;
-                            }
-                        }
+                        // Extrait les paramètres nommés de l'URL
+                        $params = array_filter($matches, 'is_string', ARRAY_FILTER_USE_KEY);
                         call_user_func_array([$controller, $methodName], $params);
                     } else {
                         http_response_code(500);
@@ -49,12 +52,11 @@ class Router
                     http_response_code(500);
                     echo "Erreur: Le contrôleur '$controllerClass' n'a pas été trouvé.";
                 }
-                break;
+                return; // Route trouvée et exécutée, on arrête le traitement.
             }
         }
 
-        if (!$found) {
-            throw new Exception('404');
-        }
+        // Si la boucle se termine, aucune route n'a été trouvée.
+        throw new Exception('404');
     }
 }

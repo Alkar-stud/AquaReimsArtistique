@@ -23,8 +23,7 @@ class LoginController extends AbstractController
     public function index(): void
     {
         // Genère un token CSRF pour le contexte POST cible
-        $csrf = $this->csrfService->getToken('/login-check');
-        $this->render('auth/login', ['csrf_token' => $csrf], 'Connexion');
+        $this->render('auth/login', [], 'Connexion');
     }
 
     #[Route('/login-check', name: 'app_login_check', methods: ['POST'])]
@@ -40,7 +39,11 @@ class LoginController extends AbstractController
 
         $user = $this->userRepository->findByUsername($username);
 
-        if ($user && password_verify($password, $user->getPassword())) {
+        if (
+            $user &&
+            $user->getUsername() === $username && // Vérification stricte de la casse
+            password_verify($password, $user->getPassword())
+        ) {
             Logger::get()->security('login_success', ['username' => $username, 'user_id' => $user->getId()]);
 
             if (password_needs_rehash($user->getPassword(), PASSWORD_DEFAULT, ['cost' => (int)$_ENV['BCRYPT_ROUNDS']])) {

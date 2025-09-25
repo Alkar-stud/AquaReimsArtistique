@@ -28,10 +28,7 @@ class ConfigController extends AbstractController
 
         $this->render('/gestion/configs', [
             'data' => $configs,
-            'currentUser' => $this->currentUser,
-            'csrf_token_add' => $this->csrfService->getToken('/gestion/configs/add'),
-            'csrf_token_edit' => $this->csrfService->getToken('/gestion/configs/update'),
-            'csrf_token_delete' => $this->csrfService->getToken('/gestion/configs/delete')
+            'currentUser' => $this->currentUser
         ], 'Gestion des configurations');
     }
 

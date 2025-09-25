@@ -15,7 +15,9 @@ final class FileLogHandler implements LogHandlerInterface
 
     public function handle(array $record): void
     {
-        $file = rtrim($this->dir, '/') . '/' . ($record['channel'] ?? 'app') . '.log';
+        $date = gmdate('Y-m-d');
+        $channel = $record['channel'] ?? 'app';
+        $file = rtrim($this->dir, '/') . "/{$channel}-{$date}.log";
         $this->rotateIfNeeded($file);
         $line = json_encode($record, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
         if ($line === false) {

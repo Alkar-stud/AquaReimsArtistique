@@ -33,11 +33,7 @@ class PasswordResetController extends AbstractController
     #[Route('/forgot-password', name: 'app_forgot_password', methods: ['GET'])]
     public function showForgotForm(): void
     {
-        $csrf = $this->csrfService->getToken('/forgot-password-submit');
-
-        $this->render('password/forgot', [
-            'csrf_token' => $csrf
-        ], 'Mot de passe oublié');
+        $this->render('password/forgot', [], 'Mot de passe oublié');
     }
 
     #[Route('/forgot-password-submit', name: 'app_forgot_password-submit', methods: ['POST'])]
@@ -85,10 +81,8 @@ class PasswordResetController extends AbstractController
         $token = $_GET['token'] ?? '';
         $this->checkReinitTokenUser($token);
         //Pour envoyer le bon contexte
-        $csrf = $this->csrfService->getToken('/reset-password-submit');
         $this->render('password/reset', [
             'token' => $token,
-            'csrf_token' => $csrf,
             'password_rules' => $this->passwordPolicyService->getRulesAsText(),
         ], 'Réinitialiser le mot de passe');
     }

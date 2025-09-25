@@ -17,10 +17,7 @@ class AccountController extends AbstractController
     #[Route('/account', name: 'app_account', methods: ['GET'])]
     public function index(): void
     {
-        $this->render('auth/account', [
-            'csrf_token_update' => $this->csrfService->getToken('/account/update'),
-            'csrf_token_password' => $this->csrfService->getToken('/account/password'),
-        ], 'Mon compte');
+        $this->render('auth/account', [], 'Mon compte');
     }
 
     #[Route('/account/update', name: 'app_account_update', methods: ['POST'])]

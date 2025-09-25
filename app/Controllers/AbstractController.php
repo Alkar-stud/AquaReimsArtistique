@@ -274,13 +274,25 @@ abstract class AbstractController
             return;
         }
 
-        $token = $_SERVER['HTTP_X_CSRF_TOKEN'] ?? ($_POST['csrf_token'] ?? '');
-        $context = $this->getCsrfContext();
+        $context = null;
+        // Pour les requêtes POST/PUT etc., le contexte CSRF doit être celui de la page
+        // qui a affiché le formulaire, que l'on retrouve via le Referer.
+        if (isset($_SERVER['HTTP_REFERER'])) {
+            $refererPath = parse_url($_SERVER['HTTP_REFERER'], PHP_URL_PATH);
+            $refererHost = parse_url($_SERVER['HTTP_REFERER'], PHP_URL_HOST);
+            $serverHost = $_SERVER['HTTP_HOST'] ?? '';
 
-        if (!$this->csrfService->validateAndConsume($token, $context)) {
+            // On vérifie que le Referer vient bien de notre propre site pour la sécurité.
+            if ($refererPath && $refererHost === $serverHost) {
+                $context = $refererPath;
+            }
+        }
+
+        $token = $_SERVER['HTTP_X_CSRF_TOKEN'] ?? ($_POST['csrf_token'] ?? '');
+
+        if ($context === null || !$this->csrfService->validateAndConsume($token, $context)) {
             $this->flashMessageService->setFlashMessage('danger', 'Token CSRF invalide ou manquant.');
-            $redirect = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
-            header('Location: ' . $redirect);
+            header('Location: ' . ($context ?: '/'));
             exit;
         }
     }
@@ -294,7 +306,7 @@ abstract class AbstractController
      */
     protected function checkIfCurrentUserIsAllowedToManagedThis(int $minLevel = 99, ?string $urlReturn = null): void
     {
-        if ($urlReturn !== null && !preg_match('/^[a-z]*$/', $urlReturn)) {
+        if ($urlReturn !== null && !preg_match('/^[a-z-]*$/', $urlReturn)) {
             http_response_code(404);
             exit;
         }

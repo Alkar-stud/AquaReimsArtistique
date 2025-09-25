@@ -15,7 +15,7 @@
             {% foreach $data as $config %}
             <li class="list-group-item">
                 <form action="/gestion/configs/update" method="POST" id="form-edit-{{ $config->getId() }}" class="d-flex flex-column gap-2">
-                    <input type="hidden" name="csrf_token" value="{{ $csrf_token_edit }}">
+                    <input type="hidden" name="csrf_token" value="{{ $csrf_token }}">
                     <input type="hidden" name="form_anchor" value="config-card-{{ $config->getId() }}">
                     <input type="hidden" name="config_id" value="{{ $config->getId() }}">
                     <div>
@@ -49,9 +49,8 @@
                     </div>
                 </form>
                 <div class="d-flex flex-column gap-2 mt-2">
-                    <button type="submit" form="form-edit-{{ $config->getId() }}" class="btn btn-secondary btn-sm w-100">Modifier</button>
                     <form method="POST" action="/gestion/configs/delete" onsubmit="return confirm('Supprimer cette configuration ?');">
-                        <input type="hidden" name="csrf_token" value="{{ $csrf_token_delete }}">
+                        <input type="hidden" name="csrf_token" value="{{ $csrf_token }}">
                         <input type="hidden" name="form_anchor" value="config-card-{{ $config->getId() }}">
                         <input type="hidden" name="config_id" value="{{ $config->getId() }}">
                         <button type="submit" class="btn btn-danger btn-sm w-100">Supprimer</button>
@@ -74,7 +73,7 @@
                             onclick="document.getElementById('modal-ajout-config').style.display='none'"></button>
                 </div>
                 <form action="/gestion/configs/add" method="POST">
-                    <input type="hidden" name="csrf_token" value="{{ $csrf_token_add }}">
+                    <input type="hidden" name="csrf_token" value="{{ $csrf_token }}">
                     <input type="hidden" name="context" value="mobile">
                     <div class="mb-2">
                         <label>Libellé
@@ -135,7 +134,7 @@
             <tbody>
             <tr>
                 <form action="/gestion/configs/add" method="POST">
-                    <input type="hidden" name="csrf_token" value="{{ $csrf_token_add }}">
+                    <input type="hidden" name="csrf_token" value="{{ $csrf_token }}">
                     <input type="hidden" name="context" value="desktop">
                     <td><input type="text" name="label" class="form-control" required></td>
                     <td><input type="text" name="config_key" class="form-control" required></td>
@@ -164,7 +163,7 @@
             {% foreach $data as $config %}
             <tr>
                 <form action="/gestion/configs/update" method="POST" id="form-edit-{{ $config->getId() }}">
-                    <input type="hidden" name="csrf_token" value="{{ $csrf_token_edit }}">
+                    <input type="hidden" name="csrf_token" value="{{ $csrf_token }}">
                     <input type="hidden" name="form_anchor" value="config-row-{{ $config->getId() }}">
                     <input type="hidden" name="config_id" value="{{ $config->getId() }}">
                     <td><input type="text" name="label" class="form-control" value="{{ $config->getLabel() }}" required></td>
@@ -193,13 +192,13 @@
                         </div>
                     </td>
                     <td>
-                        <button type="submit" class="btn btn-secondary btn-sm w-100">Enregistrer</button>
+                        <button type="submit" class="btn btn-secondary btn-sm">Enregistrer</button>
                 </form>
                 <form method="POST" action="/gestion/configs/delete" onsubmit="return confirm('Supprimer cette configuration ?');" class="d-inline">
-                    <input type="hidden" name="csrf_token" value="{{ $csrf_token_delete }}">
+                    <input type="hidden" name="csrf_token" value="{{ $csrf_token }}">
                     <input type="hidden" name="form_anchor" value="config-row-{{ $config->getId() }}">
                     <input type="hidden" name="config_id" value="{{ $config->getId() }}">
-                    <button type="submit" class="btn btn-danger btn-sm w-100">Supprimer</button>
+                    <button type="submit" class="btn btn-danger btn-sm">Supprimer</button>
                 </form>
                     </td>
             </tr>

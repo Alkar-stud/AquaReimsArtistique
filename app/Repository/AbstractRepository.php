@@ -2,11 +2,12 @@
 
 namespace app\Repository;
 
+use AllowDynamicProperties;
 use app\Services\Log\Logger;
 use app\Traits\HasPdoConnection;
 use PDOStatement;
 
-abstract class AbstractRepository
+#[AllowDynamicProperties] abstract class AbstractRepository
 {
     use HasPdoConnection;
 
@@ -71,18 +72,38 @@ abstract class AbstractRepository
     protected function execute(string $sql, array $params = []): bool
     {
         $startTime = microtime(true);
+        $this->lastError = null; // Réinitialise l’erreur
 
-        $stmt = $this->pdo->prepare($sql);
-        $result = $stmt->execute($params);
-
-        $this->lastStatement = $stmt;
         $operation = $this->getOperationType($sql);
-        $affectedRows = $stmt->rowCount();
+        $affectedRows = 0;
 
-        $this->logQuery($operation, $sql, $params, $startTime, $affectedRows);
+        try {
+            $stmt = $this->pdo->prepare($sql);
+            $result = $stmt->execute($params);
 
-        return $result;
+            $this->lastStatement = $stmt;
+            $affectedRows = $stmt->rowCount();
+
+            $this->logQuery($operation, $sql, $params, $startTime, $affectedRows);
+
+            return $result;
+        } catch (\PDOException $e) {
+            $this->lastError = $e->getMessage();
+            Logger::get()->error(
+                'SQL Error',
+                $e->getMessage(),
+                [
+                    'table' => $this->tableName,
+                    'query' => $this->sanitizeSql($sql),
+                    'params' => $this->sanitizeParams($params),
+                    'error' => $e->getMessage(),
+                ]
+            );
+            $this->logQuery($operation, $sql, $params, $startTime, $affectedRows);
+            return false;
+        }
     }
+
 
     protected function fetchAll(string $sql, array $params = []): array
     {
@@ -144,5 +165,9 @@ abstract class AbstractRepository
         return (int)$this->pdo->lastInsertId();
     }
 
+    public function getLastError(): ?string
+    {
+        return $this->lastError ?? null;
+    }
 
 }

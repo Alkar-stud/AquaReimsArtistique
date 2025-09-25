@@ -37,10 +37,7 @@ class UserController extends AbstractController
         $this->render('/gestion/users', [
             'users' => $this->userRepository->findAllWithRoleLevelLowerThan($level),
             'roles' => $this->roleRepository->findAll(),
-            'currentUser' => $this->currentUser,
-            'csrf_token_add' => $this->csrfService->getToken('/gestion/users/add'),
-            'csrf_token_edit' => $this->csrfService->getToken('/gestion/users/edit'),
-            'csrf_token_delete' => $this->csrfService->getToken('/gestion/users/delete')
+            'currentUser' => $this->currentUser
         ], 'gestion des utilisateurs');
     }
 

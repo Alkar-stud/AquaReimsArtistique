@@ -15,10 +15,10 @@ class SwimmerGroupRepository extends AbstractRepository
      * Retourne tous les groupes de nageurs
      * @return SwimmerGroup[]
      */
-    public function findAll(bool $isActive = true, bool $withSwimmers = false): array
+    public function findAll(bool $onlyIsActive = true, bool $withSwimmers = false): array
     {
         $sql = "SELECT * FROM $this->tableName"
-            . ($isActive ? " WHERE is_active = 1" : "")
+            . ($onlyIsActive ? " WHERE is_active = 1" : "")
             . " ORDER BY `order`";
         $rows = $this->query($sql);
 

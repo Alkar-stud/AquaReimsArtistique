@@ -186,20 +186,25 @@ abstract class AbstractController
 
     private function logoutAndRedirect(string $message, bool $saveRedirectUrl = false): void
     {
+        $redirectUrlAfterLogin = null;
+
+        if ($saveRedirectUrl && isset($_SERVER['REQUEST_URI'])) {
+            $redirectUrl = $_SERVER['REQUEST_URI'];
+            if ($this->isValidInternalRedirect($redirectUrl)) {
+                $redirectUrlAfterLogin = $redirectUrl;
+            }
+        }
+
         $_SESSION = [];
         session_destroy();
         session_start();
         $this->flashMessageService->setFlashMessage('warning', $message);
 
-        if ($saveRedirectUrl && isset($_SERVER['REQUEST_URI'])) {
-            $redirectUrl = $_SERVER['REQUEST_URI'];
-            if ($this->isValidInternalRedirect($redirectUrl)) {
-                $_SESSION['redirect_after_login'] = $redirectUrl;
-            }
+        if ($redirectUrlAfterLogin) {
+            $_SESSION['redirect_after_login'] = $redirectUrlAfterLogin;
         }
 
-        header('Location: /login');
-        exit;
+        $this->redirect('/login');
     }
 
     protected function configureSession(): void

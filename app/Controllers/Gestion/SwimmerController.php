@@ -135,7 +135,6 @@ class SwimmerController extends AbstractController
             $this->redirect('/gestion/swimmers');
         }
 
-
         $this->swimmerRepository->delete($swimmerId);
 
         $this->flashMessageService->setFlashMessage('success', "Nageur supprimé.");

@@ -1,5 +1,4 @@
 <?php
-// PHP
 namespace app\Repository\Reservation;
 
 use app\Models\Reservation\Reservation;
@@ -108,48 +107,6 @@ class ReservationRepository extends AbstractRepository
         $r = $this->hydrate($rows[0]);
         $this->hydrateOptionalRelations($r, $withEvent, $withEventSession);
         return $withChildren ? $this->hydrateRelations([$r])[0] : $r;
-    }
-
-    /**
-     * Retourne toutes les réservations d'un événement
-     * @return Reservation[]
-     */
-    public function findByEvent(
-        int $eventId,
-        bool $withEvent = false,
-        bool $withEventSession = false,
-        bool $withChildren = false
-    ): array {
-        $sql = "SELECT * FROM $this->tableName WHERE event = :eventId ORDER BY created_at DESC";
-        $rows = $this->query($sql, ['eventId' => $eventId]);
-
-        $list = array_map([$this, 'hydrate'], $rows);
-        foreach ($list as $r) {
-            $this->hydrateOptionalRelations($r, $withEvent, $withEventSession);
-        }
-
-        return $withChildren ? $this->hydrateRelations($list) : $list;
-    }
-
-    /**
-     * Retourne toutes les réservations actives d'un événement
-     * @return Reservation[]
-     */
-    public function findActiveByEvent(
-        int $eventId,
-        bool $withEvent = false,
-        bool $withEventSession = false,
-        bool $withChildren = false
-    ): array {
-        $sql = "SELECT * FROM $this->tableName WHERE event = :eventId AND is_canceled = 0 ORDER BY created_at DESC";
-        $rows = $this->query($sql, ['eventId' => $eventId]);
-
-        $list = array_map([$this, 'hydrate'], $rows);
-        foreach ($list as $r) {
-            $this->hydrateOptionalRelations($r, $withEvent, $withEventSession);
-        }
-
-        return $withChildren ? $this->hydrateRelations($list) : $list;
     }
 
     /**
@@ -371,21 +328,21 @@ class ReservationRepository extends AbstractRepository
         $allDetails = $detailsRepository->findByReservations($reservationIds, false, true, true);
         $detailsByReservationId = [];
         foreach ($allDetails as $detail) {
-            $detailsByReservationId[$detail->getReservation()][] = $detail;
+            $detailsByReservationId[$detail->getReservationId()][] = $detail;
         }
 
-        $complementsRepository = new ReservationsComplementsRepository();
+        $complementsRepository = new ReservationComplementRepository();
         $allComplements = $complementsRepository->findByReservations($reservationIds);
         $complementsByReservationId = [];
         foreach ($allComplements as $complement) {
-            $complementsByReservationId[$complement->getReservation()][] = $complement;
+            $complementsByReservationId[$complement->getReservationId()][] = $complement;
         }
 
-        $paymentsRepository = new ReservationPaymentsRepository();
+        $paymentsRepository = new ReservationPaymentRepository();
         $allPayments = $paymentsRepository->findByReservations($reservationIds);
         $paymentsByReservationId = [];
         foreach ($allPayments as $payment) {
-            $paymentsByReservationId[$payment->getReservation()][] = $payment;
+            $paymentsByReservationId[$payment->getReservationId()][] = $payment;
         }
 
         foreach ($reservations as $reservation) {

@@ -33,12 +33,11 @@ class EventService
      */
     public function getAllEventsWithRelations(): array
     {
-        // 1. Récupérer tous les événements de base
+        // Récupérer tous les événements de base
         $events = $this->eventRepository->findAllSortByDate();
         if (empty($events)) {
             return [];
         }
-
         // Créer une map des événements par ID pour un accès facile
         $eventsById = [];
         foreach ($events as $event) {
@@ -46,7 +45,7 @@ class EventService
         }
         $eventIds = array_keys($eventsById);
 
-        // 2. Récupérer toutes les relations en une seule fois (Eager Loading manuel)
+        // Récupérer toutes les relations en une seule fois (Eager Loading manuel)
         $piscineIds = array_map(fn(Event $e) => $e->getPlace(), $events);
         $piscines = $this->piscineRepository->findByIds(array_unique($piscineIds));
         $piscinesById = [];
@@ -56,9 +55,10 @@ class EventService
 
         $tarifsByEventId = $this->tarifRepository->findByEventIds($eventIds);
         $sessionsByEventId = $this->eventSessionRepository->findByEventIds($eventIds);
+
         $inscriptionDatesByEventId = $this->inscriptionDateRepository->findByEventIds($eventIds);
 
-        // 3. Attacher les relations aux objets Event correspondants
+        // Attacher les relations aux objets Event correspondants
         foreach ($events as $event) {
             $eventId = $event->getId();
 

@@ -50,8 +50,8 @@ class EventInscriptionDateRepository extends AbstractRepository
      */
     public function findByEventId(int $eventId, bool $withEvent = false, ?Event $eventObject = null): array
     {
-        $sql = "SELECT * FROM $this->tableName WHERE event = :event_id ORDER BY start_registration_at";
-        $rows = $this->query($sql, ['event_id' => $eventId]);
+        $sql = "SELECT * FROM $this->tableName WHERE event = :event ORDER BY start_registration_at";
+        $rows = $this->query($sql, ['event' => $eventId]);
 
         $event = $eventObject;
         if ($withEvent) {
@@ -63,7 +63,7 @@ class EventInscriptionDateRepository extends AbstractRepository
     }
 
     /**
-     * Retourne toutes les périodes d'inscription pour une liste d'IDs d'événements, groupées par event_id
+     * Retourne toutes les périodes d'inscription pour une liste d'IDs d'événements, groupées par event
      * @param int[] $eventIds
      * @return array<int, EventInscriptionDate[]>
      */
@@ -135,15 +135,16 @@ class EventInscriptionDateRepository extends AbstractRepository
         ]);
     }
 
+
     /**
-     * Supprime toutes les périodes de dates d'inscription d'un événement
+     * Supprime toutes les périodes d'inscription associées à un événement.
      * @param int $eventId
      * @return bool
      */
-    public function deleteByEventId(int $eventId): bool
+    public function deleteAllForEvent(int $eventId): bool
     {
-        $sql = "DELETE FROM $this->tableName WHERE event = :event_id";
-        return $this->execute($sql, ['event_id' => $eventId]);
+        $sql = "DELETE FROM $this->tableName WHERE `event` = :event";
+        return $this->execute($sql, ['event' => $eventId]);
     }
 
     /**

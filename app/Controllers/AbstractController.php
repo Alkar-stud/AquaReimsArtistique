@@ -305,18 +305,18 @@ abstract class AbstractController
     /**
      * Vérifie si l'utilisateur courant a les droits de faire ce qui est demandé.
      * Redirige si false sinon retourne true
-     * @param int $minLevel
+     * @param int $minRoleLevel
      * @param string|null $urlReturn
      * @return void
      */
-    protected function checkIfCurrentUserIsAllowedToManagedThis(int $minLevel = 99, ?string $urlReturn = null): void
+    protected function checkIfCurrentUserIsAllowedToManagedThis(int $minRoleLevel = 99, ?string $urlReturn = null): void
     {
         if ($urlReturn !== null && !preg_match('/^[a-z-]*$/', $urlReturn)) {
             http_response_code(404);
             exit;
         }
 
-        if (!$this->currentUser || $this->currentUser->getRole()->getLevel() > $minLevel) {
+        if (!$this->currentUser || $this->currentUser->getRole()->getLevel() > $minRoleLevel) {
             $this->flashMessageService->setFlashMessage('danger', "Accès refusé");
             if ($urlReturn !== null) {
                 $urlReturn = '/' . $urlReturn;

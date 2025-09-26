@@ -77,7 +77,7 @@ class EventDataValidationService
                 $openingAt = new DateTime($sessionData['opening_doors_at'] ?? 'invalid');
 
                 if ($openingAt > $startAt) {
-                    return "La date d'ouverture des portes ne peut pas être après le début de la séance pour la séance '{$sessionName}'.";
+                    return "La date d'ouverture des portes ne peut pas être après le début de la séance pour la séance '$sessionName'.";
                 }
 
                 $session = (new EventSession())
@@ -105,7 +105,7 @@ class EventDataValidationService
                 $accessCode = htmlspecialchars(trim($inscriptionData['access_code'] ?? ''), ENT_QUOTES, 'UTF-8');
 
                 if ($closeRegAt < $startRegAt) {
-                    return "La date de clôture des inscriptions ne peut pas être avant la date d'ouverture pour la période '{$name}'.";
+                    return "La date de clôture des inscriptions ne peut pas être avant la date d'ouverture pour la période '$name'.";
                 }
 
                 $inscription = (new EventInscriptionDate())

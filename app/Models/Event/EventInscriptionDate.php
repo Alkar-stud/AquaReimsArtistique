@@ -4,22 +4,23 @@ namespace app\Models\Event;
 
 use app\Models\AbstractModel;
 use DateTime;
+use DateTimeInterface;
 
 class EventInscriptionDate extends AbstractModel
 {
     private int $eventId;
     private ?Event $eventObject = null;
     private string $name;
-    private \DateTimeInterface $startRegistrationAt;
-    private \DateTimeInterface $closeRegistrationAt;
+    private DateTimeInterface $startRegistrationAt;
+    private DateTimeInterface $closeRegistrationAt;
     private ?string $accessCode = null;
 
     // --- GETTERS ---
     public function getEventId(): int { return $this->eventId; }
     public function getEventObject(): ?Event { return $this->eventObject; }
     public function getName(): string { return $this->name; }
-    public function getStartRegistrationAt(): \DateTimeInterface { return $this->startRegistrationAt; }
-    public function getCloseRegistrationAt(): \DateTimeInterface { return $this->closeRegistrationAt; }
+    public function getStartRegistrationAt(): DateTimeInterface { return $this->startRegistrationAt; }
+    public function getCloseRegistrationAt(): DateTimeInterface { return $this->closeRegistrationAt; }
     public function getAccessCode(): ?string { return $this->accessCode; }
 
     // --- SETTERS ---

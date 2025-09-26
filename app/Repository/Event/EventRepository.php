@@ -90,8 +90,8 @@ class EventRepository extends AbstractRepository
     {
         $sql = "SELECT e.* FROM $this->tableName e
             LEFT JOIN (
-                SELECT event_id, MIN(event_start_at) as first_session_date FROM event_session GROUP BY event_id
-            ) s ON s.event_id = e.id
+                SELECT event, MIN(event_start_at) as first_session_date FROM event_session GROUP BY event
+            ) s ON s.event = e.id
             GROUP BY e.id
             ORDER BY s.first_session_date DESC, e.created_at DESC";
         $rows = $this->query($sql);

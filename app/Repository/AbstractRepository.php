@@ -52,14 +52,31 @@ use PDOStatement;
     {
         $startTime = microtime(true);
 
-        $stmt = $this->pdo->prepare($sql);
-        $stmt->execute($params);
-        $result = $stmt->fetchAll();
+        try {
+            $stmt = $this->pdo->prepare($sql);
+            $stmt->execute($params);
+            $result = $stmt->fetchAll();
 
-        $this->lastStatement = $stmt;
-        $this->logQuery('SELECT', $sql, $params, $startTime, count($result));
+            $this->lastStatement = $stmt;
+            $this->logQuery('SELECT', $sql, $params, $startTime, count($result));
 
-        return $result;
+            return $result;
+        } catch (\PDOException $e) {
+            $this->lastError = $e->getMessage();
+            Logger::get()->error(
+                'SQL Error',
+                $e->getMessage(),
+                [
+                    'table' => $this->tableName,
+                    'query' => $this->sanitizeSql($sql),
+                    'params' => $this->sanitizeParams($params),
+                    'error' => $e->getMessage(),
+                ]
+            );
+            echo 'Erreur SQL : ' . $e->getMessage() . "\n";
+            echo 'Requête : ' . $this->sanitizeSql($sql) . "\n";
+            return [];
+        }
     }
 
     /**

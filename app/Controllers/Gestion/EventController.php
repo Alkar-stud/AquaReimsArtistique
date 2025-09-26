@@ -15,11 +15,21 @@ use DateTime;
 class EventController extends AbstractController
 {
     private EventService $eventService;
+    private EventRepository $eventRepository;
+    private EventDataValidationService $eventDataValidationService;
+    private EventTarifRepository $eventTarifRepository;
+    private EventSessionRepository $eventSessionRepository;
+    private EventInscriptionDateRepository $eventInscriptionDateRepository;
 
     public function __construct()
     {
         parent::__construct(false);
         $this->eventService = new EventService();
+        $this->eventRepository = new EventRepository();
+        $this->eventDataValidationService = new EventDataValidationService();
+        $this->eventTarifRepository = new EventTarifRepository();
+        $this->eventSessionRepository = new EventSessionRepository();
+        $this->eventInscriptionDateRepository = new EventInscriptionDateRepository();
     }
 
     /**
@@ -41,6 +51,7 @@ class EventController extends AbstractController
 
         // On parcourt chaque événement pour le classer.
         foreach ($allEvents as $event) {
+
             $sessions = $event->getSessions();
 
             // Cas où un événement n'a pas encore de session définie.
@@ -81,57 +92,115 @@ class EventController extends AbstractController
     #[Route('/gestion/events/add', name: 'app_gestion_events_add', methods: ['POST'])]
     public function add(): void
     {
-        $this->checkIfCurrentUserIsAllowedToManagedThis(1, 'events');
+        //On vérifie que le CurrentUser a bien le droit de faire ça
+        $this->checkIfCurrentUserIsAllowedToManagedThis(2, 'events');
 
-        $validationService = new EventDataValidationService();
-        $error = $validationService->checkData($_POST);
-
+        $error = $this->eventDataValidationService->checkData($_POST);
         if ($error) {
             $this->flashMessageService->setFlashMessage('danger', $error);
             $this->redirect('/gestion/events');
         }
 
         // Récupération des données validées
-        $event = $validationService->getValidatedEvent();
-        $tarifIds = $validationService->getValidatedTarifs();
-        $sessions = $validationService->getValidatedSessions();
-        $inscriptionDates = $validationService->getValidatedInscriptionDates();
-
-        // Repositories
-        $eventRepository = new EventRepository();
-        $eventTarifRepository = new EventTarifRepository();
-        $sessionRepository = new EventSessionRepository();
-        $inscriptionDateRepository = new EventInscriptionDateRepository();
+        $event = $this->eventDataValidationService->getValidatedEvent();
+        $tarifIds = $this->eventDataValidationService->getValidatedTarifs();
+        $sessions = $this->eventDataValidationService->getValidatedSessions();
+        $inscriptionDates = $this->eventDataValidationService->getValidatedInscriptionDates();
 
         // Début de la transaction pour tout insérer
-        $eventRepository->beginTransaction();
+        $this->eventRepository->beginTransaction();
         try {
             // Insérer l'événement principal pour obtenir son ID
-            $eventId = $eventRepository->insert($event);
+            $eventId = $this->eventRepository->insert($event);
             if ($eventId === 0) {
                 throw new \Exception("La création de l'événement a échoué.");
             }
 
             // Lier les tarifs à l'événement
-            $eventTarifRepository->replaceForEvent($eventId, $tarifIds);
+            $this->eventTarifRepository->replaceForEvent($eventId, $tarifIds);
 
             // Insérer les séances en liant l'ID de l'événement
             foreach ($sessions as $session) {
-                $session->setEventId($eventId);
-                $sessionRepository->insert($session);
+                $session->setEvent($eventId);
+                $this->eventSessionRepository->insert($session);
             }
 
             // Insérer les périodes d'inscription en liant l'ID de l'événement
             foreach ($inscriptionDates as $inscriptionDate) {
-                $inscriptionDate->setEventId($eventId);
-                $inscriptionDateRepository->insert($inscriptionDate);
+                $inscriptionDate->setEvent($eventId);
+                $this->eventInscriptionDateRepository->insert($inscriptionDate);
             }
 
-            $eventRepository->commit();
+            $this->eventRepository->commit();
             $this->flashMessageService->setFlashMessage('success', "L'événement '{$event->getName()}' a été ajouté avec succès.");
         } catch (\Throwable $e) {
-            $eventRepository->rollBack();
+            $this->eventRepository->rollBack();
             $this->flashMessageService->setFlashMessage('danger', "Une erreur est survenue lors de l'ajout de l'événement : " . $e->getMessage());
+        }
+
+        $this->redirect('/gestion/events');
+    }
+
+    #[Route('/gestion/events/update', name: 'app_gestion_events_update')]
+    public function update(): void
+    {
+        //On vérifie que le CurrentUser a bien le droit de faire ça
+        $this->checkIfCurrentUserIsAllowedToManagedThis(2, 'events');
+
+        //On récupère l'event
+        $eventId = (int)($_POST['event_id'] ?? 0);
+        $event = $this->eventRepository->findById($eventId);
+
+        if (!$event) {
+            $this->flashMessageService->setFlashMessage('danger', 'Événement non trouvé.');
+            $this->redirect('/gestion/events');
+        }
+
+        $error = $this->eventDataValidationService->checkData($_POST);
+        if ($error) {
+            $this->flashMessageService->setFlashMessage('danger', $error);
+            $this->redirect('/gestion/events');
+        }
+
+        // Récupération des données validées
+        $validatedEventData = $this->eventDataValidationService->getValidatedEvent();
+        $tarifIds = $this->eventDataValidationService->getValidatedTarifs();
+        $sessions = $this->eventDataValidationService->getValidatedSessions();
+        $inscriptionDates = $this->eventDataValidationService->getValidatedInscriptionDates();
+
+        // On met à jour l'objet Event existant avec les nouvelles données validées
+        $event->setName($validatedEventData->getName());
+        $event->setPlace($validatedEventData->getPlace());
+        $event->setLimitationPerSwimmer($validatedEventData->getLimitationPerSwimmer());
+
+        // Début de la transaction pour tout mettre à jour
+        $this->eventRepository->beginTransaction();
+        try {
+            // 1. Mettre à jour l'événement principal
+            $this->eventRepository->update($event);
+
+            // 2. Remplacer les tarifs liés à l'événement
+            $this->eventTarifRepository->replaceForEvent($event->getId(), $tarifIds);
+
+            // 3. Remplacer les séances (supprimer les anciennes, insérer les nouvelles)
+            $this->eventSessionRepository->deleteAllForEvent($event->getId());
+            foreach ($sessions as $session) {
+                $session->setEventId($event->getId()); // Assurer que l'ID de l'événement est bien là
+                $this->eventSessionRepository->insert($session);
+            }
+
+            // 4. Remplacer les périodes d'inscription (supprimer les anciennes, insérer les nouvelles)
+            $this->eventInscriptionDateRepository->deleteAllForEvent($event->getId());
+            foreach ($inscriptionDates as $inscriptionDate) {
+                $inscriptionDate->setEventId($event->getId()); // Assurer que l'ID de l'événement est bien là
+                $this->eventInscriptionDateRepository->insert($inscriptionDate);
+            }
+
+            $this->eventRepository->commit();
+            $this->flashMessageService->setFlashMessage('success', "L'événement '{$event->getName()}' a été modifié avec succès.");
+        } catch (\Throwable $e) {
+            $this->eventRepository->rollBack();
+            $this->flashMessageService->setFlashMessage('danger', "Une erreur est survenue lors de la modification de l'événement : " . $e->getMessage());
         }
 
         $this->redirect('/gestion/events');

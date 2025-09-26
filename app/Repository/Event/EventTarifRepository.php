@@ -77,10 +77,10 @@ class EventTarifRepository extends AbstractRepository
     {
         $tarifIds = array_values(array_unique(array_map('intval', $tarifIds)));
 
-        // 1. Purger les anciens tarifs pour cet événement.
+        // Purger les anciens tarifs pour cet événement.
         $this->detachAllForEvent($eventId);
 
-        // 2. Ré-attacher les nouveaux tarifs.
+        // Ré-attacher les nouveaux tarifs.
         if (!empty($tarifIds)) {
             $sql = "INSERT INTO $this->tableName (`event`, `tarif`) VALUES (:event, :tarif)";
             $stmt = $this->pdo->prepare($sql);

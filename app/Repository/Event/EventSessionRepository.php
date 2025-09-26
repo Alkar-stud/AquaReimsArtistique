@@ -28,7 +28,7 @@ class EventSessionRepository extends AbstractRepository
         $event = null;
         if ($withEvent) {
             $eventRepo = new EventRepository();
-            $event = $eventRepo->findById((int)$rows[0]['event_id']);
+            $event = $eventRepo->findById((int)$rows[0]['event']);
         }
         return $this->hydrate($rows[0], $event);
     }
@@ -39,8 +39,8 @@ class EventSessionRepository extends AbstractRepository
      */
     public function findByEventId(int $eventId, bool $withEvent = false, ?Event $eventObject = null): array
     {
-        $sql = "SELECT * FROM $this->tableName WHERE event_id = :event_id ORDER BY event_start_at";
-        $rows = $this->query($sql, ['event_id' => $eventId]);
+        $sql = "SELECT * FROM $this->tableName WHERE event = :event ORDER BY event_start_at";
+        $rows = $this->query($sql, ['event' => $eventId]);
 
         $event = $eventObject;
         if ($withEvent) {
@@ -52,7 +52,7 @@ class EventSessionRepository extends AbstractRepository
     }
 
     /**
-     * Retourne toutes les sessions pour une liste d'IDs d'événements, groupées par event_id
+     * Retourne toutes les sessions pour une liste d'IDs d'événements, groupées par event
      * @param int[] $eventIds
      * @return array<int, EventSession[]>
      */
@@ -63,12 +63,12 @@ class EventSessionRepository extends AbstractRepository
         }
         $placeholders = implode(',', array_fill(0, count($eventIds), '?'));
 
-        $sql = "SELECT * FROM $this->tableName WHERE event_id IN ($placeholders) ORDER BY event_id, event_start_at";
+        $sql = "SELECT * FROM $this->tableName WHERE event IN ($placeholders) ORDER BY event, event_start_at";
         $rows = $this->query($sql, $eventIds);
 
         $result = [];
         foreach ($rows as $row) {
-            $eventId = (int)$row['event_id'];
+            $eventId = (int)$row['event'];
             if (!isset($result[$eventId])) {
                 $result[$eventId] = [];
             }
@@ -85,8 +85,8 @@ class EventSessionRepository extends AbstractRepository
      */
     public function findLastSessionByEventId(int $eventId): ?array
     {
-        $sql = "SELECT * FROM $this->tableName WHERE event_id = :event_id ORDER BY event_start_at DESC LIMIT 1";
-        $rows = $this->query($sql, ['event_id' => $eventId]);
+        $sql = "SELECT * FROM $this->tableName WHERE event = :event ORDER BY event_start_at DESC LIMIT 1";
+        $rows = $this->query($sql, ['event' => $eventId]);
         return $rows[0] ?? null;
     }
 
@@ -98,10 +98,10 @@ class EventSessionRepository extends AbstractRepository
     public function insert(EventSession $session): int
     {
         $sql = "INSERT INTO $this->tableName
-            (event_id, session_name, opening_doors_at, event_start_at, created_at)
-            VALUES (:event_id, :session_name, :opening_doors_at, :event_start_at, :created_at)";
+            (event, session_name, opening_doors_at, event_start_at, created_at)
+            VALUES (:event, :session_name, :opening_doors_at, :event_start_at, :created_at)";
         $ok = $this->execute($sql, [
-            'event_id' => $session->getEventId(),
+            'event' => $session->getEventId(),
             'session_name' => $session->getSessionName(),
             'opening_doors_at' => $session->getOpeningDoorsAt()->format('Y-m-d H:i:s'),
             'event_start_at' => $session->getEventStartAt()->format('Y-m-d H:i:s'),
@@ -136,10 +136,10 @@ class EventSessionRepository extends AbstractRepository
      * @param int $eventId
      * @return bool
      */
-    public function deleteByEventId(int $eventId): bool
+    public function deleteAllForEvent(int $eventId): bool
     {
-        $sql = "DELETE FROM $this->tableName WHERE event_id = :event_id";
-        return $this->execute($sql, ['event_id' => $eventId]);
+        $sql = "DELETE FROM $this->tableName WHERE event = :event";
+        return $this->execute($sql, ['event' => $eventId]);
     }
 
     /**
@@ -152,7 +152,7 @@ class EventSessionRepository extends AbstractRepository
     {
         $s = new EventSession();
         $s->setId((int)$data['id'])
-            ->setEventId((int)$data['event_id'])
+            ->setEventId((int)$data['event'])
             ->setSessionName($data['session_name'])
             ->setOpeningDoorsAt($data['opening_doors_at'])
             ->setEventStartAt($data['event_start_at'])

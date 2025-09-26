@@ -121,13 +121,13 @@ class EventController extends AbstractController
 
             // Insérer les séances en liant l'ID de l'événement
             foreach ($sessions as $session) {
-                $session->setEvent($eventId);
+                $session->setEventId($eventId);
                 $this->eventSessionRepository->insert($session);
             }
 
             // Insérer les périodes d'inscription en liant l'ID de l'événement
             foreach ($inscriptionDates as $inscriptionDate) {
-                $inscriptionDate->setEvent($eventId);
+                $inscriptionDate->setEventId($eventId);
                 $this->eventInscriptionDateRepository->insert($inscriptionDate);
             }
 
@@ -203,6 +203,25 @@ class EventController extends AbstractController
             $this->flashMessageService->setFlashMessage('danger', "Une erreur est survenue lors de la modification de l'événement : " . $e->getMessage());
         }
 
+        $this->redirect('/gestion/events');
+    }
+
+    #[Route('/gestion/events/delete', name: 'app_gestion_events_delete')]
+    public function delete(): void
+    {
+        //On vérifie que le CurrentUser a bien le droit de faire ça
+        $this->checkIfCurrentUserIsAllowedToManagedThis(2, 'events');
+
+        //On récupère l'event
+        $eventId = (int)($_POST['event_id'] ?? 0);
+        $event = $this->eventRepository->findById($eventId);
+
+        if (!$event) {
+            $this->flashMessageService->setFlashMessage('danger', 'Événement non trouvé.');
+            $this->redirect('/gestion/events');
+        }
+
+        $this->flashMessageService->setFlashMessage('warning', 'Simulation de la suppression de l\'événement  ok.');
         $this->redirect('/gestion/events');
     }
 

@@ -23,6 +23,10 @@ Variables attendues :
                 echo htmlspecialchars(json_encode($eventData), ENT_QUOTES, 'UTF-8');
                 {% endphp %}"
                 title="Modifier"><i class="bi bi-pencil-square"></i></button>
-        <button class="btn btn-sm btn-danger" data-event-id="{{ $event->getId() }}" title="Supprimer"><i class="bi bi-trash"></i></button>
+        <form action="/gestion/events/delete" method="POST" onsubmit="return confirm('Êtes-vous sûr de vouloir supprimer cet événement ?');" class="d-inline">
+            <input type="hidden" name="csrf_token" value="{{ $csrf_token }}">
+            <input type="hidden" name="event_id" value="{{ $event->getId() }}">
+            <button type="submit" class="btn btn-sm btn-danger" title="Supprimer"><i class="bi bi-trash"></i></button>
+        </form>
     </div>
 </div>

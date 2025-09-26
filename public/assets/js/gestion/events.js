@@ -82,7 +82,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // Si des données sont fournies (mode édition), on remplit les champs
         if (data) {
             Object.keys(data).forEach(key => {
-                // L'ID est dans un champ caché, les autres sont nommés `...[key]`
+                // L'ID est dans un champ caché, les autres sont nommés `... [key]`
                 const inputName = key === 'id' ? `[id]` : `[${key}]`;
                 const input = itemElement.querySelector(`[name*="${inputName}"]`);
                 if (input) {
@@ -193,7 +193,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const desktopNameInput = document.getElementById('desktop_add_name');
             const desktopPlaceInput = document.getElementById('desktop_add_place');
 
-            // S'assurer que la modale est en mode "Ajout"
+            // S'assurer que la modale est en mode "Ajout".
             resetModalForm();
 
             // On pré-remplit les champs de la modale avec les valeurs du formulaire rapide

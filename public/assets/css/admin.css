@@ -39,6 +39,8 @@
 }
 
 
+
+
 /*
  * gestion des tarifs
  */
@@ -99,5 +101,17 @@
     .modal-footer {
         flex-direction: column !important;
         gap: 0.5rem;
+    }
+}
+
+/*
+ * Styles spécifiques pour la section de gestion
+ */
+
+/* Rend les onglets de la modale plus compacts sur les petits écrans */
+@media (max-width: 576px) {
+    .nav-tabs-sm .nav-link {
+        padding: 0.5rem 0.4rem; /* Réduit l'espacement interne */
+        font-size: 0.8rem;     /* Réduit la taille de la police */
     }
 }

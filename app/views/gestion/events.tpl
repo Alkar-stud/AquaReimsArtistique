@@ -98,12 +98,13 @@
                 </div>
                 <form id="eventForm" method="POST" action="/gestion/events/add" novalidate>
                     <input type="hidden" name="csrf_token" value="{{ $csrf_token }}">
+                    <input type="hidden" name="event_id" id="event_id" value="">
                     <div class="modal-body">
                         <!-- Zone pour les messages d'erreur de validation -->
                         <div id="validation-errors" class="alert alert-danger d-none" role="alert"></div>
 
                         <!-- Onglets de navigation -->
-                        <ul class="nav nav-tabs mb-3" id="event-tabs" role="tablist">
+                        <ul class="nav nav-tabs nav-tabs-sm mb-3" id="event-tabs" role="tablist">
                             <li class="nav-item" role="presentation">
                                 <button class="nav-link active" id="tab-info" data-bs-toggle="tab" data-bs-target="#pane-info" type="button" role="tab">1. Informations</button>
                             </li>

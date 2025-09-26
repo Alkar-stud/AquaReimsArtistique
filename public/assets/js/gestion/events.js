@@ -19,6 +19,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const eventModal = new bootstrap.Modal(document.getElementById('eventModal'));
     const eventForm = document.getElementById('eventForm');
     const validationErrorsContainer = document.getElementById('validation-errors');
+    const eventModalTitle = document.getElementById('eventModalTitle');
 
     // Conteneurs et templates pour les éléments dynamiques
     const sessionsContainer = document.getElementById('sessions-container');
@@ -38,7 +39,7 @@ document.addEventListener('DOMContentLoaded', function() {
      */
 
     // Ajoute un nouvel élément (séance ou période) au formulaire
-    function addItem(type) {
+    function addItem(type, data = null) {
         const isSession = type === 'session';
         const template = isSession ? sessionTemplate : inscriptionTemplate;
         const container = isSession ? sessionsContainer : inscriptionContainer;
@@ -78,6 +79,18 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         }
 
+        // Si des données sont fournies (mode édition), on remplit les champs
+        if (data) {
+            Object.keys(data).forEach(key => {
+                // L'ID est dans un champ caché, les autres sont nommés `...[key]`
+                const inputName = key === 'id' ? `[id]` : `[${key}]`;
+                const input = itemElement.querySelector(`[name*="${inputName}"]`);
+                if (input) {
+                    input.value = data[key];
+                }
+            });
+        }
+
         container.appendChild(itemElement);
         // Si on vient d'ajouter une période d'inscription, on tente de pré-remplir la date de clôture.
         if (!isSession) {
@@ -111,6 +124,60 @@ document.addEventListener('DOMContentLoaded', function() {
 
     /**
      * =================================================================
+     * GESTION DE L'ÉDITION D'UN ÉVÉNEMENT
+     * =================================================================
+     */
+
+    // Remplit la modale avec les données d'un événement pour l'édition
+    function populateModalForEdit(eventData) {
+        // 1. Réinitialiser le formulaire (important pour passer du mode ajout à édition)
+        resetModalForm();
+
+        // 2. Configurer la modale pour l'édition
+        eventModalTitle.textContent = "Modifier l'événement";
+        eventForm.action = `/gestion/events/update`; // La route sera la même, on utilise l'ID caché
+        document.getElementById('event_id').value = eventData.id;
+
+        // 3. Remplir l'onglet "Informations"
+        document.getElementById('event_name').value = eventData.name;
+        document.getElementById('event_place').value = eventData.place;
+        document.getElementById('event_limitation_per_swimmer').value = eventData.limitation_per_swimmer || '';
+
+        // 4. Remplir l'onglet "Tarifs"
+        const tarifCheckboxes = document.querySelectorAll('#pane-tarifs input[name="tarifs[]"]');
+        tarifCheckboxes.forEach(checkbox => {
+            checkbox.checked = eventData.tarifs.includes(parseInt(checkbox.value));
+        });
+
+        // 5. Remplir l'onglet "Séances"
+        if (eventData.sessions && eventData.sessions.length > 0) {
+            eventData.sessions.forEach(sessionData => {
+                addItem('session', sessionData);
+            });
+        }
+
+        // 6. Remplir l'onglet "Périodes d'inscription"
+        if (eventData.inscription_dates && eventData.inscription_dates.length > 0) {
+            eventData.inscription_dates.forEach(inscriptionData => {
+                addItem('inscription', inscriptionData);
+            });
+        }
+
+        // 7. Afficher la modale
+        eventModal.show();
+    }
+
+    // Écouteur de clic délégué pour les boutons "Modifier"
+    document.addEventListener('click', function(e) {
+        const editButton = e.target.closest('.edit-event-btn');
+        if (editButton) {
+            const eventData = JSON.parse(editButton.dataset.eventJson);
+            populateModalForEdit(eventData);
+        }
+    });
+
+    /**
+     * =================================================================
      * GESTION DES ÉVÉNEMENTS DU FORMULAIRE
      * =================================================================
      */
@@ -125,6 +192,9 @@ document.addEventListener('DOMContentLoaded', function() {
         desktopAddBtn.addEventListener('click', () => {
             const desktopNameInput = document.getElementById('desktop_add_name');
             const desktopPlaceInput = document.getElementById('desktop_add_place');
+
+            // S'assurer que la modale est en mode "Ajout"
+            resetModalForm();
 
             // On pré-remplit les champs de la modale avec les valeurs du formulaire rapide
             document.getElementById('event_name').value = desktopNameInput.value;
@@ -145,22 +215,29 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // Réinitialisation du formulaire à la fermeture de la modale
-    document.getElementById('eventModal').addEventListener('hidden.bs.modal', () => {
+    // Fonction pour réinitialiser complètement la modale
+    function resetModalForm() {
         eventForm.reset();
-        // On remet l'action par défaut (ajout)
+        eventModalTitle.textContent = 'Ajouter un événement';
         eventForm.action = '/gestion/events/add';
+        document.getElementById('event_id').value = '';
 
         sessionsContainer.innerHTML = '';
         inscriptionContainer.innerHTML = '';
         sessionIndex = 0;
         inscriptionIndex = 0;
+
         validationErrorsContainer.classList.add('d-none');
         validationErrorsContainer.innerHTML = '';
+
         // S'assurer que le premier onglet est actif
         bootstrap.Tab.getOrCreateInstance(document.getElementById('tab-info')).show();
+    }
 
-        // Vider aussi le formulaire d'ajout rapide desktop
+    // Réinitialisation du formulaire à la fermeture de la modale
+    document.getElementById('eventModal').addEventListener('hidden.bs.modal', () => {
+        resetModalForm();
+        // Vider aussi le formulaire d'ajout rapide desktop au cas où
         const desktopNameInput = document.getElementById('desktop_add_name');
         if(desktopNameInput) desktopNameInput.value = '';
     });

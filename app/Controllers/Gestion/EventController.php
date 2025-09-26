@@ -68,6 +68,7 @@ class EventController extends AbstractController
         $allPiscines = $this->eventService->getAllPiscines();
         $allActiveTarifs = $this->eventService->getAllActiveTarifs();
 
+
         // On envoie les deux listes d'événements (et les autres données nécessaires) à la vue.
         $this->render('/gestion/events', [
             'eventsUpcoming' => $eventsUpcoming,

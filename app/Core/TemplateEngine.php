@@ -92,12 +92,18 @@ class TemplateEngine
     private function compileIncludes(string $template): string
     {
         // {% include 'file.tpl' %}
+        // {% include 'file.tpl' with {'var': $value} %}
         return preg_replace_callback(
-            '/\{%\s*include\s+[\'"](.+?)[\'"]\s*%}/',
+            '/\{%\s*include\s+[\'"](.+?)[\'"](?:\s+with\s+(.+?))?\s*%}/',
             function ($m) {
-                $file = addslashes($m[1]);
-                // Passer uniquement $__data pour éviter l'inflation de scope
-                return "<?php echo \$this->render(\$this->resolveInclude('$file'), \$__data); ?>";
+                $file = addslashes($m[1]); // Le chemin du fichier
+                $context = $m[2] ?? '[]'; // Le contexte (ex: "{'event': $event}") ou un tableau vide
+
+                // On fusionne le contexte local ($context) avec les données globales ($__data)
+                // Le contexte local écrase les données globales en cas de conflit de nom.
+                $data_to_pass = "array_merge(\$__data, $context)";
+
+                return "<?php echo \$this->render(\$this->resolveInclude('$file'), $data_to_pass); ?>";
             },
             $template
         );

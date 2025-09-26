@@ -8,47 +8,82 @@
     <h2 class="mb-4">Gestion des événements</h2>
 
     <!-- ================================================================== -->
-    <!-- BOUTON AJOUT (MOBILE) -->
+    <!-- ONGLET POUR LES LISTES -->
     <!-- ================================================================== -->
-    <div class="d-md-none mb-4">
-        <button type="button" class="btn btn-success w-100" data-bs-toggle="modal" data-bs-target="#eventModal">
-            <i class="bi bi-plus-circle"></i> Ajouter un événement
-        </button>
-    </div>
+    <ul class="nav nav-tabs mt-5" id="events-list-tabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="upcoming-events-tab" data-bs-toggle="tab" data-bs-target="#upcoming-events-pane" type="button" role="tab" aria-controls="upcoming-events-pane" aria-selected="true">
+                Événements à venir
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="past-events-tab" data-bs-toggle="tab" data-bs-target="#past-events-pane" type="button" role="tab" aria-controls="past-events-pane" aria-selected="false">Événements passés</button>
+        </li>
+    </ul>
+    <div class="tab-content" id="events-list-tabs-content">
+        <div class="tab-pane fade show active" id="upcoming-events-pane" role="tabpanel" aria-labelledby="upcoming-events-tab">
+            {% if $eventsUpcoming %}
+            <!-- Liste des événements à venir (Mobile) -->
+            <div class="list-group d-md-none mt-3">
+                {% foreach $eventsUpcoming as $event %}
+                {% include 'events/_event-item-mobile.tpl' with ['event' => $event] %}
+                {% endforeach %}
+            </div>
 
-    <!-- ================================================================== -->
-    <!-- LISTES DES ÉVÉNEMENTS (à venir / passés) -->
-    <!-- ================================================================== -->
-    <div class="d-none d-md-block">
-        <h4 class="mt-5">Événements à venir</h4>
-        <table class="table align-middle">
-            <thead>
-            <tr>
-                <th>Libellé</th>
-                <th>Lieu</th>
-                <th style="width: 250px;">Actions</th>
-            </tr>
-            </thead>
-            <tbody>
-            <!-- Ligne d'ajout rapide pour desktop -->
-            <tr class="table-light">
-                <td><input type="text" class="form-control" id="desktop_add_name" placeholder="Libellé du nouvel événement"></td>
-                <td>
-                    <select class="form-select" id="desktop_add_place">
-                        <option value="">Sélectionner un lieu</option>
-                        {% foreach $allPiscines as $piscine %}
-                        <option value="{{ $piscine->getId() }}">{{ $piscine->getLabel() }}</option>
-                        {% endforeach %}
-                    </select>
-                </td>
-                <td><button type="button" class="btn btn-success w-100" id="desktop-add-btn"><i class="bi bi-plus-circle"></i> Continuer l'ajout...</button></td>
-            </tr>
-            <!-- TODO: La boucle des événements à venir ira ici -->
-            </tbody>
-        </table>
-    </div>
+            <!-- Table des événements à venir (Desktop) -->
+            <div class="d-none d-md-block" id="upcoming-events-table-container">
+                <table class="table align-middle mt-3">
+                    <thead>
+                    <tr>
+                        <th>Libellé</th>
+                        <th>Lieu</th>
+                        <th style="width: 250px;">Actions</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <!-- Ligne d'ajout rapide pour desktop -->
+                    <tr class="table-light">
+                        <td><input type="text" class="form-control" id="desktop_add_name" placeholder="Libellé du nouvel événement"></td>
+                        <td>
+                            <select class="form-select" id="desktop_add_place">
+                                <option value="">Sélectionner un lieu</option>
+                                {% foreach $allPiscines as $piscine %}
+                                <option value="{{ $piscine->getId() }}">{{ $piscine->getLabel() }}</option>
+                                {% endforeach %}
+                            </select>
+                        </td>
+                        <td><button type="button" class="btn btn-success w-100" id="desktop-add-btn"><i class="bi bi-plus-circle"></i> Continuer l'ajout...</button></td>
+                    </tr>
+                    <!-- Boucle pour les événements à venir (desktop) -->
+                    {% foreach $eventsUpcoming as $event %}
+                    {% include 'events/_event-item.tpl' with ['event' => $event] %}
+                    {% endforeach %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="alert alert-info mt-3">Aucun événement à venir pour le moment.</div>
+            {% endif %}
 
-    <p class="mt-4">TODO: Affichage des listes d'événements à venir (mobile) et passés (mobile/desktop) ici.</p>
+            <!-- Bouton d'ajout pour mobile, maintenant à l'intérieur de l'onglet -->
+            <div class="d-md-none my-3">
+                <button type="button" class="btn btn-success w-100" data-bs-toggle="modal" data-bs-target="#eventModal">
+                    <i class="bi bi-plus-circle"></i> Ajouter un événement
+                </button>
+            </div>
+        </div>
+        <div class="tab-pane fade" id="past-events-pane" role="tabpanel" aria-labelledby="past-events-tab">
+            {% if $eventsPast %}
+            <div class="list-group mt-3">
+                {% foreach $eventsPast as $event %}
+                {% include 'events/_event-item-readonly.tpl' with ['event' => $event] %}
+                {% endforeach %}
+            </div>
+            {% else %}
+            <div class="alert alert-secondary mt-3">Aucun événement passé à afficher.</div>
+            {% endif %}
+        </div>
+    </div>
 
 
     <!-- ================================================================== -->

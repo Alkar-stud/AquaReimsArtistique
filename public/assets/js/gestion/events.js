@@ -26,6 +26,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const inscriptionContainer = document.getElementById('inscription-dates-container');
     const inscriptionTemplate = document.getElementById('inscription-period-template');
 
+
     // Compteurs pour les index uniques
     let sessionIndex = 0;
     let inscriptionIndex = 0;
@@ -147,6 +148,9 @@ document.addEventListener('DOMContentLoaded', function() {
     // Réinitialisation du formulaire à la fermeture de la modale
     document.getElementById('eventModal').addEventListener('hidden.bs.modal', () => {
         eventForm.reset();
+        // On remet l'action par défaut (ajout)
+        eventForm.action = '/gestion/events/add';
+
         sessionsContainer.innerHTML = '';
         inscriptionContainer.innerHTML = '';
         sessionIndex = 0;

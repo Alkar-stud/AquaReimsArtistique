@@ -80,7 +80,7 @@ class SwimmerController extends AbstractController
         $swimmer->setName($this->swimmerDataValidationService->getName())
             ->setGroup($this->swimmerDataValidationService->getGroup());
         $this->swimmerRepository->insert($swimmer);
-        $this->flashMessageService->setFlashMessage('success', "Nageur ajouté");
+        $this->flashMessageService->setFlashMessage('success', "Nageu.r.se ajouté.e");
         $this->redirect('/gestion/swimmers/' . $swimmer->getGroup());
     }
 
@@ -95,7 +95,7 @@ class SwimmerController extends AbstractController
         $swimmer = $this->swimmerRepository->findById($swimmerId);
 
         if (!$swimmer) {
-            $this->flashMessageService->setFlashMessage('danger', "Nageur non trouvé.");
+            $this->flashMessageService->setFlashMessage('danger', "Nageu.r.se non trouvé.e.");
             $this->redirect('/gestion/swimmers');
         }
 
@@ -112,7 +112,7 @@ class SwimmerController extends AbstractController
             ->setGroup($this->swimmerDataValidationService->getGroup());
 
         $this->swimmerRepository->update($swimmer);
-        $this->flashMessageService->setFlashMessage('success', "Nageur modifié et/ou déplacé.");
+        $this->flashMessageService->setFlashMessage('success', "Nageu.r.se modifié.e et/ou déplacé.e.");
         $originGroupId !== $swimmer->getGroup() ? $group = $originGroupId: $group = $swimmer->getGroup();
         $context = htmlspecialchars($_POST['context']) ?? 'desktop';
 
@@ -131,13 +131,13 @@ class SwimmerController extends AbstractController
         $swimmer = $this->swimmerRepository->findById($swimmerId);
 
         if (!$swimmer) {
-            $this->flashMessageService->setFlashMessage('danger', "Nageur non trouvé.");
+            $this->flashMessageService->setFlashMessage('danger', "Nageu.r.se non trouvé.e.");
             $this->redirect('/gestion/swimmers');
         }
 
         $this->swimmerRepository->delete($swimmerId);
 
-        $this->flashMessageService->setFlashMessage('success', "Nageur supprimé.");
+        $this->flashMessageService->setFlashMessage('success', "Nageu.r.se supprimé.e.");
         $this->redirect('/gestion/swimmers/' . $swimmer->getGroup() );
     }
 

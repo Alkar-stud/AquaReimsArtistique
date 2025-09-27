@@ -13,7 +13,8 @@ class SwimmerGroupDataValidationService
     public function checkData(array $data): ?string
     {
         // Normalisation
-        $this->name = htmlspecialchars(trim($data['name'] ?? ''));
+        $nameValue = isset($data['name']) ? mb_convert_case((trim($data['name']) ?? ''), MB_CASE_TITLE, "UTF-8") : '';
+        $this->name = $nameValue !== '' ? htmlspecialchars($nameValue) : null;
         $coachValue = isset($data['coach']) ? mb_convert_case((trim($data['coach']) ?? ''), MB_CASE_TITLE, "UTF-8") : '';
         $this->coach = $coachValue !== '' ? htmlspecialchars($coachValue) : null;
         $this->is_active = isset($data['is_active']) ? filter_var($data['is_active'], FILTER_VALIDATE_BOOLEAN) : true;

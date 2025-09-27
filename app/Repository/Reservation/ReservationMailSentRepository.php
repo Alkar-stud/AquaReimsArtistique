@@ -165,6 +165,17 @@ class ReservationMailSentRepository extends AbstractRepository
     }
 
     /**
+     * Supprime tous les détails d'une réservation
+     * @param int $reservationId
+     * @return bool
+     */
+    public function deleteByReservation(int $reservationId): bool
+    {
+        $sql = "DELETE FROM $this->tableName WHERE reservation = :reservationId";
+        return $this->execute($sql, ['reservationId' => $reservationId]);
+    }
+
+    /**
      * Hydrate les relations optionnelles en masse (évite N+1).
      *
      * @param ReservationMailSent[] $items

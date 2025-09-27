@@ -15,6 +15,9 @@ class ReservationRepository extends AbstractRepository
 
     /**
      * Retourne toutes les réservations (DESC par date de création)
+     * @param bool $withEvent
+     * @param bool $withEventSession
+     * @param bool $withChildren
      * @return Reservation[]
      */
     public function findAll(
@@ -34,7 +37,13 @@ class ReservationRepository extends AbstractRepository
     }
 
     /**
-     * Retourne une réservation par son ID
+     * Recherche et retourne une réservation par son ID.
+     *
+     * @param int  $id L'ID de la réservation.
+     * @param bool $withEvent Si true, hydrate l'objet Event associé.
+     * @param bool $withEventSession Si true, hydrate l'objet EventSession associé.
+     * @param bool $withChildren Si true, hydrate les relations enfants (détails, compléments, paiements).
+     * @return Reservation|null La réservation trouvée, ou null si elle n'existe pas.
      */
     public function findById(
         int $id,
@@ -56,52 +65,23 @@ class ReservationRepository extends AbstractRepository
     }
 
     /**
-     * Retourne une réservation par son tempId
-     */
-    public function findByTempId(
-        string $tempId,
+     * Retourne une réservation par un champ défini
+     * @param string $field
+     * @param string $fieldValue
+     * @param bool $withEvent Si true, hydrate l'objet Event associé.
+     * @param bool $withEventSession Si true, hydrate l'objet EventSession associé.
+     * @param bool $withChildren Si true, hydrate les relations enfants (détails, compléments, paiements).
+     * @return Reservation|null La réservation trouvée, ou null si elle n'existe pas.
+    */
+    public function findByField(
+        string $field,
+        string $fieldValue,
         bool $withEvent = false,
         bool $withEventSession = false,
         bool $withChildren = true
     ): ?Reservation {
-        $sql = "SELECT * FROM $this->tableName WHERE reservation_temp_id = :reservation_temp_id";
-        $rows = $this->query($sql, ['reservation_temp_id' => $tempId]);
-        if (!$rows) return null;
-
-        $r = $this->hydrate($rows[0]);
-        $this->hydrateOptionalRelations($r, $withEvent, $withEventSession);
-        return $withChildren ? $this->hydrateRelations([$r])[0] : $r;
-    }
-
-    /**
-     * Retourne une réservation par son UUID
-     */
-    public function findByUuid(
-        string $uuid,
-        bool $withEvent = false,
-        bool $withEventSession = false,
-        bool $withChildren = true
-    ): ?Reservation {
-        $sql = "SELECT * FROM $this->tableName WHERE uuid = :uuid";
-        $rows = $this->query($sql, ['uuid' => $uuid]);
-        if (!$rows) return null;
-
-        $r = $this->hydrate($rows[0]);
-        $this->hydrateOptionalRelations($r, $withEvent, $withEventSession);
-        return $withChildren ? $this->hydrateRelations([$r])[0] : $r;
-    }
-
-    /**
-     * Retourne une réservation par son token
-     */
-    public function findByToken(
-        string $token,
-        bool $withEvent = false,
-        bool $withEventSession = false,
-        bool $withChildren = true
-    ): ?Reservation {
-        $sql = "SELECT * FROM $this->tableName WHERE token = :token";
-        $rows = $this->query($sql, ['token' => $token]);
+        $sql = "SELECT * FROM $this->tableName WHERE " . $field . " = :" . $field . ";";
+        $rows = $this->query($sql, [$field => $fieldValue]);
         if (!$rows) return null;
 
         $r = $this->hydrate($rows[0]);
@@ -111,6 +91,11 @@ class ReservationRepository extends AbstractRepository
 
     /**
      * Retourne toutes les réservations actives d'une session
+     * @param int $sessionId
+     * @param int|null $limit
+     * @param int|null $offset
+     * @param bool $withEvent
+     * @param bool $withChildren
      * @return Reservation[]
      */
     public function findActiveBySession(
@@ -222,7 +207,7 @@ class ReservationRepository extends AbstractRepository
     }
 
     /**
-     * Met à jour un champ simple
+     * Met à jour un champ unique
      * @param int $id
      * @param string $field
      * @param string|null $value
@@ -237,42 +222,6 @@ class ReservationRepository extends AbstractRepository
 
         $sql = "UPDATE $this->tableName SET `$field` = :value, updated_at = NOW() WHERE id = :id";
         return $this->execute($sql, ['id' => $id, 'value' => $value]);
-    }
-
-    /**
-     * Annule une réservation par son ID
-     * @param int $id
-     * @param bool $is_canceled
-     * @return bool
-     */
-    public function cancelById(int $id, bool $is_canceled = true): bool
-    {
-        $sql = "UPDATE $this->tableName SET is_canceled = :is_canceled, updated_at = NOW() WHERE id = :id";
-        return $this->execute($sql, ['id' => $id, 'is_canceled' => $is_canceled ? 1 : 0]);
-    }
-
-    /**
-     * Annule une réservation par son UUID
-     * @param string $token
-     * @param bool $is_canceled
-     * @return bool
-     */
-    public function cancelByToken(string $token, bool $is_canceled = true): bool
-    {
-        $sql = "UPDATE $this->tableName SET is_canceled = :is_canceled, updated_at = NOW() WHERE token = :token";
-        return $this->execute($sql, ['token' => $token, 'is_canceled' => $is_canceled ? 1 : 0]);
-    }
-
-    /**
-     * Marque une réservation comme vérifiée (ou non)
-     * @param int $id
-     * @param bool $is_checked
-     * @return bool
-     */
-    public function check(int $id, bool $is_checked = true): bool
-    {
-        $sql = "UPDATE $this->tableName SET is_checked = :is_checked, updated_at = NOW() WHERE id = :id";
-        return $this->execute($sql, ['id' => $id, 'is_checked' => $is_checked ? 1 : 0]);
     }
 
     /**
@@ -328,21 +277,21 @@ class ReservationRepository extends AbstractRepository
         $allDetails = $detailsRepository->findByReservations($reservationIds, false, true, true);
         $detailsByReservationId = [];
         foreach ($allDetails as $detail) {
-            $detailsByReservationId[$detail->getReservationId()][] = $detail;
+            $detailsByReservationId[$detail->getReservation()][] = $detail;
         }
 
         $complementsRepository = new ReservationComplementRepository();
         $allComplements = $complementsRepository->findByReservations($reservationIds);
         $complementsByReservationId = [];
         foreach ($allComplements as $complement) {
-            $complementsByReservationId[$complement->getReservationId()][] = $complement;
+            $complementsByReservationId[$complement->getReservation()][] = $complement;
         }
 
         $paymentsRepository = new ReservationPaymentRepository();
         $allPayments = $paymentsRepository->findByReservations($reservationIds);
         $paymentsByReservationId = [];
         foreach ($allPayments as $payment) {
-            $paymentsByReservationId[$payment->getReservationId()][] = $payment;
+            $paymentsByReservationId[$payment->getReservation()][] = $payment;
         }
 
         foreach ($reservations as $reservation) {
@@ -352,6 +301,48 @@ class ReservationRepository extends AbstractRepository
         }
 
         return $reservations;
+    }
+
+    /**
+     * Vérifie si une session a au moins une réservation active.
+     * C'est mieux que de compter toutes les réservations.
+     * @param int $sessionId
+     * @return bool
+     */
+    public function hasReservationsForSession(int $sessionId): bool
+    {
+        $sql = "SELECT 1 FROM $this->tableName WHERE event_session = :sessionId AND is_canceled = 0 LIMIT 1";
+        $result = $this->query($sql, ['sessionId' => $sessionId]);
+
+        // Si la requête retourne au moins une ligne, cela signifie qu'il y a des réservations.
+        return !empty($result);
+    }
+
+    /**
+     * On fait pareil pour vérifier s'il y a des réservations active pour un event
+     * @param int $eventId
+     * @return bool
+     */
+    public function hasReservations(int $eventId): bool
+    {
+        $sql = "SELECT 1 FROM $this->tableName WHERE event = :event AND is_canceled = 0 LIMIT 1;";
+        $result = $this->query($sql, ['event' => $eventId]);
+
+        // Si la requête retourne au moins une ligne, cela signifie qu'il y a des réservations.
+        return !empty($result);
+    }
+
+    /**
+     * Retourne un tableau des réservations annulées d'un event
+     *
+     * @param int $eventId
+     * @return array
+     */
+    public function findCanceledByEvent(int $eventId): array
+    {
+        $sql = "SELECT * FROM $this->tableName WHERE event = :event AND is_canceled = 1";
+        $rows = $this->query($sql, ['event' => $eventId]);
+        return array_map([$this, 'hydrate'], $rows);
     }
 
     /**
@@ -382,35 +373,6 @@ class ReservationRepository extends AbstractRepository
             ->setComments($data['comments'] ?? null);
 
         return $r;
-    }
-
-    /**
-     * Vérifie si une session a au moins une réservation active.
-     * C'est mieux que de compter toutes les réservations.
-     * @param int $sessionId
-     * @return bool
-     */
-    public function hasReservationsForSession(int $sessionId): bool
-    {
-        $sql = "SELECT 1 FROM $this->tableName WHERE event_session = :sessionId AND is_canceled = 0 LIMIT 1";
-        $result = $this->query($sql, ['sessionId' => $sessionId]);
-
-        // Si la requête retourne au moins une ligne, cela signifie qu'il y a des réservations.
-        return !empty($result);
-    }
-
-    /**
-     * On fait pareil pour vérifier s'il y a des réservations active pour un event
-     * @param int $eventId
-     * @return bool
-     */
-    public function hasReservations(int $eventId): bool
-    {
-        $sql = "SELECT 1 FROM $this->tableName WHERE event = :event AND is_canceled = 0 LIMIT 1;";
-        $result = $this->query($sql, ['event' => $eventId]);
-
-        // Si la requête retourne au moins une ligne, cela signifie qu'il y a des réservations.
-        return !empty($result);
     }
 
     /**

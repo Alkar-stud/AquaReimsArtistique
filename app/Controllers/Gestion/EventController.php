@@ -3,14 +3,12 @@ namespace app\Controllers\Gestion;
 
 use app\Attributes\Route;
 use app\Controllers\AbstractController;
-use app\Repository\Event\EventInscriptionDateRepository;
 use app\Repository\Event\EventRepository;
-use app\Repository\Event\EventSessionRepository;
-use app\Repository\Event\EventTarifRepository;
-use app\Repository\Reservation\ReservationRepository;
+use app\Services\Event\EventCreateService;
 use app\Services\Event\EventDeletionService;
-use app\Services\Event\EventService;
-use app\Services\DataValidation\EventDataValidationService;
+use app\Services\Event\EventQueryService;
+use app\Services\Event\EventResult;
+use app\Services\Event\EventUpdateService;
 use DateTime;
 use Exception;
 use Throwable;
@@ -18,24 +16,25 @@ use Throwable;
 #[Route('/gestion/events', name: 'app_gestion_events')]
 class EventController extends AbstractController
 {
-    private EventService $eventService;
+    private EventQueryService $eventQueryService;
     private EventRepository $eventRepository;
-    private EventDataValidationService $eventDataValidationService;
-    private EventTarifRepository $eventTarifRepository;
-    private EventSessionRepository $eventSessionRepository;
-    private EventInscriptionDateRepository $eventInscriptionDateRepository;
-    private ReservationRepository $reservationRepository;
+    private EventDeletionService $eventDeletionService;
+    private EventCreateService $eventCreateService;
+    private EventUpdateService $eventUpdateService;
 
-    public function __construct()
-    {
+    public function __construct(
+        EventQueryService              $eventQueryService,
+        EventRepository                $eventRepository,
+        EventDeletionService           $eventDeletionService,
+        EventCreateService             $eventCreateService,
+        EventUpdateService             $eventUpdateService
+    ) {
         parent::__construct(false);
-        $this->eventService = new EventService();
-        $this->eventRepository = new EventRepository();
-        $this->eventDataValidationService = new EventDataValidationService();
-        $this->eventTarifRepository = new EventTarifRepository();
-        $this->eventSessionRepository = new EventSessionRepository();
-        $this->eventInscriptionDateRepository = new EventInscriptionDateRepository();
-        $this->reservationRepository = new ReservationRepository();
+        $this->eventQueryService = $eventQueryService;
+        $this->eventRepository = $eventRepository;
+        $this->eventDeletionService = $eventDeletionService;
+        $this->eventCreateService = $eventCreateService;
+        $this->eventUpdateService = $eventUpdateService;
     }
 
     /**
@@ -48,7 +47,7 @@ class EventController extends AbstractController
     public function index(): void
     {
         // On récupère tous les événements et leurs données associées (sessions, tarifs, etc.) via le service.
-        $allEvents = $this->eventService->getAllEventsWithRelations();
+        $allEvents = $this->eventQueryService->getAllEventsWithRelations();
 
         // On prépare les listes pour séparer les événements à venir des événements passés.
         $eventsUpcoming = [];
@@ -82,8 +81,8 @@ class EventController extends AbstractController
         }
 
         // On récupère les listes complètes des piscines et des tarifs actifs pour les formulaires.
-        $allPiscines = $this->eventService->getAllPiscines();
-        $allActiveTarifs = $this->eventService->getAllActiveTarifs();
+        $allPiscines = $this->eventQueryService->getAllPiscines();
+        $allActiveTarifs = $this->eventQueryService->getAllActiveTarifs();
 
         // On envoie les deux listes d'événements (et les autres données nécessaires) à la vue.
         $this->render('/gestion/events', [
@@ -101,49 +100,16 @@ class EventController extends AbstractController
         //On vérifie que le CurrentUser a bien le droit de faire ça
         $this->checkIfCurrentUserIsAllowedToManagedThis(2, 'events');
 
-        $error = $this->eventDataValidationService->checkData($_POST);
-        if ($error) {
-            $this->flashMessageService->setFlashMessage('danger', $error);
-            $this->redirect('/gestion/events');
-        }
-
-        // Récupération des données validées
-        $event = $this->eventDataValidationService->getValidatedEvent();
-        $tarifIds = $this->eventDataValidationService->getValidatedTarifs();
-        $sessions = $this->eventDataValidationService->getValidatedSessions();
-        $inscriptionDates = $this->eventDataValidationService->getValidatedInscriptionDates();
-
-        // Début de la transaction pour tout insérer
-        $this->eventRepository->beginTransaction();
         try {
-            // Insérer l'événement principal pour obtenir son ID
-            $eventId = $this->eventRepository->insert($event);
-            if ($eventId === 0) {
-                throw new Exception("La création de l'événement a échoué.");
-            }
-
-            // Lier les tarifs à l'événement
-            $this->eventTarifRepository->replaceForEvent($eventId, $tarifIds);
-
-            // Insérer les séances en liant l'ID de l'événement
-            foreach ($sessions as $session) {
-                $session->setEventId($eventId);
-                $this->eventSessionRepository->insert($session);
-            }
-
-            // Insérer les périodes d'inscription en liant l'ID de l'événement
-            foreach ($inscriptionDates as $inscriptionDate) {
-                $inscriptionDate->setEventId($eventId);
-                $this->eventInscriptionDateRepository->insert($inscriptionDate);
-            }
-
-            $this->eventRepository->commit();
-            $this->flashMessageService->setFlashMessage('success', "L'événement '{$event->getName()}' a été ajouté avec succès.");
+            // On demande la création de l'événement
+            $this->eventCreateService->createEvent($_POST);
+            // Si tout s'est bien passé, on affiche le message de succès.
+            $this->flashMessageService->setFlashMessage('success', "L'événement a été ajouté avec succès.");
         } catch (Throwable $e) {
-            $this->eventRepository->rollBack();
-            $this->flashMessageService->setFlashMessage('danger', "Une erreur est survenue lors de l'ajout de l'événement : " . $e->getMessage());
+            // Si une exception est lancée, on l'attrape et on affiche son message.
+            $this->flashMessageService->setFlashMessage('danger', $e->getMessage());
         }
-
+        //Et on renvoie à l'index pour afficher la vue
         $this->redirect('/gestion/events');
     }
 
@@ -153,105 +119,23 @@ class EventController extends AbstractController
         //On vérifie que le CurrentUser a bien le droit de faire ça
         $this->checkIfCurrentUserIsAllowedToManagedThis(2, 'events');
 
-        //On récupère l'event
-        $eventId = (int)($_POST['event_id'] ?? 0);
-        $event = $this->eventRepository->findById($eventId);
-
-        if (!$event) {
-            $this->flashMessageService->setFlashMessage('danger', 'Événement non trouvé.');
-            $this->redirect('/gestion/events');
-        }
-
-        $error = $this->eventDataValidationService->checkData($_POST);
-        if ($error) {
-            $this->flashMessageService->setFlashMessage('danger', $error);
-            $this->redirect('/gestion/events');
-        }
-
-        // Récupération des données validées
-        $validatedEventData = $this->eventDataValidationService->getValidatedEvent();
-        $tarifIds = $this->eventDataValidationService->getValidatedTarifs();
-        $sessions = $this->eventDataValidationService->getValidatedSessions();
-        $inscriptionDates = $this->eventDataValidationService->getValidatedInscriptionDates();
-
-        // On met à jour l'objet Event existant avec les nouvelles données validées
-        $event->setName($validatedEventData->getName());
-        $event->setPlace($validatedEventData->getPlace());
-        $event->setLimitationPerSwimmer($validatedEventData->getLimitationPerSwimmer());
-
-        // Début de la transaction pour tout mettre à jour
-        $this->eventRepository->beginTransaction();
         try {
-            // Mettre à jour l'événement principal
-            $this->eventRepository->update($event);
+            $result = $this->eventUpdateService->updateEvent($_POST);
 
-            // Remplacer les tarifs liés à l'événement
-            $this->eventTarifRepository->replaceForEvent($event->getId(), $tarifIds);
-
-            // --- GESTION DES SÉANCES ---
-            $undeletableSessionNames = [];
-            $existingSessions = $this->eventSessionRepository->findByEventId($event->getId());
-            $existingSessionsMap = [];
-            foreach ($existingSessions as $s) {
-                $existingSessionsMap[$s->getId()] = $s;
-            }
-            $existingSessionIds = array_keys($existingSessionsMap);
-            $submittedSessionIds = [];
-
-            // Parcourir les séances soumises pour AJOUTER ou METTRE À JOUR
-            foreach ($sessions as $submittedSession) {
-                $submittedSession->setEventId($event->getId());
-                $sessionId = (int)($_POST['sessions'][array_search($submittedSession, $sessions, true)]['id'] ?? 0);
-
-                if ($sessionId > 0 && in_array($sessionId, $existingSessionIds, true)) {
-                    // C'est une MISE À JOUR
-                    $submittedSession->setId($sessionId);
-                    $this->eventSessionRepository->update($submittedSession);
-                    $submittedSessionIds[] = $sessionId;
-                } else {
-                    // C'est un AJOUT
-                    $newId = $this->eventSessionRepository->insert($submittedSession);
-                    $submittedSessionIds[] = $newId;
-                }
-            }
-
-            // Parcourir les séances existantes pour trouver celles à SUPPRIMER
-            $sessionsToDeleteIds = array_diff($existingSessionIds, $submittedSessionIds);
-            foreach ($sessionsToDeleteIds as $sessionIdToDelete) {
-                // VÉRIFICATION CRUCIALE
-                if ($this->reservationRepository->hasReservationsForSession($sessionIdToDelete)) {
-                    // On ne peut pas supprimer, on stocke le nom pour le message d'avertissement
-                    $undeletableSessionNames[] = $existingSessionsMap[$sessionIdToDelete]->getSessionName();
-                } else {
-                    // Suppression sécurisée
-                    $this->eventSessionRepository->delete($sessionIdToDelete);
-                }
-            }
-
-
-            // Remplacer les périodes d'inscription (supprimer les anciennes, insérer les nouvelles)
-            $this->eventInscriptionDateRepository->deleteAllForEvent($event->getId());
-            foreach ($inscriptionDates as $inscriptionDate) {
-                $inscriptionDate->setEventId($event->getId()); // Assurer que l'ID de l'événement est bien là
-                $this->eventInscriptionDateRepository->insert($inscriptionDate);
-            }
-
-            // Finalisation
-            $this->eventRepository->commit();
-
-            // Préparation des messages flash
-            if (empty($undeletableSessionNames)) {
-                $this->flashMessageService->setFlashMessage('success', "L'événement '{$event->getName()}' a été modifié avec succès.");
-            } else {
-                $this->flashMessageService->setFlashMessage('warning', "L'événement '{$event->getName()}' a été modifié, mais les séances suivantes n'ont pas pu être supprimées car elles contiennent des réservations : " . implode(', ', $undeletableSessionNames) . ".");
+            if ($result->getStatus() === EventResult::SUCCESS) {
+                $this->flashMessageService->setFlashMessage('success', "L'événement '{$result->getEventName()}' a été modifié avec succès.");
+            } else { // PARTIAL_SUCCESS
+                $sessionNames = implode(', ', $result->getUndeletableSessionNames());
+                $this->flashMessageService->setFlashMessage('warning', "L'événement '{$result->getEventName()}' a été modifié, mais les séances suivantes n'ont pas pu être supprimées car elles contiennent des réservations : " . $sessionNames . ".");
             }
 
         } catch (Throwable $e) {
-            $this->eventRepository->rollBack();
-            $this->flashMessageService->setFlashMessage('danger', "Une erreur est survenue lors de la modification de l'événement : " . $e->getMessage());
+            // Si une exception est lancée, on l'attrape et on affiche son message.
+            $this->flashMessageService->setFlashMessage('danger', $e->getMessage());
         }
-
+        //Et on renvoie à l'index pour afficher la vue
         $this->redirect('/gestion/events');
+
     }
 
     #[Route('/gestion/events/delete', name: 'app_gestion_events_delete')]
@@ -270,16 +154,17 @@ class EventController extends AbstractController
         }
 
         //On supprime l'event
-        $eventDeletionService = new EventDeletionService();
         try {
-            $eventDeletionService->deleteEvent($event->getid());
+            $this->eventDeletionService->deleteEvent($event->getid());
+            $this->flashMessageService->setFlashMessage('success', "L'événement '{$event->getName()}' a été supprimé avec succès.");
         } catch (Throwable $e) {
-            $this->flashMessageService->setFlashMessage('danger',"Il y a au moins une réservation non annulée pour cet événement. Suppression impossible : " . $e);
+            // Le message de l'exception est maintenant assez clair pour être affiché directement.
+            $this->flashMessageService->setFlashMessage('danger', $e->getMessage());
         }
 
-
-        $this->flashMessageService->setFlashMessage('warning', 'Simulation de la suppression de l\'événement  ok.');        $this->redirect('/gestion/events');
+        $this->redirect('/gestion/events');
     }
+
 
 
 }

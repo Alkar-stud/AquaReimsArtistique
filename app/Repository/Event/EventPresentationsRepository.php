@@ -133,7 +133,7 @@ class EventPresentationsRepository extends AbstractRepository
      * @param int $eventId
      * @return bool
      */
-    public function deleteByEventId(int $eventId): bool
+    public function deleteAllForEvent(int $eventId): bool
     {
         $sql = "DELETE FROM $this->tableName WHERE event = :event";
         return $this->execute($sql, ['event' => $eventId]);

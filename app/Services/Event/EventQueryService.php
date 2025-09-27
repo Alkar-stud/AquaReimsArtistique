@@ -10,7 +10,7 @@ use app\Repository\Event\EventSessionRepository;
 use app\Repository\Piscine\PiscineRepository;
 use app\Repository\Tarif\TarifRepository;
 
-class EventService
+class EventQueryService
 {
     private EventRepository $eventRepository;
     private PiscineRepository $piscineRepository;
@@ -18,12 +18,18 @@ class EventService
     private EventInscriptionDateRepository $inscriptionDateRepository;
     private EventSessionRepository $eventSessionRepository;
 
-    public function __construct() {
-        $this->eventRepository = new EventRepository();
-        $this->piscineRepository = new PiscineRepository();
-        $this->tarifRepository = new TarifRepository();
-        $this->inscriptionDateRepository =  new EventInscriptionDateRepository();
-        $this->eventSessionRepository = new EventSessionRepository();
+    public function __construct(
+        EventRepository $eventRepository,
+        PiscineRepository $piscineRepository,
+        TarifRepository $tarifRepository,
+        EventInscriptionDateRepository $inscriptionDateRepository,
+        EventSessionRepository $eventSessionRepository
+    ) {
+        $this->eventRepository = $eventRepository;
+        $this->piscineRepository = $piscineRepository;
+        $this->tarifRepository = $tarifRepository;
+        $this->inscriptionDateRepository = $inscriptionDateRepository;
+        $this->eventSessionRepository = $eventSessionRepository;
     }
 
     /**

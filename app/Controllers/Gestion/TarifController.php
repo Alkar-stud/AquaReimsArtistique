@@ -76,7 +76,7 @@ class TarifController extends AbstractController
             ->setIsActive($this->tarifDataValidationService->getIsActive());
 
         $this->tarifRepository->insert($tarif);
-        $this->flashMessageService->setFlashMessage('success', "Tarif ajoutée.");
+        $this->flashMessageService->setFlashMessage('success', "Tarif ajouté.");
         $this->redirect($redirectUrl);
     }
 

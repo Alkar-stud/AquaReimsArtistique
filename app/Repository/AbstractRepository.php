@@ -5,6 +5,7 @@ namespace app\Repository;
 use AllowDynamicProperties;
 use app\Services\Log\Logger;
 use app\Traits\HasPdoConnection;
+use PDOException;
 use PDOStatement;
 
 #[AllowDynamicProperties] abstract class AbstractRepository
@@ -61,7 +62,7 @@ use PDOStatement;
             $this->logQuery('SELECT', $sql, $params, $startTime, count($result));
 
             return $result;
-        } catch (\PDOException $e) {
+        } catch (PDOException $e) {
             $this->lastError = $e->getMessage();
             Logger::get()->error(
                 'SQL Error',
@@ -104,7 +105,7 @@ use PDOStatement;
             $this->logQuery($operation, $sql, $params, $startTime, $affectedRows);
 
             return $result;
-        } catch (\PDOException $e) {
+        } catch (PDOException $e) {
             $this->lastError = $e->getMessage();
             Logger::get()->error(
                 'SQL Error',
@@ -177,7 +178,7 @@ use PDOStatement;
         Logger::get()->db($operation, $this->tableName, [
             'query' => $safeSql,
             'params' => $safeParams,
-            'execution_ms' => round((microtime(true) - $startTime) * 1000, 2),
+            'execution_ms' => (int) round((microtime(true) - $startTime) * 1000),
             'affected' => $affectedRows,
         ]);
     }

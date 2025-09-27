@@ -8,6 +8,7 @@ use app\Repository\Event\EventRepository;
 use app\Repository\Event\EventSessionRepository;
 use app\Repository\Event\EventTarifRepository;
 use app\Repository\Reservation\ReservationRepository;
+use app\Services\Event\EventDeletionService;
 use app\Services\Event\EventService;
 use app\Services\DataValidation\EventDataValidationService;
 use DateTime;
@@ -268,14 +269,16 @@ class EventController extends AbstractController
             $this->redirect('/gestion/events');
         }
 
-        //On vérifie s'il y a déjà des réservations non annulées, dans ce cas, on bloque la suppression
-        if ($this->reservationRepository->hasReservations($event->getId())) {
-            $this->flashMessageService->setFlashMessage('danger',"Il y a au moins une réservation non annulée pour cet événement\Suppression impossible");
-        } else {
-            $this->flashMessageService->setFlashMessage('warning', 'Simulation de la suppression de l\'événement  ok.');
+        //On supprime l'event
+        $eventDeletionService = new EventDeletionService();
+        try {
+            $eventDeletionService->deleteEvent($event->getid());
+        } catch (Throwable $e) {
+            $this->flashMessageService->setFlashMessage('danger',"Il y a au moins une réservation non annulée pour cet événement. Suppression impossible : " . $e);
         }
 
-        $this->redirect('/gestion/events');
+
+        $this->flashMessageService->setFlashMessage('warning', 'Simulation de la suppression de l\'événement  ok.');        $this->redirect('/gestion/events');
     }
 
 

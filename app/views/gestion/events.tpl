@@ -23,49 +23,49 @@
     <div class="tab-content" id="events-list-tabs-content">
         <div class="tab-pane fade show active" id="upcoming-events-pane" role="tabpanel" aria-labelledby="upcoming-events-tab">
             {% if $eventsUpcoming %}
-            <!-- Liste des événements à venir (Mobile) -->
-            <div class="list-group d-md-none mt-3">
-                {% foreach $eventsUpcoming as $event %}
-                {% include 'events/_event-item-mobile.tpl' with ['event' => $event] %}
-                {% endforeach %}
-            </div>
+                <!-- Liste des événements à venir (Mobile) -->
+                <div class="list-group d-md-none mt-3">
+                    {% foreach $eventsUpcoming as $event %}
+                    {% include 'events/_event-item-mobile.tpl' with ['event' => $event] %}
+                    {% endforeach %}
+                </div>
+            {% else %}
+                <div class="alert alert-info mt-3">Aucun événement à venir pour le moment.</div>
+            {% endif %}
 
             <!-- Table des événements à venir (Desktop) -->
             <div class="d-none d-md-block" id="upcoming-events-table-container">
                 <table class="table align-middle mt-3">
                     <thead>
-                    <tr>
-                        <th>Libellé</th>
-                        <th>Lieu</th>
-                        <th style="width: 250px;">Actions</th>
-                    </tr>
+                        <tr>
+                            <th>Libellé</th>
+                            <th>Lieu</th>
+                            <th style="width: 250px;">Actions</th>
+                        </tr>
                     </thead>
                     <tbody>
-                    <!-- Ligne d'ajout rapide pour desktop -->
-                    <tr class="table-light">
-                        <td><input type="text" class="form-control" id="desktop_add_name" placeholder="Libellé du nouvel événement"></td>
-                        <td>
-                            <select class="form-select" id="desktop_add_place">
-                                <option value="">Sélectionner un lieu</option>
-                                {% foreach $allPiscines as $piscine %}
-                                <option value="{{ $piscine->getId() }}">{{ $piscine->getLabel() }}</option>
-                                {% endforeach %}
-                            </select>
-                        </td>
-                        <td><button type="button" class="btn btn-success w-100" id="desktop-add-btn"><i class="bi bi-plus-circle"></i> Continuer l'ajout...</button></td>
-                    </tr>
-                    <!-- Boucle pour les événements à venir (desktop) -->
-                    {% foreach $eventsUpcoming as $event %}
-                    {% include 'events/_event-item.tpl' with ['event' => $event] %}
-                    {% endforeach %}
+                        <!-- Ligne d'ajout rapide pour desktop (toujours visible) -->
+                        <tr class="table-light">
+                            <td><input type="text" class="form-control" id="desktop_add_name" placeholder="Libellé du nouvel événement"></td>
+                            <td>
+                                <select class="form-select" id="desktop_add_place">
+                                    <option value="">Sélectionner un lieu</option>
+                                    {% foreach $allPiscines as $piscine %}
+                                    <option value="{{ $piscine->getId() }}">{{ $piscine->getLabel() }}</option>
+                                    {% endforeach %}
+                                </select>
+                            </td>
+                            <td><button type="button" class="btn btn-success w-100" id="desktop-add-btn"><i class="bi bi-plus-circle"></i> Continuer l'ajout...</button></td>
+                        </tr>
+                        <!-- Boucle pour les événements à venir (desktop) -->
+                        {% foreach $eventsUpcoming as $event %}
+                        {% include 'events/_event-item.tpl' with ['event' => $event] %}
+                        {% endforeach %}
                     </tbody>
                 </table>
             </div>
-            {% else %}
-            <div class="alert alert-info mt-3">Aucun événement à venir pour le moment.</div>
-            {% endif %}
 
-            <!-- Bouton d'ajout pour mobile, maintenant à l'intérieur de l'onglet -->
+            <!-- Bouton d'ajout pour mobile -->
             <div class="d-md-none my-3">
                 <button type="button" class="btn btn-success w-100" data-bs-toggle="modal" data-bs-target="#eventModal">
                     <i class="bi bi-plus-circle"></i> Ajouter un événement

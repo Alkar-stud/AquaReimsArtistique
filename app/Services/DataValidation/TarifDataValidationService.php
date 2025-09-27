@@ -20,7 +20,7 @@ class TarifDataValidationService
     {
         // Normalisation
         $nameValue = trim($data['name'] ?? '');
-        $this->name = !empty($nameValue) ? htmlspecialchars(ucfirst($nameValue)) : '';
+        $this->name = !empty($nameValue) ? htmlspecialchars(mb_convert_case($nameValue, MB_CASE_TITLE, "UTF-8")) : '';
 
         $descriptionValue = trim($data['description'] ?? '');
         if (!empty($descriptionValue)) {

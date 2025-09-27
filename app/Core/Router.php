@@ -1,7 +1,7 @@
 <?php
 namespace app\Core;
 
-
+use ReflectionException;
 use Exception;
 
 class Router
@@ -15,6 +15,7 @@ class Router
 
     /**
      * @throws Exception
+     * @throws ReflectionException
      */
     public function dispatch(string $uri): void
     {
@@ -38,7 +39,10 @@ class Router
                 $methodName = $route['method'];
 
                 if (class_exists($controllerClass)) {
-                    $controller = new $controllerClass();
+                    // --- Utilisation de notre nouveau conteneur ---
+                    $container = new Container();
+                    // On demande simplement le contrôleur, le conteneur fait tout le travail !
+                    $controller = $container->get($controllerClass);
 
                     if (method_exists($controller, $methodName)) {
                         // Extrait les paramètres nommés de l'URL

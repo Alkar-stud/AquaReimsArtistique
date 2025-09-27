@@ -264,7 +264,7 @@ class ReservationRepository extends AbstractRepository
     }
 
     /**
-     * Marque une réservation comme vérifiée (ou non))
+     * Marque une réservation comme vérifiée (ou non)
      * @param int $id
      * @param bool $is_checked
      * @return bool
@@ -382,6 +382,35 @@ class ReservationRepository extends AbstractRepository
             ->setComments($data['comments'] ?? null);
 
         return $r;
+    }
+
+    /**
+     * Vérifie si une session a au moins une réservation active.
+     * C'est mieux que de compter toutes les réservations.
+     * @param int $sessionId
+     * @return bool
+     */
+    public function hasReservationsForSession(int $sessionId): bool
+    {
+        $sql = "SELECT 1 FROM $this->tableName WHERE event_session = :sessionId AND is_canceled = 0 LIMIT 1";
+        $result = $this->query($sql, ['sessionId' => $sessionId]);
+
+        // Si la requête retourne au moins une ligne, cela signifie qu'il y a des réservations.
+        return !empty($result);
+    }
+
+    /**
+     * On fait pareil pour vérifier s'il y a des réservations active pour un event
+     * @param int $eventId
+     * @return bool
+     */
+    public function hasReservations(int $eventId): bool
+    {
+        $sql = "SELECT 1 FROM $this->tableName WHERE event = :event AND is_canceled = 0 LIMIT 1;";
+        $result = $this->query($sql, ['event' => $eventId]);
+
+        // Si la requête retourne au moins une ligne, cela signifie qu'il y a des réservations.
+        return !empty($result);
     }
 
     /**

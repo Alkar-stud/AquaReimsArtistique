@@ -32,7 +32,7 @@ class EventDataValidationService
     {
         try {
             // --- Validation de l'événement principal ---
-            $name = htmlspecialchars(trim($postData['name'] ?? ''), ENT_QUOTES, 'UTF-8');
+            $name = htmlspecialchars(mb_convert_case(trim($postData['name'] ?? ''), MB_CASE_TITLE, "UTF-8"), ENT_QUOTES, 'UTF-8');
             if (empty($name)) {
                 return "Le libellé de l'événement est obligatoire.";
             }

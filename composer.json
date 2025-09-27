@@ -9,7 +9,8 @@
       "ext-curl": "*",
       "ext-dom": "*",
       "ext-libxml": "*",
-        "rakibtg/sleekdb": "^2.15"
+        "rakibtg/sleekdb": "^2.15",
+      "ext-intl": "*"
     },
     "autoload": {
         "psr-4": {

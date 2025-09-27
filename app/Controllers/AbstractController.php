@@ -1,11 +1,14 @@
 <?php
-
 namespace app\Controllers;
 
 use app\Core\TemplateEngine;
+use app\Enums\LogType;
 use app\Models\User\User;
 use app\Repository\User\UserRepository;
 use app\Services\FlashMessageService;
+use app\Services\Log\Logger;
+use app\Services\Log\LoggingBootstrap;
+use app\Services\Log\RequestContext;
 use app\Services\Security\SessionValidateService;
 use app\Services\Security\CsrfService;
 use app\Utils\DurationHelper;
@@ -16,10 +19,27 @@ abstract class AbstractController
     protected FlashMessageService $flashMessageService;
     private SessionValidateService $sessionValidateService;
     protected CsrfService $csrfService;
+    private static bool $globalHandlersRegistered = false;
+
     protected ?User $currentUser = null;
 
     public function __construct(bool $isPublicRoute = false)
     {
+        // Bootstrap logging + contexte requête (X-Request-Id)
+        LoggingBootstrap::ensureInitialized();
+        self::registerGlobalErrorHandlers();
+        RequestContext::boot();
+
+        // Journaliser la requête dans le channel "url"
+        Logger::get()->info(
+            LogType::URL->value,
+            'request',
+            [
+                'uri' => strtok($_SERVER['REQUEST_URI'] ?? '/', '?'),
+                'method' => $_SERVER['REQUEST_METHOD'] ?? 'GET',
+            ]
+        );
+
         $this->configureSession();
         if (session_status() === PHP_SESSION_NONE) {
             session_start();
@@ -91,13 +111,15 @@ abstract class AbstractController
         } catch (Throwable $e) {
             $isDebug = (($_ENV['APP_DEBUG'] ?? 'false') === 'true');
 
-            // Log détaillé
-            error_log('[Template render] ' . $e->getMessage() . PHP_EOL . $e->getTraceAsString());
+            // Log détaillé via logger applicatif
+            Logger::get()->error(
+                LogType::APPLICATION->value,
+                'template_render',
+                ['exception' => $e, 'view' => $view, 'uri' => $data['uri'] ?? null]
+            );
 
-            // Statut HTTP
             http_response_code(500);
 
-            // Message utilisateur (détaillé en dev, générique en prod)
             $this->flashMessageService->setFlashMessage(
                 'danger',
                 $isDebug
@@ -105,7 +127,6 @@ abstract class AbstractController
                     : 'Une erreur est survenue lors de l\'affichage de la page.'
             );
 
-            // Contenu de secours (affiche la stack en dev, vide en prod)
             $content = $isDebug
                 ? '<pre class="alert alert-danger" style="white-space:pre-wrap;">'
                 . htmlspecialchars((string)$e)
@@ -215,7 +236,6 @@ abstract class AbstractController
 
         $config = require __DIR__ . '/../../config/session.php';
 
-        // Normalisation de l'env (.env peut contenir prod/dev/production/local)
         $envRaw = strtolower($_ENV['APP_ENV'] ?? 'local');
         $envKey = match ($envRaw) {
             'prod', 'production' => 'production',
@@ -225,13 +245,11 @@ abstract class AbstractController
 
         $sessionConfig = $config[$envKey] ?? $config['local'];
 
-        // Durcissement
         ini_set('session.use_strict_mode', '1');
         ini_set('session.use_only_cookies', '1');
         ini_set('session.cookie_secure', ($sessionConfig['cookie_secure'] ?? true) ? '1' : '0');
         ini_set('session.cookie_httponly', ($sessionConfig['cookie_httponly'] ?? true) ? '1' : '0');
 
-        // __Host- exige: domain vide, path '/', secure=true
         session_name($sessionConfig['name'] ?? '__Host-SID');
 
         session_set_cookie_params([
@@ -263,15 +281,12 @@ abstract class AbstractController
         return str_starts_with($url, '/') && !str_starts_with($url, '//') && !str_contains($url, '://');
     }
 
-    // -------- CSRF centralisé --------
-    // Contexte par défaut : chemin de l'URL (stable entre GET du formulaire et POST de soumission)
     protected function getCsrfContext(): string
     {
         $path = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH);
         return $path ?: '/';
     }
 
-    // Enforce pour toutes les méthodes non sûres
     private function maybeEnforceCsrf(): void
     {
         $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
@@ -280,14 +295,11 @@ abstract class AbstractController
         }
 
         $context = null;
-        // Pour les requêtes POST/PUT etc., le contexte CSRF doit être celui de la page
-        // qui a affiché le formulaire, que l'on retrouve via le Referer.
         if (isset($_SERVER['HTTP_REFERER'])) {
             $refererPath = parse_url($_SERVER['HTTP_REFERER'], PHP_URL_PATH);
             $refererHost = parse_url($_SERVER['HTTP_REFERER'], PHP_URL_HOST);
             $serverHost = $_SERVER['HTTP_HOST'] ?? '';
 
-            // On vérifie que le Referer vient bien de notre propre site pour la sécurité.
             if ($refererPath && $refererHost === $serverHost) {
                 $context = $refererPath;
             }
@@ -302,13 +314,6 @@ abstract class AbstractController
         }
     }
 
-    /**
-     * Vérifie si l'utilisateur courant a les droits de faire ce qui est demandé.
-     * Redirige si false sinon retourne true
-     * @param int $minRoleLevel
-     * @param string|null $urlReturn
-     * @return void
-     */
     protected function checkIfCurrentUserIsAllowedToManagedThis(int $minRoleLevel = 99, ?string $urlReturn = null): void
     {
         if ($urlReturn !== null && !preg_match('/^[a-z-]*$/', $urlReturn)) {
@@ -331,18 +336,10 @@ abstract class AbstractController
         exit;
     }
 
-    /**
-     * Redirige vers une URL en ajoutant une ancre si elle est présente dans POST.
-     * @param string $url
-     * @param string $anchorKey La clé POST contenant l'ancre.
-     * @param int $id
-     * @param string|null $context
-     */
     protected function redirectWithAnchor(string $url, string $anchorKey = 'form_anchor', int $id = 0, ?string $context = null): void
     {
         $anchor = '';
         if ($id != 0) {
-            // Déduire le préfixe selon le contexte
             $prefix = $context === 'desktop' ? 'config-row-' : 'config-card-';
             $anchor = $prefix . $id;
         } elseif (!empty($_POST[$anchorKey])) {
@@ -352,5 +349,109 @@ abstract class AbstractController
             $url .= '#' . $anchor;
         }
         $this->redirect($url);
+    }
+
+    private static function registerGlobalErrorHandlers(): void
+    {
+        if (self::$globalHandlersRegistered) {
+            return;
+        }
+
+        // Exceptions non interceptées
+        set_exception_handler([self::class, 'handleUncaughtException']);
+
+        // Erreurs PHP (warnings, notices, etc.)
+        set_error_handler([self::class, 'handlePhpError']);
+
+        // Erreurs fatales en fin de script
+        register_shutdown_function([self::class, 'handleShutdown']);
+
+        self::$globalHandlersRegistered = true;
+    }
+
+    public static function handleUncaughtException(Throwable $e): void
+    {
+        // Toujours initialiser le logger si besoin
+        LoggingBootstrap::ensureInitialized();
+
+        Logger::get()->error(
+            LogType::APPLICATION->value,
+            'uncaught_exception',
+            ['exception' => $e]
+        );
+
+        self::respondHttp500($e);
+    }
+
+    public static function handlePhpError(int $errno, string $errstr, string $errfile, int $errline): bool
+    {
+        LoggingBootstrap::ensureInitialized();
+
+        $level = match ($errno) {
+            E_USER_ERROR, E_RECOVERABLE_ERROR => 'ERROR',
+            E_WARNING, E_USER_WARNING => 'WARNING',
+            E_NOTICE, E_USER_NOTICE, E_DEPRECATED, E_USER_DEPRECATED => 'NOTICE',
+            default => 'INFO',
+        };
+
+        Logger::get()->log(
+            $level,
+            LogType::APPLICATION->value,
+            'php_error',
+            ['errno' => $errno, 'message' => $errstr, 'file' => $errfile . ':' . $errline]
+        );
+
+        // Laisser le handler natif continuer (retourner false)
+        return false;
+    }
+
+    public static function handleShutdown(): void
+    {
+        $err = error_get_last();
+        if (!$err) {
+            return;
+        }
+
+        $fatalTypes = [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR];
+        if (in_array($err['type'] ?? 0, $fatalTypes, true)) {
+            LoggingBootstrap::ensureInitialized();
+
+            Logger::get()->critical(
+                LogType::APPLICATION->value,
+                'fatal_error',
+                ['type' => $err['type'], 'message' => $err['message'], 'file' => $err['file'] . ':' . $err['line']]
+            );
+
+            // Éviter tout double envoi si des headers sont déjà partis
+            if (!headers_sent()) {
+                self::respondHttp500('Fatal error');
+            }
+        }
+    }
+
+    private static function respondHttp500(null|Throwable|string $e): void
+    {
+        // Évite tout output parasite si on est déjà en train de sortir quelque chose
+        http_response_code(500);
+
+        $isDebug = (($_ENV['APP_DEBUG'] ?? 'false') === 'true');
+        $accept = $_SERVER['HTTP_ACCEPT'] ?? '';
+        $isJson = str_contains($accept, 'application/json') || (($_SERVER['HTTP_X_REQUESTED_WITH'] ?? '') === 'XMLHttpRequest');
+
+        if ($isJson) {
+            header('Content-Type: application/json');
+            echo json_encode([
+                'error' => 'Internal Server Error',
+                'request_id' => RequestContext::getRequestId(),
+                'details' => $isDebug ? (string)($e instanceof Throwable ? $e : ($e ?? '')) : null,
+            ]);
+        } else {
+            $msg = $isDebug
+                ? '<pre class="alert alert-danger" style="white-space:pre-wrap;">' . htmlspecialchars((string)($e instanceof Throwable ? $e : ($e ?? '')), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '</pre>'
+                : 'Une erreur interne est survenue.';
+            header('Content-Type: text/html; charset=UTF-8');
+            echo $msg;
+        }
+        exit;
     }
 }

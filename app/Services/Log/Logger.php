@@ -1,6 +1,7 @@
 <?php
 namespace app\Services\Log;
 
+use app\Enums\LogType;
 use app\Services\Log\Handler\FileLogHandler;
 use app\Services\Log\Handler\LogHandlerInterface;
 use Throwable;
@@ -38,10 +39,14 @@ final class Logger implements LoggerInterface
 
     public function log(string $level, string $channel, string $message, array $context = []): void
     {
+        $normalizedChannel = $this->normalizeChannel($channel);
+        $now = microtime(true); // haute résolution
+
         $record = [
             'ts' => gmdate('c'),
+            'tsu' => (int) round($now * 1000), // millisecondes depuis epoch
             'level' => strtoupper($level),
-            'channel' => $channel,
+            'channel' => $normalizedChannel,
             'message' => (string)$message,
             'request_id' => RequestContext::getRequestId(),
             'duration_ms' => RequestContext::getDurationMs(),
@@ -59,12 +64,27 @@ final class Logger implements LoggerInterface
 
     public function debug(string $channel, string $message, array $context = []): void { $this->log('DEBUG', $channel, $message, $context); }
     public function info(string $channel, string $message, array $context = []): void { $this->log('INFO', $channel, $message, $context); }
+    public function notice(string $channel, string $message, array $context = []): void { $this->log('NOTICE', $channel, $message, $context); }
     public function warning(string $channel, string $message, array $context = []): void { $this->log('WARNING', $channel, $message, $context); }
     public function error(string $channel, string $message, array $context = []): void { $this->log('ERROR', $channel, $message, $context); }
+    public function critical(string $channel, string $message, array $context = []): void { $this->log('CRITICAL', $channel, $message, $context); }
+    public function alert(string $channel, string $message, array $context = []): void { $this->log('ALERT', $channel, $message, $context); }
+    public function emergency(string $channel, string $message, array $context = []): void { $this->log('EMERGENCY', $channel, $message, $context); }
 
-    public function access(array $context): void { $this->info('access', 'request', $context); }
-    public function db(string $operation, string $table, array $context): void { $this->info('db', $operation, array_merge(['table'=>$table], $context)); }
-    public function security(string $event, array $context): void { $this->warning('security', $event, $context); }
+    public function access(array $context): void
+    {
+        $this->info(LogType::ACCESS->value, 'request', $context);
+    }
+
+    public function db(string $operation, string $table, array $context): void
+    {
+        $this->info(LogType::DATABASE->value, $operation, array_merge(['table' => $table], $context));
+    }
+
+    public function security(string $event, array $context): void
+    {
+        $this->warning(LogType::SECURITY->value, $event, $context);
+    }
 
     private function sanitize(array $context): array
     {
@@ -84,5 +104,39 @@ final class Logger implements LoggerInterface
             }
         }
         return $out;
+    }
+
+    private function normalizeChannel(?string $channel): string
+    {
+        $candidate = trim((string)$channel);
+        if ($candidate === '') {
+            return LogType::APPLICATION->value;
+        }
+
+        foreach (LogType::cases() as $case) {
+            if (strcasecmp($candidate, $case->value) === 0) {
+                return $case->value;
+            }
+        }
+
+        $aliases = [
+            'database'    => LogType::DATABASE->value,
+            'sql'         => LogType::SQL_ERROR->value,
+            'sql_error'   => LogType::SQL_ERROR->value,
+            'sql-error'   => LogType::SQL_ERROR->value,
+            'http'        => LogType::URL->value,
+            'request'     => LogType::ACCESS->value,
+            'app'         => LogType::APPLICATION->value,
+            'application' => LogType::APPLICATION->value,
+            'security'    => LogType::SECURITY->value,
+            'url_error'   => LogType::URL_ERROR->value,
+            'url-error'   => LogType::URL_ERROR->value,
+        ];
+        $lk = strtolower($candidate);
+        if (isset($aliases[$lk])) {
+            return $aliases[$lk];
+        }
+
+        return LogType::APPLICATION->value;
     }
 }

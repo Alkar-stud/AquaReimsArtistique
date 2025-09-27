@@ -2,7 +2,7 @@
 namespace app\Controllers;
 
 use app\Attributes\Route;
-use app\Repository\AccueilRepository;
+use app\Repository\Event\EventPresentationsRepository;
 use DOMDocument;
 use Exception;
 

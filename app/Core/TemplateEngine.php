@@ -128,6 +128,8 @@ class TemplateEngine
             '/\{%\s*endif\s*%\}/'                  => '<?php endif; ?>',
             '/\{%\s*foreach\s+(.+?)\s+as\s+(.+?)\s*%\}/' => '<?php foreach ($1 as $2): ?>',
             '/\{%\s*endforeach\s*%\}/'             => '<?php endforeach; ?>',
+            '/\{%\s*for\s+(.+?)\s+in\s+(.+?)\.\.(.+?)\s*%\}/' => '<?php for ($1 = $2; $1 <= $3; $1++): ?>',
+            '/\{%\s*endfor\s*%\}/'                  => '<?php endfor; ?>',
         ];
         return preg_replace(array_keys($patterns), array_values($patterns), $template);
     }
@@ -140,11 +142,51 @@ class TemplateEngine
 
     private function compileEchos(string $template): string
     {
-        return preg_replace(
-            '/\{\{(.+?)}}/s',
-            '<?= htmlspecialchars((string)($1), ENT_QUOTES | ENT_SUBSTITUTE, "UTF-8") ?>',
+        // Gère les échos avec ou sans filtres (ex: {{ $variable | date('Y-m-d') }})
+        return preg_replace_callback(
+            '/\{\{\s*(.+?)\s*}}/s',
+            function ($matches) {
+                $expression = $matches[1];
+                $parts = explode('|', $expression);
+                $variable = trim(array_shift($parts)); // La variable principale
+
+                // Si pas de filtres, comportement par défaut
+                if (empty($parts)) {
+                    return "<?= htmlspecialchars((string)($variable), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>";
+                }
+
+                // Appliquer les filtres en chaîne
+                $isComplexExpression = false;
+                $output = $variable;
+                foreach ($parts as $filter) {
+                    $output = $this->applyFilter($output, trim($filter));
+                    $isComplexExpression = true; // Un filtre a été appliqué, c'est une expression
+                }
+
+                // Si c'est une expression complexe, on ne l'entoure pas de parenthèses supplémentaires.
+                $finalOutput = $isComplexExpression ? $output : "($output)";
+                return "<?= htmlspecialchars((string)$finalOutput, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>";
+            },
             $template
         );
+    }
+
+    private function applyFilter(string $variable, string $filter): string
+    {
+        // Recherche du nom du filtre et de ses arguments (ex: date('Y-m-d H:i:s'))
+        if (preg_match('/^(\w+)\s*\((.*)\)$/', $filter, $matches)) {
+            $filterName = $matches[1];
+            $filterArgs = $matches[2];
+
+            if ($filterName === 'date') {
+                $format = $filterArgs ?: "'Y-m-d H:i:s'"; // Format par défaut
+                // Génère un code PHP qui gère les valeurs nulles ou vides
+                return "(!empty($variable) ? (new \\DateTime($variable))->format($format) : '')";
+            }
+        }
+
+        // Si le filtre n'est pas reconnu ou n'a pas de parenthèses, on le retourne tel quel pour l'instant
+        return $variable;
     }
 
     private function compilePhpBlocks(string $template): string

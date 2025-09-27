@@ -1,12 +1,14 @@
 <?php
 namespace app\Services\Log\Handler;
 
-final class FileLogHandler implements LogHandlerInterface
+use app\Enums\LogType;
+
+final readonly class FileLogHandler implements LogHandlerInterface
 {
     public function __construct(
-        private readonly string $dir,
-        private readonly int $maxBytes = 10_000_000,
-        private readonly int $maxFiles = 7
+        private string $dir,
+        private int    $maxBytes = 10_000_000,
+        private int    $maxFiles = 7
     ) {
         if (!is_dir($this->dir)) {
             @mkdir($this->dir, 0775, true);
@@ -15,9 +17,13 @@ final class FileLogHandler implements LogHandlerInterface
 
     public function handle(array $record): void
     {
-        $date = gmdate('Y-m-d');
-        $channel = $record['channel'] ?? 'app';
-        $file = rtrim($this->dir, '/') . "/{$channel}-{$date}.log";
+        $date = date('Y-m-d');
+        $rawChannel = !empty($record['channel']) ? $record['channel'] : LogType::APPLICATION->value;
+
+        // "Slugify" le channel pour créer un nom de fichier valide
+        $safeChannel = strtolower(preg_replace('/[^a-zA-Z0-9]+/', '-', $rawChannel));
+
+        $file = rtrim($this->dir, '/') . "/{$safeChannel}-{$date}.log";
         $this->rotateIfNeeded($file);
         $line = json_encode($record, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
         if ($line === false) {
@@ -30,7 +36,7 @@ final class FileLogHandler implements LogHandlerInterface
     {
         clearstatcache(true, $file);
         if (file_exists($file) && filesize($file) > $this->maxBytes) {
-            $ts = gmdate('Ymd_His');
+            $ts = date('Ymd_His');
             @rename($file, "{$file}.{$ts}");
             $this->pruneOld($file);
         }

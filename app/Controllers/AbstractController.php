@@ -30,25 +30,30 @@ abstract class AbstractController
         LoggingBootstrap::ensureInitialized();
         self::registerGlobalErrorHandlers();
 
+        // Configuration et démarrage de la session
         $this->configureSession();
         if (session_status() === PHP_SESSION_NONE) {
             session_start();
         }
         RequestContext::boot();
 
-        $this->flashMessageService = new FlashMessageService();
+        // Validation de la session utilisateur (y compris la régénération)
+        // C'est l'étape la plus importante à faire tôt.
         $this->sessionValidateService = new SessionValidateService();
-        $this->csrfService = new CsrfService();
-
-        // Valide automatiquement le CSRF pour les méthodes non sûres
-        $this->maybeEnforceCsrf();
-
-        // Vérifier la session de l'utilisateur
         try {
             $this->checkUserSession($isPublicRoute);
         } catch (Throwable) {
             $this->logoutAndRedirect('Une erreur de session est survenue. Veuillez vous reconnecter.');
         }
+
+        // Initialisation des services qui dépendent d'une session stable
+        $this->flashMessageService = new FlashMessageService();
+        $this->csrfService = new CsrfService();
+        $context = $this->getCsrfContext();
+
+        // Validation du token CSRF pour les requêtes POST, PUT, etc.
+        // Doit se faire après l'initialisation de CsrfService.
+        $this->maybeEnforceCsrf();
 
         // Journaliser la requête dans le channel "url" (maintenant que l'utilisateur est connu)
         Logger::get()->info(
@@ -70,8 +75,8 @@ abstract class AbstractController
         $data['is_gestion_page'] = str_starts_with($uri, '/gestion');
         $data['load_ckeditor'] = $data['is_gestion_page'] && (str_starts_with($uri, '/gestion/mail_templates') || str_starts_with($uri, '/gestion/accueil'));
 
-        // Injecte automatiquement le token CSRF si non fourni
-        $data['csrf_token'] ??= $this->csrfService->getToken($this->getCsrfContext());
+        // Injecter le token pour la page COURANTE (jamais le Referer)
+        $data['csrf_token'] ??= $this->csrfService->getToken($this->getCurrentPath());
 
         // Centralisation de la récupération des messages flash
         $data['flash_message'] = $this->flashMessageService->getFlashMessage();
@@ -282,25 +287,43 @@ abstract class AbstractController
         return str_starts_with($url, '/') && !str_starts_with($url, '//') && !str_contains($url, '://');
     }
 
+    // Contexte CSRF: Referer seulement pour les requêtes non-GET
     protected function getCsrfContext(): string
     {
-        // Pour les requêtes AJAX/Fetch, le contexte correct est la page d'où vient la requête.
-        // On se base sur le Referer, en s'assurant qu'il vient bien du même domaine pour la sécurité.
-        if (isset($_SERVER['HTTP_REFERER'])) {
-            $refererHost = parse_url($_SERVER['HTTP_REFERER'], PHP_URL_HOST);
-            $serverHost = $_SERVER['HTTP_HOST'] ?? '';
+        $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 
-            // Si le referer vient du même hôte, on l'utilise comme contexte.
-            if ($refererHost === $serverHost) {
-                $refererPath = parse_url($_SERVER['HTTP_REFERER'], PHP_URL_PATH);
-                if ($refererPath) {
-                    return $refererPath;
-                }
-            }
+        if (in_array($method, ['POST', 'PUT', 'PATCH', 'DELETE'], true)) {
+            // Préférer le Referer si même origine, sinon l’URI courante
+            return $this->getSameOriginRefererPath() ?? $this->getCurrentPath();
         }
 
-        // Comportement par défaut pour les chargements de page classiques.
+        // GET: toujours la page courante
+        return $this->getCurrentPath();
+    }
+
+    // Chemin de la page courante (sans query)
+    private function getCurrentPath(): string
+    {
         return parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
+    }
+
+    // Referer si même origine (hôte comparé en ignorant le port)
+    private function getSameOriginRefererPath(): ?string
+    {
+        if (empty($_SERVER['HTTP_REFERER'])) {
+            return null;
+        }
+
+        $refererHost = parse_url($_SERVER['HTTP_REFERER'], PHP_URL_HOST);
+        $serverHostRaw = $_SERVER['HTTP_X_FORWARDED_HOST'] ?? ($_SERVER['HTTP_HOST'] ?? '');
+        $serverHost = parse_url('http://' . $serverHostRaw, PHP_URL_HOST); // normalise et ignore le port
+
+        if ($refererHost && $serverHost && strcasecmp($refererHost, $serverHost) === 0) {
+            $path = parse_url($_SERVER['HTTP_REFERER'], PHP_URL_PATH);
+            return $path ?: null;
+        }
+
+        return null;
     }
 
     private function maybeEnforceCsrf(): void
@@ -310,24 +333,17 @@ abstract class AbstractController
             return;
         }
 
-        $context = null;
-        if (isset($_SERVER['HTTP_REFERER'])) {
-            $refererPath = parse_url($_SERVER['HTTP_REFERER'], PHP_URL_PATH);
-            $refererHost = parse_url($_SERVER['HTTP_REFERER'], PHP_URL_HOST);
-            $serverHost = $_SERVER['HTTP_HOST'] ?? '';
-
-            if ($refererPath && $refererHost === $serverHost) {
-                $context = $refererPath;
-            }
-        }
-
+        $context = $this->getCsrfContext();
         $token = $_SERVER['HTTP_X_CSRF_TOKEN'] ?? ($_POST['csrf_token'] ?? '');
 
-        if ($context === null || !$this->csrfService->validateAndConsume($token, $context)) {
+        if (!$this->csrfService->validateAndConsume($token, $context)) {
             $this->flashMessageService->setFlashMessage('danger', 'Token CSRF invalide ou manquant.');
-            header('Location: ' . ($context ?: '/'));
+            header('Location: ' . ($this->getSameOriginRefererPath() ?? $this->getCurrentPath()));
             exit;
         }
+
+        // Préparer le prochain token pour ce contexte
+        $this->csrfService->generateToken($context);
     }
 
     protected function checkIfCurrentUserIsAllowedToManagedThis(int $minRoleLevel = 99, ?string $urlReturn = null): void

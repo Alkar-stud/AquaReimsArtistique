@@ -37,7 +37,7 @@ class EventQueryService
      *
      * @return Event[]
      */
-    public function getAllEventsWithRelations(): array
+    public function getAllEventsWithRelations($isUpComing = null): array
     {
         // Récupérer tous les événements de base
         $events = $this->eventRepository->findAllSortByDate();

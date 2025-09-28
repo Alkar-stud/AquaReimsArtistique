@@ -3,21 +3,21 @@
     {{ $flash_message['message'] ?? '' }}
 </div>
 {% endif %}
-<ul class="nav nav-tabs mb-3" id="tarifTabs">
-    <li class="nav-item">
-        <a class="nav-link {{ !$onglet ? 'active' : '' }}" id="tab-all" href="/gestion/tarifs">Tous</a>
-    </li>
-    <li class="nav-item">
-        <a class="nav-link {{ $onglet === 'places' ? 'active' : '' }}" id="tab-places" href="/gestion/tarifs?onglet=places">Places assises</a>
-    </li>
-    <li class="nav-item">
-        <a class="nav-link {{ $onglet === 'autres' ? 'active' : '' }}" id="tab-autres" href="/gestion/tarifs?onglet=autres">Autres</a>
-    </li>
-</ul>
-<div id="content-places" style="{{ $onglet === 'places' ? '' : 'display:none;' }}"></div>
-<div id="content-autres" style="{{ $onglet === 'autres' ? '' : 'display:none;' }}"></div>
 <div class="container-fluid">
     <h2 class="mb-4">Gestion des tarifs</h2>
+    <ul class="nav nav-tabs mb-3" id="tarifTabs">
+        <li class="nav-item">
+            <a class="nav-link {{ !$onglet ? 'active' : '' }}" id="tab-all" href="/gestion/tarifs">Tous</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link {{ $onglet === 'places' ? 'active' : '' }}" id="tab-places" href="/gestion/tarifs?onglet=places">Places assises</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link {{ $onglet === 'autres' ? 'active' : '' }}" id="tab-autres" href="/gestion/tarifs?onglet=autres">Autres</a>
+        </li>
+    </ul>
+    <div id="content-places" style="{{ $onglet === 'places' ? '' : 'display:none;' }}"></div>
+    <div id="content-autres" style="{{ $onglet === 'autres' ? '' : 'display:none;' }}"></div>
     <div class="d-md-none mb-4">
         {% if !empty($data) %}
         <ul class="list-group mb-3">

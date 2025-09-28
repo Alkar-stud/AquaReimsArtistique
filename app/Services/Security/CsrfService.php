@@ -71,4 +71,17 @@ final class CsrfService
         $this->ensureSessionStarted();
         unset($_SESSION[self::SESSION_KEY][$context]);
     }
+
+    public function generateToken(string $context = 'default'): string
+    {
+        $this->ensureSessionStarted();
+        $tokenData = $this->tokenGenerate->generateToken(32);
+        if ($tokenData === null) {
+            throw new \RuntimeException('Could not generate a secure CSRF token.');
+        }
+        $_SESSION[self::SESSION_KEY][$context] = $tokenData['token'];
+        return $_SESSION[self::SESSION_KEY][$context];
+    }
+
+
 }

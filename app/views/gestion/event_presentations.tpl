@@ -4,7 +4,7 @@
 </div>
 {% endif %}
 
-<div class="container my-4">
+<div class="container-fluid">
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h2>Gestion de la page d'accueil</h2>
         <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addModal">

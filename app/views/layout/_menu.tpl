@@ -28,7 +28,7 @@
                     <a class="nav-link {{ $uri == '/gestion/accueil' ? 'active-link' : '' }}" href="/gestion/accueil">Page d'accueil</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link {{ $uri == '/gestion/reservations' ? 'active-link' : '' }}" href="/gestion/reservations">Réservations</a>
+                    <a class="nav-link {{ $uri == '/gestion/reservation' ? 'active-link' : '' }}" href="/gestion/reservations">Réservations</a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link {{ $uri == '/gestion/piscines' ? 'active-link' : '' }}" href="/gestion/piscines">Piscines</a>

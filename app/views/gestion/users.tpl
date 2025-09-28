@@ -4,7 +4,7 @@
 </div>
 {% endif %}
 
-<div class="container">
+<div class="container-fluid">
     <h2>Gestion des utilisateurs</h2>
 
     <!-- Desktop -->

@@ -105,7 +105,7 @@ class EventRepository extends AbstractRepository
             $sql .= " WHERE s.last_session_date < NOW()";
         }
 
-        $sql .= " ORDER BY s.last_session_date DESC, e.created_at DESC";
+        $sql .= " ORDER BY s.last_session_date";
         $rows = $this->query($sql, $params);
         return array_map([$this, 'hydrate'], $rows);
     }

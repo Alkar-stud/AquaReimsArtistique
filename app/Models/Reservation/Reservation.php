@@ -23,9 +23,9 @@ class Reservation extends AbstractModel
     private string $email;
     private ?string $phone = null;
 
-    // FK nageuse si limitation active
-    private ?int $nageuse_si_limitation = null;
-    private ?Swimmer $nageuse = null;
+    // FK swimmer si limitation active
+    private ?int $swimmer_if_limitation = null;
+    private ?Swimmer $swimmer = null;
 
     private int $total_amount = 0;
     private int $total_amount_paid = 0;
@@ -54,8 +54,8 @@ class Reservation extends AbstractModel
     public function getFirstName(): string { return $this->firstname; }
     public function getEmail(): string { return $this->email; }
     public function getPhone(): ?string { return $this->phone; }
-    public function getSwimmerId(): ?int { return $this->nageuse_si_limitation; }
-    public function getSwimmer(): ?Swimmer { return $this->nageuse; }
+    public function getSwimmerId(): ?int { return $this->swimmer_if_limitation; }
+    public function getSwimmer(): ?Swimmer { return $this->swimmer; }
     public function getTotalAmount(): int { return $this->total_amount; }
     public function getTotalAmountPaid(): int { return $this->total_amount_paid; }
     public function getToken(): ?string { return $this->token; }
@@ -97,10 +97,10 @@ class Reservation extends AbstractModel
     public function setEmail(string $email): self { $this->email = $email; return $this; }
     public function setPhone(?string $phone): self { $this->phone = ($phone === '' ? null : $phone); return $this; }
 
-    public function setSwimmerId(?int $nageuse_si_limitation): self { $this->nageuse_si_limitation = $nageuse_si_limitation; return $this; }
-    public function setSwimmer(?Swimmer $nageuse): self {
-        $this->nageuse = $nageuse;
-        if ($nageuse) { $this->nageuse_si_limitation = $nageuse->getId(); }
+    public function setSwimmerId(?int $swimmer_if_limitation): self { $this->swimmer_if_limitation = $swimmer_if_limitation; return $this; }
+    public function setSwimmer(?Swimmer $swimmer): self {
+        $this->swimmer = $swimmer;
+        if ($swimmer) { $this->swimmer_if_limitation = $swimmer->getId(); }
         return $this;
     }
 

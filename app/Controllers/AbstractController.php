@@ -12,7 +12,6 @@ use app\Services\Log\RequestContext;
 use app\Services\Security\SessionValidateService;
 use app\Services\Security\CsrfService;
 use app\Utils\DurationHelper;
-use JetBrains\PhpStorm\NoReturn;
 use Throwable;
 
 abstract class AbstractController
@@ -40,6 +39,10 @@ abstract class AbstractController
         // Validation de la session utilisateur (y compris la régénération)
         // C'est l'étape la plus importante à faire tôt.
         $this->sessionValidateService = new SessionValidateService();
+        // On initialise le service de messages flash ici, car il peut être appelé
+        // par logoutAndRedirect() à l'intérieur de checkUserSession().
+        $this->flashMessageService = new FlashMessageService();
+
         try {
             $this->checkUserSession($isPublicRoute);
         } catch (Throwable) {
@@ -47,9 +50,7 @@ abstract class AbstractController
         }
 
         // Initialisation des services qui dépendent d'une session stable
-        $this->flashMessageService = new FlashMessageService();
         $this->csrfService = new CsrfService();
-        $context = $this->getCsrfContext();
 
         // Validation du token CSRF pour les requêtes POST, PUT, etc.
         // Doit se faire après l'initialisation de CsrfService.
@@ -66,6 +67,13 @@ abstract class AbstractController
         );
     }
 
+    /**
+     * @param string $view
+     * @param array $data
+     * @param string $title
+     * @param bool $partial
+     * @return void
+     */
     protected function render(string $view, array $data = [], string $title = '', bool $partial = false): void
     {
         $engine = new TemplateEngine();
@@ -151,6 +159,10 @@ abstract class AbstractController
         }
     }
 
+    /**
+     * @param array $data
+     * @return array
+     */
     private function prepareLoopData(array $data): array
     {
         foreach ($data as $key => $value) {
@@ -172,6 +184,11 @@ abstract class AbstractController
         return $data;
     }
 
+    /**
+     * @param bool $isPublicRoute
+     * @return void
+     * @throws \Exception
+     */
     public function checkUserSession(bool $isPublicRoute = false): void
     {
         if ($isPublicRoute) {
@@ -211,6 +228,11 @@ abstract class AbstractController
         }
     }
 
+    /**
+     * @param string $message
+     * @param bool $saveRedirectUrl
+     * @return void
+     */
     private function logoutAndRedirect(string $message, bool $saveRedirectUrl = false): void
     {
         $redirectUrlAfterLogin = null;
@@ -234,6 +256,9 @@ abstract class AbstractController
         $this->redirect('/login');
     }
 
+    /**
+     * @return void
+     */
     protected function configureSession(): void
     {
         if (session_status() !== PHP_SESSION_NONE) {
@@ -268,6 +293,10 @@ abstract class AbstractController
         ]);
     }
 
+    /**
+     * @param bool $destroyOldSession
+     * @return void
+     */
     protected function regenerateSessionId(bool $destroyOldSession = false): void
     {
         if (session_status() === PHP_SESSION_ACTIVE) {
@@ -275,19 +304,42 @@ abstract class AbstractController
         }
     }
 
+    /**
+     * @param array $data
+     * @param int $statusCode
+     * @return void
+     */
     protected function json(array $data, int $statusCode = 200): void
     {
         http_response_code($statusCode);
         header('Content-Type: application/json; charset=utf-8');
-        echo json_encode($data);
-        exit;    }
 
+        // Toujours joindre un nouveau token pour le contexte courant (ou Referer pour POST/PUT/…)
+        try {
+            $context = $this->getCsrfContext();
+            $data['csrf_token'] ??= $this->csrfService->getToken($context);
+        } catch (Throwable) {
+            // On ignore en cas d'absence de service (ex. pendant des tests).
+        }
+
+        echo json_encode($data);
+        exit;
+    }
+
+    /**
+     * @param string $url
+     * @return bool
+     */
     private function isValidInternalRedirect(string $url): bool
     {
         return str_starts_with($url, '/') && !str_starts_with($url, '//') && !str_contains($url, '://');
     }
 
     // Contexte CSRF: Referer seulement pour les requêtes non-GET
+
+    /**
+     * @return string
+     */
     protected function getCsrfContext(): string
     {
         $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
@@ -302,12 +354,20 @@ abstract class AbstractController
     }
 
     // Chemin de la page courante (sans query)
+
+    /**
+     * @return string
+     */
     private function getCurrentPath(): string
     {
         return parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
     }
 
     // Referer si même origine (hôte comparé en ignorant le port)
+
+    /**
+     * @return string|null
+     */
     private function getSameOriginRefererPath(): ?string
     {
         if (empty($_SERVER['HTTP_REFERER'])) {
@@ -326,6 +386,9 @@ abstract class AbstractController
         return null;
     }
 
+    /**
+     * @return void
+     */
     private function maybeEnforceCsrf(): void
     {
         $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
@@ -346,6 +409,11 @@ abstract class AbstractController
         $this->csrfService->generateToken($context);
     }
 
+    /**
+     * @param int $minRoleLevel
+     * @param string|null $urlReturn
+     * @return void
+     */
     protected function checkIfCurrentUserIsAllowedToManagedThis(int $minRoleLevel = 99, ?string $urlReturn = null): void
     {
         if ($urlReturn !== null && !preg_match('/^[a-z-]*$/', $urlReturn)) {
@@ -362,12 +430,23 @@ abstract class AbstractController
         }
     }
 
+    /**
+     * @param string $url
+     * @return void
+     */
     protected function redirect(string $url): void
     {
         header('Location: ' . $url);
         exit;
     }
 
+    /**
+     * @param string $url
+     * @param string $anchorKey
+     * @param int $id
+     * @param string|null $context
+     * @return void
+     */
     protected function redirectWithAnchor(string $url, string $anchorKey = 'form_anchor', int $id = 0, ?string $context = null): void
     {
         $anchor = '';
@@ -383,6 +462,9 @@ abstract class AbstractController
         $this->redirect($url);
     }
 
+    /**
+     * @return void
+     */
     private static function registerGlobalErrorHandlers(): void
     {
         if (self::$globalHandlersRegistered) {
@@ -401,6 +483,10 @@ abstract class AbstractController
         self::$globalHandlersRegistered = true;
     }
 
+    /**
+     * @param Throwable $e
+     * @return void
+     */
     public static function handleUncaughtException(Throwable $e): void
     {
         // Toujours initialiser le logger si besoin
@@ -415,6 +501,13 @@ abstract class AbstractController
         self::respondHttp500($e);
     }
 
+    /**
+     * @param int $errno
+     * @param string $errstr
+     * @param string $errfile
+     * @param int $errline
+     * @return bool
+     */
     public static function handlePhpError(int $errno, string $errstr, string $errfile, int $errline): bool
     {
         LoggingBootstrap::ensureInitialized();
@@ -437,6 +530,9 @@ abstract class AbstractController
         return false;
     }
 
+    /**
+     * @return void
+     */
     public static function handleShutdown(): void
     {
         $err = error_get_last();
@@ -461,6 +557,10 @@ abstract class AbstractController
         }
     }
 
+    /**
+     * @param Throwable|string|null $e
+     * @return void
+     */
     private static function respondHttp500(null|Throwable|string $e): void
     {
         // Évite tout output parasite si on est déjà en train de sortir quelque chose

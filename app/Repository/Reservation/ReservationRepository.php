@@ -245,24 +245,6 @@ class ReservationRepository extends AbstractRepository
     }
 
     /**
-     * Compte le nombre de réservations actives par event (option nageur)
-     * @param int $eventId
-     * @param int|null $swimmerId
-     * @return int
-     */
-    public function countActiveReservationsForEvent(int $eventId, ?int $swimmerId = null): int
-    {
-        $sql = "SELECT COUNT(*) as count FROM $this->tableName WHERE event = :eventId AND is_canceled = 0";
-        $params = ['eventId' => $eventId];
-        if ($swimmerId !== null) {
-            $sql .= " AND swimmer_if_limitation = :swimmerId";
-            $params['swimmerId'] = $swimmerId;
-        }
-        $row = $this->query($sql, $params)[0] ?? ['count' => 0];
-        return (int)$row['count'];
-    }
-
-    /**
      * Hydrate détails, compléments et paiements en masse
      * @param Reservation[] $reservations
      * @return Reservation[]

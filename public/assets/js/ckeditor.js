@@ -230,7 +230,6 @@ class CustomUploadAdapter {
 			formData.append('upload', file);
 
 			const url = `/gestion/accueil/upload?displayUntil=${encodeURIComponent(displayUntilValue)}`;
-console.log('csrfToken envoyé : ', csrfToken);
 			return fetch(url, {
 				method: 'POST',
 				headers: {

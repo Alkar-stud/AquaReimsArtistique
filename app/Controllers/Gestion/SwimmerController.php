@@ -32,7 +32,7 @@ class SwimmerController extends AbstractController
             $groupName = 'tous les groupes';
             $swimmers = $this->swimmerRepository->findAll(true);
         } elseif ($groupId == 0) {
-            $this->flashMessageService->setFlashMessage('warning', 'Vous n\'avez ici que les nageuses sans groupe');
+            $this->flashMessageService->setFlashMessage('warning', 'Vous n\'avez ici que les nageurs sans groupe');
             $groupName = 'sans groupe';
             $swimmers = $this->swimmerRepository->findWithoutGroup();
         } elseif (!is_numeric($groupId)) {

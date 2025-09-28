@@ -2,6 +2,7 @@
 namespace app\Services\Event;
 
 use app\Models\Event\Event;
+use app\Models\Event\EventInscriptionDate;
 use app\Models\Piscine\Piscine;
 use app\Models\Tarif\Tarif;
 use app\Repository\Event\EventInscriptionDateRepository;
@@ -9,6 +10,7 @@ use app\Repository\Event\EventRepository;
 use app\Repository\Event\EventSessionRepository;
 use app\Repository\Piscine\PiscineRepository;
 use app\Repository\Tarif\TarifRepository;
+use DateTime;
 
 class EventQueryService
 {
@@ -37,10 +39,10 @@ class EventQueryService
      *
      * @return Event[]
      */
-    public function getAllEventsWithRelations($isUpComing = null): array
+    public function getAllEventsWithRelations(?bool $isUpComing = null): array
     {
         // Récupérer tous les événements de base
-        $events = $this->eventRepository->findAllSortByDate();
+        $events = $this->eventRepository->findAllSortByDate($isUpComing);
         if (empty($events)) {
             return [];
         }
@@ -111,4 +113,94 @@ class EventQueryService
     {
         return $this->tarifRepository->findAllActive();
     }
-}
+
+    /**
+     * Pour récupérer la période d'inscription ouverte d'un événement.
+     *
+     * @param Event[] $events
+     * @return array{periodesOuvertes: array<int, EventInscriptionDate>, nextPublicOuvertures: array<int, EventInscriptionDate>}
+     */
+     public function getEventInscriptionPeriodsStatus(array $events): array
+     {
+         $periodesOuvertes = [];
+         $nextPublicOuvertures = [];
+         $now = new DateTime();
+
+         foreach ($events as $event) {
+             $activePeriod = null;
+             $nextPublicPeriod = null;
+
+             // Les périodes sont déjà triées par start_registration_at dans le repository
+             $inscriptionDates = $event->getInscriptionDates();
+
+             foreach ($inscriptionDates as $date) {
+                 $start = $date->getStartRegistrationAt();
+                 $end = $date->getCloseRegistrationAt();
+
+                 // Chercher la période actuellement active
+                 if ($activePeriod === null && $start <= $now && $end > $now) {
+                     $activePeriod = $date;
+                 }
+
+                 // Chercher la prochaine période publique (sans code)
+                 if ($date->getAccessCode() === null && $start > $now) {
+                     // Si on n'a pas encore de prochaine période publique, ou si celle-ci est plus proche
+                     if ($nextPublicPeriod === null || $start < $nextPublicPeriod->getStartRegistrationAt()) {
+                         $nextPublicPeriod = $date;
+                     }
+                 }
+             }
+
+             if ($activePeriod) {
+                 $periodesOuvertes[$event->getId()] = $activePeriod;
+             }
+             if ($nextPublicPeriod) {
+                 $nextPublicOuvertures[$event->getId()] = $nextPublicPeriod;
+             }
+         }
+
+         return [
+             'periodesOuvertes' => $periodesOuvertes,
+             'nextPublicOuvertures' => $nextPublicOuvertures,
+         ];
+     }
+
+    /**
+     * Valide un code d'accès pour un événement et vérifie si la période d'inscription est active.
+     *
+     * @param int $eventId L'ID de l'événement.
+     * @param string $code Le code d'accès à valider.
+     * @return array ['success' => bool, 'error' => ?string]
+     */
+    public function validateAccessCode(int $eventId, string $code): array
+    {
+        $periods = $this->inscriptionDateRepository->findByEventId($eventId);
+        $now = new DateTime();
+
+        foreach ($periods as $period) {
+            // Comparaison sensible à la casse
+            if ($period->getAccessCode() && $period->getAccessCode() === $code) {
+                if ($now < $period->getStartRegistrationAt()) {
+                    $dateLocale = $period->getStartRegistrationAt()->format('d/m/Y à H\hi');
+                    return [
+                        'success' => false,
+                        'error' => "Ce code est valide, mais la période d'inscription n'a pas encore commencé. Ouverture le $dateLocale."
+                    ];
+                }
+
+                if ($now > $period->getCloseRegistrationAt()) {
+                    return [
+                        'success' => false,
+                        'error' => "Ce code est valide, mais la période d'inscription est terminée."
+                    ];
+                }
+
+                // Le code est valide et la période est ouverte
+                return ['success' => true, 'error' => null];
+            }
+        }
+
+        return ['success' => false, 'error' => 'Code inconnu pour cet événement.'];
+    }
+
+ }

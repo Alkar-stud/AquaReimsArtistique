@@ -28,22 +28,12 @@ abstract class AbstractController
         // Bootstrap logging + contexte requête (X-Request-Id)
         LoggingBootstrap::ensureInitialized();
         self::registerGlobalErrorHandlers();
-        RequestContext::boot();
-
-        // Journaliser la requête dans le channel "url"
-        Logger::get()->info(
-            LogType::URL->value,
-            'request',
-            [
-                'uri' => strtok($_SERVER['REQUEST_URI'] ?? '/', '?'),
-                'method' => $_SERVER['REQUEST_METHOD'] ?? 'GET',
-            ]
-        );
 
         $this->configureSession();
         if (session_status() === PHP_SESSION_NONE) {
             session_start();
         }
+        RequestContext::boot();
 
         $this->flashMessageService = new FlashMessageService();
         $this->sessionValidateService = new SessionValidateService();
@@ -58,6 +48,16 @@ abstract class AbstractController
         } catch (Throwable) {
             $this->logoutAndRedirect('Une erreur de session est survenue. Veuillez vous reconnecter.');
         }
+
+        // Journaliser la requête dans le channel "url" (maintenant que l'utilisateur est connu)
+        Logger::get()->info(
+            LogType::URL->value,
+            'request',
+            [
+                'uri' => strtok($_SERVER['REQUEST_URI'] ?? '/', '?'),
+                'method' => $_SERVER['REQUEST_METHOD'] ?? 'GET',
+            ]
+        );
     }
 
     protected function render(string $view, array $data = [], string $title = '', bool $partial = false): void

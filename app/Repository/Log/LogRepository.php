@@ -167,7 +167,16 @@ class LogRepository
 
     private function matches(array $logEntry, array $filters): bool
     {
-        if (!empty($filters['level']) && strcasecmp($logEntry['level'] ?? '', $filters['level']) !== 0) return false;
+        if (!empty($filters['level'])) {
+            $logLevel = strtoupper($logEntry['level'] ?? '');
+            if (is_array($filters['level'])) {
+                // Le filtre est un tableau de niveaux (ex: ['WARNING', 'ERROR', ...])
+                if (!in_array($logLevel, $filters['level'], true)) return false;
+            } elseif (strcasecmp($logLevel, $filters['level']) !== 0) {
+                // Le filtre est une chaîne unique (comportement précédent)
+                return false;
+            }
+        }
         if (!empty($filters['channel']) && strcasecmp($logEntry['channel'] ?? '', $filters['channel']) !== 0) return false;
         if (!empty($filters['ip']) && ($logEntry['ip'] ?? '') !== $filters['ip']) return false;
 

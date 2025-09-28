@@ -9,6 +9,16 @@ class LogQueryService
 {
     private LogRepository $logRepository;
     private const int LOGS_PER_PAGE = 50;
+    private const LOG_LEVELS_HIERARCHY = [
+        'DEBUG'     => 100,
+        'INFO'      => 200,
+        'NOTICE'    => 250,
+        'WARNING'   => 300,
+        'ERROR'     => 400,
+        'CRITICAL'  => 500,
+        'ALERT'     => 550,
+        'EMERGENCY' => 600,
+    ];
 
     public function __construct(LogRepository $logRepository)
     {
@@ -23,9 +33,23 @@ class LogQueryService
      */
     public function getPaginatedLogs(array $queryParams): array
     {
+        $selectedLevel = !empty($queryParams['level']) ? strtoupper(htmlspecialchars($queryParams['level'])) : null;
+
+        // Préparer le filtre de niveau hiérarchique
+        $levelFilter = null;
+        if ($selectedLevel && isset(self::LOG_LEVELS_HIERARCHY[$selectedLevel])) {
+            $threshold = self::LOG_LEVELS_HIERARCHY[$selectedLevel];
+            $levelFilter = [];
+            foreach (self::LOG_LEVELS_HIERARCHY as $levelName => $levelValue) {
+                if ($levelValue >= $threshold) {
+                    $levelFilter[] = $levelName;
+                }
+            }
+        }
+
         // Valider et nettoyer les filtres
-        $filters = [
-            'level'   => !empty($queryParams['level']) ? strtoupper(htmlspecialchars($queryParams['level'])) : null,
+        $repoFilters = [
+            'level'   => $levelFilter, // Sera un tableau de niveaux ou null
             'channel' => !empty($queryParams['channel']) ? strtolower(htmlspecialchars($queryParams['channel'])) : null,
             'ip'      => !empty($queryParams['ip']) && filter_var($queryParams['ip'], FILTER_VALIDATE_IP) ? $queryParams['ip'] : null,
             'user'    => !empty($queryParams['user']) ? htmlspecialchars($queryParams['user']) : null,
@@ -36,8 +60,8 @@ class LogQueryService
         $offset = ($currentPage - 1) * self::LOGS_PER_PAGE;
 
         // Appeler le Repository
-        $totalLogs = $this->logRepository->count($filters);
-        $logs = $this->logRepository->search($filters, self::LOGS_PER_PAGE, $offset);
+        $totalLogs = $this->logRepository->count($repoFilters);
+        $logs = $this->logRepository->search($repoFilters, self::LOGS_PER_PAGE, $offset);
 
         // Calculer les informations de pagination
         $totalPages = (int)ceil($totalLogs / self::LOGS_PER_PAGE);
@@ -62,8 +86,13 @@ class LogQueryService
                 'totalResults' => $totalLogs,
                 'perPage' => self::LOGS_PER_PAGE,
             ],
-            'filters' => $filters,
-            'logLevels' => ['DEBUG', 'INFO', 'NOTICE', 'WARNING', 'ERROR', 'CRITICAL', 'ALERT', 'EMERGENCY'],
+            'filters' => [
+                'level'   => $selectedLevel, // On renvoie le niveau unique sélectionné à la vue
+                'channel' => $repoFilters['channel'],
+                'ip'      => $repoFilters['ip'],
+                'user'    => $repoFilters['user'],
+            ],
+            'logLevels' => array_keys(self::LOG_LEVELS_HIERARCHY),
             'logChannels' => $channels,
         ];
     }

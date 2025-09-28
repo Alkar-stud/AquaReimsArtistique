@@ -45,6 +45,8 @@
                 <th style="width: 100px;">Niveau</th>
                 <th style="width: 120px;">Channel</th>
                 <th>Message</th>
+                <th>URL</th>
+                <th>Requête</th>
                 <th style="width: 130px;">IP</th>
                 <th style="width: 120px;">Utilisateur</th>
             </tr>
@@ -84,8 +86,20 @@
                     </div>
                     {% endif %}
                 </td>
+                <td>{{ $log['uri'] ?? '-' }}</td>
+                <td>{{ $log['context']['query'] ?? '-' }}</td>
                 <td>{{ $log['ip'] ?? 'N/A' }}</td>
-                <td>{{ $log['user_id'] ?? 'anonymous' }}</td>
+                <td>
+                    {% if !empty($log['user_id']) %}
+                    {% if !empty($log['username']) %}
+                    {{ $log['username'] }} ({{ $log['user_id'] }})
+                    {% else %}
+                    {{ $log['user_id'] }}
+                    {% endif %}
+                    {% else %}
+                    <span class="text-muted">N/A</span>
+                    {% endif %}
+                </td>
             </tr>
             {% endforeach %}
             {% else %}

@@ -180,8 +180,12 @@ class TemplateEngine
 
             if ($filterName === 'date') {
                 $format = $filterArgs ?: "'Y-m-d H:i:s'"; // Format par défaut
+                // On récupère le fuseau horaire défini pour l'application
+                $timezone = date_default_timezone_get();
                 // Génère un code PHP qui gère les valeurs nulles ou vides
-                return "(!empty($variable) ? (new \\DateTime($variable))->format($format) : '')";
+                return "(!empty($variable) ? "
+                    . "(new \\DateTime($variable))->setTimezone(new \\DateTimeZone('$timezone'))->format($format) "
+                    . ": '')";
             }
         }
 

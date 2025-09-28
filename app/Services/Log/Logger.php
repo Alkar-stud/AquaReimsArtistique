@@ -40,15 +40,15 @@ final class Logger implements LoggerInterface
     public function log(string $level, string $channel, string $message, array $context = []): void
     {
         $normalizedChannel = $this->normalizeChannel($channel);
-        $now = microtime(true); // haute résolution
+        $finalMessage = $this->buildRichMessage($normalizedChannel, $message, $context);
+        $now = microtime(true);
 
         $record = [
             'ts' => gmdate('c'),
             'tsu' => (int) round($now * 1000), // millisecondes depuis epoch
             'level' => strtoupper($level),
             'channel' => $normalizedChannel,
-            'message' => (string)$message,
-            'request_id' => RequestContext::getRequestId(),
+            'message' => $finalMessage,
             'duration_ms' => RequestContext::getDurationMs(),
             'user_id' => $_SESSION['user']['id'] ?? null,
             'ip' => $_SERVER['REMOTE_ADDR'] ?? null,
@@ -84,6 +84,46 @@ final class Logger implements LoggerInterface
     public function security(string $event, array $context): void
     {
         $this->warning(LogType::SECURITY->value, $event, $context);
+    }
+
+    private function buildRichMessage(string $channel, string $message, array $context): string
+    {
+        switch ($channel) {
+            case LogType::DATABASE->value:
+                $parts = [];
+                if (!empty($context['query'])) {
+                    $parts[] = "SQL: " . preg_replace('/\s+/', ' ', $context['query']);
+                }
+
+                // Si le contexte ne contient pas la requête, on retourne le message de base (ex : "SELECT")
+                if (empty($parts)) {
+                    return $message;
+                }
+                return implode(' | ', $parts);
+
+            case LogType::ACCESS->value:
+                $method = $_SERVER['REQUEST_METHOD'] ?? 'UNK';
+                $uri = $context['route'] ?? strtok($_SERVER['REQUEST_URI'] ?? '/', '?');
+                $status = $context['status'] ?? '???';
+                // Format: GET /gestion/logs
+                return "{$method} {$uri} -> {$status}";
+
+            case LogType::URL->value:
+            case LogType::URL_ERROR->value:
+                $method = $context['method'] ?? $_SERVER['REQUEST_METHOD'] ?? 'UNK';
+                $uri = $context['uri'] ?? strtok($_SERVER['REQUEST_URI'] ?? '/', '?');
+                return "{$method} {$uri}";
+
+            case LogType::SECURITY->value:
+                $user = $context['user_id'] ?? 'anonymous';
+                $ip = $context['ip'] ?? ($_SERVER['REMOTE_ADDR'] ?? 'unknown');
+                return "{$message} - User: {$user}, IP: {$ip}";
+
+            // Ajoutez d'autres cas pour d'autres canaux si nécessaire
+
+            default:
+                return $message;
+        }
     }
 
     private function sanitize(array $context): array

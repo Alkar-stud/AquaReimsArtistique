@@ -18,11 +18,9 @@ try {
     //    Ses variables auront la priorité, car elles sont chargées en premier.
     if (file_exists(__DIR__ . '/../.env.local')) {
         Dotenv::createImmutable(__DIR__ . '/../', '.env.local')->load();
-    }
-    if (file_exists(__DIR__ . '/../.env.prod')) {
+    } elseif (file_exists(__DIR__ . '/../.env.prod')) {
         Dotenv::createImmutable(__DIR__ . '/../', '.env.prod')->load();
-    }
-    if (file_exists(__DIR__ . '/../.env.docker')) {
+    } else if (file_exists(__DIR__ . '/../.env.docker')) {
         Dotenv::createImmutable(__DIR__ . '/../', '.env.docker')->load();
     }
 

@@ -13,7 +13,6 @@ use DateTime;
 use Exception;
 use Throwable;
 
-#[Route('/gestion/events', name: 'app_gestion_events')]
 class EventController extends AbstractController
 {
     private EventQueryService $eventQueryService;
@@ -44,6 +43,7 @@ class EventController extends AbstractController
      * les sépare en deux listes (événements à venir et événements passés),
      * puis les transmet à la vue pour affichage.
      */
+    #[Route('/gestion/events', name: 'app_gestion_events')]
     public function index(): void
     {
         // On récupère tous les événements et leurs données associées (sessions, tarifs, etc.) via le service.

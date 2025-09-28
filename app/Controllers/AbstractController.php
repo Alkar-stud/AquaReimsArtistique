@@ -12,6 +12,7 @@ use app\Services\Log\RequestContext;
 use app\Services\Security\SessionValidateService;
 use app\Services\Security\CsrfService;
 use app\Utils\DurationHelper;
+use JetBrains\PhpStorm\NoReturn;
 use Throwable;
 
 abstract class AbstractController
@@ -269,12 +270,12 @@ abstract class AbstractController
         }
     }
 
-    protected function json(array $data): void
+    protected function json(array $data, int $statusCode = 200): void
     {
-        header('Content-Type: application/json');
+        http_response_code($statusCode);
+        header('Content-Type: application/json; charset=utf-8');
         echo json_encode($data);
-        exit;
-    }
+        exit;    }
 
     private function isValidInternalRedirect(string $url): bool
     {
@@ -283,8 +284,23 @@ abstract class AbstractController
 
     protected function getCsrfContext(): string
     {
-        $path = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH);
-        return $path ?: '/';
+        // Pour les requêtes AJAX/Fetch, le contexte correct est la page d'où vient la requête.
+        // On se base sur le Referer, en s'assurant qu'il vient bien du même domaine pour la sécurité.
+        if (isset($_SERVER['HTTP_REFERER'])) {
+            $refererHost = parse_url($_SERVER['HTTP_REFERER'], PHP_URL_HOST);
+            $serverHost = $_SERVER['HTTP_HOST'] ?? '';
+
+            // Si le referer vient du même hôte, on l'utilise comme contexte.
+            if ($refererHost === $serverHost) {
+                $refererPath = parse_url($_SERVER['HTTP_REFERER'], PHP_URL_PATH);
+                if ($refererPath) {
+                    return $refererPath;
+                }
+            }
+        }
+
+        // Comportement par défaut pour les chargements de page classiques.
+        return parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
     }
 
     private function maybeEnforceCsrf(): void
@@ -454,4 +470,5 @@ abstract class AbstractController
         }
         exit;
     }
+
 }

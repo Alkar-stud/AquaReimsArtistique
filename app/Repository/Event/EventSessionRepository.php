@@ -91,6 +91,26 @@ class EventSessionRepository extends AbstractRepository
     }
 
     /**
+     * Retourne la date de la dernière session pour chaque événement.
+     * Utilise une sous-requête pour trouver la date maximale par événement.
+     * @return array<int, string> Un tableau associatif [eventId => 'YYYY-MM-DD HH:MM:SS']
+     */
+    public function findAllLastSessionDateByEvent(): array
+    {
+        $sql = "SELECT t.event, t.event_start_at
+                 FROM $this->tableName t
+                 INNER JOIN (
+                     SELECT event, MAX(event_start_at) as max_date
+                     FROM $this->tableName
+                     GROUP BY event
+                 ) tm ON t.event = tm.event AND t.event_start_at = tm.max_date";
+
+        $rows = $this->query($sql);
+
+        return array_column($rows, 'event_start_at', 'event');
+    }
+
+    /**
      * Ajoute une session d'événement
      * @param EventSession $session
      * @return int

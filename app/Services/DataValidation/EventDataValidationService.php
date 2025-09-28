@@ -15,7 +15,6 @@ class EventDataValidationService
     private array $validatedTarifs = [];
     private array $validatedSessions = [];
     private array $validatedInscriptionDates = [];
-
     private TarifRepository $tarifRepository;
 
     public function __construct()

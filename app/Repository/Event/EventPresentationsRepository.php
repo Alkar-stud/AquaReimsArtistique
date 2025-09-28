@@ -71,6 +71,25 @@ class EventPresentationsRepository extends AbstractRepository
     }
 
     /**
+     * Retourne les présentations dont la date d'affichage n'est pas passée
+     * @return EventPresentations[]
+     */
+    public function findFuturePresentations(bool $withEvent = false): array
+    {
+        $sql = "SELECT * FROM $this->tableName WHERE display_until >= NOW() ORDER BY display_until";
+        $rows = $this->query($sql);
+
+        return array_map(function (array $r) use ($withEvent) {
+            $event = null;
+            if ($withEvent && !empty($r['event'])) {
+                $eventRepo = new EventRepository();
+                $event = $eventRepo->findById((int)$r['event']);
+            }
+            return $this->hydrate($r, $event);
+        }, $rows);
+    }
+
+    /**
      * Ajoute une présentation
      * @param EventPresentations $p
      * @return int

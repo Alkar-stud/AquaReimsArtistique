@@ -142,6 +142,7 @@ class EventPresentationsController extends AbstractController
     {
         //On vérifie que le CurrentUser a bien le droit de faire ça
         $this->checkIfCurrentUserIsAllowedToManagedThis(2, 'accueil');
+
         $eventPresentationsId = (int)($_POST['id'] ?? 0);
         $eventPresentations = $this->eventPresentationsRepository->findById($eventPresentationsId);
 
@@ -173,5 +174,23 @@ class EventPresentationsController extends AbstractController
         $this->redirect('/gestion/accueil');
     }
 
+    #[Route('/gestion/accueil/delete', name: 'app_gestion_accueil_delete', methods: ['POST'])]
+    public function delete(): void
+    {
+        //On vérifie que le CurrentUser a bien le droit de faire ça
+        $this->checkIfCurrentUserIsAllowedToManagedThis(2, 'accueil');
+
+        $eventPresentationsId = (int)($_POST['id'] ?? 0);
+        $eventPresentations = $this->eventPresentationsRepository->findById($eventPresentationsId);
+
+        if (!$eventPresentations) {
+            $this->flashMessageService->setFlashMessage('danger', "Présentation non trouvée.");
+            $this->redirect('/gestion/accueil');
+        }
+
+        $this->eventPresentationsRepository->delete($eventPresentationsId);
+        $this->flashMessageService->setFlashMessage('success', "Le contenu a été supprimé avec succès.");
+        $this->redirect('/gestion/accueil');
+    }
 
 }

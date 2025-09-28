@@ -54,12 +54,19 @@
                     </div>
                 </td>
                 <td>
-                    <button type="button"
-                            class="btn btn-primary btn-sm w-100"
-                            data-bs-toggle="modal"
-                            data-bs-target="#editModal-{{ $item->getId() }}">
-                        <i class="bi bi-pencil-square me-1"></i> Modifier
-                    </button>
+                    <div class="d-flex gap-1">
+                        <button type="button"
+                                class="btn btn-primary btn-sm"
+                                data-bs-toggle="modal"
+                                data-bs-target="#editModal-{{ $item->getId() }}">
+                            <i class="bi bi-pencil-square me-1"></i> Modifier
+                        </button>
+                        <form method="POST" action="/gestion/accueil/delete" onsubmit="return confirm('Supprimer cette présentation ?');">
+                            <input type="hidden" name="csrf_token" value="{{ $csrf_token }}">
+                            <input type="hidden" name="id" value="{{ $item->getId() }}">
+                            <button type="submit" class="btn btn-danger btn-sm"><i class="bi bi-trash"></i> Supprimer</button>
+                        </form>
+                    </div>
                 </td>
             </tr>
             {% endforeach %}
@@ -164,7 +171,6 @@
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
                     <button type="submit" class="btn btn-primary">Enregistrer les modifications</button>
-                    <a href="/gestion/accueil/delete/{{ $item->getId() }}" class="btn btn-danger" onclick="return confirm('Êtes-vous sûr de vouloir supprimer ce contenu ?');">Supprimer</a>
                 </div>
             </form>
         </div>

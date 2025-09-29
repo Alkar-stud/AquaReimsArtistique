@@ -4,6 +4,8 @@ namespace app\Controllers\Reservation;
 
 use app\Attributes\Route;
 use app\Controllers\AbstractController;
+use app\DTO\ReservationSelectionSessionDTO;
+use app\Services\DataValidation\ReservationDataValidationService;
 use app\Services\Event\EventQueryService;
 use app\Services\Reservation\ReservationSessionService;
 use app\Services\Swimmer\SwimmerQueryService;
@@ -11,14 +13,14 @@ use app\Services\Swimmer\SwimmerQueryService;
 class ReservationController extends AbstractController
 {
     private EventQueryService $eventQueryService;
-    private ReservationSessionService $reservationSessionService;
     private SwimmerQueryService $swimmerQueryService;
-
+    private ReservationDataValidationService $reservationDataValidationService;
 
     public function __construct(
         EventQueryService $eventQueryService,
         ReservationSessionService $reservationSessionService,
-        SwimmerQueryService $swimmerQueryService
+        SwimmerQueryService $swimmerQueryService,
+        ReservationDataValidationService $reservationDataValidationService,
     )
     {
         // On déclare la route comme publique pour éviter la redirection vers la page de login.
@@ -26,6 +28,7 @@ class ReservationController extends AbstractController
         $this->eventQueryService = $eventQueryService;
         $this->reservationSessionService = $reservationSessionService;
         $this->swimmerQueryService = $swimmerQueryService;
+        $this->reservationDataValidationService = $reservationDataValidationService;
     }
 
     /**
@@ -59,6 +62,37 @@ class ReservationController extends AbstractController
     }
 
 
+    #[Route('/reservation/etape2Display', name: 'etape2Display')]
+    public function etape2Display(): void
+    {
+        //On récupère la session
+        $session = $this->reservationSessionService->getReservationSession();
 
+        //On vérifie si la session est expirée
+        if (!$session || $this->reservationSessionService->isReservationSessionExpired($session)) {
+            $this->flashMessageService->setFlashMessage('warning', 'Votre session a expiré. Merci de recommencer votre réservation.');
+            $this->redirect('/reservation?session_expiree=1');
+        }
+
+        // Construire le DTO à partir de la session (mapping explicite)
+        $dto = ReservationSelectionSessionDTO::fromArray([
+            'event_id'        => (int)($session['event_id'] ?? 0),
+            'event_session_id' => (int)($session['event_session_id'] ?? 0),
+            'swimmer_id'      => isset($session['swimmer_id']) ? (int)$session['swimmer_id'] : null,
+            'access_code_used'      => isset($session['access_code_used']) ? (string)$session['access_code_used'] : null,
+            'limit_per_swimmer'=> isset($session['limit_per_swimmer']) ? (int)$session['limit_per_swimmer'] : null,
+        ]);
+
+        // Valider l'étape 1 avec le DTO
+        $check = $this->reservationDataValidationService->validateStep1($dto);
+        if (!$check['success']) {
+            $this->flashMessageService->setFlashMessage('danger', 'Veuillez reprendre le choix de la séance.');
+            $this->redirect('/reservation');
+        }
+
+        $this->render('reservation/etape2', [
+            'event_id' => $dto->eventId
+        ], 'Réservations');
+    }
 
 }

@@ -4,29 +4,35 @@ namespace app\Controllers\Ajax;
 
 use app\Attributes\Route;
 use app\Controllers\AbstractController;
-
-use app\Services\Event\EventQueryService;
+use app\Services\Reservation\ReservationQueryService;
 use app\Services\Reservation\ReservationSessionService;
+use app\Services\DataValidation\ReservationDataValidationService;
+use app\Services\Event\EventQueryService;
 use app\Services\Swimmer\SwimmerQueryService;
 
 class ReservationAjaxController extends AbstractController
 {
 
-    private ReservationSessionService $reservationSessionService;
     private EventQueryService $eventQueryService;
     private SwimmerQueryService $swimmerQueryService;
+    private ReservationDataValidationService $reservationDataValidationService;
+    private ReservationQueryService $reservationQueryService;
 
     public function __construct(
-        ReservationSessionService $reservationSessionService,
         EventQueryService $eventQueryService,
         SwimmerQueryService $swimmerQueryService,
+        ReservationSessionService $reservationSessionService,
+        ReservationDataValidationService $reservationDataValidationService,
+        ReservationQueryService $reservationQueryService,
     )
     {
         // On déclare la route comme publique pour éviter la redirection vers la page de login.
         parent::__construct(true);
-        $this->reservationSessionService = $reservationSessionService;
         $this->eventQueryService = $eventQueryService;
+        $this->reservationSessionService = $reservationSessionService;
         $this->swimmerQueryService = $swimmerQueryService;
+        $this->reservationDataValidationService = $reservationDataValidationService;
+        $this->reservationQueryService = $reservationQueryService;
     }
 
     //======================================================================
@@ -44,7 +50,7 @@ class ReservationAjaxController extends AbstractController
         $swimmerLimitReached = $this->swimmerQueryService->checkSwimmerLimit($eventId, $swimmerId);
 
         // On enregistre la limite en session pour les étapes suivantes, même si elle est null
-        $this->reservationSessionService->setReservationSession('limitPerSwimmer', $swimmerLimitReached['limit']);
+        $this->reservationSessionService->setReservationSession('limit_per_swimmer', $swimmerLimitReached['limit']);
 
         $this->json([
             'success' => true,
@@ -82,9 +88,80 @@ class ReservationAjaxController extends AbstractController
     #[Route('/reservation/etape1', name: 'etape1', methods: ['POST'])]
     public function etape1(): string
     {
-return 'ok';
+        // Met à jour le timestamp à chaque vérification
+        $_SESSION['reservation']['last_activity'] = time();
 
+        $input = json_decode(file_get_contents('php://input'), true);
+
+                if (!is_array($input)) {
+                    $input = [];
+                }
+        // Normalise le nom du champ côté serveur
+        if (isset($input['codeAccess']) && !isset($input['access_code_used'])) {
+                    $input['access_code_used'] = $input['codeAccess'];
+                }
+
+        // Session expirée => on renvoie une indication de redirection
+        $session = $this->reservationSessionService->getReservationSession();
+        if (!empty($session) && $this->reservationSessionService->isReservationSessionExpired($session)) {
+                    $this->json([
+                            'success' => false,
+                            'error' => 'Votre session a expiré. Merci de recommencer.',
+                            'redirect' => '/reservation?session_expiree=1'
+                            ], 440);
+                    return '';
+        }
+
+        $result = $this->reservationDataValidationService->validateAndPersistDataPerStep(1, $input);
+
+        if (!$result['success']) {
+            $this->json($result, 400);
+        }
+
+        $this->json(['success' => true]);
+        return '';
     }
+
+    //======================================================================
+    // ETAPE 2 : Informations Personnelles
+    //======================================================================
+
+    /**
+     * Pour vérifier si un email a déjà été utilisé pour une réservation
+     */
+    #[Route('/reservation/check-duplicate-email', name: 'check-duplicate-email', methods: ['POST'])]
+    public function checkDuplicateEmailInReservation(): void
+    {
+        $input = json_decode(file_get_contents('php://input'), true);
+
+        $email = trim($input['email'] ?? '');
+        $eventId = (int)($input['event_id'] ?? 0);
+
+        $result = $this->reservationQueryService->checkExistingReservationWithSameEmail($eventId, $email);
+
+        // Ajoute le token CSRF à la réponse
+        $result['csrf_token'] = $this->csrfService->getToken($this->getCurrentPath());
+
+        $this->json($result);
+    }
+
+    /**
+     * Pour renvoyer le mail de confirmation d'une commande
+     */
+    #[Route('/reservation/resend-confirmation', name: 'resend_confirmation', methods: ['POST'])]
+    public function resendConfirmation(): void
+    {
+        $input = json_decode(file_get_contents('php://input'), true);
+
+        $email = trim($input['email'] ?? '');
+        $eventId = (int)($input['event_id'] ?? 0);
+
+        $result = $this->reservationQueryService->resendConfirmationEmails($eventId, $email);
+        $result['csrf_token'] = $this->csrfService->getToken($this->getCurrentPath());
+
+        $this->json($result);
+    }
+
 
 
 }

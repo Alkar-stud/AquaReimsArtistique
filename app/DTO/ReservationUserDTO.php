@@ -7,10 +7,10 @@ use JsonSerializable;
 readonly class ReservationUserDTO implements JsonSerializable
 {
     public function __construct(
-        public string $nom,
-        public string $prenom,
+        public string $name,
+        public string $firstname,
         public string $email,
-        public ?string $telephone = null
+        public ?string $phone = null
     ) {
     }
 

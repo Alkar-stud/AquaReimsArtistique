@@ -9,6 +9,7 @@ use app\Services\FlashMessageService;
 use app\Services\Log\Logger;
 use app\Services\Log\LoggingBootstrap;
 use app\Services\Log\RequestContext;
+use app\Services\Reservation\ReservationSessionService;
 use app\Services\Security\SessionValidateService;
 use app\Services\Security\CsrfService;
 use app\Utils\DurationHelper;
@@ -19,6 +20,7 @@ abstract class AbstractController
     protected FlashMessageService $flashMessageService;
     private SessionValidateService $sessionValidateService;
     protected CsrfService $csrfService;
+    protected ReservationSessionService $reservationSessionService;
     private static bool $globalHandlersRegistered = false;
 
     protected ?User $currentUser = null;
@@ -37,11 +39,13 @@ abstract class AbstractController
         RequestContext::boot();
 
         // Validation de la session utilisateur (y compris la régénération)
-        // C'est l'étape la plus importante à faire tôt.
         $this->sessionValidateService = new SessionValidateService();
         // On initialise le service de messages flash ici, car il peut être appelé
         // par logoutAndRedirect() à l'intérieur de checkUserSession().
         $this->flashMessageService = new FlashMessageService();
+
+        // On initialise le service de session de réservation ici pour qu'il soit toujours disponible.
+        $this->reservationSessionService = new ReservationSessionService();
 
         try {
             $this->checkUserSession($isPublicRoute);
@@ -93,6 +97,10 @@ abstract class AbstractController
         if (($_ENV['APP_DEBUG'] ?? 'false') === 'true') {
             $data['user_is_authenticated'] = isset($_SESSION['user']['id']);
             $data['debug_user_info'] = null;
+
+            // Assurer que la clé debug existe pour le JS
+            $data['js_data']['debug'] ??= [];
+
             if ($data['user_is_authenticated']) {
                 $data['debug_user_info'] = [
                     'name' => $_SESSION['user']['username'] ?? 'N/A',
@@ -101,17 +109,25 @@ abstract class AbstractController
                     'role_id' => $_SESSION['user']['role']['id'] ?? 'N/A',
                     'session_id' => session_id()
                 ];
-            }
-            $timeoutValue = defined('TIMEOUT_SESSION') ? TIMEOUT_SESSION : 0;
-            $durationInSeconds = 0;
 
-            if (is_numeric($timeoutValue)) {
-                $durationInSeconds = (int)$timeoutValue;
-            } elseif (is_string($timeoutValue) && str_starts_with($timeoutValue, 'PT')) {
-                $durationInSeconds = DurationHelper::iso8601ToSeconds($timeoutValue);
+                // Données pour le timeout de la session utilisateur
+                $timeoutValue = defined('TIMEOUT_SESSION') ? TIMEOUT_SESSION : 0;
+                $durationInSeconds = is_numeric($timeoutValue) ? (int)$timeoutValue : DurationHelper::iso8601ToSeconds($timeoutValue);
+
+                $data['js_data']['debug']['sessionTimeoutDuration'] = $durationInSeconds;
+                $data['js_data']['debug']['sessionLastActivity'] = $_SESSION['user']['LAST_ACTIVITY'] ?? time();
+                $data['js_data']['debug']['isUserSession'] = true;
+
+            } else {
+                // Si pas d'utilisateur connecté, on vérifie s'il y a une session de réservation
+                $reservationSession = $this->reservationSessionService->getReservationSession();
+                if ($reservationSession && !empty($reservationSession['event_id'])) {
+                    $data['reservation_session_active'] = true;
+                    $data['js_data']['debug']['sessionTimeoutDuration'] = $this->reservationSessionService->getReservationTimeoutDuration();
+                    $data['js_data']['debug']['sessionLastActivity'] = $reservationSession['last_activity'] ?? time();
+                    $data['js_data']['debug']['isUserSession'] = false;
+                }
             }
-            $data['js_data']['debug']['sessionTimeoutDuration'] = $durationInSeconds;
-            $data['js_data']['debug']['sessionLastActivity'] = $_SESSION['user']['LAST_ACTIVITY'] ?? time();
         }
 
         $templateTpl = __DIR__ . '/../views/' . $view . '.tpl';
@@ -204,7 +220,6 @@ abstract class AbstractController
             $this->logoutAndRedirect('Votre session a expiré pour cause d\'inactivité. Veuillez vous reconnecter.', true);
             return;
         }
-
         $userRepository = new UserRepository();
         $user = $userRepository->findById((int)$_SESSION['user']['id']);
 
@@ -358,7 +373,7 @@ abstract class AbstractController
     /**
      * @return string
      */
-    private function getCurrentPath(): string
+    protected function getCurrentPath(): string
     {
         return parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
     }
@@ -376,7 +391,7 @@ abstract class AbstractController
 
         $refererHost = parse_url($_SERVER['HTTP_REFERER'], PHP_URL_HOST);
         $serverHostRaw = $_SERVER['HTTP_X_FORWARDED_HOST'] ?? ($_SERVER['HTTP_HOST'] ?? '');
-        $serverHost = parse_url('http://' . $serverHostRaw, PHP_URL_HOST); // normalise et ignore le port
+        $serverHost = parse_url('https://' . $serverHostRaw, PHP_URL_HOST); // normalise et ignore le port
 
         if ($refererHost && $serverHost && strcasecmp($refererHost, $serverHost) === 0) {
             $path = parse_url($_SERVER['HTTP_REFERER'], PHP_URL_PATH);

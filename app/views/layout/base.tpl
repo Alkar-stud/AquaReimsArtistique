@@ -53,8 +53,9 @@
     </div>
     <div id="debug-bar">
         <div id="screen-dimensions-display"></div>
-        {% if ($user_is_authenticated ?? false) %}
+        {% if ($user_is_authenticated ?? false) || ($reservation_session_active ?? false) %}
         <span style="color: #666;">|</span>
+        {% if ($user_is_authenticated ?? false) %}
         <div>
             <span style="color: #aaa;">User:</span> {{ $debug_user_info['name'] }} ({{ $debug_user_info['id'] }})
         </div>
@@ -63,10 +64,7 @@
             <span style="color: #aaa;">Role:</span> {{ $debug_user_info['role_label'] }} ({{ $debug_user_info['role_id'] }})
         </div>
         <span style="color: #666;">|</span>
-        <div title="Session ID">
-            <span style="color: #aaa;">SID:</span> <span style="font-size: 10px;">{{ $debug_user_info['session_id'] }}</span>
-        </div>
-        <span style="color: #666;">|</span>
+        {% endif %}
         <div id="session-timeout-display"></div>
         {% endif %}
     </div>

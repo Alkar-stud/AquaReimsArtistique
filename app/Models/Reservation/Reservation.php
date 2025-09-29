@@ -42,6 +42,7 @@ class Reservation extends AbstractModel
     private array $details = [];
     private array $complements = [];
     private array $payments = [];
+    private array $mailSent = [];
 
     // --- GETTERS ---
     public function getUuid(): ?string { return $this->uuid; }
@@ -66,6 +67,7 @@ class Reservation extends AbstractModel
     public function getDetails(): array { return $this->details; }
     public function getComplements(): array { return $this->complements; }
     public function getPayments(): array { return $this->payments; }
+    public function getMailSent(): array { return $this->mailSent; }
 
     // --- SETTERS ---
     public function setUuid(?string $uuid): self { $this->uuid = $uuid; return $this; }
@@ -121,4 +123,5 @@ class Reservation extends AbstractModel
     public function setDetails(array $details): self { $this->details = $details; return $this; }
     public function setComplements(array $complements): self { $this->complements = $complements; return $this; }
     public function setPayments(array $payments): self { $this->payments = $payments; return $this; }
+    public function setMailSent(array $mailSent): self { $this->mailSent = $mailSent; return $this; }
 }

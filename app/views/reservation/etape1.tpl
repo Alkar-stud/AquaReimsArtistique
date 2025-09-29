@@ -12,11 +12,6 @@
         Aucun événement à venir pour le moment.
     </div>
     {% else %}
-    {% if !empty($_GET['session_expiree']) %}
-    <div class="alert alert-warning">
-        Votre session a expiré. Merci de recommencer votre réservation.
-    </div>
-    {% endif %}
 
     <div class="row">
         {% foreach $events as $event %}

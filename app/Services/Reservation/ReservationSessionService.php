@@ -2,22 +2,15 @@
 
 namespace app\Services\Reservation;
 
+use app\Utils\DurationHelper;
 use JsonSerializable;
 
 class ReservationSessionService
 {
-    private string $sessionId;
 
-    public function __construct()
+    public function __construct(
+    )
     {
-        if (session_status() === PHP_SESSION_NONE) {
-            session_start();
-        }
-
-        $this->sessionId = session_id();
-        if (!isset($_SESSION['reservation'][$this->sessionId])) {
-            $_SESSION['reservation'][$this->sessionId] = [];
-        }
     }
 
     /**
@@ -25,9 +18,7 @@ class ReservationSessionService
      */
     public function clearReservationSession(): void
     {
-        unset($_SESSION['reservation'][$this->sessionId]);
-        $sessionId = session_id();
-        $_SESSION['reservation'][$sessionId] = $this->getDefaultReservationStructure();
+        $_SESSION['reservation'] = $this->getDefaultReservationStructure();
     }
 
     /**
@@ -41,9 +32,14 @@ class ReservationSessionService
             'event_id' => null,
             'event_session_id' => null,
             'swimmer_id' => null,
-            'limitPerSwimmer' => null,
+            'limit_per_swimmer' => null,
             'access_code_used' => null,
-            'user' => null,
+            'booker' => [
+                'name'    => $_SESSION['booker']['name'] ?? null,
+                'firstname' => $_SESSION['booker']['firstname'] ?? null,
+                'email'  => $_SESSION['booker']['email'] ?? null,
+                'phone'  => $_SESSION['booker']['phone'] ?? null,
+            ],
             'reservation_detail' => [],
             'reservation_complement' => [],
             'last_activity' => time(),
@@ -56,7 +52,7 @@ class ReservationSessionService
      */
     public function getReservationSession(): ?array
     {
-        return $_SESSION['reservation'][$this->sessionId] ?? null;
+        return $_SESSION['reservation'] ?? null;
     }
 
     /**
@@ -67,9 +63,9 @@ class ReservationSessionService
     public function setReservationSession(string $key, mixed $value): void
     {
         // Sérialise récursivement la valeur pour s'assurer qu'aucun objet n'est stocké en session.
-        $_SESSION['reservation'][$this->sessionId][$key] = $this->recursiveSerialize($value);
+        $_SESSION['reservation'][$key] = $this->recursiveSerialize($value);
         // Met à jour le timestamp à chaque modification
-        $_SESSION['reservation'][$this->sessionId]['last_activity'] = time();
+        $_SESSION['reservation']['last_activity'] = time();
     }
 
     /**
@@ -91,5 +87,34 @@ class ReservationSessionService
 
         return $data;
     }
+
+
+    /**
+     * TTL de session de réservation en secondes, dérivé de TIMEOUT_SESSION (ISO 8601, ex PT20M).
+     * Fallback à 1800s si non défini ou invalide.
+     */
+    public function getReservationTimeoutDuration(): int
+    {
+        $iso = TIMEOUT_PLACE_RESERV ?? 'PT30M';
+        return DurationHelper::iso8601ToSeconds($iso) ?? 1800;
+    }
+
+
+    /**
+     * Vérifie si la session de réservation est expirée
+     *
+     * @param array $session
+     * @return bool
+     */
+    public function isReservationSessionExpired(array $session): bool
+    {
+        $last = (int)($session['last_activity'] ?? 0);
+        if ($last <= 0) {
+            return true;
+        }
+        $ttl = $this->getReservationTimeoutDuration();
+        return (time() - $last) > $ttl;
+    }
+
 
 }

@@ -40,6 +40,15 @@ function validerFormulaireReservation(eventId) {
         else swimmerId = swimmerSelect.value;
     }
 
+    //Si besoin d'un code accès
+    const codeAccessInput = document.getElementById('access_code_input_' + eventId);
+    let codeAccess = null;
+    if (codeAccessInput) {
+        codeAccess = codeAccessInput.value.trim();
+        if (!codeAccess) erreur += "- Veuillez saisir un code d'accès.\n";
+    }
+
+
     if (erreur) {
         const errorDiv = document.getElementById('form_error_message_' + eventId);
         if (errorDiv) {
@@ -75,7 +84,7 @@ function validerFormulaireReservation(eventId) {
                 showFlash('danger', err.userMessage || err.message);
             });
     } else {
-        step1Valid(eventId, sessionChoisie, swimmerId);
+        step1Valid(eventId, sessionChoisie, swimmerId, codeAccess);
     }
 }
 
@@ -112,28 +121,33 @@ function validerCodeAcces(eventId) {
         });
 }
 
-function step1Valid(eventId, sessionChoisie, swimmerId) {
+function step1Valid(eventId, sessionChoisie, swimmerId, codeAccess) {
     sessionChoisie = parseInt(sessionChoisie, 10);
     swimmerId = (swimmerId != null) ? parseInt(swimmerId, 10) : null;
 
     apiPost('/reservation/etape1', {
         event_id: eventId,
         event_session_id: sessionChoisie,
-        swimmer_id: swimmerId
+        swimmer_id: swimmerId,
+        codeAccess: codeAccess
     })
-        .then((data) => {
-            if (data.success) {
-                window.location.href = '/reservation/etape2Display';
-            } else {
-                const errorDiv = document.getElementById('form_error_message_' + eventId);
-                if (errorDiv) {
-                    errorDiv.textContent = data.error || 'Une erreur inconnue est survenue.';
-                } else {
-                    showFlash('danger', data.error || 'Erreur');
-                }
+    .then((data) => {
+        if (data.success) {
+            window.location.href = '/reservation/etape2Display';
+        } else {
+            if (data.redirect) {
+                window.location.href = data.redirect;
+                return;
             }
-        })
-        .catch((err) => {
-            showFlash('danger', err.userMessage || err.message);
-        });
+            const errorDiv = document.getElementById('form_error_message_' + eventId);
+            if (errorDiv) {
+                errorDiv.textContent = data.error || 'Une erreur inconnue est survenue.';
+            } else {
+                showFlash('danger', data.error || 'Erreur');
+            }
+        }
+    })
+    .catch((err) => {
+        showFlash('danger', err.userMessage || err.message);
+    });
 }

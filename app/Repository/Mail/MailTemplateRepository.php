@@ -4,7 +4,6 @@ namespace app\Repository\Mail;
 
 use app\Models\Mail\MailTemplate;
 use app\Repository\AbstractRepository;
-use DateMalformedStringException;
 
 class MailTemplateRepository extends AbstractRepository
 {
@@ -28,7 +27,6 @@ class MailTemplateRepository extends AbstractRepository
      * Trouve un template par son ID.
      * @param int $id
      * @return MailTemplate|null
-     * @throws DateMalformedStringException
      */
     public function findById(int $id): ?MailTemplate
     {
@@ -41,7 +39,6 @@ class MailTemplateRepository extends AbstractRepository
      * Trouve un template par son code.
      * @param string $code
      * @return MailTemplate|null
-     * @throws DateMalformedStringException
      */
     public function findByCode(string $code): ?MailTemplate
     {

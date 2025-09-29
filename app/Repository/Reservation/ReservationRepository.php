@@ -42,7 +42,7 @@ class ReservationRepository extends AbstractRepository
      * @param int  $id L'ID de la réservation.
      * @param bool $withEvent Si true, hydrate l'objet Event associé.
      * @param bool $withEventSession Si true, hydrate l'objet EventSession associé.
-     * @param bool $withChildren Si true, hydrate les relations enfants (détails, compléments, paiements).
+     * @param bool $withChildren Si true, hydrate les relations enfants (détails, compléments, paiements, mails envoyés).
      * @return Reservation|null La réservation trouvée, ou null si elle n'existe pas.
      */
     public function findById(
@@ -121,14 +121,33 @@ class ReservationRepository extends AbstractRepository
     }
 
     /**
-     * Retourne les réservations d'un événement par email (doublons potentiels)
-     * @return Reservation[]
+     * Recherche toutes les réservations par email et évènement,
+     * puis hydrate chaque enregistrement exactement comme `findById`.
+     *
+     * Les options variadiques `$with` doivent suivre le même ordre que celles de `findById`
+     * (par exemple: withEvent, withEventSession, withSwimmer, withDetails, withComplements, withPayments, ...).
+     * @param string $email
+     * @param int $eventId
+     * @param bool ...$with
+     * @return array
      */
-    public function findByEmailAndEvent(string $email, int $eventId): array
+    public function findByEmailAndEvent(string $email, int $eventId, bool ...$with): array
     {
-        $sql = "SELECT * FROM $this->tableName WHERE email = :email AND event = :eventId";
+        $sql = "SELECT id FROM {$this->tableName} WHERE email = :email AND event = :eventId";
         $rows = $this->query($sql, ['email' => $email, 'eventId' => $eventId]);
-        return array_map([$this, 'hydrate'], $rows);
+
+        $reservations = [];
+        foreach ($rows as $row) {
+            $id = (int)($row['id'] ?? 0);
+            if ($id <= 0) {
+                continue;
+            }
+            // Délègue à findById pour bénéficier des mêmes options d'hydratation
+            $reservations[] = $this->findById($id, ...$with);
+        }
+
+        // Filtre les éventuels null renvoyés si un id n'existe plus
+        return array_values(array_filter($reservations));
     }
 
     /**
@@ -263,7 +282,7 @@ class ReservationRepository extends AbstractRepository
         }
 
         $complementsRepository = new ReservationComplementRepository();
-        $allComplements = $complementsRepository->findByReservations($reservationIds);
+        $allComplements = $complementsRepository->findByReservations($reservationIds, false, true);
         $complementsByReservationId = [];
         foreach ($allComplements as $complement) {
             $complementsByReservationId[$complement->getReservation()][] = $complement;
@@ -276,10 +295,18 @@ class ReservationRepository extends AbstractRepository
             $paymentsByReservationId[$payment->getReservation()][] = $payment;
         }
 
+        $mailSentRepository = new ReservationMailSentRepository();
+        $allMailSent = $mailSentRepository->findByReservations($reservationIds);
+        $mailSentByReservationId = [];
+        foreach ($allMailSent as $mailSent) {
+            $mailSentByReservationId[$mailSent->getReservation()][] = $mailSent;
+        }
+
         foreach ($reservations as $reservation) {
             $reservation->setDetails($detailsByReservationId[$reservation->getId()] ?? []);
             $reservation->setComplements($complementsByReservationId[$reservation->getId()] ?? []);
             $reservation->setPayments($paymentsByReservationId[$reservation->getId()] ?? []);
+            $reservation->setMailSent($mailSentByReservationId[$reservation->getId()] ?? []);
         }
 
         return $reservations;
@@ -368,7 +395,7 @@ class ReservationRepository extends AbstractRepository
     {
         if ($withEvent) {
             $eventRepo = new EventRepository();
-            $event = $eventRepo->findById($r->getEvent());
+            $event = $eventRepo->findById($r->getEvent(), true);
             if ($event) { $r->setEventObject($event); }
         }
         if ($withEventSession) {

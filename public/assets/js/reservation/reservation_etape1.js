@@ -30,7 +30,7 @@ function validerFormulaireReservation(eventId) {
         if (!hidden) erreur += "- Séance non définie.\n";
     }
 
-    // Limitation nageur.
+    // Limitation par nageur.
     const groupSelect = document.getElementById('swimmer_group_' + eventId);
     let swimmerId = null;
     if (groupSelect) {
@@ -59,7 +59,11 @@ function validerFormulaireReservation(eventId) {
             .then((data) => {
                 if (data.success) {
                     if (data.limiteAtteinte) {
-                        showFlash('warning', "Le quota de spectateurs pour cette nageuse est atteint.");
+                        let limitPerSwimmer = '';
+                        if (data.limitPerSwimmer) {
+                            limitPerSwimmer = ' (max : ' + data.limitPerSwimmer + ')';
+                        }
+                        showFlash('warning', "Le quota de spectateurs pour cette nageuse est atteint" + limitPerSwimmer + ".");
                     } else {
                         step1Valid(eventId, sessionChoisie, swimmerId);
                     }

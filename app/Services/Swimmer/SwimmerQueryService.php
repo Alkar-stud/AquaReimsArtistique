@@ -67,6 +67,7 @@ class SwimmerQueryService
     }
 
     /**
+     * Vérifie si la limite de spectateurs pour un nageur spécifique est atteinte pour un événement.
      * @param int $eventId
      * @param int $swimmerId
      * @return array
@@ -86,7 +87,7 @@ class SwimmerQueryService
     }
 
     /**
-     * Vérifie si la limite de spectateurs pour un nageur spécifique est atteinte pour un événement.
+     * Calcul si la limite de spectateurs pour un nageur spécifique est atteinte pour un événement.
      *
      * @param int $eventId L'ID de l'événement.
      * @param int $swimmerId L'ID du nageur.
@@ -114,7 +115,8 @@ class SwimmerQueryService
 
         // Compte les réservations actives pour ce nageur spécifique sur cet événement.
         $currentReservations = $this->reservationQueryService->countActiveReservationsForThisEventAndThisSwimmer($eventId, $swimmerId);
-
+;
+        //Et on retourne
         return ['limitReached' => $currentReservations >= $limit, 'limit' => $limit, 'error' => null];
     }
 

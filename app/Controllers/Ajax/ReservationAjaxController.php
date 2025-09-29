@@ -42,10 +42,15 @@ class ReservationAjaxController extends AbstractController
 
         //On récupère la limite, et si elle est atteinte ou non et à combien on en est.
         $swimmerLimitReached = $this->swimmerQueryService->checkSwimmerLimit($eventId, $swimmerId);
+
         // On enregistre la limite en session pour les étapes suivantes, même si elle est null
         $this->reservationSessionService->setReservationSession('limitPerSwimmer', $swimmerLimitReached['limit']);
 
-        $this->json(['success' => true, 'limiteAtteinte' => $swimmerLimitReached['limitReached']]);
+        $this->json([
+            'success' => true,
+            'limiteAtteinte' => $swimmerLimitReached['limitReached'],
+            'limitPerSwimmer' => $swimmerLimitReached['limit']
+        ]);
     }
 
     #[Route('/reservation/validate-access-code', name: 'validate_access_code', methods: ['POST'])]
@@ -64,7 +69,7 @@ class ReservationAjaxController extends AbstractController
         $result = $this->eventQueryService->validateAccessCode($eventId, $code);
 
         if ($result['success']) {
-            //$this->reservationSessionService->setReservationSession('access_code_used', new ReservationAccessCodeDTO($eventId, $code));
+            $this->reservationSessionService->setReservationSession('access_code_used', $code);
         }
 
         $this->json($result);
@@ -75,9 +80,9 @@ class ReservationAjaxController extends AbstractController
      *
      */
     #[Route('/reservation/etape1', name: 'etape1', methods: ['POST'])]
-    public function etape1(): void
+    public function etape1(): string
     {
-
+return 'ok';
 
     }
 

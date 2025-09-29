@@ -10,6 +10,10 @@ class ReservationSessionService
 
     public function __construct()
     {
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+
         $this->sessionId = session_id();
         if (!isset($_SESSION['reservation'][$this->sessionId])) {
             $_SESSION['reservation'][$this->sessionId] = [];

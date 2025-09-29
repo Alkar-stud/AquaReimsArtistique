@@ -391,6 +391,12 @@ abstract class AbstractController
      */
     private function maybeEnforceCsrf(): void
     {
+        $env = strtolower($_ENV['APP_ENV'] ?? 'local');
+        if (in_array($env, ['local', 'dev'], true)) {
+            // Désactive la vérification CSRF en local/dev
+            return;
+        }
+
         $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
         if (!in_array($method, ['POST', 'PUT', 'PATCH', 'DELETE'], true)) {
             return;

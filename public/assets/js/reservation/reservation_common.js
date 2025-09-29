@@ -82,6 +82,7 @@ function apiPost(url, body, opts = {}) {
             // JSON attendu
             if (contentType.includes('application/json')) {
                 const data = await response.json();
+console.log('[apiPost] Réponse JSON:', data);
                 updateCsrfTokenFrom(data);
 
                 if (!response.ok) {

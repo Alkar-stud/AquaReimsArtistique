@@ -89,6 +89,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function validatePhoneField() {
         const value = phone.value.trim();
+        if (!value) {
+            phone.classList.remove('is-invalid');
+            return true;
+        }
         const ok = validateTel(value);
         phone.classList.toggle('is-invalid', !ok);
         if (!ok) {
@@ -167,10 +171,8 @@ function step2Valid(name, firstname, email, phone, eventId) {
             showFlash('danger', err.userMessage || err.message);
         });
 
-    return;
 }
 function submitEtape2(name, firstname, email, phone, eventId) {
-alert('ok pour l\'étape 2 à valider avec le DTO');
     apiPost('/reservation/etape2', {
         name: name,
         firstname: firstname,

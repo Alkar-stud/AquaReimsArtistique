@@ -26,7 +26,7 @@ class ReservationSessionService
      *
      * @return array
      */
-    private function getDefaultReservationStructure(): array
+    public function getDefaultReservationStructure(): array
     {
         return [
             'event_id' => null,
@@ -57,16 +57,25 @@ class ReservationSessionService
 
     /**
      * Met à jour une valeur spécifique dans la session de réservation.
-     * @param string $key
+     * @param string|array $key
      * @param mixed $value
      */
-    public function setReservationSession(string $key, mixed $value): void
+    public function setReservationSession(string|array $key, mixed $value): void
     {
-        // Sérialise récursivement la valeur pour s'assurer qu'aucun objet n'est stocké en session.
-        $_SESSION['reservation'][$key] = $this->recursiveSerialize($value);
+        if (is_array($key)) {
+            $ref = &$_SESSION['reservation'];
+            foreach ($key as $k) {
+                $ref = &$ref[$k];
+            }
+            // Sérialise récursivement la valeur pour s'assurer qu'aucun objet n'est stocké en session.
+            $ref = $this->recursiveSerialize($value);
+        } else {
+            $_SESSION['reservation'][$key] = $this->recursiveSerialize($value);
+        }
         // Met à jour le timestamp à chaque modification
         $_SESSION['reservation']['last_activity'] = time();
     }
+
 
     /**
      * Parcourt récursivement une valeur (tableau ou objet) et convertit tous les objets

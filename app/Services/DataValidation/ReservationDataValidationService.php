@@ -3,6 +3,7 @@
 namespace app\Services\DataValidation;
 
 use app\DTO\ReservationSelectionSessionDTO;
+use app\DTO\ReservationUserDTO;
 use app\Repository\Event\EventRepository;
 use app\Repository\Swimmer\SwimmerRepository;
 use app\Services\Event\EventQueryService;
@@ -48,19 +49,13 @@ class ReservationDataValidationService
         }
 
         // Valeurs par défaut issues de la session pour combler un payload incomplet
-        $defaults = [
-            'event_id'          => $session['event_id']          ?? null,
-            'event_session_id'  => $session['event_session_id']  ?? null,
-            'swimmer_id'        => $session['swimmer_id']        ?? null,
-            'limit_per_swimmer'   => $session['limit_per_swimmer']   ?? null,
-            // Normalisation: on alimente `accessCode` depuis la session.
-            'access_code_used'        => $session['access_code_used']  ?? null,
-        ];
+        $defaults = $this->reservationSessionService->getDefaultReservationStructure();
+        $session = $this->reservationSessionService->getReservationSession() ?? [];
 
-        // `$data` prime, `+` conserve les clés manquantes depuis `$defaults`
-        $effective = $data + array_filter($defaults, static fn($v) => $v !== null);
 
         if ($step >= 1) {
+            $effective = array_replace_recursive($defaults, $session, $data);
+
             $dto = ReservationSelectionSessionDTO::fromArray($effective);
 
             $check = $this->validateStep1($dto);
@@ -75,13 +70,26 @@ class ReservationDataValidationService
         }
 
         if ($step >= 2) {
-            //On vérifie si la session n'est pas expirée
+            $effective = array_replace_recursive($defaults, $session);
+            // On fusionne les données de $data dans la clé 'booker'
+            $effective['booker'] = array_replace($effective['booker'], $data);
 
+            $dto = ReservationUserDTO::fromArray($effective);
+
+            $check = $this->validateStep2($dto);
+            if ($check['success'] === false) {
+                return ['success' => false, 'errors' => $check['errors']];
+            }
+
+            if ($step === 2) {
+                $this->persistStep2($dto);
+                return ['success' => true, 'errors' => [], 'data' => []];
+            }
 
         }
 
 
-        return ['success' => true, 'errors' => [], 'data' => []];
+        return ['success' => false, 'errors' => [], 'data' => []];
     }
 
 
@@ -132,7 +140,7 @@ class ReservationDataValidationService
                     $errors['accessCode'] = 'Un code d\'accès est requis pour la période d\'inscription en cours.';
                 } else {
                     //On vérifie si le code saisi est valide
-                    $check = $this->eventQueryService->validateAccessCode($event->getId(), $dto->accessCode);
+                    $check = $this->eventQueryService->validateAccessCode($event->getId(), htmlspecialchars((string)$dto->accessCode));
                     if (!($check['success'] ?? false)) {
                         $errors['accessCode'] = $check['error'] ?? 'Code d\'accès invalide.';
                     } else {
@@ -143,12 +151,12 @@ class ReservationDataValidationService
             }
         }
 
-        // 4) Nageur ou code d'accès (si limitation active)
+        // 4) Nageur (si limitation active)
         $limit = $event?->getLimitationPerSwimmer();
         $accessCode = $dto->accessCode ? trim($dto->accessCode) : null;
 
         if ($limit !== null && $dto->swimmerId === null && $accessCode === null) {
-            $errors['swimmerOrAccessCode'] = 'Nageuse ou code d\'accès requis pour cet événement.';
+            $errors['swimmerOrAccessCode'] = 'Le nom d\une nageuse est requis pour cet événement.';
         }
 
         if ($dto->swimmerId !== null) {
@@ -186,6 +194,50 @@ class ReservationDataValidationService
         $this->reservationSessionService->setReservationSession('swimmer_id', $dto->swimmerId);
         $this->reservationSessionService->setReservationSession('access_code_used', $dto->accessCode);
         $this->reservationSessionService->setReservationSession('limit_per_swimmer', $dto->limitPerSwimmer);
+    }
+
+    /**
+     * Étape 2: valide [booker]=< name, firstname, email, phone
+     * Retourne ['success'=>bool, 'errors'=>array]
+     *
+     * @param ReservationUserDTO $dto
+     * @return array
+     */
+    public function validateStep2(ReservationUserDTO $dto): array
+    {
+        $errors = [];
+
+        //sanitize les données
+        $dto->name = htmlspecialchars(trim($dto->name), true, 'UTF-8');
+        mb_strtoupper($dto->name, 'UTF-8');
+        $dto->firstname = htmlspecialchars(trim($dto->firstname), true, 'UTF-8');
+        mb_convert_case(mb_strtolower($dto->firstname, 'UTF-8'), MB_CASE_TITLE, 'UTF-8');
+        $dto->email = trim($dto->email);
+        if (!filter_var($dto->email, FILTER_VALIDATE_EMAIL)) {
+            $errors['email'] = 'Email invalide.';
+        }
+        if (!empty($dto->phone) && !preg_match('/^(?:0[1-9]\d{8}|\+33[1-9]\d{8})$/', str_replace(' ', '', $dto->phone))) {
+            $errors['phone'] = 'Numéro de téléphone invalide (doit être au format 0XXXXXXXXX ou +33XXXXXXXXX).';
+        }
+
+        if (!empty($errors)) {
+            return ['success' => false, 'errors' => $errors];
+        }
+        return ['success' => true, 'errors' => []];
+    }
+
+    /**
+     * Persiste suite validation step2
+     * @param ReservationUserDTO $dto
+     * @return void
+     */
+    public function persistStep2(ReservationUserDTO $dto): void
+    {
+        // Persistance en session (structure simple pour JS et $_SESSION)
+        $this->reservationSessionService->setReservationSession(['booker', 'name'], $dto->name);
+        $this->reservationSessionService->setReservationSession(['booker', 'firstname'], $dto->firstname);
+        $this->reservationSessionService->setReservationSession(['booker', 'email'], $dto->email);
+        $this->reservationSessionService->setReservationSession(['booker', 'phone'], $dto->phone);
     }
 
 }

@@ -119,11 +119,6 @@ window.apiPost = apiPost;
 window.showFlash = showFlash;
 
 
-// File: 'public/assets/js/reservation/reservation_etape1.js'
-
-
-
-
 /* Exemples d'usage:
 
 // 1) Appel JSON

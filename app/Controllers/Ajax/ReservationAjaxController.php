@@ -39,6 +39,9 @@ class ReservationAjaxController extends AbstractController
     // ETAPE 1 : Sélection Événement / Séance / Nageur
     //======================================================================
 
+    /**
+     * @return void
+     */
     #[Route('/reservation/check-swimmer-limit', name: 'check_swimmer_limit', methods: ['POST'])]
     public function checkSwimmerLimit(): void
     {
@@ -59,6 +62,9 @@ class ReservationAjaxController extends AbstractController
         ]);
     }
 
+    /**
+     * @return void
+     */
     #[Route('/reservation/validate-access-code', name: 'validate_access_code', methods: ['POST'])]
     public function validateAccessCode(): void
     {
@@ -86,31 +92,18 @@ class ReservationAjaxController extends AbstractController
      *
      */
     #[Route('/reservation/etape1', name: 'etape1', methods: ['POST'])]
-    public function etape1(): string
+    public function etape1(): void
     {
         // Met à jour le timestamp à chaque vérification
         $_SESSION['reservation']['last_activity'] = time();
 
         $input = json_decode(file_get_contents('php://input'), true);
-
-                if (!is_array($input)) {
-                    $input = [];
-                }
-        // Normalise le nom du champ côté serveur
-        if (isset($input['codeAccess']) && !isset($input['access_code_used'])) {
-                    $input['access_code_used'] = $input['codeAccess'];
-                }
-
-        // Session expirée => on renvoie une indication de redirection
-        $session = $this->reservationSessionService->getReservationSession();
-        if (!empty($session) && $this->reservationSessionService->isReservationSessionExpired($session)) {
-                    $this->json([
-                            'success' => false,
-                            'error' => 'Votre session a expiré. Merci de recommencer.',
-                            'redirect' => '/reservation?session_expiree=1'
-                            ], 440);
-                    return '';
+        if (!is_array($input)) {
+            $input = [];
         }
+
+        // On redirige si session de réservation est expirée
+        $this->redirectIfReservationSessionIsExpired();
 
         $result = $this->reservationDataValidationService->validateAndPersistDataPerStep(1, $input);
 
@@ -119,7 +112,6 @@ class ReservationAjaxController extends AbstractController
         }
 
         $this->json(['success' => true]);
-        return '';
     }
 
     //======================================================================
@@ -163,5 +155,48 @@ class ReservationAjaxController extends AbstractController
     }
 
 
+    /**
+     * @return void
+     */
+    #[Route('/reservation/etape2', name: 'etape2', methods: ['POST'])]
+    public function etape2(): void
+    {
+        // Met à jour le timestamp à chaque vérification
+        $_SESSION['reservation']['last_activity'] = time();
+
+        $input = json_decode(file_get_contents('php://input'), true);
+        if (!is_array($input)) {
+            $input = [];
+        }
+
+        // On redirige si session de réservation est expirée
+        $this->redirectIfReservationSessionIsExpired();
+
+        $result = $this->reservationDataValidationService->validateAndPersistDataPerStep(2, $input);
+
+        if (!$result['success']) {
+            $this->json($result, 400);
+        }
+
+        $this->json(['success' => true]);
+    }
+
+
+    /**
+     * Redirige vers session expirée si timeout session réservation est expiré ou retourne $session
+     *
+     * @return void
+     */
+    private function redirectIfReservationSessionIsExpired(): void
+    {
+        $session = $this->reservationSessionService->getReservationSession();
+        if (!empty($session) && $this->reservationSessionService->isReservationSessionExpired($session)) {
+            $this->json([
+                'success' => false,
+                'error' => 'Votre session a expiré. Merci de recommencer.',
+                'redirect' => '/reservation?session_expiree=1'
+            ], 440);
+        }
+    }
 
 }

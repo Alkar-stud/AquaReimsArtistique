@@ -4,7 +4,7 @@ namespace app\DTO;
 
 use JsonSerializable;
 
-readonly class ReservationUserDTO implements JsonSerializable
+class ReservationUserDTO extends AbstractDTO implements JsonSerializable
 {
     public function __construct(
         public string $name,
@@ -14,8 +14,14 @@ readonly class ReservationUserDTO implements JsonSerializable
     ) {
     }
 
-    public function jsonSerialize(): array
+    public static function fromArray(array $data): self
     {
-        return get_object_vars($this);
+        return new self(
+            name: (string)($data['booker']['name'] ?? null),
+            firstname: (string)($data['booker']['firstname'] ?? null),
+            email: (string)($data['booker']['email'] ?? null),
+            phone: self::nullIfEmpty($data['phone'] ?? null),
+        );
     }
+
 }

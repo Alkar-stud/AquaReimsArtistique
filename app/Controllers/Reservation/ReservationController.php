@@ -128,7 +128,7 @@ class ReservationController extends AbstractController
             'placesDejaReservees' => $currentReservations,
             'limiteDepassee' => $swimmerLimitReached['limitReached'],
             'limitation' => $swimmerLimitReached['limit'],
-            'reservationDetails' => $session['reservation_detail']
+            'session' => $session
         ], 'Réservations');
     }
 

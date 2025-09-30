@@ -4,11 +4,13 @@ namespace app\Controllers\Ajax;
 
 use app\Attributes\Route;
 use app\Controllers\AbstractController;
+use app\DTO\ReservationDetailItemDTO;
 use app\Services\Reservation\ReservationQueryService;
 use app\Services\Reservation\ReservationSessionService;
 use app\Services\DataValidation\ReservationDataValidationService;
 use app\Services\Event\EventQueryService;
 use app\Services\Swimmer\SwimmerQueryService;
+use app\Services\Tarif\TarifService;
 
 class ReservationAjaxController extends AbstractController
 {
@@ -17,6 +19,7 @@ class ReservationAjaxController extends AbstractController
     private SwimmerQueryService $swimmerQueryService;
     private ReservationDataValidationService $reservationDataValidationService;
     private ReservationQueryService $reservationQueryService;
+    private TarifService $tarifService;
 
     public function __construct(
         EventQueryService $eventQueryService,
@@ -24,6 +27,7 @@ class ReservationAjaxController extends AbstractController
         ReservationSessionService $reservationSessionService,
         ReservationDataValidationService $reservationDataValidationService,
         ReservationQueryService $reservationQueryService,
+        TarifService $tarifService,
     )
     {
         // On déclare la route comme publique pour éviter la redirection vers la page de login.
@@ -33,6 +37,7 @@ class ReservationAjaxController extends AbstractController
         $this->swimmerQueryService = $swimmerQueryService;
         $this->reservationDataValidationService = $reservationDataValidationService;
         $this->reservationQueryService = $reservationQueryService;
+        $this->tarifService = $tarifService;
     }
 
     //======================================================================
@@ -197,6 +202,31 @@ class ReservationAjaxController extends AbstractController
                 'redirect' => '/reservation?session_expiree=1'
             ], 440);
         }
+    }
+
+    //======================================================================
+    // ETAPE 3 : Choix des places
+    //======================================================================
+
+    //Pour valider les tarifs avec code
+    #[Route('/reservation/validate-special-code', name: 'validate_special_code', methods: ['POST'])]
+    public function validateSpecialCode(): void
+    {
+        $input = json_decode(file_get_contents('php://input'), true);
+
+        $eventId = (int)($input['event_id'] ?? 0);
+        $code = trim($input['code'] ?? '');
+
+        $result = $this->tarifService->validateSpecialCode($eventId, $code);
+
+        if ($result['success']) {
+            // On récupère les détails actuels pour y ajouter le nouveau
+            $currentDetails = $this->reservationSessionService->getReservationSession()['reservation_detail'] ?? [];
+            //$currentDetails[] = new ReservationDetailItemDTO(tarif_id: $result['Tarif']['id'], access_code: $code);
+            $this->reservationSessionService->setReservationSession('reservation_detail', $currentDetails);
+        }
+
+        $this->json($result);
     }
 
 }

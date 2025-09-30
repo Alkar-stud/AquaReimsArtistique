@@ -67,11 +67,21 @@ class SwimmerQueryService
     }
 
     /**
-     * Vérifie si la limite de spectateurs pour un nageur spécifique est atteinte pour un événement.
+     * Retourne un tableau contenant les informations suivantes :
+     * - 'success' (bool) : Indique si l'opération a réussi.
+     * - 'limiteAtteinte' (bool) : Vrai si la limite de nageurs est atteinte.
+     * - 'limitPerSwimmer' (int|null) : Limite maximale de réservations par nageur, ou null si non définie.
+     * - 'currentReservations' (int), existant seulement si 'limit' est null
+     *
      * @param int $eventId
      * @param int $swimmerId
-     * @return array
+     * @return array{
+     *     success: bool,
+     *     limiteAtteinte: bool,
+     *     limitPerSwimmer: int|null
+     * }
      */
+
     public function checkSwimmerLimit(int $eventId, int $swimmerId): array
     {
         if (!$eventId || !$swimmerId) {
@@ -91,7 +101,7 @@ class SwimmerQueryService
      *
      * @param int $eventId L'ID de l'événement.
      * @param int $swimmerId L'ID du nageur.
-     * @return array Contient 'limitReached' (bool), 'limit' (?int), et 'error' (?string).
+     * @return array Contient 'currentReservations' (int), 'limitReached' (bool), 'limit' (?int), et 'error' (?string).
      */
     public function isSwimmerLimitReached(int $eventId, int $swimmerId): array
     {
@@ -110,14 +120,16 @@ class SwimmerQueryService
         if ($limit === null) {
             return ['limitReached' => false, 'limit' => null, 'error' => null];
         }
-        //S'il y a une limite, on la renseigne dans $_SESSION
-        $_SESSION['reservation'][session_id()]['swimmer_id'] = $swimmerId;
 
         // Compte les réservations actives pour ce nageur spécifique sur cet événement.
         $currentReservations = $this->reservationQueryService->countActiveReservationsForThisEventAndThisSwimmer($eventId, $swimmerId);
-;
+
         //Et on retourne
-        return ['limitReached' => $currentReservations >= $limit, 'limit' => $limit, 'error' => null];
+        return [
+            'currentReservations' => $currentReservations,
+            'limitReached' => $currentReservations >= $limit,
+            'limit' => $limit, 'error' => null
+        ];
     }
 
 }

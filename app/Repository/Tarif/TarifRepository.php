@@ -128,11 +128,11 @@ class TarifRepository extends AbstractRepository
     }
 
     /**
-     * Retourne les tarifs en fonction de la présence de places assises.
+     * Retourne les tarifs en fonction de la présence de places assises ou non
      * @param bool $hasSeats true pour les tarifs avec places, false pour les autres.
      * @return Tarif[]
      */
-    public function findBySeatType(bool $hasSeats): array
+    public function findBySeatType(bool $hasSeats, int $eventId = 0): array
     {
         if ($hasSeats) {
             $sql = "SELECT * FROM $this->tableName WHERE seat_count IS NOT NULL AND seat_count > 0 ORDER BY name";

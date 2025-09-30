@@ -19,11 +19,11 @@ class ReservationDataValidationService
     private EventQueryService $eventQueryService;
 
     public function __construct(
-        EventRepository           $eventRepository,
-        SwimmerRepository         $swimmerRepository,
-        SwimmerQueryService       $swimmerQueryService,
-        ReservationSessionService $reservationSessionService,
-        EventQueryService           $eventQueryService,
+        EventRepository                  $eventRepository,
+        SwimmerRepository                $swimmerRepository,
+        SwimmerQueryService              $swimmerQueryService,
+        ReservationSessionService        $reservationSessionService,
+        EventQueryService                $eventQueryService,
     ) {
         $this->eventRepository = $eventRepository;
         $this->swimmerRepository = $swimmerRepository;
@@ -90,6 +90,38 @@ class ReservationDataValidationService
 
 
         return ['success' => false, 'errors' => [], 'data' => []];
+    }
+
+    /**
+     * Pour valider les étapes précédentes
+     *
+     * @param int $step
+     * @param array $session
+     * @return bool
+     */
+    public function validatePreviousStep(int $step, array $session): bool
+    {
+        // Fusionne la structure par défaut et la session pour éviter les clés manquantes
+        $defaults = $this->reservationSessionService->getDefaultReservationStructure();
+        $effective = array_replace_recursive($defaults, $session);
+
+        if ($step === 1) {
+            $dto = ReservationSelectionSessionDTO::fromArray($effective);
+            return (bool)($this->validateStep1($dto)['success'] ?? false);
+        }
+
+        if ($step === 2) {
+            // Toujours revalider l'étape 1 avant l’étape 2
+            $dto1 = ReservationSelectionSessionDTO::fromArray($effective);
+            if (!($this->validateStep1($dto1)['success'] ?? false)) {
+                return false;
+            }
+            $dto2 = ReservationUserDTO::fromArray($effective);
+            return (bool)($this->validateStep2($dto2)['success'] ?? false);
+        }
+
+        // Étapes suivantes: ajouter ici les validations step3+, en revalidant les précédentes si besoin
+        return false;
     }
 
 

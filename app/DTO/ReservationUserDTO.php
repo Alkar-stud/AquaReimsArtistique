@@ -20,7 +20,7 @@ class ReservationUserDTO extends AbstractDTO implements JsonSerializable
             name: (string)($data['booker']['name'] ?? null),
             firstname: (string)($data['booker']['firstname'] ?? null),
             email: (string)($data['booker']['email'] ?? null),
-            phone: self::nullIfEmpty($data['phone'] ?? null),
+            phone: self::nullIfEmpty($data['booker']['phone'] ?? null),
         );
     }
 

@@ -9,7 +9,7 @@
 
     <form id="reservationInfosForm" class="mb-4">
         <input type="hidden" name="csrf_token" value="{{ $csrf_token }}">
-        <input type="hidden" id="event_id" name="event_id" value="{{ $event_id }}">
+        <input type="hidden" id="event_id" name="event_id" value="{{ $reservation['event_id'] }}">
         <div class="mb-3">
             <label for="name" class="form-label">Nom *</label>
             <input type="text" class="form-control" id="name" name="name" required

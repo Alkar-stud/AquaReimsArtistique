@@ -2,7 +2,9 @@
 // php
 namespace app\Repository\Event;
 
+use app\Models\Tarif\Tarif;
 use app\Repository\AbstractRepository;
+use app\Repository\Tarif\TarifRepository;
 use Throwable;
 
 class EventTarifRepository extends AbstractRepository
@@ -56,6 +58,40 @@ class EventTarifRepository extends AbstractRepository
         $sql = "SELECT `tarif` FROM $this->tableName WHERE `event` = :event ORDER BY `tarif`";
         $rows = $this->query($sql, ['event' => $eventId]);
         return array_map(fn($r) => (int)$r['tarif'], $rows);
+    }
+
+
+    /**
+     * Retourne la liste des tarifs pour un événement avec option place assise ou non
+     *
+     * @param int $eventId
+     * @param bool $withSeat
+     * @return array
+     */
+
+
+    /**
+     * Retourne les tarifs d’un événement filtrés par présence de places assises.
+     * @param int $eventId
+     * @param bool $withSeat true => tarifs avec places (>0), false => sans place (NULL ou 0)
+     * @return Tarif[]
+     */
+    public function findSeatedTarifsByEvent(int $eventId, bool $withSeat = true): array
+    {
+        $tarifRepo = new TarifRepository();
+        $tarifs = $tarifRepo->findByEventId($eventId);
+
+        if ($withSeat) {
+            return array_values(array_filter(
+                $tarifs,
+                fn(Tarif $t) => $t->getSeatCount() !== null && $t->getSeatCount() > 0
+            ));
+        }
+
+        return array_values(array_filter(
+            $tarifs,
+            fn(Tarif $t) => $t->getSeatCount() === null || $t->getSeatCount() <= 0
+        ));
     }
 
     /**

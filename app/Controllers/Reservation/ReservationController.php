@@ -4,7 +4,7 @@ namespace app\Controllers\Reservation;
 
 use app\Attributes\Route;
 use app\Controllers\AbstractController;
-use app\DTO\ReservationSelectionSessionDTO;
+use app\Repository\Event\EventTarifRepository;
 use app\Services\DataValidation\ReservationDataValidationService;
 use app\Services\Event\EventQueryService;
 use app\Services\Reservation\ReservationSessionService;
@@ -15,12 +15,14 @@ class ReservationController extends AbstractController
     private EventQueryService $eventQueryService;
     private SwimmerQueryService $swimmerQueryService;
     private ReservationDataValidationService $reservationDataValidationService;
+    private EventTarifRepository $eventTarifRepository;
 
     public function __construct(
         EventQueryService $eventQueryService,
         ReservationSessionService $reservationSessionService,
         SwimmerQueryService $swimmerQueryService,
         ReservationDataValidationService $reservationDataValidationService,
+        EventTarifRepository $eventTarifRepository,
     )
     {
         // On déclare la route comme publique pour éviter la redirection vers la page de login.
@@ -29,6 +31,7 @@ class ReservationController extends AbstractController
         $this->reservationSessionService = $reservationSessionService;
         $this->swimmerQueryService = $swimmerQueryService;
         $this->reservationDataValidationService = $reservationDataValidationService;
+        $this->eventTarifRepository = $eventTarifRepository;
     }
 
     /**
@@ -74,24 +77,58 @@ class ReservationController extends AbstractController
             $this->redirect('/reservation?session_expiree=1');
         }
 
-        // Construire le DTO à partir de la session (mapping explicite)
-        $dto = ReservationSelectionSessionDTO::fromArray([
-            'event_id'        => (int)($session['event_id'] ?? 0),
-            'event_session_id' => (int)($session['event_session_id'] ?? 0),
-            'swimmer_id'      => isset($session['swimmer_id']) ? (int)$session['swimmer_id'] : null,
-            'access_code_used'      => isset($session['access_code_used']) ? (string)$session['access_code_used'] : null,
-            'limit_per_swimmer'=> isset($session['limit_per_swimmer']) ? (int)$session['limit_per_swimmer'] : null,
-        ]);
-
         // Valider l'étape 1 avec le DTO
-        $check = $this->reservationDataValidationService->validateStep1($dto);
-        if (!$check['success']) {
-            $this->flashMessageService->setFlashMessage('danger', 'Veuillez reprendre le choix de la séance.');
+        $result = $this->reservationDataValidationService->validatePreviousStep(1, $session);
+
+        $this->render('reservation/etape2', [
+            'reservation' => $session
+        ], 'Réservations');
+    }
+
+    #[Route('/reservation/etape3Display', name: 'etape3Display', methods: ['GET'])]
+    public function etape3Display(): void
+    {
+        //On récupère la session
+        $session = $this->reservationSessionService->getReservationSession();
+
+        //On vérifie si la session est expirée
+        if (!$session || $this->reservationSessionService->isReservationSessionExpired($session)) {
+            $this->flashMessageService->setFlashMessage('warning', 'Votre session a expiré. Merci de recommencer votre réservation.');
+            $this->redirect('/reservation?session_expiree=1');
+        }
+
+        // Valider l'étape 1
+        if (!$this->reservationDataValidationService->validatePreviousStep(1, $session)) {
+            $this->flashMessageService->setFlashMessage('danger', 'Erreur dans le parcours, veuillez recommencer');
+            $this->redirect('/reservation');
+        }
+        // Valider l'étape 2
+        if (!$this->reservationDataValidationService->validatePreviousStep(2, $session)) {
+            $this->flashMessageService->setFlashMessage('danger', 'Erreur dans le parcours, veuillez recommencer');
             $this->redirect('/reservation');
         }
 
-        $this->render('reservation/etape2', [
-            'event_id' => $dto->eventId
+        $eventId   = (int)($session['event_id'] ?? 0);
+        $swimmerId = (int)($session['swimmer_id'] ?? 0);
+        // Ne teste la limite que si un nageur est effectivement sélectionné
+        $swimmerLimitReached = ['limitReached' => false, 'limit' => null];
+        if ($swimmerId > 0) {
+            $swimmerLimitReached = $this->swimmerQueryService->checkSwimmerLimit($eventId, $swimmerId);
+        }
+
+        isset($swimmerLimitReached['currentReservations']) ? $currentReservations = $swimmerLimitReached['currentReservations'] : $currentReservations = null;
+
+        //Récupération des tarifs avec place assise
+        $allTarifsWithSeatForThisEvent = $this->eventTarifRepository->findSeatedTarifsByEvent($session['event_id']);
+
+        //On envoie aussi le tableau des détails, pour préremplir si on est dans le cas d'un retour au niveau des étapes
+
+        $this->render('reservation/etape3', [
+            'allTarifsWithSeatForThisEvent' => $allTarifsWithSeatForThisEvent,
+            'placesDejaReservees' => $currentReservations,
+            'limiteDepassee' => $swimmerLimitReached['limitReached'],
+            'limitation' => $swimmerLimitReached['limit'],
+            'reservationDetails' => $session['reservation_detail']
         ], 'Réservations');
     }
 

@@ -222,11 +222,32 @@ class ReservationAjaxController extends AbstractController
         if ($result['success']) {
             // On récupère les détails actuels pour y ajouter le nouveau
             $currentDetails = $this->reservationSessionService->getReservationSession()['reservation_detail'] ?? [];
-            //$currentDetails[] = new ReservationDetailItemDTO(tarif_id: $result['Tarif']['id'], access_code: $code);
+            $currentDetails[] = new ReservationDetailItemDTO(tarif_id: $result['tarif']['id'], tarif_access_code: $code);
             $this->reservationSessionService->setReservationSession('reservation_detail', $currentDetails);
         }
 
         $this->json($result);
+    }
+
+    #[Route('/reservation/remove-special-tarif', name: 'remove_special_tarif', methods: ['POST'])]
+    public function removeSpecialTarif(): void
+    {
+        $input = json_decode(file_get_contents('php://input'), true);
+
+        $tarifId = (int)($input['tarif_id'] ?? 0);
+        if (!$tarifId) {
+            $this->json(['success' => false, 'error' => 'Paramètre manquant']);
+            return;
+        }
+
+        // Récupérer les détails actuels de la session
+        $currentDetails = $this->reservationSessionService->getReservationSession()['reservation_detail'] ?? [];
+        // Utiliser le service pour retirer le tarif
+        $newDetails = $this->tarifService->removeTarifFromDetails($currentDetails, $tarifId);
+        // Mettre à jour la session
+        $this->reservationSessionService->setReservationSession('reservation_detail', $newDetails);
+
+        $this->json(['success' => true]);
     }
 
 }

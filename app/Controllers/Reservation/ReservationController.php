@@ -121,14 +121,41 @@ class ReservationController extends AbstractController
         //Récupération des tarifs avec place assise
         $allTarifsWithSeatForThisEvent = $this->eventTarifRepository->findSeatedTarifsByEvent($session['event_id']);
 
+        // Construit le "pré-remplissage" s'il existe déjà un tarif avec code en session
+        $specialTarifSession = null;
+        $details = $session['reservation_detail'] ?? [];
+        if (is_array($details) && !empty($details)) {
+            foreach ($details as $d) {
+                $code = is_object($d) ? ($d->tarif_access_code ?? null) : ($d['tarif_access_code'] ?? null);
+                $tarifId = (int)(is_object($d) ? ($d->tarif_id ?? 0) : ($d['tarif_id'] ?? 0));
+                if (!$code || $tarifId <= 0) {
+                    continue;
+                }
+                // Retrouve le tarif correspondant parmi les tarifs siégeants
+                foreach ($allTarifsWithSeatForThisEvent as $tarif) {
+                    if ($tarif->getId() === $tarifId) {
+                        $specialTarifSession = [
+                            'id'         => $tarif->getId(),
+                            'name'       => $tarif->getName(),
+                            'description'=> $tarif->getDescription(),
+                            'seat_count' => $tarif->getSeatCount(),
+                            'price'      => $tarif->getPrice(),
+                            'code'       => $code,
+                        ];
+                        break 2; // on s'arrête au premier trouvé
+                    }
+                }
+            }
+        }
         //On envoie aussi le tableau des détails, pour préremplir si on est dans le cas d'un retour au niveau des étapes
 
         $this->render('reservation/etape3', [
             'allTarifsWithSeatForThisEvent' => $allTarifsWithSeatForThisEvent,
-            'placesDejaReservees' => $currentReservations,
-            'limiteDepassee' => $swimmerLimitReached['limitReached'],
-            'limitation' => $swimmerLimitReached['limit'],
-            'session' => $session
+            'placesDejaReservees'           => $currentReservations,
+            'limiteDepassee'                => $swimmerLimitReached['limitReached'],
+            'limitation'                    => $swimmerLimitReached['limit'],
+            'session'                       => $session,
+            'specialTarifSession'           => $specialTarifSession,
         ], 'Réservations');
     }
 

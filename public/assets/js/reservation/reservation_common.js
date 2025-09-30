@@ -53,7 +53,12 @@ function normalizeUserMessage(status, fallback = null) {
 function apiPost(url, body, opts = {}) {
     const isFormData = (typeof FormData !== 'undefined') && (body instanceof FormData);
     const headers = Object.assign(
-        { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+        {
+            'Accept': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest',
+            // Contexte explicite pour la validation CSRF côté serveur
+            'X-CSRF-Context': (typeof location !== 'undefined' ? location.pathname : '/')
+        },
         opts.headers || {}
     );
 

@@ -1,5 +1,6 @@
+
 document.addEventListener('DOMContentLoaded', function () {
-    const container = document.getElementById('tarifsContainer') || document;
+    const container = document;
     const alertDiv = document.getElementById('reservationStep3Alert');
     const placesRestantesSpan = document.getElementById('placesRestantes');
 
@@ -13,6 +14,7 @@ document.addEventListener('DOMContentLoaded', function () {
             ? (parseInt(window.placesDejaReservees, 10) || 0)
             : 0;
 
+    // Tous les inputs "classiques" seulement (le spécial n'a plus la classe .place-input)
     const getInputs = () => container.querySelectorAll('.place-input');
 
     function totalDemanded(except = null) {
@@ -24,6 +26,11 @@ document.addEventListener('DOMContentLoaded', function () {
             total += nb * placesParTarif;
         });
         return total;
+    }
+
+    function hasSpecialSelection() {
+        const cb = document.getElementById('specialTarifCheck');
+        return !!(cb && cb.checked);
     }
 
     function refreshRemainingUi(remaining) {
@@ -42,34 +49,31 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function clampInput(input) {
-        // Si aucune limitation, pas de borne ni d'alerte
         if (limitation === null) return;
-
         const placesParTarif = parseInt(input.dataset.nbPlace, 10) || 1;
-
-        // Reste disponible (en excluant le champ courant)
         const reste = Math.max(0, limitation - dejaReservees - totalDemanded(input));
         const maxPossible = Math.floor(reste / placesParTarif);
-
-        // Valeur courante
         const current = parseInt(input.value, 10) || 0;
 
-        // Borne et fixe l'attribut max
         input.setAttribute('min', '0');
         input.setAttribute('step', '1');
         input.setAttribute('max', String(Math.max(0, maxPossible)));
 
         if (current > maxPossible) {
             input.value = String(Math.max(0, maxPossible));
-            // Message uniquement si dépassement tenté
-            showAlert(`Vous ne pouvez pas réserver plus de ${limitation} place(s) pour cette nageuse sur l'ensemble des séances.`);
+            showAlert('Votre sélection a été ajustée pour respecter la limite.');
         } else {
             clearAlert();
         }
-
-        // Met à jour le compteur "Restantes à réserver"
         const remaining = Math.max(0, limitation - dejaReservees - totalDemanded());
         refreshRemainingUi(remaining);
+    }
+
+    // Active/désactive le bouton: au moins une place classique OU le code spécial coché
+    const submitButtonBtn = document.getElementById('submitButton');
+    function updateSubmitState() {
+        if (!submitButtonBtn) return;
+        submitButtonBtn.disabled = !(totalDemanded() > 0 || hasSpecialSelection());
     }
 
     // Délégation d’événements pour couvrir les champs dynamiques
@@ -84,98 +88,163 @@ document.addEventListener('DOMContentLoaded', function () {
         if (!input) return;
         if (input.value === '') input.value = '0';
         clampInput(input);
+        updateSubmitState();
     }, true);
 
     container.addEventListener('input', (e) => {
         const input = e.target.closest('.place-input');
         if (!input) return;
-        // Nettoyage valeurs non numériques
         const v = input.value.trim();
         if (v !== '' && !/^\d+$/.test(v)) {
             input.value = String(parseInt(v.replace(/[^\d]/g, ''), 10) || 0);
         }
         clampInput(input);
+        updateSubmitState();
     });
 
     // Initialisation UI au chargement
     if (limitation !== null) {
-        // Fixe l'état initial et borne chaque champ
         getInputs().forEach(clampInput);
-        // Valeur initiale "restantes"
         const remaining = Math.max(0, limitation - dejaReservees - totalDemanded());
         refreshRemainingUi(remaining);
     } else {
         clearAlert();
     }
+    updateSubmitState(); // désactivé par défaut si rien sélectionné
 
-
-    // Gestion du code spécial (validation côté client + affichage Tarif spécial)
+    // --- Gestion du code spécial ---
     const validateCodeBtn = document.getElementById('validateCodeBtn');
     const specialCodeInput = document.getElementById('specialCode');
     const specialCodeFeedback = document.getElementById('specialCodeFeedback');
     const specialTarifContainer = document.getElementById('specialTarifContainer');
     const eventIdInput = document.getElementById('event_id');
+
+    function euroFromCents(cents) {
+        const n = (parseInt(cents, 10) || 0) / 100;
+        return n.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
+    }
+
+    function renderSpecialTarifBlock(t) {
+        // Injection sans classe .place-input pour ne pas compter dans les totaux/limites
+        specialTarifContainer.innerHTML = `
+          <div class="alert alert-success mb-2">
+            Tarif spécial reconnu : <strong>${(t.name || 'Tarif spécial')}</strong>
+          </div>
+          <div class="form-check mb-3">
+            <input class="form-check-input" type="checkbox" id="specialTarifCheck" name="specialTarif[${t.id}]" checked>
+            <label class="form-check-label" for="specialTarifCheck">
+              Utiliser ce tarif spécial${t.seat_count ? ` (${t.seat_count} place${t.seat_count > 1 ? 's' : ''} incluse${t.seat_count > 1 ? 's' : ''})` : ''}
+              ${typeof t.price !== 'undefined' ? ` - ${euroFromCents(t.price)}` : ''}
+            </label>
+            <input type="hidden"
+                   id="tarif_${t.id}"
+                   name="tarifs[${t.id}]"
+                   value="1">
+          </div>
+          ${t.description ? `<div class="text-muted small mb-1">${String(t.description).replace(/\n/g, '<br>')}</div>` : ''}
+        `;
+
+        // Toggle l'input caché selon la checkbox (pour un éventuel submit natif)
+        const cb = document.getElementById('specialTarifCheck');
+        const hidden = document.getElementById(`tarif_${t.id}`);
+        if (cb && hidden) hidden.disabled = !cb.checked;
+
+        // Recalcule l'état du bouton (le spécial ne compte pas dans les totaux)
+        updateSubmitState();
+    }
+
+    // Écoute le (dé)cochage du tarif spécial
+    container.addEventListener('change', (e) => {
+        if (e.target && e.target.id === 'specialTarifCheck') {
+            const hidden = document.querySelector('#specialTarifContainer input[type="hidden"][id^="tarif_"]');
+            if (hidden) hidden.disabled = !e.target.checked;
+            // Les "restantes" ne changent pas car le spécial n'est pas compté
+            updateSubmitState();
+        }
+    });
+
+    // Préremplissage si déjà en session
+    if (window.specialTarifSession) {
+        const t = window.specialTarifSession;
+        if (specialCodeInput) specialCodeInput.value = t.code || '';
+        if (specialCodeInput) specialCodeInput.disabled = true;
+        if (validateCodeBtn) validateCodeBtn.disabled = true;
+        if (specialCodeFeedback) {
+            specialCodeFeedback.classList.remove('text-danger');
+            specialCodeFeedback.classList.add('text-success');
+            specialCodeFeedback.textContent = 'Code validé.';
+        }
+        renderSpecialTarifBlock(t);
+    }
+
+    // Validation du code spécial (AJAX)
     if (validateCodeBtn && specialCodeInput && eventIdInput) {
-        validateCodeBtn.addEventListener('click', () => {
+        validateCodeBtn.addEventListener('click', async () => {
             const code = specialCodeInput.value.trim();
-console.log('specialCodeInput', eventIdInput);
             const event_id = parseInt(eventIdInput.value, 10) || 0;
             if (!code || !event_id) {
-                specialCodeFeedback.textContent = 'Veuillez saisir un code et vérifier l\'événement.';
+                if (specialCodeFeedback) {
+                    specialCodeFeedback.classList.remove('text-success');
+                    specialCodeFeedback.classList.add('text-danger');
+                    specialCodeFeedback.textContent = 'Veuillez saisir un code et avoir un événement sélectionné.';
+                }
                 return;
             }
-            apiPost('/reservation/validate-special-code', { event_id, code })
-                .then((data) => {
-                    if (data.success) {
-                        specialCodeFeedback.textContent = '';
-                        // Injecter dynamiquement un nouveau champ .place-input si nécessaire...
-                        // Pensez à définir data-nb-place sur ce nouvel input pour que la borne fonctionne.
-                    } else {
-                        specialCodeFeedback.textContent = data.error || 'Code invalide.';
-                    }
-                })
-                .catch((e) => {
-                    specialCodeFeedback.textContent = e.userMessage || 'Erreur lors de la validation du code.';
-                });
+
+            validateCodeBtn.disabled = true;
+            specialCodeFeedback.textContent = '';
+
+            try {
+                const res = await apiPost('/reservation/validate-special-code', { event_id, code });
+                if (!res || !res.success) {
+                    throw new Error(res?.error || 'Code invalide.');
+                }
+
+                // Mémorise côté fenêtre pour la page
+                window.specialTarifSession = {
+                    id: res.tarif.id,
+                    name: res.tarif.name,
+                    description: res.tarif.description,
+                    seat_count: res.tarif.seat_count,
+                    price: res.tarif.price,
+                    code
+                };
+
+                // Désactive le champ code + message
+                specialCodeInput.disabled = true;
+                if (specialCodeFeedback) {
+                    specialCodeFeedback.classList.remove('text-danger');
+                    specialCodeFeedback.classList.add('text-success');
+                    specialCodeFeedback.textContent = 'Code validé.';
+                }
+
+                renderSpecialTarifBlock(window.specialTarifSession);
+            } catch (e) {
+                validateCodeBtn.disabled = false;
+                if (specialCodeFeedback) {
+                    specialCodeFeedback.classList.remove('text-success');
+                    specialCodeFeedback.classList.add('text-danger');
+                    specialCodeFeedback.textContent = e.message || 'Erreur lors de la validation du code.';
+                }
+            }
         });
     }
 
-
-
-    /* ----------------------------------------------------------------------
-     * Le code ci-dessous est encore à vérifier car le back ou la vue n'ont pas encore été implémentés
-     * ---------------------------------------------------------------------- */
-
-
-
-     // Gestion suppression du Tarif spécial si décoché
-     container.addEventListener('click', (e) => {
-       const btn = e.target.closest('[data-remove-Tarif]');
-       if (!btn) return;
-       const row = btn.closest('.special-Tarif-row');
-       if (row) row.remove();
-       // Recalcule la limitation après suppression
-       if (limitation !== null) {
-         clearAlert();
-         const remaining = Math.max(0, limitation - dejaReservees - totalDemanded());
-         refreshRemainingUi(remaining);
-       }
-     });
-
-     // Soumission du formulaire (étape suivante)
-     const form = document.getElementById('reservationPlacesForm');
-     if (form) {
-       form.addEventListener('submit', function (e) {
-         // Exemple: validation locale avant envoi AJAX
-         if (limitation !== null) {
-           const remaining = limitation - dejaReservees - totalDemanded();
-           if (remaining < 0) {
-             e.preventDefault();
-             showFlash('danger', 'Votre sélection dépasse la limite autorisée.');
-             return;
-           }
-         }
-         // Envoyer en AJAX si requis…
-       });
-     }
+    // Soumission du formulaire (exemple: collecte des quantités)
+    const form = document.getElementById('reservationPlacesForm');
+    if (form) {
+        form.addEventListener('submit', function (e) {
+            // Laisser tel quel si soumission native; sinon, préparer un payload AJAX ici
+            // Exemple de collecte:
+            // const tarifs = [];
+            // document.querySelectorAll('.place-input').forEach(input => {
+            //   const id = parseInt(input.id.replace('tarif_', ''), 10);
+            //   const qty = parseInt(input.value, 10) || 0;
+            //   if (qty > 0) tarifs.push({ id, qty });
+            // });
+            // if (hasSpecialSelection() && window.specialTarifSession) {
+            //   tarifs.push({ id: window.specialTarifSession.id, qty: 1, code: window.specialTarifSession.code });
+            // }
+        });
+    }
 });

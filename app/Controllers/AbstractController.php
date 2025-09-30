@@ -359,9 +359,23 @@ abstract class AbstractController
     {
         $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 
-        if (in_array($method, ['POST', 'PUT', 'PATCH', 'DELETE'], true)) {
+//        if (in_array($method, ['POST', 'PUT', 'PATCH', 'DELETE'], true)) {
             // Préférer le Referer si même origine, sinon l’URI courante
-            return $this->getSameOriginRefererPath() ?? $this->getCurrentPath();
+  //          return $this->getSameOriginRefererPath() ?? $this->getCurrentPath();
+    //    }
+        if (in_array($method, ['POST', 'PUT', 'PATCH', 'DELETE'], true)) {
+                        // 1) Contexte explicite envoyé par le client
+                        $override = $_SERVER['HTTP_X_CSRF_CONTEXT'] ?? null;
+                        if (is_string($override) && str_starts_with($override, '/')) {
+                            return $override;
+            }
+            // 2) Referer même origine
+            $refererPath = $this->getSameOriginRefererPath();
+            if ($refererPath !== null) {
+                                return $refererPath;
+            }
+            // 3) Fallback: chemin courant (API)
+            return $this->getCurrentPath();
         }
 
         // GET: toujours la page courante
@@ -407,7 +421,7 @@ abstract class AbstractController
     private function maybeEnforceCsrf(): void
     {
         $env = strtolower($_ENV['APP_ENV'] ?? 'local');
-        if (in_array($env, ['local', 'dev'], true)) {
+        if (in_array($env, ['locala', 'dev'], true)) {
             // Désactive la vérification CSRF en local/dev
             return;
         }

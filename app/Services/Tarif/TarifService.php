@@ -72,9 +72,9 @@ class TarifService
                     'success' => true,
                     'tarif' => [
                         'id' => $tarif->getId(),
-                        'libelle' => $tarif->getLibelle(),
+                        'name' => $tarif->getName(),
                         'description' => $tarif->getDescription(),
-                        'nb_place' => $tarif->getNbPlace(),
+                        'seat_count' => $tarif->getSeatCount(),
                         'price' => $tarif->getPrice()
                     ]
                 ];

@@ -8,10 +8,20 @@ function validateTel(tel) {
     return /^(?:0[1-9]\d{8}|\+33[1-9]\d{8})$/.test(v);
 }
 
-// MAJ CSRF depuis les réponses JSON
-function updateCsrfTokenFrom(data) {
-    if (data && typeof data.csrf_token === 'string' && data.csrf_token.length > 0) {
-        window.csrf_token = data.csrf_token;
+/**
+ * Récupère le jeton CSRF depuis la balise meta.
+ * @returns {string|null} Le jeton CSRF.
+ */
+function getCsrfToken() {
+    return document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+}
+
+/**
+ * Met à jour le jeton CSRF dans la balise meta.
+ */
+function updateCsrfToken(token) {
+    if (token) {
+        document.querySelector('meta[name="csrf-token"]')?.setAttribute('content', token);
     }
 }
 
@@ -55,9 +65,7 @@ function apiPost(url, body, opts = {}) {
     const headers = Object.assign(
         {
             'Accept': 'application/json',
-            'X-Requested-With': 'XMLHttpRequest',
-            // Contexte explicite pour la validation CSRF côté serveur
-            'X-CSRF-Context': (typeof location !== 'undefined' ? location.pathname : '/')
+            'X-Requested-With': 'XMLHttpRequest'
         },
         opts.headers || {}
     );
@@ -69,8 +77,9 @@ function apiPost(url, body, opts = {}) {
     }
 
     // Injecter le CSRF si absent
-    if (!headers['X-CSRF-TOKEN'] && typeof window !== 'undefined' && typeof window.csrf_token === 'string') {
-        headers['X-CSRF-TOKEN'] = window.csrf_token;
+    const csrfToken = getCsrfToken();
+    if (csrfToken && !headers['X-CSRF-TOKEN']) {
+        headers['X-CSRF-TOKEN'] = csrfToken;
     }
 
     const fetchBody = shouldJsonEncode ? JSON.stringify(body) : body;
@@ -89,8 +98,8 @@ function apiPost(url, body, opts = {}) {
             // JSON attendu
             if (contentType.includes('application/json')) {
                 const data = await response.json();
-console.log('[apiPost] Réponse JSON:', data);
-                updateCsrfTokenFrom(data);
+                console.log('[apiPost] Réponse JSON:', data);
+                updateCsrfToken(data.csrf_token);
 
                 if (!response.ok) {
                     const msg = data && (data.error || data.message) || `HTTP ${response.status}`;

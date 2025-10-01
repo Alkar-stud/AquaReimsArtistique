@@ -332,6 +332,10 @@ abstract class AbstractController
         // Toujours joindre un nouveau token pour le contexte courant (ou Referer pour POST/PUT/…)
         try {
             $context = $this->getCsrfContext();
+            // On s'assure que le token est bien (re)généré pour la réponse
+            // C'est crucial pour que le client récupère le nouveau token après une requête POST/PUT...
+            // qui a consommé l'ancien.
+            $this->csrfService->generateToken($context);
             $data['csrf_token'] ??= $this->csrfService->getToken($context);
         } catch (Throwable) {
             // On ignore en cas d'absence de service (ex. pendant des tests).
@@ -359,26 +363,17 @@ abstract class AbstractController
     {
         $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 
-//        if (in_array($method, ['POST', 'PUT', 'PATCH', 'DELETE'], true)) {
-            // Préférer le Referer si même origine, sinon l’URI courante
-  //          return $this->getSameOriginRefererPath() ?? $this->getCurrentPath();
-    //    }
+        // Pour les requêtes qui modifient des données (POST, etc.), le contexte
+        // est la page d'où vient la requête (le Referer).
+        // Cela permet à un token généré sur /reservation d'être valide pour un appel
+        // API vers /reservation/etape1.
         if (in_array($method, ['POST', 'PUT', 'PATCH', 'DELETE'], true)) {
-                        // 1) Contexte explicite envoyé par le client
-                        $override = $_SERVER['HTTP_X_CSRF_CONTEXT'] ?? null;
-                        if (is_string($override) && str_starts_with($override, '/')) {
-                            return $override;
-            }
-            // 2) Referer même origine
-            $refererPath = $this->getSameOriginRefererPath();
-            if ($refererPath !== null) {
-                                return $refererPath;
-            }
-            // 3) Fallback: chemin courant (API)
-            return $this->getCurrentPath();
+            // On utilise le Referer s'il est de la même origine, sinon on se rabat sur le path courant.
+            return $this->getSameOriginRefererPath() ?? $this->getCurrentPath();
         }
 
-        // GET: toujours la page courante
+        // Pour les requêtes GET (affichage de page), le contexte est la page elle-même.
+        // C'est ce qui génère le token pour le formulaire/la page.
         return $this->getCurrentPath();
     }
 
@@ -420,12 +415,6 @@ abstract class AbstractController
      */
     private function maybeEnforceCsrf(): void
     {
-        $env = strtolower($_ENV['APP_ENV'] ?? 'local');
-        if (in_array($env, ['locala', 'dev'], true)) {
-            // Désactive la vérification CSRF en local/dev
-            return;
-        }
-
         $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
         if (!in_array($method, ['POST', 'PUT', 'PATCH', 'DELETE'], true)) {
             return;
@@ -436,12 +425,12 @@ abstract class AbstractController
 
         if (!$this->csrfService->validateAndConsume($token, $context)) {
             $this->flashMessageService->setFlashMessage('danger', 'Token CSRF invalide ou manquant.');
-            header('Location: ' . ($this->getSameOriginRefererPath() ?? $this->getCurrentPath()));
+            // Redirige vers le referer si c'est une origine sûre, sinon vers la page d'accueil.
+            $redirectTo = $this->getSameOriginRefererPath() ?? '/';
+            header('Location: ' . $redirectTo);
             exit;
         }
 
-        // Préparer le prochain token pour ce contexte
-        $this->csrfService->generateToken($context);
     }
 
     /**

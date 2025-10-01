@@ -19,7 +19,7 @@
 
         $sessions = $event->getSessions();
         $nbSessions = is_array($sessions) ? count($sessions) : 0;
- 
+
         $periodeOuverte = $periodesOuvertes[$event->getId()] ?? null;
         $nextPublic = $nextPublicOuvertures[$event->getId()] ?? null;
         $codeNecessaire = $periodeOuverte && $periodeOuverte->getAccessCode() !== null;
@@ -28,7 +28,7 @@
 
         // Libellé de la piscine
         $piscineLibelle = $event->getPiscine() ? $event->getPiscine()->getLabel() : 'Non défini';
- 
+
         {% endphp %}
 
         <div class="col-md-6 mb-4">
@@ -117,7 +117,7 @@
                             id="btn_reserver_{{ $event->getId() }}"
                             onclick="validerFormulaireReservation({{ $event->getId() }})"
                             {{ $buttonDisabled }}
-                        >
+                    >
                         Réserver
                     </button>
 
@@ -132,7 +132,6 @@
 
 <script>
     window.swimmerPerGroup = {{! json_encode($swimmerPerGroup ?? []) !}};
-    window.csrf_token = {{! json_encode($csrf_token ?? '') !}};
 </script>
 <script src="/assets/js/reservation/reservation_common.js" defer></script>
 <script src="/assets/js/reservation/reservation_etape1.js" defer></script>

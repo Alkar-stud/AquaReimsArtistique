@@ -8,7 +8,6 @@
     <h2 class="mb-4">Informations personnelles</h2>
 
     <form id="reservationInfosForm" class="mb-4">
-        <input type="hidden" name="csrf_token" value="{{ $csrf_token }}">
         <input type="hidden" id="event_id" name="event_id" value="{{ $reservation['event_id'] }}">
         <div class="mb-3">
             <label for="name" class="form-label">Nom *</label>
@@ -52,7 +51,6 @@ echo '</pre>';
 
 <script>
     window.swimmerPerGroup = {{! json_encode($swimmerPerGroup ?? []) !}};
-    window.csrf_token = {{! json_encode($csrf_token ?? '') !}};
 </script>
 <script src="/assets/js/reservation/reservation_common.js" defer></script>
 <script src="/assets/js/reservation/reservation_etape2.js" defer></script>

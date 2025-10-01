@@ -131,9 +131,7 @@ function step2Valid(name, firstname, email, phone, eventId) {
         email: email
     })
         .then((data) => {
-console.log('data duplicate : ', data);
-            //On met à jour le token_csrf
-            window.csrf_token = data.csrf_token;
+            console.log('data duplicate : ', data);
             if (data.exists) {
                 let html = `<div class="alert alert-warning">
                              <p>Vous avez déjà réservé <strong>${data.total_places_reserved} place(s)</strong> en <strong>${data.num_reservations} réservation(s)</strong> pour cet événement :</p><ul>`;
@@ -152,16 +150,15 @@ console.log('data duplicate : ', data);
                 document.getElementById('resendBtn').onclick = () => {
                     apiPost('/reservation/resend-confirmation', {
                         email: email,
-                        event_id: eventId,
-                        csrf_token: window.csrf_token
+                        event_id: eventId
                     })
-                    .then(res => {
-                        if (res.success) {
-                            alertDiv.innerHTML = '<div class="alert alert-success">Mail(s) de confirmation renvoyé(s) !</div>';
-                        } else {
-                            alertDiv.innerHTML = `<div class="alert alert-danger">${res.error}</div>`;
-                        }
-                    });
+                        .then(res => {
+                            if (res.success) {
+                                alertDiv.innerHTML = '<div class="alert alert-success">Mail(s) de confirmation renvoyé(s) !</div>';
+                            } else {
+                                alertDiv.innerHTML = `<div class="alert alert-danger">${res.error}</div>`;
+                            }
+                        });
                 };
             } else {
                 submitEtape2(name, firstname, email, phone, eventId);
@@ -178,7 +175,8 @@ function submitEtape2(name, firstname, email, phone, eventId) {
         name: name,
         firstname: firstname,
         email: email,
-        phone: phone
+        phone: phone,
+        event_id: eventId // Ajout de l'event_id
     })
         .then((data) => {
             if (data.success) {

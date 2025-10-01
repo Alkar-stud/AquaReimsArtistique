@@ -23,35 +23,33 @@
     {% endif %}
 
     <form id="reservationPlacesForm">
-        <input type="hidden" name="csrf_token" value="{{ $csrf_token }}">
-        <input type="hidden" id="event_id" name="event_id" value="{{ $session['event_id'] ?? 0 }}">
         {% if !empty($allTarifsWithSeatForThisEvent) %}
-            <div id="tarifsContainer">
-                {% foreach $allTarifsWithSeatForThisEvent as $tarif %}
-                {% if $tarif->getPrice() > 0 %}
-                    <div class="mb-3">
-                        <label for="tarif_{{ $tarif->getId() }}" class="form-label">
-                            <strong>{{ $tarif->getName() }}</strong>
-                            ({{ $tarif->getSeatCount() }} place{{ $tarif->getSeatCount() > 1 ? 's':'' }} incluse{{ $tarif->getSeatCount() > 1 ? 's':'' }})
-                             - {{ number_format($tarif->getPrice() / 100, 2, ',', ' ') }} €
-                            <br>
-                            <div class="text small text-muted">
-                                {{ $tarif->getDescription() }}
-                            </div>
-                        </label>
-                        <input type="number"
-                               class="form-control place-input"
-                               id="tarif_{{ $tarif->getId() }}"
-                               name="tarifs[{{ $tarif->getId() }}]"
-                               min="0"
-                               value="0"
-                               data-nb-place="{{ $tarif->getSeatCount() ?? 1 }}">
+        <div id="tarifsContainer">
+            {% foreach $allTarifsWithSeatForThisEvent as $tarif %}
+            {% if $tarif->getPrice() > 0 %}
+            <div class="mb-3">
+                <label for="tarif_{{ $tarif->getId() }}" class="form-label">
+                    <strong>{{ $tarif->getName() }}</strong>
+                    ({{ $tarif->getSeatCount() }} place{{ $tarif->getSeatCount() > 1 ? 's':'' }} incluse{{ $tarif->getSeatCount() > 1 ? 's':'' }})
+                    - {{ number_format($tarif->getPrice() / 100, 2, ',', ' ') }} €
+                    <br>
+                    <div class="text small text-muted">
+                        {{ $tarif->getDescription() }}
                     </div>
-                {% endif %}
-                {% endforeach %}
+                </label>
+                <input type="number"
+                       class="form-control place-input"
+                       id="tarif_{{ $tarif->getId() }}"
+                       name="tarifs[{{ $tarif->getId() }}]"
+                       min="0"
+                       value="0"
+                       data-nb-place="{{ $tarif->getSeatCount() ?? 1 }}">
             </div>
+            {% endif %}
+            {% endforeach %}
+        </div>
         {% else %}
-            <div class="alert alert-info">Aucun tarif disponible pour cet événement.</div>
+        <div class="alert alert-info">Aucun tarif disponible pour cet événement.</div>
         {% endif %}
 
 

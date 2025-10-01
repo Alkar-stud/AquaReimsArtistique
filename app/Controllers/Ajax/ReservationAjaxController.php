@@ -136,8 +136,9 @@ class ReservationAjaxController extends AbstractController
 
         $result = $this->reservationQueryService->checkExistingReservationWithSameEmail($eventId, $email);
 
-        // Ajoute le token CSRF à la réponse
-        $result['csrf_token'] = $this->csrfService->getToken($this->getCurrentPath());
+        // Utiliser le contexte déclaré par le client (fallback: chemin courant si absent)
+        $clientContext = $_SERVER['HTTP_X_CSRF_CONTEXT'] ?? $this->getCurrentPath();
+        $result['csrf_token'] = $this->csrfService->getToken($clientContext);
 
         $this->json($result);
     }
@@ -154,7 +155,10 @@ class ReservationAjaxController extends AbstractController
         $eventId = (int)($input['event_id'] ?? 0);
 
         $result = $this->reservationQueryService->resendConfirmationEmails($eventId, $email);
-        $result['csrf_token'] = $this->csrfService->getToken($this->getCurrentPath());
+
+        // Utiliser le contexte déclaré par le client (fallback: chemin courant si absent)
+        $clientContext = $_SERVER['HTTP_X_CSRF_CONTEXT'] ?? $this->getCurrentPath();
+        $result['csrf_token'] = $this->csrfService->getToken($clientContext);
 
         $this->json($result);
     }

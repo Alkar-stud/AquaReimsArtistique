@@ -131,6 +131,7 @@ function step2Valid(name, firstname, email, phone, eventId) {
         email: email
     })
         .then((data) => {
+console.log('data duplicate : ', data);
             //On met à jour le token_csrf
             window.csrf_token = data.csrf_token;
             if (data.exists) {

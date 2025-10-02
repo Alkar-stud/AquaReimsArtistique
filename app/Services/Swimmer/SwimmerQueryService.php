@@ -81,7 +81,6 @@ class SwimmerQueryService
      *     limitPerSwimmer: int|null
      * }
      */
-
     public function checkSwimmerLimit(int $eventId, int $swimmerId): array
     {
         if (!$eventId || !$swimmerId) {
@@ -130,6 +129,26 @@ class SwimmerQueryService
             'limitReached' => $currentReservations >= $limit,
             'limit' => $limit, 'error' => null
         ];
+    }
+
+    /**
+     * Retourne un tableau contenant les informations suivantes :
+     * (bool)limitReached, (?int)limit, (?int)currentReservations: nombre de réservations existantes
+     *
+     * @return array
+     */
+    public function getStateOfLimitPerSwimmer(): array
+    {
+        $eventId   = (int)($session['event_id'] ?? 0);
+        $swimmerId = (int)($session['swimmer_id'] ?? 0);
+        // Ne teste la limite que si un nageur est effectivement sélectionné
+        $swimmerLimitReached = ['limitReached' => false, 'limit' => null, 'currentReservations' => null];
+        if ($swimmerId > 0) {
+            $swimmerLimitReached = $this->checkSwimmerLimit($eventId, $swimmerId);
+        }
+
+        return $swimmerLimitReached;
+
     }
 
 }

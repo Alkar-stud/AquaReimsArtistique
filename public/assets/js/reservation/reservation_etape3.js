@@ -179,11 +179,8 @@ document.addEventListener('DOMContentLoaded', function () {
     // Validation du code spécial (AJAX)
     if (validateCodeBtn && specialCodeInput && eventIdInput) {
         validateCodeBtn.addEventListener('click', async () => {
-console.log('ici ça click');
             const code = specialCodeInput.value.trim();
-console.log('code : ', code);
             const event_id = parseInt(eventIdInput.value, 10) || 0;
-console.log('event_id : ', event_id);
             if (!code || !event_id) {
                 if (specialCodeFeedback) {
                     specialCodeFeedback.classList.remove('text-success');
@@ -232,21 +229,87 @@ console.log('event_id : ', event_id);
         });
     }
 
-    // Soumission du formulaire (exemple: collecte des quantités)
-    const form = document.getElementById('reservationPlacesForm');
-    if (form) {
-        form.addEventListener('submit', function (e) {
-            // Laisser tel quel si soumission native; sinon, préparer un payload AJAX ici
-            // Exemple de collecte:
-            // const tarifs = [];
-            // document.querySelectorAll('.place-input').forEach(input => {
-            //   const id = parseInt(input.id.replace('tarif_', ''), 10);
-            //   const qty = parseInt(input.value, 10) || 0;
-            //   if (qty > 0) tarifs.push({ id, qty });
-            // });
-            // if (hasSpecialSelection() && window.specialTarifSession) {
-            //   tarifs.push({ id: window.specialTarifSession.id, qty: 1, code: window.specialTarifSession.code });
-            // }
+    // Construit le tableau à envoyer (classiques + spéciaux cochés)
+    function buildReservationPayload() {
+        const eventIdInput = document.getElementById('event_id');
+        const event_id = parseInt(eventIdInput?.value, 10) || 0;
+        const tarifs = {};
+
+        // 1) Tarifs "classiques" (tous les inputs .place-input)
+        getInputs().forEach(input => {
+            const qty = parseInt(input.value, 10) || 0;
+            if (qty <= 0) return;
+
+            // Récupère l'id de tarif (priorité au name, fallback sur l'id DOM)
+            const idFromName = parseTarifIdFromName(input.name);
+            const idFromDom = (input.id && input.id.startsWith('tarif_')) ? input.id.slice('tarif_'.length) : null;
+            const tarifId = idFromName || idFromDom;
+            if (!tarifId) return;
+
+            tarifs[tarifId] = (tarifs[tarifId] || 0) + qty;
         });
+
+        // 2) Tarifs spéciaux (ne comptent pas dans les totaux, mais doivent partir au backend)
+        // Tarif spécial (clé = id, valeur = code)
+        const specialCb = document.getElementById('specialTarifCheck');
+        let special = null;
+        if (specialCb && specialCb.checked && window.specialTarifSession) {
+            const s = window.specialTarifSession;
+            const sid = String(s.id);
+
+            // On conserve aussi la quantité côté 'tarifs'
+            tarifs[sid] = (tarifs[sid] || 0) + 1;
+
+            // Clé calculée: { [sid]: codeOuNull }
+            special = { [sid]: (s.code || null) };
+        }
+
+        return { event_id, tarifs, special };
     }
+
+        const form = document.getElementById('reservationPlacesForm');
+        const submitButton = document.getElementById('submitButton');
+
+        if (!form) return;
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+
+            submitButton && (submitButton.disabled = true);
+
+            try {
+                const payload = buildReservationPayload();
+
+                await submitEtape3(payload);
+            } catch (err) {
+                showFlash('danger', err.userMessage || err.message || 'Erreur lors de la validation de l’étape 3.');
+                submitButton && (submitButton.disabled = false);
+            }
+        });
+
+    function submitEtape3(payload) {
+        apiPost('/reservation/etape3', payload)
+            .then((data) => {
+                if (data.success) {
+                    window.location.href = '/reservation/etape4Display';
+                } else {
+                    if (data.redirect) {
+                        window.location.href = data.redirect;
+                        return;
+                    }
+                    showFlash('danger', data.error || 'Erreur');
+                }
+            })
+            .catch((err) => {
+                showFlash('danger', err.userMessage || err.message);
+                submitButton && (submitButton.disabled = false);
+            });
+
+
+
+
+    }
+
+
 });

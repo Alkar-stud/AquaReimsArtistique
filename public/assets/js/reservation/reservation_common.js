@@ -79,7 +79,6 @@ function apiPost(url, body, opts = {}) {
             'X-Requested-With': 'XMLHttpRequest',
             'X-CSRF-Context' : '/reservation', // Explicite pour les réservations
             'X-CSRF-Token' : csrfToken
-
         },
         opts.headers || {}
     );
@@ -90,10 +89,9 @@ function apiPost(url, body, opts = {}) {
         headers['Content-Type'] = 'application/json';
     }
 
-console.log('headers : ', headers);
-
+console.log('body : ', body);
     const fetchBody = shouldJsonEncode ? JSON.stringify(body) : body;
-
+console.log('fetchBody : ', fetchBody);
     return fetch(url, {
         method: 'POST',
         headers,
@@ -150,6 +148,12 @@ console.log('[apiPost] Réponse JSON:', data);
             err.userMessage = normalizeUserMessage(response.status);
             throw err;
         });
+}
+
+// Extrait l'id de tarif à partir de name="tarifs[123]"
+function parseTarifIdFromName(name) {
+    const m = String(name || '').match(/^tarifs\[(\d+)]$/);
+    return m ? m[1] : null;
 }
 
 // Exposer globalement

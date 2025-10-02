@@ -2,6 +2,7 @@
 // php
 namespace app\Services\DataValidation;
 
+use app\DTO\ReservationDetailItemDTO;
 use app\DTO\ReservationSelectionSessionDTO;
 use app\DTO\ReservationUserDTO;
 use app\Repository\Event\EventRepository;
@@ -85,11 +86,34 @@ class ReservationDataValidationService
                 $this->persistStep2($dto);
                 return ['success' => true, 'errors' => [], 'data' => []];
             }
+        }
 
+        if ($step >= 3) {
+            $items = ReservationDetailItemDTO::listFromPayload($data);
+
+            // On rejette si vide
+            if (empty($items)) {
+                return ['success' => false, 'errors' => ['tarifs' => 'Aucun tarif sélectionné.'], 'data' => []];
+            }
+
+            $eventIdPayload = (int)($data['event_id'] ?? 0);
+            $eventIdSession = (int)($session['event_id'] ?? 0);
+            if ($eventIdPayload <= 0 || $eventIdPayload !== $eventIdSession) {
+                return ['success' => false, 'errors' => ['event_id' => 'Événement incohérent.'], 'data' => []];
+            }
+
+            // Persistance en session
+            $this->reservationSessionService->setReservationSession(
+                'reservation_detail',
+                array_map(static fn(ReservationDetailItemDTO $i) => $i->jsonSerialize(), $items)
+            );
+
+            return ['success' => true, 'errors' => [], 'data' => []];
         }
 
 
-        return ['success' => false, 'errors' => [], 'data' => []];
+
+        return ['success' => false, 'errors' => ['message' => 'ne correspond pas'], 'data' => []];
     }
 
     /**

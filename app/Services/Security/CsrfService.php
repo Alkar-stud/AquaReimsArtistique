@@ -76,12 +76,6 @@ final class CsrfService
         unset($_SESSION[self::SESSION_KEY][$context]);
 
         if (!$ok) {
-
-
-            echo "échec ici reçu : csrfToken : " . $submittedToken . "\n csrfContext : " . $context . "\n Attendus : \n";
-            echo "stored : " . $stored . "\n";
-            print_r($_SESSION);
-            die;
             Logger::get()->security('csrf_fail', [
                 'reason'  => 'token_mismatch_or_missing',
                 'context' => $context,

@@ -131,7 +131,6 @@ function step2Valid(name, firstname, email, phone, eventId) {
         email: email
     })
         .then((data) => {
-            console.log('data duplicate : ', data);
             if (data.exists) {
                 let html = `<div class="alert alert-warning">
                              <p>Vous avez déjà réservé <strong>${data.total_places_reserved} place(s)</strong> en <strong>${data.num_reservations} réservation(s)</strong> pour cet événement :</p><ul>`;
@@ -176,7 +175,7 @@ function submitEtape2(name, firstname, email, phone, eventId) {
         firstname: firstname,
         email: email,
         phone: phone,
-        event_id: eventId // Ajout de l'event_id
+        event_id: eventId
     })
         .then((data) => {
             if (data.success) {
@@ -186,12 +185,7 @@ function submitEtape2(name, firstname, email, phone, eventId) {
                     window.location.href = data.redirect;
                     return;
                 }
-                const errorDiv = document.getElementById('form_error_message_' + eventId);
-                if (errorDiv) {
-                    errorDiv.textContent = data.error || 'Une erreur inconnue est survenue.';
-                } else {
-                    showFlash('danger', data.error || 'Erreur');
-                }
+                showFlash('danger', data.error || 'Erreur');
             }
         })
         .catch((err) => {

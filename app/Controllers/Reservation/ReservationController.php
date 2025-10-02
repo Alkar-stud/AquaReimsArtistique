@@ -109,15 +109,8 @@ class ReservationController extends AbstractController
             $this->redirect('/reservation');
         }
 
-        $eventId   = (int)($session['event_id'] ?? 0);
-        $swimmerId = (int)($session['swimmer_id'] ?? 0);
-        // Ne teste la limite que si un nageur est effectivement sélectionné
-        $swimmerLimitReached = ['limitReached' => false, 'limit' => null];
-        if ($swimmerId > 0) {
-            $swimmerLimitReached = $this->swimmerQueryService->checkSwimmerLimit($eventId, $swimmerId);
-        }
+        $swimmerLimitReached = $this->swimmerQueryService->getStateOfLimitPerSwimmer();
 
-        isset($swimmerLimitReached['currentReservations']) ? $currentReservations = $swimmerLimitReached['currentReservations'] : $currentReservations = null;
 
         //Récupération des tarifs avec place assise
         $allTarifsWithSeatForThisEvent = $this->eventTarifRepository->findSeatedTarifsByEvent($session['event_id']);
@@ -132,7 +125,7 @@ class ReservationController extends AbstractController
                 if (!$code || $tarifId <= 0) {
                     continue;
                 }
-                // Retrouve le tarif correspondant parmi les tarifs siégeants
+                // Retrouve le tarif correspondant parmi les tarifs présents
                 foreach ($allTarifsWithSeatForThisEvent as $tarif) {
                     if ($tarif->getId() === $tarifId) {
                         $specialTarifSession = [
@@ -149,10 +142,9 @@ class ReservationController extends AbstractController
             }
         }
         //On envoie aussi le tableau des détails, pour préremplir si on est dans le cas d'un retour au niveau des étapes
-
         $this->render('reservation/etape3', [
             'allTarifsWithSeatForThisEvent' => $allTarifsWithSeatForThisEvent,
-            'placesDejaReservees'           => $currentReservations,
+            'placesDejaReservees'           => $swimmerLimitReached['currentReservations'],
             'limiteDepassee'                => $swimmerLimitReached['limitReached'],
             'limitation'                    => $swimmerLimitReached['limit'],
             'reservation'                   => $session,

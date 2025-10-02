@@ -14,12 +14,13 @@ use app\Services\Tarif\TarifService;
 
 class ReservationAjaxController extends AbstractController
 {
-
     private EventQueryService $eventQueryService;
     private SwimmerQueryService $swimmerQueryService;
     private ReservationDataValidationService $reservationDataValidationService;
     private ReservationQueryService $reservationQueryService;
     private TarifService $tarifService;
+    //Pour définir les steps existants
+    private array $existingStep = [1, 2, 3, 4, 5, 6];
 
     public function __construct(
         EventQueryService $eventQueryService,
@@ -96,9 +97,14 @@ class ReservationAjaxController extends AbstractController
      * Pour valider et enregistrer en $_SESSION les valeurs de l'étape 1
      *
      */
-    #[Route('/reservation/etape1', name: 'etape1', methods: ['POST'])]
-    public function etape1(): void
+    #[Route('/reservation/valid/{step}', name: 'etape1', methods: ['POST'])]
+    public function validStep(int $step): void
     {
+        //On vérifie
+        if (!in_array($step, $this->existingStep)) {
+            $this->json(['success' => false, 400, 'error' => 'Cette étape n\'existe pas']);
+        }
+
         // Met à jour le timestamp à chaque vérification
         $_SESSION['reservation']['last_activity'] = time();
 
@@ -110,7 +116,7 @@ class ReservationAjaxController extends AbstractController
         // On redirige si session de réservation est expirée
         $this->redirectIfReservationSessionIsExpired();
 
-        $result = $this->reservationDataValidationService->validateAndPersistDataPerStep(1, $input);
+        $result = $this->reservationDataValidationService->validateAndPersistDataPerStep($step, $input);
 
         if (!$result['success']) {
             $this->json($result, 400);
@@ -243,6 +249,29 @@ class ReservationAjaxController extends AbstractController
         $this->reservationSessionService->setReservationSession('reservation_detail', $newDetails);
 
         $this->json(['success' => true], 200, 'reservation');
+    }
+
+    #[Route('/reservation/etape3', name: 'etape3', methods: ['POST'])]
+    public function etape3(): void
+    {
+        // Met à jour le timestamp à chaque vérification
+        $_SESSION['reservation']['last_activity'] = time();
+
+        $input = json_decode(file_get_contents('php://input'), true);
+        if (!is_array($input)) {
+            $input = [];
+        }
+
+        // On redirige si session de réservation est expirée
+        $this->redirectIfReservationSessionIsExpired();
+
+        $result = $this->reservationDataValidationService->validateAndPersistDataPerStep(3, $input);
+
+        if (!$result['success']) {
+            $this->json($result, 400);
+        }
+
+        $this->json(['success' => true]);
     }
 
 }

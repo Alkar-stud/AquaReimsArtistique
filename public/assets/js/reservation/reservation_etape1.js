@@ -125,7 +125,7 @@ function step1Valid(eventId, sessionChoisie, swimmerId, codeAccess) {
     sessionChoisie = parseInt(sessionChoisie, 10);
     swimmerId = (swimmerId != null) ? parseInt(swimmerId, 10) : null;
 
-    apiPost('/reservation/etape1', {
+    apiPost('/reservation/valid/1', {
         event_id: eventId,
         event_session_id: sessionChoisie,
         swimmer_id: swimmerId,

@@ -459,6 +459,11 @@ abstract class AbstractController
      */
     private function maybeEnforceCsrf(): void
     {
+        // En debug, on ne valide/consomme pas le jeton CSRF
+        if (($_ENV['APP_DEBUG'] ?? 'false') === 'true') {
+            return;
+        }
+
         $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
         // Si c'est une requête qui modifie l'état (POST, PUT, PATCH, DELETE)
         if (in_array($method, ['POST', 'PUT', 'PATCH', 'DELETE'], true)) {

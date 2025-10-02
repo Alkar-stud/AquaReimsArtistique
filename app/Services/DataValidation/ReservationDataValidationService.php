@@ -188,7 +188,7 @@ class ReservationDataValidationService
         $accessCode = $dto->accessCode ? trim($dto->accessCode) : null;
 
         if ($limit !== null && $dto->swimmerId === null && $accessCode === null) {
-            $errors['swimmerOrAccessCode'] = 'Le nom d\une nageuse est requis pour cet événement.';
+            $errors['swimmerOrAccessCode'] = 'Le nom d\'une nageuse est requis pour cet événement.';
         }
 
         if ($dto->swimmerId !== null) {

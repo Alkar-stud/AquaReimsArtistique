@@ -136,10 +136,6 @@ class ReservationAjaxController extends AbstractController
 
         $result = $this->reservationQueryService->checkExistingReservationWithSameEmail($eventId, $email);
 
-        // Utiliser le contexte déclaré par le client (fallback: chemin courant si absent)
-        $clientContext = $_SERVER['HTTP_X_CSRF_CONTEXT'] ?? $this->getCurrentPath();
-        $result['csrf_token'] = $this->csrfService->getToken($clientContext);
-
         $this->json($result);
     }
 
@@ -155,10 +151,6 @@ class ReservationAjaxController extends AbstractController
         $eventId = (int)($input['event_id'] ?? 0);
 
         $result = $this->reservationQueryService->resendConfirmationEmails($eventId, $email);
-
-        // Utiliser le contexte déclaré par le client (fallback: chemin courant si absent)
-        $clientContext = $_SERVER['HTTP_X_CSRF_CONTEXT'] ?? $this->getCurrentPath();
-        $result['csrf_token'] = $this->csrfService->getToken($clientContext);
 
         $this->json($result);
     }
@@ -217,7 +209,6 @@ class ReservationAjaxController extends AbstractController
     public function validateSpecialCode(): void
     {
         $input = json_decode(file_get_contents('php://input'), true);
-
         $eventId = (int)($input['event_id'] ?? 0);
         $code = trim($input['code'] ?? '');
 
@@ -230,7 +221,7 @@ class ReservationAjaxController extends AbstractController
             $this->reservationSessionService->setReservationSession('reservation_detail', $currentDetails);
         }
 
-        $this->json($result);
+        $this->json($result, 200, 'reservation');
     }
 
     #[Route('/reservation/remove-special-tarif', name: 'remove_special_tarif', methods: ['POST'])]
@@ -251,7 +242,7 @@ class ReservationAjaxController extends AbstractController
         // Mettre à jour la session
         $this->reservationSessionService->setReservationSession('reservation_detail', $newDetails);
 
-        $this->json(['success' => true]);
+        $this->json(['success' => true], 200, 'reservation');
     }
 
 }

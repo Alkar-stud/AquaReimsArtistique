@@ -74,7 +74,7 @@ function validerFormulaireReservation(eventId) {
                         }
                         showFlash('warning', "Le quota de spectateurs pour cette nageuse est atteint" + limitPerSwimmer + ".");
                     } else {
-                        step1Valid(eventId, sessionChoisie, swimmerId);
+                        step1Valid(eventId, sessionChoisie, swimmerId, codeAccess);
                     }
                 } else {
                     showFlash('danger', data.error || 'Erreur lors du contrôle de la limite.');

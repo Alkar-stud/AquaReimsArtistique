@@ -7,6 +7,7 @@
     <meta http-equiv="content-type" content="no-cache">
     <meta http-equiv="refresh" content="no-cache">
     <meta name="csrf-token" content="{{ $csrf_token ?? '' }}">
+    <meta name="csrf-context" content="{{ $csrf_context ?? '' }}">
     <meta charset="UTF-8">
     <link rel="icon" href="/assets/images/favicon.ico" type="image/x-icon" />
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-LN+7fdVzj6u52u30Kp6M/trliBMCMKTyK833zpbD+pXdCLuTusPj697FH4R/5mcr" crossorigin="anonymous">

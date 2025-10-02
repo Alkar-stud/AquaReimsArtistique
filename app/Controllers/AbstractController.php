@@ -13,13 +13,14 @@ use app\Services\Reservation\ReservationSessionService;
 use app\Services\Security\SessionValidateService;
 use app\Services\Security\CsrfService;
 use app\Utils\DurationHelper;
+use Exception;
 use Throwable;
 
 abstract class AbstractController
 {
     protected FlashMessageService $flashMessageService;
     private SessionValidateService $sessionValidateService;
-    protected CsrfService $csrfService;
+    protected ?CsrfService $csrfService = null;
     protected ReservationSessionService $reservationSessionService;
     private static bool $globalHandlersRegistered = false;
 
@@ -36,6 +37,7 @@ abstract class AbstractController
         if (session_status() === PHP_SESSION_NONE) {
             session_start();
         }
+
         RequestContext::boot();
 
         // Validation de la session utilisateur (y compris la régénération)
@@ -72,23 +74,26 @@ abstract class AbstractController
     }
 
     /**
+     * Injecte les données demandées par le controller dans la vue, en ajoutant les données communes, comme token CSRF ou les messages flashes
+     *
      * @param string $view
      * @param array $data
      * @param string $title
+     * @param int $statusCode
+     * @param string $csrfContext
      * @param bool $partial
      * @return void
      */
-    protected function render(string $view, array $data = [], string $title = '', bool $partial = false): void
+    protected function render(string $view, array $data = [], string $title = '', int $statusCode = 200, string $csrfContext = 'default', bool $partial = false): void
     {
+        http_response_code($statusCode);
+
         $engine = new TemplateEngine();
 
         $uri = strtok($_SERVER['REQUEST_URI'], '?');
         $data['uri'] = $uri;
         $data['is_gestion_page'] = str_starts_with($uri, '/gestion');
         $data['load_ckeditor'] = $data['is_gestion_page'] && (str_starts_with($uri, '/gestion/mail_templates') || str_starts_with($uri, '/gestion/accueil'));
-
-        // Injecter le token pour la page COURANTE (jamais le Referer)
-        $data['csrf_token'] ??= $this->csrfService->getToken($this->getCurrentPath());
 
         // Centralisation de la récupération des messages flash
         $data['flash_message'] = $this->flashMessageService->getFlashMessage();
@@ -145,7 +150,7 @@ abstract class AbstractController
             Logger::get()->error(
                 LogType::APPLICATION->value,
                 'template_render',
-                ['exception' => $e, 'view' => $view, 'uri' => $data['uri'] ?? null]
+                ['exception' => $e, 'view' => $view, 'uri' => $data['uri']]
             );
 
             http_response_code(500);
@@ -164,18 +169,29 @@ abstract class AbstractController
                 : '';
         }
 
+        // Pour les pages de réservation, forcer le contexte unifié
+        if (str_starts_with($view, 'reservation/')) {
+            $csrfContext = '/reservation';
+        } else {
+            $csrfContext = $this->getCurrentPath();
+        }
+
         if ($partial) {
             echo $content;
         } else {
             $layoutData = array_merge($data, [
                 'title' => $title,
-                'content' => $content
+                'content' => $content,
+                'csrf_token' => $this->csrfService->getToken($csrfContext),
+                'csrf_context' => $csrfContext
             ]);
             echo $engine->render(__DIR__ . '/../views/layout/base.tpl', $layoutData);
         }
     }
 
     /**
+     * Pour le moteur de template, enrichit les tableaux pour faciliter les boucles dans les vues
+     *
      * @param array $data
      * @return array
      */
@@ -201,9 +217,11 @@ abstract class AbstractController
     }
 
     /**
+     * Vérifie si le User est connecté (et non expiré) pour les routes non publiques
+     *
      * @param bool $isPublicRoute
      * @return void
-     * @throws \Exception
+     * @throws Exception
      */
     public function checkUserSession(bool $isPublicRoute = false): void
     {
@@ -244,6 +262,9 @@ abstract class AbstractController
     }
 
     /**
+     * Supprime la session et redirige vers la page de login avec un message si besoin
+     * Enregistre l'URL en cours pour pouvoir y retourner après le login
+     *
      * @param string $message
      * @param bool $saveRedirectUrl
      * @return void
@@ -272,6 +293,8 @@ abstract class AbstractController
     }
 
     /**
+     * Applique les paramètres de sécurité des cookies de session
+     *
      * @return void
      */
     protected function configureSession(): void
@@ -285,7 +308,6 @@ abstract class AbstractController
         $envRaw = strtolower($_ENV['APP_ENV'] ?? 'local');
         $envKey = match ($envRaw) {
             'prod', 'production' => 'production',
-            'dev', 'development', 'local' => 'local',
             default => 'local',
         };
 
@@ -320,32 +342,46 @@ abstract class AbstractController
     }
 
     /**
+     * Prépare et envoie une réponse JSON avec gestion automatique du contexte CSRF
+     *
      * @param array $data
      * @param int $statusCode
+     * @param string|null $csrfContext Contexte CSRF (si null, utilise l'en-tête X-CSRF-Context)
      * @return void
      */
-    protected function json(array $data, int $statusCode = 200): void
+    protected function json(array $data, int $statusCode = 200, ?string $csrfContext = null): void
     {
-        http_response_code($statusCode);
-        header('Content-Type: application/json; charset=utf-8');
-
-        // Toujours joindre un nouveau token pour le contexte courant (ou Referer pour POST/PUT/…)
-        try {
-            $context = $this->getCsrfContext();
-            // On s'assure que le token est bien (re)généré pour la réponse
-            // C'est crucial pour que le client récupère le nouveau token après une requête POST/PUT...
-            // qui a consommé l'ancien.
-            $this->csrfService->generateToken($context);
-            $data['csrf_token'] ??= $this->csrfService->getToken($context);
-        } catch (Throwable) {
-            // On ignore en cas d'absence de service (ex. pendant des tests).
+        // Détection automatique du contexte CSRF depuis les en-têtes HTTP
+        if ($csrfContext === null) {
+            $csrfContext = $_SERVER['HTTP_X_CSRF_CONTEXT'] ?? $this->getCsrfContext();
         }
 
-        echo json_encode($data);
+        $newToken = $this->csrfService->getToken($csrfContext);
+
+        // Ajouter des informations de débogage en environnement de développement
+        if (($_ENV['APP_DEBUG'] ?? 'false') === 'true') {
+            $data['_debug'] = [
+                'csrf_context' => $csrfContext,
+                'http_x_csrf_context' => $_SERVER['HTTP_X_CSRF_CONTEXT'] ?? null,
+                'referer_path' => $this->getSameOriginRefererPath(),
+                'current_path' => $this->getCurrentPath(),
+            ];
+        }
+
+        http_response_code($statusCode);
+        header('Content-Type: application/json; charset=UTF-8');
+        header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+        header('Pragma: no-cache');
+        header('X-CSRF-Token: ' . $newToken);
+        header('X-CSRF-Context: ' . $csrfContext);
+
+        echo json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
         exit;
     }
 
     /**
+     * Vérifie si la redirection est bien interne
+     *
      * @param string $url
      * @return bool
      */
@@ -354,32 +390,30 @@ abstract class AbstractController
         return str_starts_with($url, '/') && !str_starts_with($url, '//') && !str_contains($url, '://');
     }
 
-    // Contexte CSRF: Referer seulement pour les requêtes non-GET
-
     /**
+     * Détermine le contexte CSRF à partir de l'URL courante
+     *
      * @return string
      */
     protected function getCsrfContext(): string
     {
-        $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
+        $uri = $_SERVER['REQUEST_URI'] ?? '';
 
-        // Pour les requêtes qui modifient des données (POST, etc.), le contexte
-        // est la page d'où vient la requête (le Referer).
-        // Cela permet à un token généré sur /reservation d'être valide pour un appel
-        // API vers /reservation/etape1.
-        if (in_array($method, ['POST', 'PUT', 'PATCH', 'DELETE'], true)) {
-            // On utilise le Referer s'il est de la même origine, sinon on se rabat sur le path courant.
-            return $this->getSameOriginRefererPath() ?? $this->getCurrentPath();
+        // Pour toutes les routes de réservation (avec ou sans slash final)
+        if ($uri === '/reservation' || str_starts_with($uri, '/reservation/')) {
+            return '/reservation';
         }
 
-        // Pour les requêtes GET (affichage de page), le contexte est la page elle-même.
-        // C'est ce qui génère le token pour le formulaire/la page.
-        return $this->getCurrentPath();
+        // Pour les autres routes
+        $path = parse_url($uri, PHP_URL_PATH) ?: '/';
+        $segments = explode('/', trim($path, '/'));
+        return !empty($segments[0]) ? '/' . $segments[0] : 'default';
     }
 
-    // Chemin de la page courante (sans query)
 
     /**
+     * Chemin de la page courante (sans query)
+     *
      * @return string
      */
     protected function getCurrentPath(): string
@@ -411,29 +445,59 @@ abstract class AbstractController
     }
 
     /**
+     * @return CsrfService
+     */
+    protected function csrf(): CsrfService
+    {
+        return $this->csrfService ??= new CsrfService();
+    }
+
+    /**
+     * Vérifie la validité du token CSRF pour les requêtes modifiant l'état
+     *
      * @return void
      */
     private function maybeEnforceCsrf(): void
     {
         $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
-        if (!in_array($method, ['POST', 'PUT', 'PATCH', 'DELETE'], true)) {
-            return;
+        // Si c'est une requête qui modifie l'état (POST, PUT, PATCH, DELETE)
+        if (in_array($method, ['POST', 'PUT', 'PATCH', 'DELETE'], true)) {
+            $csrfToken = null;
+            $csrfContext = null;
+
+            // Recherche le token dans l'entête
+            if (isset($_SERVER['HTTP_X_CSRF_TOKEN'])) {
+                $csrfToken = $_SERVER['HTTP_X_CSRF_TOKEN'];
+            }
+            // Recherche le contexte du token dans l'entête
+            if (isset($_SERVER['HTTP_X_CSRF_CONTEXT'])) {
+                $csrfContext = $_SERVER['HTTP_X_CSRF_CONTEXT'];
+            }
+
+            // Si CSRF échoue -> redirection avec message d'erreur
+            if ($csrfToken && !$this->csrfService->validateAndConsume($csrfToken, $csrfContext)) {
+                http_response_code(419);
+                header('Content-Type: application/json; charset=UTF-8');
+
+                // Générer un nouveau token pour remplacer celui qui vient d'échouer
+                $newToken = $this->csrfService->getToken($csrfContext);
+                header('X-CSRF-Token: ' . $newToken);
+                header('X-CSRF-Context: ' . $csrfContext);
+
+                echo json_encode([
+                    'success' => false,
+                    'error' => 'Jeton de sécurité invalide ou expiré.',
+                    'csrf_token' => $newToken
+                ]);
+                exit;
+            }
         }
-
-        $context = $this->getCsrfContext();
-        $token = $_SERVER['HTTP_X_CSRF_TOKEN'] ?? ($_POST['csrf_token'] ?? '');
-
-        if (!$this->csrfService->validateAndConsume($token, $context)) {
-            $this->flashMessageService->setFlashMessage('danger', 'Token CSRF invalide ou manquant.');
-            // Redirige vers le referer si c'est une origine sûre, sinon vers la page d'accueil.
-            $redirectTo = $this->getSameOriginRefererPath() ?? '/';
-            header('Location: ' . $redirectTo);
-            exit;
-        }
-
     }
 
+
     /**
+     * Vérifie que le User connecté a bien le droit de faire ce qu'il demande
+     *
      * @param int $minRoleLevel
      * @param string|null $urlReturn
      * @return void
@@ -455,6 +519,8 @@ abstract class AbstractController
     }
 
     /**
+     * Redirige vers une url donnée
+     *
      * @param string $url
      * @return void
      */
@@ -465,6 +531,8 @@ abstract class AbstractController
     }
 
     /**
+     * Récupère l'ancre et redirige vers celle-ci
+     *
      * @param string $url
      * @param string $anchorKey
      * @param int $id

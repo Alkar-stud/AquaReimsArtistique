@@ -2,7 +2,6 @@
 namespace app\Services\Security;
 
 use app\Services\Log\Logger;
-use app\Services\Security\TokenGenerateService;
 use RuntimeException;
 
 final class CsrfService
@@ -15,6 +14,11 @@ final class CsrfService
         $this->tokenGenerate = new TokenGenerateService();
     }
 
+    /**
+     * Pour s'assurer qu'une session PHP est déjà active
+     *
+     * @return void
+     */
     private function ensureSessionStarted(): void
     {
         if (session_status() === PHP_SESSION_NONE) {
@@ -22,6 +26,12 @@ final class CsrfService
         }
     }
 
+    /**
+     * Pour obtenir un token CSRF, soit un nouveau, soit l'existant et le stocke dans $_SESSION
+     *
+     * @param string $context
+     * @return string
+     */
     public function getToken(string $context = 'default'): string
     {
         $this->ensureSessionStarted();
@@ -39,24 +49,39 @@ final class CsrfService
 
             // Pour le CSRF, nous n'avons besoin que du token, pas de la date d'expiration.
             $_SESSION[self::SESSION_KEY][$context] = $tokenData['token'];
+            $_SESSION[self::SESSION_KEY][$context . '_time'] = (new \DateTime())->format('Y-m-d H:i:s.v');
         }
         return $_SESSION[self::SESSION_KEY][$context];
     }
 
+    /**
+     * Valide et consomme le token CSRF, retourne false si la validation échoue, true si c'est bon
+     *
+     * @param string|null $submittedToken
+     * @param string $context
+     * @return bool
+     */
     public function validateAndConsume(?string $submittedToken, string $context = 'default'): bool
     {
         // Ouvrir la session avant tout output
         $this->ensureSessionStarted();
 
+        //On récupère le token de $_SESSION
         $stored = $_SESSION[self::SESSION_KEY][$context] ?? '';
-        $submitted = (string)($submittedToken ?? '');
 
-        $ok = ($submitted !== '') && ($stored !== '') && hash_equals($stored, $submitted);
+        //On compare le token en session et le token reçu
+        $ok = ($submittedToken !== '') && ($stored !== '') && hash_equals($stored, $submittedToken);
 
         // Consommer le token (usage unique)
         unset($_SESSION[self::SESSION_KEY][$context]);
 
         if (!$ok) {
+
+
+            echo "échec ici reçu : csrfToken : " . $submittedToken . "\n csrfContext : " . $context . "\n Attendus : \n";
+            echo "stored : " . $stored . "\n";
+            print_r($_SESSION);
+            die;
             Logger::get()->security('csrf_fail', [
                 'reason'  => 'token_mismatch_or_missing',
                 'context' => $context,
@@ -65,23 +90,5 @@ final class CsrfService
 
         return $ok;
     }
-
-    public function invalidate(string $context = 'default'): void
-    {
-        $this->ensureSessionStarted();
-        unset($_SESSION[self::SESSION_KEY][$context]);
-    }
-
-    public function generateToken(string $context = 'default'): string
-    {
-        $this->ensureSessionStarted();
-        $tokenData = $this->tokenGenerate->generateToken(32);
-        if ($tokenData === null) {
-            throw new \RuntimeException('Could not generate a secure CSRF token.');
-        }
-        $_SESSION[self::SESSION_KEY][$context] = $tokenData['token'];
-        return $_SESSION[self::SESSION_KEY][$context];
-    }
-
 
 }

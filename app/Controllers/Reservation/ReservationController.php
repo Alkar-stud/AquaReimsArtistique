@@ -81,8 +81,9 @@ class ReservationController extends AbstractController
         $result = $this->reservationDataValidationService->validatePreviousStep(1, $session);
 
         $this->render('reservation/etape2', [
-            'reservation' => $session
-        ], 'Réservations');
+            'reservation' => $session,
+        ],'Réservations');
+
     }
 
     #[Route('/reservation/etape3Display', name: 'etape3Display', methods: ['GET'])]

@@ -55,6 +55,12 @@ class TokenGenerateService
         ];
     }
 
+    /**
+     * Génère un token d'une longueur donnée
+     *
+     * @param int $length
+     * @return string|null
+     */
     private function generate(int $length): ?string
     {
         try {

@@ -13,16 +13,24 @@ function validateTel(tel) {
  * @returns {string|null} Le jeton CSRF.
  */
 function getCsrfToken() {
-    return document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+//    return document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+    return document.querySelector('meta[name="csrf-token"]').content;
 }
 
 /**
  * Met à jour le jeton CSRF dans la balise meta.
  */
 function updateCsrfToken(token) {
-    if (token) {
-        document.querySelector('meta[name="csrf-token"]')?.setAttribute('content', token);
+    const csrfMeta = document.querySelector('meta[name="csrf-token"]');
+    if (csrfMeta) {
+        csrfMeta.content = token;
     }
+    /*
+    if (token) {
+        const meta = document.querySelector('meta[name="csrf-token"]');
+        if (meta && token) meta.setAttribute('content', token);
+    }
+     */
 }
 
 // Affichage "flash" côté client (similaire à $flash_message serveur)
@@ -62,10 +70,16 @@ function normalizeUserMessage(status, fallback = null) {
 // Point unique pour POST + gestion CSRF + parsing JSON + log non-JSON
 function apiPost(url, body, opts = {}) {
     const isFormData = (typeof FormData !== 'undefined') && (body instanceof FormData);
+    // Récupérer le jeton CSRF
+    let csrfToken = getCsrfToken();
+
     const headers = Object.assign(
         {
             'Accept': 'application/json',
-            'X-Requested-With': 'XMLHttpRequest'
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-CSRF-Context' : '/reservation', // Explicite pour les réservations
+            'X-CSRF-Token' : csrfToken
+
         },
         opts.headers || {}
     );
@@ -76,11 +90,8 @@ function apiPost(url, body, opts = {}) {
         headers['Content-Type'] = 'application/json';
     }
 
-    // Injecter le CSRF si absent
-    const csrfToken = getCsrfToken();
-    if (csrfToken && !headers['X-CSRF-TOKEN']) {
-        headers['X-CSRF-TOKEN'] = csrfToken;
-    }
+console.log('headers : ', headers);
+console.log('Token CSRF envoyé:', csrfToken, 'Contexte:', headers['X-CSRF-Context']);
 
     const fetchBody = shouldJsonEncode ? JSON.stringify(body) : body;
 
@@ -93,15 +104,33 @@ function apiPost(url, body, opts = {}) {
         redirect: 'follow'
     })
         .then(async (response) => {
-            const contentType = response.headers.get('content-type') || '';
+            // Récupère le nouveau token côté réponse
+            // Récupérer les nouveaux jetons CSRF dans la réponse
+            const csrfHeader = response.headers.get('X-CSRF-Token');
+            const csrfContext = response.headers.get('X-CSRF-Context');
 
+// Log de débogage pour comprendre ce qui est reçu
+console.log('Token CSRF reçu:', csrfHeader, 'Contexte:', csrfContext);
+
+            // Mettre à jour le jeton pour les requêtes suivantes
+            if (csrfHeader) {
+                updateCsrfToken(csrfHeader);
+            }
+
+            const contentType = response.headers.get('content-type') || '';
+console.log('contentType : ', contentType);
             // JSON attendu
             if (contentType.includes('application/json')) {
                 const data = await response.json();
-                console.log('[apiPost] Réponse JSON:', data);
-                updateCsrfToken(data.csrf_token);
+console.log('[apiPost] Réponse JSON:', data);
 
                 if (!response.ok) {
+                    if (response.status === 419) {
+                        // Erreur de CSRF - on peut réessayer une fois avec le nouveau jeton
+                        console.warn('Jeton CSRF expiré, actualisation du jeton...');
+                        throw { userMessage: 'Session expirée, veuillez réessayer.' };
+                    }
+
                     const msg = data && (data.error || data.message) || `HTTP ${response.status}`;
                     const err = new Error(msg);
                     err.status = response.status;

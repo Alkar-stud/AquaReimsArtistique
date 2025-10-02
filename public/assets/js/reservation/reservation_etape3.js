@@ -14,7 +14,7 @@ document.addEventListener('DOMContentLoaded', function () {
             ? (parseInt(window.placesDejaReservees, 10) || 0)
             : 0;
 
-    // Tous les inputs "classiques" seulement (le spécial n'a plus la classe .place-input)
+    // Tous les inputs "classiques" seulement (le spécial n'a plus la classe .place-input).
     const getInputs = () => container.querySelectorAll('.place-input');
 
     function totalDemanded(except = null) {
@@ -121,14 +121,14 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function euroFromCents(cents) {
         const n = (parseInt(cents, 10) || 0) / 100;
-        return n.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
+        return n.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
     }
 
     function renderSpecialTarifBlock(t) {
         // Injection sans classe .place-input pour ne pas compter dans les totaux/limites
         specialTarifContainer.innerHTML = `
           <div class="alert alert-success mb-2">
-            Tarif spécial reconnu : <strong>${(t.name || 'Tarif spécial')}</strong>
+            Tarif spécial reconnu : <strong>${(t.name || 'Tarif spécial')}</strong>
           </div>
           <div class="form-check mb-3">
             <input class="form-check-input" type="checkbox" id="specialTarifCheck" name="specialTarif[${t.id}]" checked>
@@ -158,7 +158,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if (e.target && e.target.id === 'specialTarifCheck') {
             const hidden = document.querySelector('#specialTarifContainer input[type="hidden"][id^="tarif_"]');
             if (hidden) hidden.disabled = !e.target.checked;
-            // Les "restantes" ne changent pas car le spécial n'est pas compté
+            // Les "restantes" ne changent pas, car le spécial n'est pas compté
             updateSubmitState();
         }
     });
@@ -176,12 +176,14 @@ document.addEventListener('DOMContentLoaded', function () {
         }
         renderSpecialTarifBlock(t);
     }
-
     // Validation du code spécial (AJAX)
     if (validateCodeBtn && specialCodeInput && eventIdInput) {
         validateCodeBtn.addEventListener('click', async () => {
+console.log('ici ça click');
             const code = specialCodeInput.value.trim();
+console.log('code : ', code);
             const event_id = parseInt(eventIdInput.value, 10) || 0;
+console.log('event_id : ', event_id);
             if (!code || !event_id) {
                 if (specialCodeFeedback) {
                     specialCodeFeedback.classList.remove('text-success');

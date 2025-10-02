@@ -23,6 +23,7 @@
     {% endif %}
 
     <form id="reservationPlacesForm">
+        <input type="hidden" id="event_id" name="event_id" value="{{ $reservation['event_id'] }}">
         {% if !empty($allTarifsWithSeatForThisEvent) %}
         <div id="tarifsContainer">
             {% foreach $allTarifsWithSeatForThisEvent as $tarif %}

@@ -91,7 +91,6 @@ function apiPost(url, body, opts = {}) {
     }
 
 console.log('headers : ', headers);
-console.log('Token CSRF envoyé:', csrfToken, 'Contexte:', headers['X-CSRF-Context']);
 
     const fetchBody = shouldJsonEncode ? JSON.stringify(body) : body;
 
@@ -109,16 +108,12 @@ console.log('Token CSRF envoyé:', csrfToken, 'Contexte:', headers['X-CSRF-Conte
             const csrfHeader = response.headers.get('X-CSRF-Token');
             const csrfContext = response.headers.get('X-CSRF-Context');
 
-// Log de débogage pour comprendre ce qui est reçu
-console.log('Token CSRF reçu:', csrfHeader, 'Contexte:', csrfContext);
-
             // Mettre à jour le jeton pour les requêtes suivantes
             if (csrfHeader) {
                 updateCsrfToken(csrfHeader);
             }
 
             const contentType = response.headers.get('content-type') || '';
-console.log('contentType : ', contentType);
             // JSON attendu
             if (contentType.includes('application/json')) {
                 const data = await response.json();

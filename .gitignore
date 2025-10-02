@@ -24,3 +24,5 @@ storage/*
 
 # Fichiers liés à Docker (si non partagés)
 /.dockerignore
+
+*.tif

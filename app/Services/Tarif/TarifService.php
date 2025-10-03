@@ -7,15 +7,16 @@ use app\Repository\Tarif\TarifRepository;
 
 class TarifService
 {
-    private TarifRepository $tarifsRepository;
+    private TarifRepository $tarifRepository;
     private EventTarifRepository $eventTarifRepository;
 
+
     public function __construct(
-        TarifRepository $tarifsRepository,
+        TarifRepository $tarifRepository,
         EventTarifRepository $eventTarifRepository,
     )
     {
-        $this->tarifsRepository = $tarifsRepository;
+        $this->tarifRepository = $tarifRepository;
         $this->eventTarifRepository = $eventTarifRepository;
     }
 
@@ -68,7 +69,7 @@ class TarifService
             return ['success' => false, 'error' => 'Paramètres manquants.'];
         }
 
-        $tarifs = $this->tarifsRepository->findByEventId($eventId);
+        $tarifs = $this->tarifRepository->findByEventId($eventId);
         foreach ($tarifs as $tarif) {
             if ($tarif->getAccessCode() && strcasecmp($tarif->getAccessCode(), $code) === 0) {
                 // Code trouvé et valide
@@ -145,6 +146,45 @@ class TarifService
         return $specialTarifSession ?: null;
     }
 
+    /**
+     * Retourne un tableau d'objet Tarif indexé par leur ID à partir de la session[reservation][reservation_detail]
+     *
+     * @param array $listTarifsEventsSelected
+     * @return array
+     */
+    public function getIndexedTarifFromEvent(array $listTarifsEventsSelected): array
+    {
+        // Extraire les ids de tarif depuis $listTarifsEventsSelected
+        $ids = [];
+        foreach ($listTarifsEventsSelected as $row) {
+            $id = is_array($row)
+                ? ($row['tarif_id'] ?? null)
+                : ($row->tarif_id ?? null);
+
+            $id = (int)$id;
+            if ($id > 0) {
+                $ids[] = $id;
+            }
+        }
+
+        if (empty($ids)) {
+            return [];
+        }
+
+        // Dé-dupliquer
+        $ids = array_values(array_unique($ids));
+
+        // Charger les tarifs correspondants
+        $tarifs = $this->tarifRepository->findByIds($ids);
+
+        // Indexer par id
+        $indexed = [];
+        foreach ($tarifs as $tarif) {
+            $indexed[$tarif->getId()] = $tarif;
+        }
+
+        return $indexed;
+    }
 
 
 }

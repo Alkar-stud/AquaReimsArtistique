@@ -5,6 +5,7 @@ namespace app\Controllers\Reservation;
 use app\Attributes\Route;
 use app\Controllers\AbstractController;
 use app\Repository\Event\EventTarifRepository;
+use app\Repository\Tarif\TarifRepository;
 use app\Services\DataValidation\ReservationDataValidationService;
 use app\Services\Event\EventQueryService;
 use app\Services\Reservation\ReservationSessionService;
@@ -18,6 +19,7 @@ class ReservationController extends AbstractController
     private ReservationDataValidationService $reservationDataValidationService;
     private EventTarifRepository $eventTarifRepository;
     private TarifService $tarifService;
+    private TarifRepository $tarifRepository;
 
     public function __construct(
         EventQueryService $eventQueryService,
@@ -25,7 +27,8 @@ class ReservationController extends AbstractController
         SwimmerQueryService $swimmerQueryService,
         ReservationDataValidationService $reservationDataValidationService,
         EventTarifRepository $eventTarifRepository,
-        TarifService $tarifService
+        TarifService $tarifService,
+        TarifRepository $tarifRepository,
     )
     {
         // On déclare la route comme publique pour éviter la redirection vers la page de login.
@@ -36,6 +39,7 @@ class ReservationController extends AbstractController
         $this->reservationDataValidationService = $reservationDataValidationService;
         $this->eventTarifRepository = $eventTarifRepository;
         $this->tarifService = $tarifService;
+        $this->tarifRepository = $tarifRepository;
     }
 
     /**
@@ -124,7 +128,7 @@ class ReservationController extends AbstractController
             $allTarifsWithSeatForThisEvent,
             $session
         );
-        //Préparation des données déjà saisie, regroupé par id et quantité
+        //Préparation des données déjà saisie à cette étape, regroupé par id et quantité
         $arrayTarifForForm = $this->reservationSessionService->arraySessionForFormStep3($session['reservation_detail'], $allTarifsWithSeatForThisEvent);
 
         //On envoie aussi le tableau des détails, pour préremplir si on est dans le cas d'un retour au niveau des étapes
@@ -160,9 +164,12 @@ class ReservationController extends AbstractController
             $this->redirect('/reservation');
         }
 
+        ///On récupère la liste des tarifs à envoyer à la vue sous forme de tableau indexé avec les ID
+        $tarifs = $this->tarifService->getIndexedTarifFromEvent($session['reservation_detail']);
 
         $this->render('reservation/etape4', [
             'reservation' => $session,
+            'tarifs' => $tarifs
         ], 'Réservations');
     }
 

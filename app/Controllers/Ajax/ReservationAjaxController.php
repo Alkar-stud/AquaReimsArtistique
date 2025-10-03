@@ -41,11 +41,50 @@ class ReservationAjaxController extends AbstractController
         $this->tarifService = $tarifService;
     }
 
+
+    /**
+     * Pour valider et enregistrer en $_SESSION les valeurs des différentes étapes
+     * @param int $step
+     * @return void
+     *
+     */
+    #[Route('/reservation/valid/{step}', name: 'etape1', methods: ['POST'])]
+    public function validStep(int $step): void
+    {
+        //On vérifie
+        if (!in_array($step, $this->existingStep)) {
+            $this->json(['success' => false, 400, 'error' => 'Cette étape n\'existe pas']);
+        }
+
+        // Met à jour le timestamp à chaque vérification
+        $_SESSION['reservation']['last_activity'] = time();
+
+        $input = json_decode(file_get_contents('php://input'), true);
+        if (!is_array($input)) {
+            $input = [];
+        }
+
+        // On redirige si session de réservation est expirée
+        $this->redirectIfReservationSessionIsExpired();
+
+        $result = $this->reservationDataValidationService->validateAndPersistDataPerStep($step, $input);
+
+        if (!$result['success']) {
+            $this->json($result, 400);
+        }
+
+        $this->json(['success' => true]);
+    }
+
+
     //======================================================================
     // ETAPE 1 : Sélection Événement / Séance / Nageur
     //======================================================================
 
     /**
+     * Pour vérifier si la limite est atteinte
+     * Renvoi en JSON limitPerSwimmer pour le JS et limiteAtteinte true ou false
+     *
      * @return void
      */
     #[Route('/reservation/check-swimmer-limit', name: 'check_swimmer_limit', methods: ['POST'])]
@@ -93,38 +132,6 @@ class ReservationAjaxController extends AbstractController
         $this->json($result);
     }
 
-    /**
-     * Pour valider et enregistrer en $_SESSION les valeurs de l'étape 1
-     *
-     */
-    #[Route('/reservation/valid/{step}', name: 'etape1', methods: ['POST'])]
-    public function validStep(int $step): void
-    {
-        //On vérifie
-        if (!in_array($step, $this->existingStep)) {
-            $this->json(['success' => false, 400, 'error' => 'Cette étape n\'existe pas']);
-        }
-
-        // Met à jour le timestamp à chaque vérification
-        $_SESSION['reservation']['last_activity'] = time();
-
-        $input = json_decode(file_get_contents('php://input'), true);
-        if (!is_array($input)) {
-            $input = [];
-        }
-
-        // On redirige si session de réservation est expirée
-        $this->redirectIfReservationSessionIsExpired();
-
-        $result = $this->reservationDataValidationService->validateAndPersistDataPerStep($step, $input);
-
-        if (!$result['success']) {
-            $this->json($result, 400);
-        }
-
-        $this->json(['success' => true]);
-    }
-
     //======================================================================
     // ETAPE 2 : Informations Personnelles
     //======================================================================
@@ -161,34 +168,6 @@ class ReservationAjaxController extends AbstractController
         $this->json($result);
     }
 
-
-    /**
-     * @return void
-     */
-    #[Route('/reservation/etape2', name: 'etape2', methods: ['POST'])]
-    public function etape2(): void
-    {
-        // Met à jour le timestamp à chaque vérification
-        $_SESSION['reservation']['last_activity'] = time();
-
-        $input = json_decode(file_get_contents('php://input'), true);
-        if (!is_array($input)) {
-            $input = [];
-        }
-
-        // On redirige si session de réservation est expirée
-        $this->redirectIfReservationSessionIsExpired();
-
-        $result = $this->reservationDataValidationService->validateAndPersistDataPerStep(2, $input);
-
-        if (!$result['success']) {
-            $this->json($result, 400);
-        }
-
-        $this->json(['success' => true]);
-    }
-
-
     /**
      * Redirige vers session expirée si timeout session réservation est expiré ou retourne $session
      *
@@ -211,6 +190,9 @@ class ReservationAjaxController extends AbstractController
     //======================================================================
 
     //Pour valider les tarifs avec code
+    /**
+     * @return void
+     */
     #[Route('/reservation/validate-special-code', name: 'validate_special_code', methods: ['POST'])]
     public function validateSpecialCode(): void
     {
@@ -218,18 +200,29 @@ class ReservationAjaxController extends AbstractController
         $eventId = (int)($input['event_id'] ?? 0);
         $code = trim($input['code'] ?? '');
 
+        //On va chercher le tarif correspondant s'il y en a un
         $result = $this->tarifService->validateSpecialCode($eventId, $code);
-
-        if ($result['success']) {
-            // On récupère les détails actuels pour y ajouter le nouveau
-            $currentDetails = $this->reservationSessionService->getReservationSession()['reservation_detail'] ?? [];
-            $currentDetails[] = new ReservationDetailItemDTO(tarif_id: $result['tarif']['id'], tarif_access_code: $code);
-            $this->reservationSessionService->setReservationSession('reservation_detail', $currentDetails);
+        if (!$result['success']) {
+            $this->json($result, 200, 'reservation');
         }
 
-        $this->json($result, 200, 'reservation');
+        //On construit le DTO pour persister le code dans $_SESSION
+        // On récupère les détails actuels pour y ajouter le nouveau
+        $currentDetails = $this->reservationSessionService->getReservationSession()['reservation_detail'] ?? [];
+        $dto = ReservationDetailItemDTO::fromArrayWithSpecialPrice($result['tarif']['id'], [], $code);
+        $currentDetails[] = $dto->jsonSerialize();
+        $this->reservationSessionService->setReservationSession('reservation_detail', $currentDetails);
+
+        $this->json([
+            'success'            => true,
+            'tarif'              => $result['tarif'],
+            'reservation_detail' => $currentDetails
+        ], 200, 'reservation');
     }
 
+    /**
+     * @return void
+     */
     #[Route('/reservation/remove-special-tarif', name: 'remove_special_tarif', methods: ['POST'])]
     public function removeSpecialTarif(): void
     {
@@ -249,29 +242,6 @@ class ReservationAjaxController extends AbstractController
         $this->reservationSessionService->setReservationSession('reservation_detail', $newDetails);
 
         $this->json(['success' => true], 200, 'reservation');
-    }
-
-    #[Route('/reservation/etape3', name: 'etape3', methods: ['POST'])]
-    public function etape3(): void
-    {
-        // Met à jour le timestamp à chaque vérification
-        $_SESSION['reservation']['last_activity'] = time();
-
-        $input = json_decode(file_get_contents('php://input'), true);
-        if (!is_array($input)) {
-            $input = [];
-        }
-
-        // On redirige si session de réservation est expirée
-        $this->redirectIfReservationSessionIsExpired();
-
-        $result = $this->reservationDataValidationService->validateAndPersistDataPerStep(3, $input);
-
-        if (!$result['success']) {
-            $this->json($result, 400);
-        }
-
-        $this->json(['success' => true]);
     }
 
 }

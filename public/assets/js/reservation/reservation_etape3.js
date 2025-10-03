@@ -289,7 +289,7 @@ document.addEventListener('DOMContentLoaded', function () {
         });
 
     function submitEtape3(payload) {
-        apiPost('/reservation/etape3', payload)
+        apiPost('/reservation/valid/3', payload)
             .then((data) => {
                 if (data.success) {
                     window.location.href = '/reservation/etape4Display';

@@ -170,7 +170,7 @@ function step2Valid(name, firstname, email, phone, eventId) {
 
 }
 function submitEtape2(name, firstname, email, phone, eventId) {
-    apiPost('/reservation/etape2', {
+    apiPost('/reservation/valid/2', {
         name: name,
         firstname: firstname,
         email: email,

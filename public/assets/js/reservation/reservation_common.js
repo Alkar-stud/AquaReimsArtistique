@@ -104,7 +104,6 @@ console.log('fetchBody : ', fetchBody);
             // Récupère le nouveau token côté réponse
             // Récupérer les nouveaux jetons CSRF dans la réponse
             const csrfHeader = response.headers.get('X-CSRF-Token');
-            const csrfContext = response.headers.get('X-CSRF-Context');
 
             // Mettre à jour le jeton pour les requêtes suivantes
             if (csrfHeader) {

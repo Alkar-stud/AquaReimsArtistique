@@ -218,6 +218,18 @@ class TarifRepository extends AbstractRepository
         ]);
     }
 
+
+    /**
+     * Expose l’hydratation pour réutilisation depuis d’autres repositories.
+     * Garantit une source unique de vérité si le modèle \`Tarif\` évolue.
+     *
+     * @param array<string,mixed> $row
+     */
+    public function hydrateFromRow(array $row): Tarif
+    {
+        return $this->hydrate($row);
+    }
+
     /**
      * @param array<string,mixed> $data
      */

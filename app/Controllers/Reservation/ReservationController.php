@@ -9,6 +9,7 @@ use app\Services\DataValidation\ReservationDataValidationService;
 use app\Services\Event\EventQueryService;
 use app\Services\Reservation\ReservationSessionService;
 use app\Services\Swimmer\SwimmerQueryService;
+use app\Services\Tarif\TarifService;
 
 class ReservationController extends AbstractController
 {
@@ -16,6 +17,7 @@ class ReservationController extends AbstractController
     private SwimmerQueryService $swimmerQueryService;
     private ReservationDataValidationService $reservationDataValidationService;
     private EventTarifRepository $eventTarifRepository;
+    private TarifService $tarifService;
 
     public function __construct(
         EventQueryService $eventQueryService,
@@ -23,6 +25,7 @@ class ReservationController extends AbstractController
         SwimmerQueryService $swimmerQueryService,
         ReservationDataValidationService $reservationDataValidationService,
         EventTarifRepository $eventTarifRepository,
+        TarifService $tarifService
     )
     {
         // On déclare la route comme publique pour éviter la redirection vers la page de login.
@@ -32,6 +35,7 @@ class ReservationController extends AbstractController
         $this->swimmerQueryService = $swimmerQueryService;
         $this->reservationDataValidationService = $reservationDataValidationService;
         $this->eventTarifRepository = $eventTarifRepository;
+        $this->tarifService = $tarifService;
     }
 
     /**
@@ -100,6 +104,52 @@ class ReservationController extends AbstractController
 
         // Valider l'étape 1
         if (!$this->reservationDataValidationService->validatePreviousStep(1, $session)) {
+            $this->flashMessageService->setFlashMessage('danger', 'Erreur dans le parcours 1, veuillez recommencer');
+            $this->redirect('/reservation');
+        }
+        // Valider l'étape 2
+        if (!$this->reservationDataValidationService->validatePreviousStep(2, $session)) {
+            $this->flashMessageService->setFlashMessage('danger', 'Erreur dans le parcours 2, veuillez recommencer');
+            $this->redirect('/reservation');
+        }
+
+        //Récupération des limites et l'état de la réservation par nageur
+        $swimmerLimitReached = $this->swimmerQueryService->getStateOfLimitPerSwimmer();
+
+        // Récupération des tarifs avec place assise de cet event
+        $allTarifsWithSeatForThisEvent = $this->eventTarifRepository->findSeatedTarifsByEvent($session['event_id']);
+
+        // Préparation des données à envoyer à la vue, construit le "pré-remplissage" s'il existe déjà un tarif avec code en session à l'aide du tableau des tarifs de cet event
+        $dataForViewSpecialCode = $this->tarifService->getAllTarifAndPrepareViewWithSpecialCode(
+            $allTarifsWithSeatForThisEvent,
+            $session
+        );
+
+        //On envoie aussi le tableau des détails, pour préremplir si on est dans le cas d'un retour au niveau des étapes
+        $this->render('reservation/etape3', [
+            'allTarifsWithSeatForThisEvent' => $allTarifsWithSeatForThisEvent,
+            'placesDejaReservees'           => $swimmerLimitReached['currentReservations'],
+            'limiteDepassee'                => $swimmerLimitReached['limitReached'],
+            'limitation'                    => $swimmerLimitReached['limit'],
+            'reservation'                   => $session,
+            'specialTarifSession'           => $dataForViewSpecialCode,
+        ], 'Réservations');
+    }
+
+    #[Route('/reservation/etape4Display', name: 'etape3Display', methods: ['GET'])]
+    public function etape4Display(): void
+    {
+        //On récupère la session
+        $session = $this->reservationSessionService->getReservationSession();
+
+        //On vérifie si la session est expirée
+        if (!$session || $this->reservationSessionService->isReservationSessionExpired($session)) {
+            $this->flashMessageService->setFlashMessage('warning', 'Votre session a expiré. Merci de recommencer votre réservation.');
+            $this->redirect('/reservation?session_expiree=1');
+        }
+
+        // Valider l'étape 1
+        if (!$this->reservationDataValidationService->validatePreviousStep(1, $session)) {
             $this->flashMessageService->setFlashMessage('danger', 'Erreur dans le parcours, veuillez recommencer');
             $this->redirect('/reservation');
         }
@@ -109,47 +159,11 @@ class ReservationController extends AbstractController
             $this->redirect('/reservation');
         }
 
-        $swimmerLimitReached = $this->swimmerQueryService->getStateOfLimitPerSwimmer();
 
-
-        //Récupération des tarifs avec place assise
-        $allTarifsWithSeatForThisEvent = $this->eventTarifRepository->findSeatedTarifsByEvent($session['event_id']);
-
-        // Construit le "pré-remplissage" s'il existe déjà un tarif avec code en session
-        $specialTarifSession = null;
-        $details = $session['reservation_detail'] ?? [];
-        if (is_array($details) && !empty($details)) {
-            foreach ($details as $d) {
-                $code = is_object($d) ? ($d->tarif_access_code ?? null) : ($d['tarif_access_code'] ?? null);
-                $tarifId = (int)(is_object($d) ? ($d->tarif_id ?? 0) : ($d['tarif_id'] ?? 0));
-                if (!$code || $tarifId <= 0) {
-                    continue;
-                }
-                // Retrouve le tarif correspondant parmi les tarifs présents
-                foreach ($allTarifsWithSeatForThisEvent as $tarif) {
-                    if ($tarif->getId() === $tarifId) {
-                        $specialTarifSession = [
-                            'id'         => $tarif->getId(),
-                            'name'       => $tarif->getName(),
-                            'description'=> $tarif->getDescription(),
-                            'seat_count' => $tarif->getSeatCount(),
-                            'price'      => $tarif->getPrice(),
-                            'code'       => $code,
-                        ];
-                        break 2; // on s'arrête au premier trouvé
-                    }
-                }
-            }
-        }
-        //On envoie aussi le tableau des détails, pour préremplir si on est dans le cas d'un retour au niveau des étapes
-        $this->render('reservation/etape3', [
-            'allTarifsWithSeatForThisEvent' => $allTarifsWithSeatForThisEvent,
-            'placesDejaReservees'           => $swimmerLimitReached['currentReservations'],
-            'limiteDepassee'                => $swimmerLimitReached['limitReached'],
-            'limitation'                    => $swimmerLimitReached['limit'],
-            'reservation'                   => $session,
-            'specialTarifSession'           => $specialTarifSession,
+        $this->render('reservation/etape4', [
+            'reservation' => $session,
         ], 'Réservations');
     }
+
 
 }

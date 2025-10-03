@@ -6,6 +6,7 @@ use app\DTO\ReservationDetailItemDTO;
 use app\DTO\ReservationSelectionSessionDTO;
 use app\DTO\ReservationUserDTO;
 use app\Repository\Event\EventRepository;
+use app\Repository\Event\EventTarifRepository;
 use app\Repository\Swimmer\SwimmerRepository;
 use app\Services\Event\EventQueryService;
 use app\Services\Reservation\ReservationSessionService;
@@ -18,6 +19,7 @@ class ReservationDataValidationService
     private SwimmerQueryService $swimmerQueryService;
     private ReservationSessionService $reservationSessionService;
     private EventQueryService $eventQueryService;
+    private EventTarifRepository $eventTarifRepository;
 
     public function __construct(
         EventRepository                  $eventRepository,
@@ -25,12 +27,14 @@ class ReservationDataValidationService
         SwimmerQueryService              $swimmerQueryService,
         ReservationSessionService        $reservationSessionService,
         EventQueryService                $eventQueryService,
+        EventTarifRepository             $eventTarifRepository,
     ) {
         $this->eventRepository = $eventRepository;
         $this->swimmerRepository = $swimmerRepository;
         $this->swimmerQueryService = $swimmerQueryService;
         $this->reservationSessionService = $reservationSessionService;
         $this->eventQueryService = $eventQueryService;
+        $this->eventTarifRepository = $eventTarifRepository;
     }
 
     /**
@@ -42,6 +46,7 @@ class ReservationDataValidationService
      */
     public function validateAndPersistDataPerStep(int $step, array $data): array
     {
+
         $data ??= [];
         //On récupère la session, à l'étape 1 elle doit être vide, mais existe.
         $session = $this->reservationSessionService->getReservationSession();
@@ -52,7 +57,6 @@ class ReservationDataValidationService
         // Valeurs par défaut issues de la session pour combler un payload incomplet
         $defaults = $this->reservationSessionService->getDefaultReservationStructure();
         $session = $this->reservationSessionService->getReservationSession() ?? [];
-
 
         if ($step >= 1) {
             $effective = array_replace_recursive($defaults, $session, $data);
@@ -89,7 +93,33 @@ class ReservationDataValidationService
         }
 
         if ($step >= 3) {
-            $items = ReservationDetailItemDTO::listFromPayload($data);
+            $effective = array_replace_recursive($defaults, $session);
+            //On récupère tous les tarifs de l'event
+            $allEventTarifs = $this->eventTarifRepository->findSeatedTarifsByEvent($effective['event_id']);
+
+            //Boucle sur $data['tarif']
+            $items = [];
+            foreach ($data['tarifs'] as $tarif_id => $qty) {
+                //On boucle sur la quantité
+                for ($i = 0; $i < $qty; $i++) {
+                    //On vérifie s'il y a code spécial demandé que ce soit bien le bon qui est fourni
+                    $codeRequis = $allEventTarifs[$tarif_id]->getAccessCode();
+
+                    if ($codeRequis !== null) {
+                        if (isset($data['special']) && is_array($data['special']) && array_key_exists($tarif_id, $data['special'])) {
+                            if ($data['special'][$tarif_id] !== $codeRequis) {
+                                return ['success' => false, 'error' => 'Code d\'accès invalide pour le tarif sélectionné.'];
+                            }
+                        }
+                    }
+                    //Puis sur le nombre de places dans le tarif (pour les packs multi-places)
+                    $nbPlacesInPack = $allEventTarifs[$tarif_id]->getSeatCount();
+                    for ($j = 0; $j < $nbPlacesInPack; $j++) {
+                        //On génère le dto qu'on ajoute
+                        $items[] = ReservationDetailItemDTO::fromArrayWithSpecialPrice($tarif_id, $data, $codeRequis);
+                    }
+                }
+            }
 
             // On rejette si vide
             if (empty($items)) {
@@ -102,16 +132,14 @@ class ReservationDataValidationService
                 return ['success' => false, 'errors' => ['event_id' => 'Événement incohérent.'], 'data' => []];
             }
 
-            // Persistance en session
-            $this->reservationSessionService->setReservationSession(
-                'reservation_detail',
-                array_map(static fn(ReservationDetailItemDTO $i) => $i->jsonSerialize(), $items)
-            );
+            if ($step === 3) {
+                $this->persistStep3($items);
+                return ['success' => true, 'errors' => [], 'data' => []];
+            }
+
 
             return ['success' => true, 'errors' => [], 'data' => []];
         }
-
-
 
         return ['success' => false, 'errors' => ['message' => 'ne correspond pas'], 'data' => []];
     }
@@ -129,23 +157,33 @@ class ReservationDataValidationService
         $defaults = $this->reservationSessionService->getDefaultReservationStructure();
         $effective = array_replace_recursive($defaults, $session);
 
-        if ($step === 1) {
-            $dto = ReservationSelectionSessionDTO::fromArray($effective);
-            return (bool)($this->validateStep1($dto)['success'] ?? false);
-        }
-
-        if ($step === 2) {
-            // Toujours revalider l'étape 1 avant l’étape 2
+        //On valide l'étape 1, on return si false
+        if ($step >= 1) {
             $dto1 = ReservationSelectionSessionDTO::fromArray($effective);
-            if (!($this->validateStep1($dto1)['success'] ?? false)) {
+            if (!$this->validateStep1($dto1)['success']) {
                 return false;
             }
-            $dto2 = ReservationUserDTO::fromArray($effective);
-            return (bool)($this->validateStep2($dto2)['success'] ?? false);
         }
 
-        // Étapes suivantes: ajouter ici les validations step3+, en revalidant les précédentes si besoin
-        return false;
+        if ($step >= 2) {
+            $dto2 = ReservationUserDTO::fromArray($effective);
+            if (!$this->validateStep2($dto2)['success']) {
+                return false;
+            }
+        }
+
+        if ($step >= 3) {
+            $dto3 = ReservationDetailItemDTO::fromArray($effective);
+            if ($this->validateStep3($dto3)['success']) {
+echo $step;
+                print_r($this->validateStep3($dto3)['success']);
+                die;
+                return false;
+            }
+        }
+
+        // Étapes suivantes à ajouter ici
+        return true;
     }
 
 
@@ -294,6 +332,19 @@ class ReservationDataValidationService
         $this->reservationSessionService->setReservationSession(['booker', 'firstname'], $dto->firstname);
         $this->reservationSessionService->setReservationSession(['booker', 'email'], $dto->email);
         $this->reservationSessionService->setReservationSession(['booker', 'phone'], $dto->phone);
+    }
+
+
+    /**
+     * Persiste suite validation step3
+     * @param ReservationDetailItemDTO[] $dtos
+     * @return void
+     */
+    public function persistStep3(array $dtos): void
+    {
+        // Persistance en session (structure simple pour JS et $_SESSION)
+
+        $this->reservationSessionService->setReservationSession('reservation_detail', array_map(static fn(ReservationDetailItemDTO $i) => $i->jsonSerialize(), $dtos));
     }
 
 }

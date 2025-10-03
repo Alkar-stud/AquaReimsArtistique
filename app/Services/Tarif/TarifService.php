@@ -2,17 +2,21 @@
 
 namespace app\Services\Tarif;
 
+use app\Repository\Event\EventTarifRepository;
 use app\Repository\Tarif\TarifRepository;
 
 class TarifService
 {
     private TarifRepository $tarifsRepository;
+    private EventTarifRepository $eventTarifRepository;
 
     public function __construct(
-        TarifRepository $tarifsRepository
+        TarifRepository $tarifsRepository,
+        EventTarifRepository $eventTarifRepository,
     )
     {
         $this->tarifsRepository = $tarifsRepository;
+        $this->eventTarifRepository = $eventTarifRepository;
     }
 
     /**
@@ -102,6 +106,45 @@ class TarifService
         // Ré-indexer le tableau pour éviter les clés discontinues en JSON
         return array_values($filteredDetails);
     }
+
+    /**
+     * Construit le "pré-remplissage" s'il existe déjà un tarif avec code en session.
+     *
+     * @param array $allTarifsWithSeatForThisEvent
+     * @param array $session
+     * @return array|null
+     */
+    public function getAllTarifAndPrepareViewWithSpecialCode(array $allTarifsWithSeatForThisEvent, array $session): ?array
+    {
+        $specialTarifSession = null;
+        $details = $session['reservation_detail'] ?? [];
+
+        if (is_array($details) && !empty($details)) {
+            foreach ($details as $d) {
+                $code = is_object($d) ? ($d->tarif_access_code ?? null) : ($d['tarif_access_code'] ?? null);
+                $tarifId = (int)(is_object($d) ? ($d->tarif_id ?? 0) : ($d['tarif_id'] ?? 0));
+                if (!$code || $tarifId <= 0) {
+                    continue;
+                }
+                foreach ($allTarifsWithSeatForThisEvent as $tarif) {
+                    if ($tarif->getId() === $tarifId) {
+                        $specialTarifSession = [
+                            'id'         => $tarif->getId(),
+                            'name'       => $tarif->getName(),
+                            'description'=> $tarif->getDescription(),
+                            'seat_count' => $tarif->getSeatCount(),
+                            'price'      => $tarif->getPrice(),
+                            'code'       => $code,
+                        ];
+                        break 2;
+                    }
+                }
+            }
+        }
+
+        return $specialTarifSession ?: null;
+    }
+
 
 
 }

@@ -117,22 +117,23 @@ class ReservationController extends AbstractController
         $swimmerLimitReached = $this->swimmerQueryService->getStateOfLimitPerSwimmer();
 
         // Récupération des tarifs avec place assise de cet event
-        $allTarifsWithSeatForThisEvent = $this->eventTarifRepository->findSeatedTarifsByEvent($session['event_id']);
+        $allTarifsWithSeatForThisEvent = $this->eventTarifRepository->findTarifsByEvent($session['event_id']);
 
         // Préparation des données à envoyer à la vue, construit le "pré-remplissage" s'il existe déjà un tarif avec code en session à l'aide du tableau des tarifs de cet event
         $dataForViewSpecialCode = $this->tarifService->getAllTarifAndPrepareViewWithSpecialCode(
             $allTarifsWithSeatForThisEvent,
             $session
         );
+        //Préparation des données déjà saisie, regroupé par id et quantité
+        $arrayTarifForForm = $this->reservationSessionService->arraySessionForFormStep3($session['reservation_detail'], $allTarifsWithSeatForThisEvent);
 
         //On envoie aussi le tableau des détails, pour préremplir si on est dans le cas d'un retour au niveau des étapes
         $this->render('reservation/etape3', [
-            'allTarifsWithSeatForThisEvent' => $allTarifsWithSeatForThisEvent,
-            'placesDejaReservees'           => $swimmerLimitReached['currentReservations'],
-            'limiteDepassee'                => $swimmerLimitReached['limitReached'],
-            'limitation'                    => $swimmerLimitReached['limit'],
-            'reservation'                   => $session,
-            'specialTarifSession'           => $dataForViewSpecialCode,
+            'allTarifsWithSeatForThisEvent' => $allTarifsWithSeatForThisEvent,  // tous les objets Tarif de Event index par leur ID
+            'swimmerLimit'                  => $swimmerLimitReached,            // limitReached=> true|false, limit=> int|null = limit max, currentReservations=> int|null = nb actuel
+            'event_id'                      => $session['event_id'],
+            'specialTarifSession'           => $dataForViewSpecialCode,         //Tarif du code spécial saisi en tableau
+            'arrayTarifForForm'             => $arrayTarifForForm,
         ], 'Réservations');
     }
 

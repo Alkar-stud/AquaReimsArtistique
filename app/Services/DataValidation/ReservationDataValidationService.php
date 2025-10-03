@@ -95,7 +95,7 @@ class ReservationDataValidationService
         if ($step >= 3) {
             $effective = array_replace_recursive($defaults, $session);
             //On récupère tous les tarifs de l'event
-            $allEventTarifs = $this->eventTarifRepository->findSeatedTarifsByEvent($effective['event_id']);
+            $allEventTarifs = $this->eventTarifRepository->findTarifsByEvent($effective['event_id']);
 
             //Boucle sur $data['tarif']
             $items = [];

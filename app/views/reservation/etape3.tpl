@@ -7,14 +7,14 @@
 <div class="container-fluid">
     <h2 class="mb-4">Choix des places</h2>
 
-    {% if $limiteDepassee %}
+    {% if $swimmerLimit['limitReached'] %}
     <div class="alert alert-danger">
         La limite de places autorisées pour cette nageuse sur l'ensemble des séances de l'événement est atteinte.<br>
         Il n'y a pour le moment plus de places disponibles pour cette nageuse.
     </div>
     {% endif %}
 
-    {% if $limitation !== null %}
+    {% if $swimmerLimit['limit'] !== null %}
     <div class="alert alert-info mb-3">
         Limite de places par nageuse sur l'événement : <strong>{{ $limitation }}</strong><br>
         Déjà réservées : <strong>{{ $placesDejaReservees }}</strong><br>
@@ -23,7 +23,7 @@
     {% endif %}
 
     <form id="reservationPlacesForm">
-        <input type="hidden" id="event_id" name="event_id" value="{{ $reservation['event_id'] }}">
+        <input type="hidden" id="event_id" name="event_id" value="{{ $event_id }}">
         {% if !empty($allTarifsWithSeatForThisEvent) %}
         <div id="tarifsContainer">
             {% foreach $allTarifsWithSeatForThisEvent as $tarif %}
@@ -43,7 +43,7 @@
                        id="tarif_{{ $tarif->getId() }}"
                        name="tarifs[{{ $tarif->getId() }}]"
                        min="0"
-                       value="0"
+                       value="{{ isset($arrayTarifForForm[$tarif->getId()]) ? $arrayTarifForForm[$tarif->getId()] : 0 }}"
                        data-nb-place="{{ $tarif->getSeatCount() ?? 1 }}">
             </div>
             {% endif %}
@@ -52,8 +52,6 @@
         {% else %}
         <div class="alert alert-info">Aucun tarif disponible pour cet événement.</div>
         {% endif %}
-
-
 
         <hr>
         <div class="mb-3">
@@ -80,8 +78,8 @@
 </div>
 
 <script>
-    window.limitationPerSwimmer = {{! json_encode($limitation) !}};           // null si pas de limite
-    window.placesDejaReservees  = {{! json_encode($placesDejaReservees ?? 0) !}}; // nombre déjà réservé
+    window.limitationPerSwimmer = {{! json_encode($swimmerLimit['limit']) !}};           // null si pas de limite
+    window.placesDejaReservees  = {{! json_encode($swimmerLimit['currentReservations'] ?? 0) !}}; // nombre déjà réservé
     window.specialTarifSession  = {{! json_encode($specialTarifSession ?? null) !}}; // préremplissage code spécial
 </script>
 

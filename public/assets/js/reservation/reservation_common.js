@@ -13,7 +13,6 @@ function validateTel(tel) {
  * @returns {string|null} Le jeton CSRF.
  */
 function getCsrfToken() {
-//    return document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
     return document.querySelector('meta[name="csrf-token"]').content;
 }
 
@@ -25,12 +24,6 @@ function updateCsrfToken(token) {
     if (csrfMeta) {
         csrfMeta.content = token;
     }
-    /*
-    if (token) {
-        const meta = document.querySelector('meta[name="csrf-token"]');
-        if (meta && token) meta.setAttribute('content', token);
-    }
-     */
 }
 
 // Affichage "flash" côté client (similaire à $flash_message serveur)

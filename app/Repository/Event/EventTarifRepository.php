@@ -5,7 +5,6 @@ namespace app\Repository\Event;
 use app\Models\Tarif\Tarif;
 use app\Repository\AbstractRepository;
 use app\Repository\Tarif\TarifRepository;
-use Throwable;
 
 class EventTarifRepository extends AbstractRepository
 {
@@ -66,18 +65,20 @@ class EventTarifRepository extends AbstractRepository
     }
 
     /**
-     * Retourne les tarifs avec places pour un événement.
+     * Retourne les tarifs avec places ou sans pour un événement.
      * Retourne une liste (array indexé numériquement).
      *
      * @param int $eventId
+     * @param bool $withSeat
      * @return Tarif[]|array<int,Tarif>
      */
-    public function findSeatedTarifsByEvent(int $eventId): array
+    public function findTarifsByEvent(int $eventId, bool $withSeat = true): array
     {
+        $withSeat === true ? $sqlWithSeat = ' AND t.seat_count IS NOT NULL':$sqlWithSeat = ' AND t.seat_count IS NULL';
         $sql = "SELECT t.*
                 FROM tarif t
                 INNER JOIN event_tarif et ON et.tarif = t.id
-                WHERE et.event = :event_id AND t.is_active = 1 AND t.seat_count IS NOT NULL AND t.seat_count > 0
+                WHERE et.event = :event_id AND t.is_active = 1" . $sqlWithSeat . "
                 ORDER BY t.seat_count DESC, t.name";
 
         $rows = $this->query($sql, ['event_id' => $eventId]);

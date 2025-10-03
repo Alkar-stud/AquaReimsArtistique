@@ -2,6 +2,7 @@
 
 namespace app\Services\Reservation;
 
+use app\Models\Reservation\ReservationDetail;
 use app\Utils\DurationHelper;
 use JsonSerializable;
 
@@ -101,11 +102,13 @@ class ReservationSessionService
     /**
      * TTL de session de réservation en secondes, dérivé de TIMEOUT_SESSION (ISO 8601, ex PT20M).
      * Fallback à 1800s si non défini ou invalide.
+     *
+     * @return int
      */
     public function getReservationTimeoutDuration(): int
     {
-        $iso = TIMEOUT_PLACE_RESERV ?? 'PT30M';
-        return DurationHelper::iso8601ToSeconds($iso) ?? 1800;
+        $isoDuration = defined('TIMEOUT_PLACE_RESERV') ? TIMEOUT_PLACE_RESERV : 'PT30M';
+        return DurationHelper::iso8601ToSeconds($isoDuration) ?? 1800;
     }
 
 
@@ -123,6 +126,31 @@ class ReservationSessionService
         }
         $ttl = $this->getReservationTimeoutDuration();
         return (time() - $last) > $ttl;
+    }
+
+    public function arraySessionForFormStep3(array $reservationDetails,$allEventTarifs): array
+    {
+        //on parcourt le tableau pour retourner un autre tableau avec index=tarif_id et valeur=quantité de ce tarif
+        if (empty($reservationDetails)) {
+            return [];
+        }
+        // Compter le nombre de places pour chaque tarif_id
+        $tarifIds = array_column($reservationDetails, 'tarif_id');
+        $placesPerTarifId = array_count_values($tarifIds);
+
+        // Convertir le nombre de places en nombre de "packs" (quantité de tarifs)
+        $tarifQuantities = [];
+        foreach ($allEventTarifs as $tarif) {
+            $tarifId = $tarif->getId();
+            $nbPlacesInTarif = $tarif->getSeatCount() ?? 1;
+            if (isset($placesPerTarifId[$tarifId])) {
+                // On s'assure que la division est entière et logique.
+                // Si on a 4 places pour un tarif de 4 places, ça fait 1 pack.
+                // La division par zéro est évitée car getNbPlace() renvoie 1 par défaut.
+                $tarifQuantities[$tarifId] = (int)($placesPerTarifId[$tarifId] / $nbPlacesInTarif);
+            }
+        }
+        return $tarifQuantities;
     }
 
 

@@ -1,4 +1,3 @@
-
 document.addEventListener('DOMContentLoaded', function () {
     const container = document;
     const alertDiv = document.getElementById('reservationStep3Alert');
@@ -156,6 +155,21 @@ document.addEventListener('DOMContentLoaded', function () {
     // Écoute le (dé)cochage du tarif spécial
     container.addEventListener('change', (e) => {
         if (e.target && e.target.id === 'specialTarifCheck') {
+            const tarifId = window.specialTarifSession?.id;
+            if (!tarifId) return;
+            apiPost('/reservation/remove-special-tarif', { tarif_id: tarifId })
+                .then(data => {
+                    if (data.success) {
+                        window.location.reload();
+                    } else {
+                        alert(data.error || "Erreur lors de la suppression du tarif spécial.");
+                    }
+                })
+                .catch((err) => {
+                    showFlash('danger', err.userMessage || err.message);
+                    window.location.reload();
+                });
+
             const hidden = document.querySelector('#specialTarifContainer input[type="hidden"][id^="tarif_"]');
             if (hidden) hidden.disabled = !e.target.checked;
             // Les "restantes" ne changent pas, car le spécial n'est pas compté
@@ -164,6 +178,7 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     // Préremplissage si déjà en session
+    //Si un tarif spécial est déjà présent
     if (window.specialTarifSession) {
         const t = window.specialTarifSession;
         if (specialCodeInput) specialCodeInput.value = t.code || '';
@@ -305,10 +320,6 @@ document.addEventListener('DOMContentLoaded', function () {
                 showFlash('danger', err.userMessage || err.message);
                 submitButton && (submitButton.disabled = false);
             });
-
-
-
-
     }
 
 

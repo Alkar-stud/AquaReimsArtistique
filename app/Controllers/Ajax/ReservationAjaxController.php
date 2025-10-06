@@ -56,24 +56,38 @@ class ReservationAjaxController extends AbstractController
             $this->json(['success' => false, 400, 'error' => 'Cette étape n\'existe pas']);
         }
 
-        // Met à jour le timestamp à chaque vérification
-        $_SESSION['reservation']['last_activity'] = time();
+        // On redirige si session de réservation est expirée
+        $session = $this->redirectIfReservationSessionIsExpired();
 
-        $input = json_decode(file_get_contents('php://input'), true);
-        if (!is_array($input)) {
-            $input = [];
+        //on vérifie les données des étapes précédentes
+        for ($i = 1; $i <= $step; $i++) {
+            $return = $this->reservationDataValidationService->checkPreviousStep($i, $session);
+            if (!$return['success']) {
+                $this->json($return, 400);
+            }
         }
 
-        // On redirige si session de réservation est expirée
-        $this->redirectIfReservationSessionIsExpired();
+        //On récupère les données step4, il y a potentiellement des fichiers
+        if ($step == 4) {
+            $input = json_decode($_POST['participants'] ?? '[]', true);
+            $files = $_FILES;
 
-        $result = $this->reservationDataValidationService->validateAndPersistDataPerStep($step, $input);
+        } else {
+            $input = json_decode(file_get_contents('php://input'), true);
+            if (!is_array($input)) {
+                $input = [];
+            }
+            $files = null;
+        }
+
+        $result = $this->reservationDataValidationService->validateAndPersistDataPerStep($step, $input, $files);
 
         if (!$result['success']) {
             $this->json($result, 400);
         }
 
-        $this->json(['success' => true]);
+        //selon si place de la piscine sont numérotées au pas
+        $this->json(['success' => true, 'numerated_seat' => $result['data']['numerated_seat']]);
     }
 
 
@@ -169,11 +183,11 @@ class ReservationAjaxController extends AbstractController
     }
 
     /**
-     * Redirige vers session expirée si timeout session réservation est expiré ou retourne $session
+     * Redirige vers session expirée si timeout session réservation est expiré
      *
-     * @return void
+     * @return array|null
      */
-    private function redirectIfReservationSessionIsExpired(): void
+    private function redirectIfReservationSessionIsExpired(): ?array
     {
         $session = $this->reservationSessionService->getReservationSession();
         if (!empty($session) && $this->reservationSessionService->isReservationSessionExpired($session)) {
@@ -183,6 +197,11 @@ class ReservationAjaxController extends AbstractController
                 'redirect' => '/reservation?session_expiree=1'
             ], 440);
         }
+        // Met à jour le timestamp à chaque vérification
+        $_SESSION['reservation']['last_activity'] = time();
+        $this->reservationSessionService->setReservationSession('last_activity', $_SESSION['reservation']['last_activity']);
+
+        return $session;
     }
 
     //======================================================================

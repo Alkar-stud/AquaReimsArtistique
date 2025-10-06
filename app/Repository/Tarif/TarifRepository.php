@@ -175,7 +175,7 @@ class TarifRepository extends AbstractRepository
             'includes_program' => $tarif->getIncludesProgram() ? 1 : 0,
             'requires_proof' => $tarif->getRequiresProof() ? 1 : 0,
             'access_code' => $tarif->getAccessCode(),
-            'is_active' => $tarif->getIsActive() ? 1 : 0,
+            'is_active' => $tarif->isActive() ? 1 : 0,
             'created_at' => $tarif->getCreatedAt()->format('Y-m-d H:i:s'),
         ]);
         return $ok ? $this->getLastInsertId() : 0;
@@ -214,7 +214,7 @@ class TarifRepository extends AbstractRepository
             'includes_program' => $tarif->getIncludesProgram() ? 1 : 0,
             'requires_proof' => $tarif->getRequiresProof() ? 1 : 0,
             'access_code' => $tarif->getAccessCode(),
-            'is_active' => $tarif->getIsActive() ? 1 : 0,
+            'is_active' => $tarif->isActive() ? 1 : 0,
         ]);
     }
 

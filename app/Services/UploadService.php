@@ -80,11 +80,16 @@ class UploadService
      * @param array $file Le tableau de fichier provenant de $_FILES (ex: $_FILES['justificatifs']).
      * @param string $destinationPath Le chemin complet du dossier de destination.
      * @param string $newFileName Le nom final du fichier (sans le chemin).
-     * @param array $options Options de validation.
      * @return array ['success' => bool, 'error' => ?string]
      */
-    public function handleUpload(array $file, string $destinationPath, string $newFileName, array $options = []): array
+    public function handleUpload(array $file, string $destinationPath, string $newFileName): array
     {
+        $destinationPath = __DIR__ . '/../../' . $destinationPath;
+        $options = [
+            'max_size_mb' => MAX_UPLOAD_PROOF_SIZE,
+            'allowed_extensions' => ['pdf', 'jpg', 'jpeg', 'png'],
+            'allowed_mime_types' => ['application/pdf', 'image/jpeg', 'image/png']
+            ];
         // --- Vérification des erreurs d'upload initiales ---
         if (!isset($file['error']) || is_array($file['error'])) {
             return ['success' => false, 'error' => 'Paramètres de fichier invalides.'];
@@ -100,8 +105,8 @@ class UploadService
         }
 
         // --- Validation du type MIME et de l'extension ---
-        $allowedExtensions = $options['allowed_extensions'] ?? ['pdf', 'jpg', 'jpeg', 'png'];
-        $allowedMimeTypes = $options['allowed_mime_types'] ?? ['application/pdf', 'image/jpeg', 'image/png'];
+        $allowedExtensions = $options['allowed_extensions'];
+        $allowedMimeTypes = $options['allowed_mime_types'];
 
         $extension = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
         $mimeType = mime_content_type($file['tmp_name']);
@@ -120,7 +125,9 @@ class UploadService
 
         // --- Déplacement du fichier ---
         $finalPath = rtrim($destinationPath, '/') . '/' . $newFileName;
-        if (!move_uploaded_file($file['tmp_name'], $finalPath)) {
+        $moveFile = move_uploaded_file($file['tmp_name'], $finalPath);
+
+        if (!$moveFile) {
             return ['success' => false, 'error' => 'Échec du déplacement du fichier téléchargé.'];
         }
 
@@ -147,5 +154,21 @@ class UploadService
         };
     }
 
+    /**
+     * Test l'existence d'un fichier après un upload.
+     *
+     * @param string $path
+     * @param string $fileName
+     * @return bool
+     */
+    public function checkIfFileExisteAfterUpload(string $path, string $fileName): bool
+    {
+        $filePath = __DIR__ . '/../../' . $path;
+        if (file_exists($filePath . $fileName)) {
+            return true;
+        }
+        return false;
+
+    }
 
 }

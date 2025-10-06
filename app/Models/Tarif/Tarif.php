@@ -29,7 +29,7 @@ class Tarif extends AbstractModel
     public function getIncludesProgram(): bool { return $this->includes_program; }
     public function getRequiresProof(): bool { return $this->requires_proof; }
     public function getAccessCode(): ?string { return $this->access_code; }
-    public function getIsActive(): bool { return $this->is_active; }
+    public function isActive(): bool { return $this->is_active; }
 
     // --- SETTERS ---
     public function setName(string $name): self { $this->name = $name; return $this; }

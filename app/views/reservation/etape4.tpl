@@ -13,24 +13,25 @@
         {% foreach $reservation['reservation_detail'] as $detail %}
         {% php %} $i++; {% endphp %}
         <div class="mb-3">
+            <input type="hidden" name="tarif_ids[]" value="{{ $detail['tarif_id'] }}">
             <label>
                 <strong>Participant {{ $i }} pour le tarif</strong>
                 <span class="badge bg-secondary ms-2">{{ $tarifs[$detail['tarif_id']]->getName() }}</span>
             </label>
             <div class="row">
                 <div class="col-md-6">
-                    <input type="text" name="noms[]" class="form-control" placeholder="Nom" required value="{{ $detail['name'] }}">
+                    <input type="text" name="names[]" class="form-control" placeholder="Nom" required value="{{ $detail['name'] }}">
                 </div>
                 <div class="col-md-6">
-                    <input type="text" name="prenoms[]" class="form-control" placeholder="Prénom" required value="{{ $detail['firstname'] }}">
+                    <input type="text" name="firstnames[]" class="form-control" placeholder="Prénom" required value="{{ $detail['firstname'] }}">
                 </div>
             </div>
             {% if ($tarifs[$detail['tarif_id']]->getRequiresProof() )%}
             <div class="mt-2">
                 <label>Justificatif (PDF ou image) :</label>
-                <input type="file" name="justificatifs[]" accept=".pdf,image/*" class="form-control" {% $detail['justificatif_name'] ? '' : 'required' %}>
+                <input type="file" name="justificatifs[]" accept=".pdf,image/*" class="form-control" {{ $detail['justificatif_name'] ? '' : 'required' }}>
                 {% if ($detail['justificatif_name']) %}
-                <div class="mt-1 text-success">Déjà fourni, pour le changer, il suffit d'envoyer le nouveau fichier</div>
+                <div class="mt-1 text-success">Déjà fourni ({{ $detail['justificatif_original_name'] }}), pour le changer, il suffit d'envoyer un nouveau fichier</div>
                 {% endif %}
             </div>
             {% else %}

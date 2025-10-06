@@ -86,7 +86,7 @@ class ReservationController extends AbstractController
         }
 
         // Valider l'étape 1 avec le DTO
-        $result = $this->reservationDataValidationService->validatePreviousStep(1, $session);
+        $this->reservationDataValidationService->checkPreviousStep(1, $session);
 
         $this->render('reservation/etape2', [
             'reservation' => $session,
@@ -107,12 +107,12 @@ class ReservationController extends AbstractController
         }
 
         // Valider l'étape 1
-        if (!$this->reservationDataValidationService->validatePreviousStep(1, $session)) {
+        if (!$this->reservationDataValidationService->checkPreviousStep(1, $session)) {
             $this->flashMessageService->setFlashMessage('danger', 'Erreur dans le parcours 1, veuillez recommencer');
             $this->redirect('/reservation');
         }
         // Valider l'étape 2
-        if (!$this->reservationDataValidationService->validatePreviousStep(2, $session)) {
+        if (!$this->reservationDataValidationService->checkPreviousStep(2, $session)) {
             $this->flashMessageService->setFlashMessage('danger', 'Erreur dans le parcours 2, veuillez recommencer');
             $this->redirect('/reservation');
         }
@@ -141,7 +141,7 @@ class ReservationController extends AbstractController
         ], 'Réservations');
     }
 
-    #[Route('/reservation/etape4Display', name: 'etape3Display', methods: ['GET'])]
+    #[Route('/reservation/etape4Display', name: 'etape4Display', methods: ['GET'])]
     public function etape4Display(): void
     {
         //On récupère la session
@@ -154,12 +154,12 @@ class ReservationController extends AbstractController
         }
 
         // Valider l'étape 1
-        if (!$this->reservationDataValidationService->validatePreviousStep(1, $session)) {
+        if (!$this->reservationDataValidationService->checkPreviousStep(1, $session)) {
             $this->flashMessageService->setFlashMessage('danger', 'Erreur dans le parcours, veuillez recommencer');
             $this->redirect('/reservation');
         }
         // Valider l'étape 2
-        if (!$this->reservationDataValidationService->validatePreviousStep(2, $session)) {
+        if (!$this->reservationDataValidationService->checkPreviousStep(2, $session)) {
             $this->flashMessageService->setFlashMessage('danger', 'Erreur dans le parcours, veuillez recommencer');
             $this->redirect('/reservation');
         }
@@ -173,5 +173,26 @@ class ReservationController extends AbstractController
         ], 'Réservations');
     }
 
+    #[Route('/reservation/etape5Display', name: 'etape5Display', methods: ['GET'])]
+    public function etape5Display(): void
+    {
+        //On récupère la session
+        $session = $this->reservationSessionService->getReservationSession();
+
+        $this->render('reservation/etape5', [
+            'reservation' => $session,
+        ], 'Réservations');
+    }
+
+    #[Route('/reservation/etape6Display', name: 'etape6Display', methods: ['GET'])]
+    public function etape6Display(): void
+    {
+        //On récupère la session
+        $session = $this->reservationSessionService->getReservationSession();
+
+        $this->render('reservation/etape6', [
+            'reservation' => $session,
+        ], 'Réservations');
+    }
 
 }

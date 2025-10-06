@@ -9,17 +9,21 @@ use app\Repository\Event\EventRepository;
 use app\Repository\Event\EventTarifRepository;
 use app\Repository\Swimmer\SwimmerRepository;
 use app\Services\Event\EventQueryService;
+use app\Services\Reservation\ReservationDataPersist;
 use app\Services\Reservation\ReservationSessionService;
 use app\Services\Swimmer\SwimmerQueryService;
+use app\Services\UploadService;
+use DateTimeImmutable;
 
 class ReservationDataValidationService
 {
-    private EventRepository $eventRepository;
-    private SwimmerRepository $swimmerRepository;
-    private SwimmerQueryService $swimmerQueryService;
-    private ReservationSessionService $reservationSessionService;
-    private EventQueryService $eventQueryService;
-    private EventTarifRepository $eventTarifRepository;
+    private EventRepository             $eventRepository;
+    private SwimmerRepository           $swimmerRepository;
+    private SwimmerQueryService         $swimmerQueryService;
+    private ReservationSessionService   $reservationSessionService;
+    private EventQueryService           $eventQueryService;
+    private EventTarifRepository        $eventTarifRepository;
+    private UploadService               $uploadService;
 
     public function __construct(
         EventRepository                  $eventRepository,
@@ -28,6 +32,7 @@ class ReservationDataValidationService
         ReservationSessionService        $reservationSessionService,
         EventQueryService                $eventQueryService,
         EventTarifRepository             $eventTarifRepository,
+        UploadService                    $uploadService
     ) {
         $this->eventRepository = $eventRepository;
         $this->swimmerRepository = $swimmerRepository;
@@ -35,6 +40,7 @@ class ReservationDataValidationService
         $this->reservationSessionService = $reservationSessionService;
         $this->eventQueryService = $eventQueryService;
         $this->eventTarifRepository = $eventTarifRepository;
+        $this->uploadService = $uploadService;
     }
 
     /**
@@ -42,39 +48,34 @@ class ReservationDataValidationService
      *
      * @param int $step
      * @param array $data
+     * @param array|null $file
      * @return array
      */
-    public function validateAndPersistDataPerStep(int $step, array $data): array
+    public function validateAndPersistDataPerStep(int $step, array $data, ?array $file = null): array
     {
-
-        $data ??= [];
-        //On récupère la session, à l'étape 1 elle doit être vide, mais existe.
+        $dto = null;
+        $dtos = null;
+        //On récupère la session, à l'étape 1 elle doit être vide, existante.
         $session = $this->reservationSessionService->getReservationSession();
         if (!$session) {
-            return ['success' => false, 'errors' => [], 'data' => []];
+            return ['success' => false, 'errors' => ['Erreur serveur'], 'data' => []];
         }
 
         // Valeurs par défaut issues de la session pour combler un payload incomplet
         $defaults = $this->reservationSessionService->getDefaultReservationStructure();
         $session = $this->reservationSessionService->getReservationSession() ?? [];
 
-        if ($step >= 1) {
+        if ($step === 1) {
             $effective = array_replace_recursive($defaults, $session, $data);
-
             $dto = ReservationSelectionSessionDTO::fromArray($effective);
 
             $check = $this->validateStep1($dto);
-            if ($check['success'] === false) {
+            if (!$check['success']) {
                 return ['success' => false, 'errors' => $check['errors']];
-            }
-
-            if ($step === 1) {
-                $this->persistStep1($dto);
-                return ['success' => true, 'errors' => [], 'data' => []];
             }
         }
 
-        if ($step >= 2) {
+        if ($step === 2) {
             $effective = array_replace_recursive($defaults, $session);
             // On fusionne les données de $data dans la clé 'booker'
             $effective['booker'] = array_replace($effective['booker'], $data);
@@ -85,44 +86,44 @@ class ReservationDataValidationService
             if ($check['success'] === false) {
                 return ['success' => false, 'errors' => $check['errors']];
             }
-
-            if ($step === 2) {
-                $this->persistStep2($dto);
-                return ['success' => true, 'errors' => [], 'data' => []];
-            }
         }
 
-        if ($step >= 3) {
+        if ($step === 3) {
             $effective = array_replace_recursive($defaults, $session);
+
             //On récupère tous les tarifs de l'event
             $allEventTarifs = $this->eventTarifRepository->findTarifsByEvent($effective['event_id']);
 
-            //Boucle sur $data['tarif']
-            $items = [];
+            //Boucle sur les tarifs reçus $data['tarifs']
+            $dtos = [];
             foreach ($data['tarifs'] as $tarif_id => $qty) {
-                //On boucle sur la quantité
+                //On boucle sur la quantité de ce tarif
                 for ($i = 0; $i < $qty; $i++) {
-                    //On vérifie s'il y a code spécial demandé que ce soit bien le bon qui est fourni
-                    $codeRequis = $allEventTarifs[$tarif_id]->getAccessCode();
-
-                    if ($codeRequis !== null) {
-                        if (isset($data['special']) && is_array($data['special']) && array_key_exists($tarif_id, $data['special'])) {
-                            if ($data['special'][$tarif_id] !== $codeRequis) {
-                                return ['success' => false, 'error' => 'Code d\'accès invalide pour le tarif sélectionné.'];
-                            }
-                        }
-                    }
-                    //Puis sur le nombre de places dans le tarif (pour les packs multi-places)
+                    //Puis sur le nombre de places dans le tarif (pour les packs multi-places) pour avoir le nombre de place total
                     $nbPlacesInPack = $allEventTarifs[$tarif_id]->getSeatCount();
                     for ($j = 0; $j < $nbPlacesInPack; $j++) {
                         //On génère le dto qu'on ajoute
-                        $items[] = ReservationDetailItemDTO::fromArrayWithSpecialPrice($tarif_id, $data, $codeRequis);
+                        $dtos[] = ReservationDetailItemDTO::fromArrayWithSpecialPrice($tarif_id, $data);
                     }
                 }
             }
+            //Pour ne pas perdre ce qui aurait été saisi avant
+            // Indexer l'existant par tarif_id
+            $effectiveByTarif = $this->mapEffectiveByTarifId($effective['reservation_detail']);
+            // Compléter chaque DTO construit depuis le POST avec l'existant si même tarif_id
+echo 'effectiveByTarif : ';
+print_r($effectiveByTarif);
+echo "\n";
+            foreach ($dtos as $i => $dtoToComplete) {
 
+                $dtos[$i] = $this->mergeDtoWithEffective($dtoToComplete, $effectiveByTarif);
+            }
+
+echo "\n dtos : ";
+print_r($dtos);
+die;
             // On rejette si vide
-            if (empty($items)) {
+            if (empty($dtos)) {
                 return ['success' => false, 'errors' => ['tarifs' => 'Aucun tarif sélectionné.'], 'data' => []];
             }
 
@@ -132,58 +133,159 @@ class ReservationDataValidationService
                 return ['success' => false, 'errors' => ['event_id' => 'Événement incohérent.'], 'data' => []];
             }
 
-            if ($step === 3) {
-                $this->persistStep3($items);
-                return ['success' => true, 'errors' => [], 'data' => []];
-            }
-
-
-            return ['success' => true, 'errors' => [], 'data' => []];
         }
 
-        return ['success' => false, 'errors' => ['message' => 'ne correspond pas'], 'data' => []];
+        if ($step === 4) {
+            $effective = array_replace_recursive($defaults, $session);
+            //On récupère tous les tarifs de l'event
+            $allEventTarifs = $this->eventTarifRepository->findTarifsByEvent($effective['event_id']);
+
+            //on boucle sur reservation_detail
+            //Initialise pour que les valeurs ne soient pas gardées dans les autres boucles
+            $dtos = [];
+            $newFileName = null;
+            foreach ($effective['reservation_detail'] as $key => $detail) {
+                if (isset($allEventTarifs[$detail['tarif_id']])) {
+
+                    //On vérifie si le tarif est actif
+                    if ($allEventTarifs[$detail['tarif_id']]->isActive() === false) {
+                        return ['success' => false, 'errors' => ['message' => 'Ce tarif est inactif'], 'data' => []];
+                    }
+
+                    //On vérifie s'il y a besoin d'un code et s'il est fourni
+                    if ($allEventTarifs[$detail['tarif_id']]->getAccessCode() !== null) {
+                        if (isset($detail['access_code']) && $detail['access_code'] !== $allEventTarifs[$detail['tarif_id']]->getAccessCode()) {
+                            return ['success' => false, 'errors' => ['message' => 'Code d\'accès invalide'], 'data' => []];
+                        }
+                    }
+                }
+
+                //On vérifie s'il y a besoin d'un justificatif
+                if ($allEventTarifs[$detail['tarif_id']]->getRequiresProof() === true) {
+                    //On vérifie d'abord si pas dans $session si on est dans le cas d'un retour en arrière pour revalider le formulaire.
+                    $checkIfFileExisteAfterUpload = false;
+                    if (isset($session['reservation_detail'][$key]['justificatif_name'])) {
+                        //On vérifie si le fichier existe bien dans le dossier
+                        $justificatif_name = $session['reservation_detail'][$key]['justificatif_name'];
+                        $checkIfFileExisteAfterUpload = $this->uploadService->checkIfFileExisteAfterUpload(UPLOAD_PROOF_PATH . 'temp/', $justificatif_name);
+                        $newFileName = $justificatif_name;
+                        $orignalFileName = $session['reservation_detail'][$key]['justificatif_original_name'];
+                    }
+                    if ($checkIfFileExisteAfterUpload === false) {
+                        if (
+                            !isset($data[$key]['justificatif']) ||
+                            $data[$key]['justificatif'] == '' ||
+                            !isset($file['justificatif_' . $key])
+                        ) {
+                            return ['success' => false, 'errors' => ['message' => 'Aucun justificatif fourni'], 'data' => []];
+                        }
+                        //On gère l'upload ici
+                        $newFileName = $this->generateUniqueProofName(
+                            $data[$key]['name'],
+                            $data[$key]['firstname'],
+                            $detail['tarif_id'],
+                            strtolower(pathinfo($file['justificatif_' . $key]['name'], PATHINFO_EXTENSION))
+                        );
+                        $retourUpload = $this->uploadService->handleUpload(
+                            $file['justificatif_' . $key],
+                            UPLOAD_PROOF_PATH . 'temp/',
+                            $newFileName
+                        );
+                        if (!$retourUpload) {
+                            return ['success' => false, 'errors' => ['message' => 'Erreur lors de l\'upload du justificatif'], 'data' => []];
+                        }
+                    }
+                }
+
+                //Si c'est bon, on génère le DTO
+                // Crée un nouveau DTO avec les informations de base
+                $dtos[] = ReservationDetailItemDTO::fromArray(
+                    [
+                        'tarif_id' => $detail['tarif_id'],
+                        'name' => $data[$key]['name'],
+                        'firstname' => $data[$key]['firstname'],
+                        'justificatif_name' => $newFileName ?? null,
+                        'justificatif_original_name' => $orignalFileName ?? null,
+                        'tarif_access_code' => $detail['tarif_access_code'] ?? null,
+                    ]
+                );
+                //On réinitialise la valeur et on supprime de 'reservation_detail' pour éviter les doublons à l'ajout après
+                $newFileName = null;
+                unset($_SESSION['reservation']['reservation_detail'][$key]);
+
+            }
+            // On rejette si vide
+            if (empty($dtos)) {
+                return ['success' => false, 'errors' => ['message' => 'Aucun tarif sélectionné.'], 'data' => []];
+            }
+        }
+
+
+        if ($dto === null && $dtos === null) {
+            return ['success' => false, 'errors' => ['message' => 'Aucune étape ne correspond.'], 'data' => []];
+        }
+        //Une fois les données validées, on persiste
+        $reservationDataPersist = new ReservationDataPersist($this->reservationSessionService);
+
+        //Selon si c'est un tableau ou un objet direct
+
+        if ($dto != null) {
+            $reservationDataPersist->persistDataInSession($dto);
+        } else {
+            //On fait au cas par cas
+            foreach ($dtos as $key => $dto) {
+                $reservationDataPersist->persistDataInSession($dto, $key);
+            }
+        }
+
+        if (gettype($session['event_id']) == 'integer') {
+            $isSeatsWithNumberInEventSwimmingPool = $this->eventRepository->findById($session['event_id'], true)->getPiscine()->getNumberedSeats();
+        } else {
+            $isSeatsWithNumberInEventSwimmingPool = false;
+        }
+
+        return ['success' => true, 'errors' => [], 'data' => ['numerated_seat' => $isSeatsWithNumberInEventSwimmingPool]];
     }
 
     /**
-     * Pour valider les étapes précédentes
+     * Pour revérifier les étapes précédentes
      *
      * @param int $step
      * @param array $session
-     * @return bool
+     * @return array
      */
-    public function validatePreviousStep(int $step, array $session): bool
+    public function checkPreviousStep(int $step, array $session): array
     {
         // Fusionne la structure par défaut et la session pour éviter les clés manquantes
         $defaults = $this->reservationSessionService->getDefaultReservationStructure();
         $effective = array_replace_recursive($defaults, $session);
 
         //On valide l'étape 1, on return si false
-        if ($step >= 1) {
+        if ($step > 1) {
             $dto1 = ReservationSelectionSessionDTO::fromArray($effective);
-            if (!$this->validateStep1($dto1)['success']) {
-                return false;
+            $check = $this->validateStep1($dto1);
+            if (!$check['success']) {
+                return ['success' => false, 'errors' => $check['errors']];
             }
         }
 
-        if ($step >= 2) {
+        if ($step > 2) {
             $dto2 = ReservationUserDTO::fromArray($effective);
-            if (!$this->validateStep2($dto2)['success']) {
-                return false;
+            $check = $this->validateStep2($dto2);
+            if (!$check['success']) {
+                return ['success' => false, 'errors' => $check['errors']];
             }
         }
 
-        if ($step >= 3) {
+        if ($step > 3) {
             $dto3 = ReservationDetailItemDTO::fromArray($effective);
-            if ($this->validateStep3($dto3)['success']) {
-echo $step;
-                print_r($this->validateStep3($dto3)['success']);
-                die;
-                return false;
+            $check = $this->validateStep3($dto3);
+            if (!$check['success']) {
+                return ['success' => false, 'errors' => $check['errors']];
             }
         }
 
-        // Étapes suivantes à ajouter ici
-        return true;
+        return ['success' => true];
     }
 
 
@@ -198,13 +300,13 @@ echo $step;
     {
         $errors = [];
 
-        // 1) Event
+        // On récupère Event avec les dépendances nécessaires
         $event = $this->eventRepository->findById($dto->eventId, false, true, true);
         if (!$event) {
             $errors['eventId'] = 'Événement introuvable.';
         }
 
-        // 2) Session
+        // On vérifie que la session choisie existe bien et est bien rattachée à l'Event
         $session = null;
         if ($dto->eventSessionId <= 0) {
             $errors['eventSessionId'] = 'Session manquante.';
@@ -222,34 +324,31 @@ echo $step;
             }
         }
 
-        // 3) Vérification du code si besoin pour la période d'inscription
-        if ($event && empty($errors['eventId'])) {
+        // Vérification du code si besoin pour la période d'inscription
+        if ($event && empty($errors)) {
             //On vérifie si la période d'inscription nécessite un code
             $periodsStatus = $this->eventQueryService->getEventInscriptionPeriodsStatus([$event]);
             $activePeriod = $periodsStatus['periodesOuvertes'][$event->getId()] ?? null;
-
             //Si période active avec un code access
             if ($activePeriod && $activePeriod->getAccessCode() !== null) {
-                if ($dto->accessCode === '') {
+                if (trim((string)$dto->access_code) === '') {
                     $errors['accessCode'] = 'Un code d\'accès est requis pour la période d\'inscription en cours.';
                 } else {
                     //On vérifie si le code saisi est valide
-                    $check = $this->eventQueryService->validateAccessCode($event->getId(), htmlspecialchars((string)$dto->accessCode));
+                    $check = $this->eventQueryService->validateAccessCode($event->getId(), htmlspecialchars((string)$dto->access_code));
                     if (!($check['success'] ?? false)) {
                         $errors['accessCode'] = $check['error'] ?? 'Code d\'accès invalide.';
-                    } else {
-                        // Mémoriser pour les étapes suivantes
-                        $this->reservationSessionService->setReservationSession('access_code_used', $dto->accessCode);
                     }
                 }
             }
         }
 
-        // 4) Nageur (si limitation active)
-        $limit = $event?->getLimitationPerSwimmer();
-        $accessCode = $dto->accessCode ? trim($dto->accessCode) : null;
 
-        if ($limit !== null && $dto->swimmerId === null && $accessCode === null) {
+        // Nageur (si limitation active)
+        $limit = $event?->getLimitationPerSwimmer();
+        $access_code = $dto->access_code ? trim($dto->access_code) : null;
+
+        if ($limit !== null && $dto->swimmerId === null && $access_code === null) {
             $errors['swimmerOrAccessCode'] = 'Le nom d\'une nageuse est requis pour cet événement.';
         }
 
@@ -272,23 +371,10 @@ echo $step;
         if (!empty($errors)) {
             return ['success' => false, 'errors' => $errors];
         }
+
         return ['success' => true, 'errors' => []];
     }
 
-    /**
-     * Persiste suite validation step1
-     * @param ReservationSelectionSessionDTO $dto
-     * @return void
-     */
-    public function persistStep1(ReservationSelectionSessionDTO $dto): void
-    {
-        // Persistance en session (structure simple pour JS)
-        $this->reservationSessionService->setReservationSession('event_id', $dto->eventId);
-        $this->reservationSessionService->setReservationSession('event_session_id', $dto->eventSessionId);
-        $this->reservationSessionService->setReservationSession('swimmer_id', $dto->swimmerId);
-        $this->reservationSessionService->setReservationSession('access_code_used', $dto->accessCode);
-        $this->reservationSessionService->setReservationSession('limit_per_swimmer', $dto->limitPerSwimmer);
-    }
 
     /**
      * Étape 2: valide [booker]=< name, firstname, email, phone
@@ -321,30 +407,138 @@ echo $step;
     }
 
     /**
-     * Persiste suite validation step2
-     * @param ReservationUserDTO $dto
-     * @return void
+     * @param $dto
+     * @return array
      */
-    public function persistStep2(ReservationUserDTO $dto): void
+    public function validateStep3($dto): array
     {
-        // Persistance en session (structure simple pour JS et $_SESSION)
-        $this->reservationSessionService->setReservationSession(['booker', 'name'], $dto->name);
-        $this->reservationSessionService->setReservationSession(['booker', 'firstname'], $dto->firstname);
-        $this->reservationSessionService->setReservationSession(['booker', 'email'], $dto->email);
-        $this->reservationSessionService->setReservationSession(['booker', 'phone'], $dto->phone);
+        $errors = [];
+
+        // Récupération de la session et des détails saisis à l’étape 3
+        $session  = $this->reservationSessionService->getReservationSession() ?? [];
+        $eventId  = (int)($session['event_id'] ?? 0);
+        $details  = $session['reservation_detail'] ?? [];
+
+        if ($eventId <= 0) {
+            $errors['event_id'] = 'Événement incohérent.';
+        }
+
+        if (empty($details) || !is_array($details)) {
+            $errors['tarifs'] = 'Aucun tarif sélectionné.';
+        }
+
+        if (!empty($errors)) {
+            return ['success' => false, 'errors' => $errors];
+        }
+
+        // Tarifs disponibles pour l’événement, indexés par ID
+        $tarifsById = $this->eventTarifRepository->findTarifsByEvent($eventId);
+
+        foreach ($details as $idx => $d) {
+            $tid = (int)($d['tarif_id'] ?? 0);
+
+            if ($tid <= 0 || !isset($tarifsById[$tid])) {
+                $errors["reservation_detail.$idx.tarif_id"] = 'Tarif inconnu pour cet événement.';
+                continue;
+            }
+
+            $tarif = $tarifsById[$tid];
+
+            // Tarif actif
+            if (!$tarif->isActive()) {
+                $errors["reservation_detail.$idx.tarif_id"] = 'Tarif inactif.';
+            }
+
+            // Validation éventuelle du code d’accès requis
+            $requiredCode = $tarif->getAccessCode();
+            if ($requiredCode !== null) {
+                $provided = isset($d['tarif_access_code']) ? trim((string)$d['tarif_access_code']) : '';
+                if ($provided === '' || $provided !== $requiredCode) {
+                    $errors["reservation_detail.$idx.tarif_access_code"] = 'Code d\'accès invalide pour ce tarif.';
+                }
+            }
+        }
+
+        if (!empty($errors)) {
+            return ['success' => false, 'errors' => $errors];
+        }
+
+        return ['success' => true, 'errors' => []];
     }
 
 
     /**
-     * Persiste suite validation step3
-     * @param ReservationDetailItemDTO[] $dtos
-     * @return void
+     * Génère un nom de fichier unique pour un justificatif.
+     *
+     * @param string $name
+     * @param string $firstname
+     * @param int $tarifId
+     * @param string $extension
+     * @return string
      */
-    public function persistStep3(array $dtos): void
+    private function generateUniqueProofName(string $name, string $firstname, int $tarifId, string $extension): string
     {
-        // Persistance en session (structure simple pour JS et $_SESSION)
+        // Horodatage au fuseau horaire de l'application (ex: 20251005130632)
+        $now = new DateTimeImmutable('now');
+        $timestamp = $now->format('YmdHis');
 
-        $this->reservationSessionService->setReservationSession('reservation_detail', array_map(static fn(ReservationDetailItemDTO $i) => $i->jsonSerialize(), $dtos));
+        $safeNom = strtolower(preg_replace('/[^a-z0-9]/i', '', $name));
+        $safePrenom = strtolower(preg_replace('/[^a-z0-9]/i', '', $firstname));
+
+        return "{$timestamp}_{$tarifId}_{$safeNom}_$safePrenom.$extension";
+    }
+
+
+    /**
+     * Indexe le tableau $effective par tarif_id.
+     * Accepte un tableau plat ou déjà indexé.
+     *
+     * @param array<int|string,mixed> $effective
+     * @return array<int,array<string,mixed>>
+     */
+    private function mapEffectiveByTarifId(array $effective): array
+    {
+        $out = [];
+        foreach ($effective as $row) {
+            if (!is_array($row) || !isset($row['tarif_id'])) {
+                continue;
+            }
+            $id = (int)$row['tarif_id'];
+            $row['tarif_id'] = $id;
+            $out[$id] ??= [];
+            $out[$id][] = $row;
+        }
+        return $out;
+    }
+
+    /**
+     * Complète un DTO avec les champs existants (par tarif_id) quand ils sont absents/vides dans le DTO.
+     * N’écrase pas une valeur déjà renseignée par l’utilisateur.
+     *
+     * @template T of object
+     * @param object $dto
+     * @param array<int,array<string,mixed>> $effectiveByTarif
+     * @return object
+     */
+    private function mergeDtoWithEffective(object $dto, array $effectiveByTarif): object
+    {
+        //On fait un tableau du DTO existant (avec les données de l'étape), sans les données déjà saisies dans les étapes suivantes.
+        $dtoTab = get_object_vars($dto);
+
+        //On cherche si tarif_id de $dtoTab existe en clé dans $effectiveByTarif
+        if (array_key_exists($dtoTab['tarif_id'], $effectiveByTarif)) {
+            //Si un champ vide ou null de $dtoTab existe dans une occurrence de $effectiveByTarif[$dtoTab['tarif_id']], on écrase $dtoTab avec $effectiveByTarif
+            foreach ($effectiveByTarif[$dtoTab['tarif_id']] as $key => $value) {
+                $dtoTab = array_merge($dtoTab, $value);
+            }
+        }
+        if ($dto instanceof \app\DTO\ReservationDetailItemDTO) {
+            $dto = ReservationDetailItemDTO::fromArray($dtoTab);
+        } elseif ($dto instanceof \app\DTO\ReservationComplementItemDTO) {
+            // ...
+        }
+
+        return $dto;
     }
 
 }

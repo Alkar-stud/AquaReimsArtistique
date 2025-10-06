@@ -129,25 +129,25 @@ function step1Valid(eventId, sessionChoisie, swimmerId, codeAccess) {
         event_id: eventId,
         event_session_id: sessionChoisie,
         swimmer_id: swimmerId,
-        codeAccess: codeAccess
+        access_code_used: codeAccess || null
     })
-    .then((data) => {
-        if (data.success) {
-            window.location.href = '/reservation/etape2Display';
-        } else {
-            if (data.redirect) {
-                window.location.href = data.redirect;
-                return;
-            }
-            const errorDiv = document.getElementById('form_error_message_' + eventId);
-            if (errorDiv) {
-                errorDiv.textContent = data.error || 'Une erreur inconnue est survenue.';
+        .then((data) => {
+            if (data.success) {
+                window.location.href = '/reservation/etape2Display';
             } else {
-                showFlash('danger', data.error || 'Erreur');
+                if (data.redirect) {
+                    window.location.href = data.redirect;
+                    return;
+                }
+                const errorDiv = document.getElementById('form_error_message_' + eventId);
+                if (errorDiv) {
+                    errorDiv.textContent = data.error || 'Une erreur inconnue est survenue.';
+                } else {
+                    showFlash('danger', data.error || 'Erreur');
+                }
             }
-        }
-    })
-    .catch((err) => {
-        showFlash('danger', err.userMessage || err.message);
-    });
+        })
+        .catch((err) => {
+            showFlash('danger', err.userMessage || err.message);
+        });
 }

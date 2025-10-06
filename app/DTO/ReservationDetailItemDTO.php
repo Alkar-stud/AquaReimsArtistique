@@ -10,6 +10,7 @@ final class ReservationDetailItemDTO extends AbstractDTO implements JsonSerializ
         public ?string $name = null,
         public ?string $firstname = null,
         public ?string $justificatif_name = null,
+        public ?string $justificatif_original_name = null,
         public ?string $tarif_access_code = null,
         public ?int $place_id = null
     ) {
@@ -30,8 +31,22 @@ final class ReservationDetailItemDTO extends AbstractDTO implements JsonSerializ
             name: (string)($data['name'] ?? null),
             firstname: (string)($data['firstname'] ?? null),
             justificatif_name: (string)($data['justificatif_name'] ?? null),
+            justificatif_original_name: (string)($data['justificatif_name'] ?? null),
             tarif_access_code: $code,
             place_id: (isset($data['place_id'])) ? (int)$data['place_id'] : null,
+        );
+    }
+
+    public static function fromArray(array $data = []): self
+    {
+        return new self(
+            tarif_id: isset($data['tarif_id']) ? (int)$data['tarif_id'] : 0,
+            name: ReservationDetailItemDTO::nullIfEmpty($data['name'] ?? null),
+            firstname: ReservationDetailItemDTO::nullIfEmpty($data['firstname'] ?? null),
+            justificatif_name: ReservationDetailItemDTO::nullIfEmpty($data['justificatif_name'] ?? null),
+            justificatif_original_name: ReservationDetailItemDTO::nullIfEmpty($data['justificatif_original_name'] ?? null),
+            tarif_access_code: isset($data['tarif_access_code']) ? ReservationDetailItemDTO::nullIfEmpty((string)$data['tarif_access_code']) : null,
+            place_id: isset($data['place_id']) ? (int)$data['place_id'] : null,
         );
     }
 

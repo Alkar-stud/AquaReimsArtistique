@@ -2,6 +2,7 @@
 // php
 namespace app\Services\DataValidation;
 
+use app\DTO\ReservationComplementItemDTO;
 use app\DTO\ReservationDetailItemDTO;
 use app\DTO\ReservationSelectionSessionDTO;
 use app\DTO\ReservationUserDTO;
@@ -99,7 +100,7 @@ class ReservationDataValidationService
             foreach ($data['tarifs'] as $tarif_id => $qty) {
                 //On boucle sur la quantité de ce tarif
                 for ($i = 0; $i < $qty; $i++) {
-                    //Puis sur le nombre de places dans le tarif (pour les packs multi-places) pour avoir le nombre de place total
+                    //Puis sur le nombre de places dans le tarif (pour les packs multi-places) pour avoir le nombre de places total
                     $nbPlacesInPack = $allEventTarifs[$tarif_id]->getSeatCount();
                     for ($j = 0; $j < $nbPlacesInPack; $j++) {
                         //On génère le dto qu'on ajoute
@@ -107,21 +108,27 @@ class ReservationDataValidationService
                     }
                 }
             }
+
             //Pour ne pas perdre ce qui aurait été saisi avant
             // Indexer l'existant par tarif_id
             $effectiveByTarif = $this->mapEffectiveByTarifId($effective['reservation_detail']);
+
+            // Filtrer les anciens détails pour ne garder que ceux présents dans les nouveaux dtos
+            $tarifIdsActuels = array_map(fn($dto) => $dto->tarif_id, $dtos);
+            $effectiveByTarif = array_filter(
+                $effectiveByTarif,
+                fn($tarifDetails, $tarifId) => in_array($tarifId, $tarifIdsActuels),
+                ARRAY_FILTER_USE_BOTH
+            );
+
+
             // Compléter chaque DTO construit depuis le POST avec l'existant si même tarif_id
-echo 'effectiveByTarif : ';
-print_r($effectiveByTarif);
-echo "\n";
             foreach ($dtos as $i => $dtoToComplete) {
 
                 $dtos[$i] = $this->mergeDtoWithEffective($dtoToComplete, $effectiveByTarif);
             }
 
-echo "\n dtos : ";
-print_r($dtos);
-die;
+
             // On rejette si vide
             if (empty($dtos)) {
                 return ['success' => false, 'errors' => ['tarifs' => 'Aucun tarif sélectionné.'], 'data' => []];
@@ -133,6 +140,9 @@ die;
                 return ['success' => false, 'errors' => ['event_id' => 'Événement incohérent.'], 'data' => []];
             }
 
+            //Les dtos sont prêts à être persistés,
+            // on supprime ['reservation_detail'] pour éviter de garder des items supprimés par le visiteur.
+            $this->reservationSessionService->setReservationSession('reservation_detail', []);
         }
 
         if ($step === 4) {
@@ -226,9 +236,7 @@ die;
         }
         //Une fois les données validées, on persiste
         $reservationDataPersist = new ReservationDataPersist($this->reservationSessionService);
-
         //Selon si c'est un tableau ou un objet direct
-
         if ($dto != null) {
             $reservationDataPersist->persistDataInSession($dto);
         } else {
@@ -478,7 +486,7 @@ die;
      */
     private function generateUniqueProofName(string $name, string $firstname, int $tarifId, string $extension): string
     {
-        // Horodatage au fuseau horaire de l'application (ex: 20251005130632)
+        // Horodatage au fuseau horaire de l'application (ex : 20251005130632)
         $now = new DateTimeImmutable('now');
         $timestamp = $now->format('YmdHis');
 
@@ -532,9 +540,9 @@ die;
                 $dtoTab = array_merge($dtoTab, $value);
             }
         }
-        if ($dto instanceof \app\DTO\ReservationDetailItemDTO) {
+        if ($dto instanceof ReservationDetailItemDTO) {
             $dto = ReservationDetailItemDTO::fromArray($dtoTab);
-        } elseif ($dto instanceof \app\DTO\ReservationComplementItemDTO) {
+        } elseif ($dto instanceof ReservationComplementItemDTO) {
             // ...
         }
 

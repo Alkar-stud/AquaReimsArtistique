@@ -4,6 +4,7 @@ namespace app\Controllers\Reservation;
 
 use app\Attributes\Route;
 use app\Controllers\AbstractController;
+use app\Repository\Event\EventRepository;
 use app\Repository\Event\EventTarifRepository;
 use app\Repository\Tarif\TarifRepository;
 use app\Services\DataValidation\ReservationDataValidationService;
@@ -19,7 +20,7 @@ class ReservationController extends AbstractController
     private ReservationDataValidationService $reservationDataValidationService;
     private EventTarifRepository $eventTarifRepository;
     private TarifService $tarifService;
-    private TarifRepository $tarifRepository;
+    private EventRepository $eventRepository;
 
     public function __construct(
         EventQueryService $eventQueryService,
@@ -28,7 +29,7 @@ class ReservationController extends AbstractController
         ReservationDataValidationService $reservationDataValidationService,
         EventTarifRepository $eventTarifRepository,
         TarifService $tarifService,
-        TarifRepository $tarifRepository,
+        EventRepository $eventRepository,
     )
     {
         // On déclare la route comme publique pour éviter la redirection vers la page de login.
@@ -39,7 +40,7 @@ class ReservationController extends AbstractController
         $this->reservationDataValidationService = $reservationDataValidationService;
         $this->eventTarifRepository = $eventTarifRepository;
         $this->tarifService = $tarifService;
-        $this->tarifRepository = $tarifRepository;
+        $this->eventRepository = $eventRepository;
     }
 
     /**
@@ -164,7 +165,7 @@ class ReservationController extends AbstractController
             $this->redirect('/reservation');
         }
 
-        ///On récupère la liste des tarifs à envoyer à la vue sous forme de tableau indexé avec les ID
+        //On récupère la liste des tarifs à envoyer à la vue sous forme de tableau indexé avec les ID
         $tarifs = $this->tarifService->getIndexedTarifFromEvent($session['reservation_detail']);
 
         $this->render('reservation/etape4', [
@@ -190,8 +191,39 @@ class ReservationController extends AbstractController
         //On récupère la session
         $session = $this->reservationSessionService->getReservationSession();
 
+        //On vérifie si la session est expirée
+        if (!$session || $this->reservationSessionService->isReservationSessionExpired($session)) {
+            $this->flashMessageService->setFlashMessage('warning', 'Votre session a expiré. Merci de recommencer votre réservation.');
+            $this->redirect('/reservation?session_expiree=1');
+        }
+
+        //Il faut valider les étapes précédentes
+        if (!$this->reservationDataValidationService->checkPreviousStep(1, $session)) {
+            $this->flashMessageService->setFlashMessage('danger', 'Erreur 1 dans le parcours, veuillez recommencer');
+            $this->redirect('/reservation');
+        }
+        if (!$this->reservationDataValidationService->checkPreviousStep(2, $session)) {
+            $this->flashMessageService->setFlashMessage('danger', 'Erreur 2 dans le parcours, veuillez recommencer');
+            $this->redirect('/reservation');
+        }
+        if (!$this->reservationDataValidationService->checkPreviousStep(3, $session)) {
+            $this->flashMessageService->setFlashMessage('danger', 'Erreur 3 dans le parcours, veuillez recommencer');
+            $this->redirect('/reservation');
+        }
+
+        // Récupération des tarifs avec tarif sans place non assise de cet event
+        $allTarifsWithoutSeatForThisEvent = $this->eventTarifRepository->findTarifsByEvent($session['event_id'], false);
+        //On ajoute si les sièges sont numérotées pour el retour dans la vue
+        $event = $this->eventRepository->findById($session['event_id'], true);
+
+        //Préparation des données déjà saisie à cette étape, regroupé par id et quantité
+        $arrayTarifForForm = $this->reservationSessionService->arraySessionForFormStep3($session['reservation_complement'], $allTarifsWithoutSeatForThisEvent);
+
         $this->render('reservation/etape6', [
-            'reservation' => $session,
+            'reservation'                       => $session,
+            'previousStep'                      => $event->getPiscine()->getNumberedSeats() ? 'etape5Display' : 'etape4Display',
+            'allTarifsWithoutSeatForThisEvent'  => $allTarifsWithoutSeatForThisEvent,
+            'arrayTarifForForm'                 => $arrayTarifForForm,
         ], 'Réservations');
     }
 

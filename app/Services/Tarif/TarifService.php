@@ -2,6 +2,7 @@
 
 namespace app\Services\Tarif;
 
+use app\Models\Tarif\Tarif;
 use app\Repository\Tarif\TarifRepository;
 
 class TarifService
@@ -57,32 +58,43 @@ class TarifService
      *
      * @param int $eventId
      * @param string $code
+     * @param bool $withSeat
      * @return array ['success' => bool, 'error' => ?string, 'tarif' => ?array]
      */
-    public function validateSpecialCode(int $eventId, string $code, $withSeat = true): array
+    public function validateSpecialCode(int $eventId, string $code, bool $withSeat = true): array
     {
         if (!$eventId || empty($code)) {
             return ['success' => false, 'error' => 'Paramètres manquants.'];
         }
 
         $tarifs = $this->tarifRepository->findByEventId($eventId);
-        foreach ($tarifs as $tarif) {
-            if ($tarif->getAccessCode() && strcasecmp($tarif->getAccessCode(), $code) === 0) {
-                // Code trouvé et valide
-                return [
-                    'success' => true,
-                    'tarif' => [
-                        'id' => $tarif->getId(),
-                        'name' => $tarif->getName(),
-                        'description' => $tarif->getDescription(),
-                        'seat_count' => $tarif->getSeatCount(),
-                        'price' => $tarif->getPrice()
-                    ],
-                ];
+        $needle = mb_strtolower($code);
+                $matches = array_values(array_filter($tarifs, function (Tarif $t) use ($needle, $withSeat) {
+                        $tCode = $t->getAccessCode();
+                        if (!$tCode || mb_strtolower(trim($tCode)) !== $needle) {
+                                return false;
             }
+            $hasSeats = ($t->getSeatCount() !== null && $t->getSeatCount() > 0);
+            // withSeat=false => seulement seat_count null (pas de places), sinon seulement avec places
+            return $withSeat ? $hasSeats : !$hasSeats;
+        }));
+
+                if (empty($matches)) {
+                    return ['success' => false, 'error' => 'Code invalide pour ce type de tarif.'];
         }
 
-        return ['success' => false, 'error' => 'Code invalide ou non reconnu.'];
+        $t = $matches[0];
+        return [
+            'success' => true,
+            'tarif' => [
+                    'id' => $t->getId(),
+                    'name' => $t->getName(),
+                    'description' => $t->getDescription(),
+                    'seat_count' => $t->getSeatCount(),
+                    'price' => $t->getPrice(),
+                ],
+        ];
+
     }
 
     /**

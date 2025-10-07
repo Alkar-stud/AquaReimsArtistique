@@ -220,9 +220,10 @@ class ReservationAjaxController extends AbstractController
         $input = json_decode(file_get_contents('php://input'), true);
         $eventId = (int)($input['event_id'] ?? 0);
         $code = trim($input['code'] ?? '');
+        $withSeat = array_key_exists('with_seat', $input) ? (bool)$input['with_seat'] : true;
 
         //On va chercher le tarif correspondant s'il y en a un
-        $result = $this->tarifService->validateSpecialCode($eventId, $code);
+        $result = $this->tarifService->validateSpecialCode($eventId, $code, $withSeat);
         if (!$result['success']) {
             $this->json($result, 200, 'reservation');
         }

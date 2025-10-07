@@ -111,7 +111,7 @@ document.addEventListener('DOMContentLoaded', function () {
             specialCodeFeedback.textContent = '';
 
             try {
-                const res = await apiPost('/reservation/validate-special-code', { event_id, code });
+                const res = await apiPost('/reservation/validate-special-code', { event_id, code , with_seat: false });
                 if (!res || !res.success) {
                     throw new Error(res?.error || 'Code invalide.');
                 }

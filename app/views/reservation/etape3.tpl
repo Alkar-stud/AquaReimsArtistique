@@ -27,7 +27,7 @@
         {% if !empty($allTarifsWithSeatForThisEvent) %}
         <div id="tarifsContainer">
             {% foreach $allTarifsWithSeatForThisEvent as $tarif %}
-            {% if $tarif->getPrice() > 0 %}
+            {% if $tarif->getAccessCode() === null %}
             <div class="mb-3">
                 <label for="tarif_{{ $tarif->getId() }}" class="form-label">
                     <strong>{{ $tarif->getName() }}</strong>

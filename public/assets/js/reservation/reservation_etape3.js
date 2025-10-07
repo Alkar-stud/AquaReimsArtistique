@@ -118,11 +118,6 @@ document.addEventListener('DOMContentLoaded', function () {
     const specialTarifContainer = document.getElementById('specialTarifContainer');
     const eventIdInput = document.getElementById('event_id');
 
-    function euroFromCents(cents) {
-        const n = (parseInt(cents, 10) || 0) / 100;
-        return n.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
-    }
-
     function renderSpecialTarifBlock(t) {
         // Injection sans classe .place-input pour ne pas compter dans les totaux/limites
         specialTarifContainer.innerHTML = `
@@ -264,7 +259,7 @@ document.addEventListener('DOMContentLoaded', function () {
             tarifs[tarifId] = (tarifs[tarifId] || 0) + qty;
         });
 
-        // 2) Tarifs spéciaux (ne comptent pas dans les totaux, mais doivent partir au backend)
+        // Tarifs spéciaux (ne comptent pas dans les totaux, mais doivent partir au backend)
         // Tarif spécial (clé = id, valeur = code)
         const specialCb = document.getElementById('specialTarifCheck');
         let special = null;

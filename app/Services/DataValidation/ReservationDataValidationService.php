@@ -92,57 +92,14 @@ class ReservationDataValidationService
         if ($step === 3) {
             $effective = array_replace_recursive($defaults, $session);
 
-            //On récupère tous les tarifs de l'event
-            $allEventTarifs = $this->eventTarifRepository->findTarifsByEvent($effective['event_id']);
-
-            //Boucle sur les tarifs reçus $data['tarifs']
-            $dtos = [];
-            foreach ($data['tarifs'] as $tarif_id => $qty) {
-                //On boucle sur la quantité de ce tarif
-                for ($i = 0; $i < $qty; $i++) {
-                    //Puis sur le nombre de places dans le tarif (pour les packs multi-places) pour avoir le nombre de places total
-                    $nbPlacesInPack = $allEventTarifs[$tarif_id]->getSeatCount();
-                    for ($j = 0; $j < $nbPlacesInPack; $j++) {
-                        //On génère le dto qu'on ajoute
-                        $dtos[] = ReservationDetailItemDTO::fromArrayWithSpecialPrice($tarif_id, $data);
-                    }
-                }
-            }
-
-            //Pour ne pas perdre ce qui aurait été saisi avant
-            // Indexer l'existant par tarif_id
-            $effectiveByTarif = $this->mapEffectiveByTarifId($effective['reservation_detail']);
-
-            // Filtrer les anciens détails pour ne garder que ceux présents dans les nouveaux dtos
-            $tarifIdsActuels = array_map(fn($dto) => $dto->tarif_id, $dtos);
-            $effectiveByTarif = array_filter(
-                $effectiveByTarif,
-                fn($tarifDetails, $tarifId) => in_array($tarifId, $tarifIdsActuels),
-                ARRAY_FILTER_USE_BOTH
-            );
-
-
-            // Compléter chaque DTO construit depuis le POST avec l'existant si même tarif_id
-            foreach ($dtos as $i => $dtoToComplete) {
-
-                $dtos[$i] = $this->mergeDtoWithEffective($dtoToComplete, $effectiveByTarif);
-            }
-
+            //Construction des DTOs
+            $dtos = $this->builtDtos('ReservationDetailItemDTO', $effective, $data);
 
             // On rejette si vide
             if (empty($dtos)) {
                 return ['success' => false, 'errors' => ['tarifs' => 'Aucun tarif sélectionné.'], 'data' => []];
             }
 
-            $eventIdPayload = (int)($data['event_id'] ?? 0);
-            $eventIdSession = (int)($session['event_id'] ?? 0);
-            if ($eventIdPayload <= 0 || $eventIdPayload !== $eventIdSession) {
-                return ['success' => false, 'errors' => ['event_id' => 'Événement incohérent.'], 'data' => []];
-            }
-
-            //Les dtos sont prêts à être persistés,
-            // on supprime ['reservation_detail'] pour éviter de garder des items supprimés par le visiteur.
-            $this->reservationSessionService->setReservationSession('reservation_detail', []);
         }
 
         if ($step === 4) {
@@ -229,6 +186,20 @@ class ReservationDataValidationService
                 return ['success' => false, 'errors' => ['message' => 'Aucun tarif sélectionné.'], 'data' => []];
             }
         }
+
+        if ($step === 5) {
+
+        }
+
+
+        if ($step === 6) {
+            $effective = array_replace_recursive($defaults, $session);
+
+            $dtos = $this->builtDtos('ReservationComplementItemDTO', $effective, $data);
+
+            //On ne rejette pas si vide puisqu'on n'oblige pas à prendre des compléments.
+        }
+
 
 
         if ($dto === null && $dtos === null) {
@@ -548,5 +519,73 @@ class ReservationDataValidationService
 
         return $dto;
     }
+
+    private function builtDtos(string $DTOClass, array $effectiveSession, array $data): array
+    {
+        if ($DTOClass == 'ReservationDetailItemDTO') {
+            $keySession = 'reservation_detail';
+            //On récupère tous les tarifs de l'event
+            $allEventTarifs = $this->eventTarifRepository->findTarifsByEvent($effectiveSession['event_id'], true);
+        } else {
+            $keySession = 'reservation_complement';
+            //On récupère tous les tarifs de l'event
+            $allEventTarifs = $this->eventTarifRepository->findTarifsByEvent($effectiveSession['event_id'], false);
+        }
+
+        //Boucle sur les tarifs reçus $data['tarifs']
+        $dtos = [];
+        foreach ($data['tarifs'] as $tarif_id => $qty) {
+            //On boucle sur la quantité de ce tarif
+            for ($i = 0; $i < $qty; $i++) {
+            //Puis sur le nombre de places dans le tarif (pour les packs multi-places) pour avoir le nombre de places total
+                if ($DTOClass == 'ReservationDetailItemDTO') {
+                    $nbPlacesInPack = $allEventTarifs[$tarif_id]->getSeatCount();
+                    for ($j = 0; $j < $nbPlacesInPack; $j++) {
+                        //On génère le dto qu'on ajoute
+                        $dtos[] = ReservationDetailItemDTO::fromArrayWithSpecialPrice($tarif_id, $data);
+                    }
+                } else {
+                    //On va récupérer le code s'il y en a 1
+                    $tarif = $allEventTarifs[$tarif_id];
+                    $code = $tarif->getAccessCode();
+                    $dtos[] = ReservationComplementItemDTO::fromArrayWithSpecialPrice($tarif_id, $data, $code);
+                }
+            }
+        }
+
+        //Pour ne pas perdre ce qui aurait été saisi avant
+        // Indexer l'existant par tarif_id
+        $effectiveByTarif = $this->mapEffectiveByTarifId($effectiveSession[$keySession]);
+
+        // Filtrer les anciens détails pour ne garder que ceux présents dans les nouveaux dtos
+        $tarifIdsActuels = array_map(fn($dto) => $dto->tarif_id, $dtos);
+        $effectiveByTarif = array_filter(
+            $effectiveByTarif,
+            fn($tarifDetails, $tarifId) => in_array($tarifId, $tarifIdsActuels),
+            ARRAY_FILTER_USE_BOTH
+        );
+
+
+        // Compléter chaque DTO construit depuis le POST avec l'existant si même tarif_id
+        foreach ($dtos as $i => $dtoToComplete) {
+
+            $dtos[$i] = $this->mergeDtoWithEffective($dtoToComplete, $effectiveByTarif);
+        }
+
+
+        $eventIdPayload = (int)($data['event_id'] ?? 0);
+        $eventIdSession = (int)($effectiveSession['event_id'] ?? 0);
+        if ($eventIdPayload <= 0 || $eventIdPayload !== $eventIdSession) {
+            return ['success' => false, 'errors' => ['event_id' => 'Événement incohérent.'], 'data' => []];
+        }
+
+
+        //Les dtos sont prêts à être persistés,
+        // on supprime ['reservation_retail'] ou ['reservation_complement'] pour éviter de garder des items supprimés par le visiteur.
+        $this->reservationSessionService->setReservationSession($keySession, []);
+
+        return $dtos;
+    }
+
 
 }

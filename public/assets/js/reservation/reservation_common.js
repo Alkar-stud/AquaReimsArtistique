@@ -95,47 +95,56 @@ console.log('fetchBody : ', fetchBody);
     })
         .then(async (response) => {
             // Récupère le nouveau token côté réponse
-            // Récupérer les nouveaux jetons CSRF dans la réponse
             const csrfHeader = response.headers.get('X-CSRF-Token');
-
             // Mettre à jour le jeton pour les requêtes suivantes
-            if (csrfHeader) {
-                updateCsrfToken(csrfHeader);
-            }
+            if (csrfHeader) updateCsrfToken(csrfHeader);
 
             const contentType = response.headers.get('content-type') || '';
-            // JSON attendu
-            if (contentType.includes('application/json')) {
-                const data = await response.json();
-console.log('[apiPost] Réponse JSON:', data);
+            const raw = await response.text(); // Lire le corps UNE seule fois
+            const isJson = contentType.includes('application/json');
+
+            if (isJson) {
+                let data;
+                try {
+                    data = raw ? JSON.parse(raw) : null;
+                } catch {
+                    console.error('[apiPost] Échec du parsing JSON. Corps brut:');
+                    console.error(raw);
+                    const err = new Error('Réponse JSON invalide');
+                    err.status = response.status;
+                    err.body = raw;
+                    err.url = response.url;
+                    err.userMessage = normalizeUserMessage(response.status);
+                    throw err;
+                }
 
                 if (!response.ok) {
                     if (response.status === 419) {
-                        // Erreur de CSRF - on peut réessayer une fois avec le nouveau jeton
                         console.warn('Jeton CSRF expiré, actualisation du jeton...');
                         throw { userMessage: 'Session expirée, veuillez réessayer.' };
                     }
-
                     const msg = data && (data.error || data.message) || `HTTP ${response.status}`;
                     const err = new Error(msg);
                     err.status = response.status;
                     err.data = data;
-                    err.userMessage = normalizeUserMessage(response.status, data && (data.userMessage || data.error || data.message));
                     err.url = response.url;
+                    err.userMessage = normalizeUserMessage(response.status, data && (data.userMessage || data.error || data.message));
+                    console.error(`[apiPost] HTTP ${response.status} - ${response.url}`);
+                    console.error('[apiPost] Corps:', raw);
                     throw err;
                 }
+
+                console.log('[apiPost] Réponse JSON:', data);
                 return data;
             }
 
-            // Non-JSON: journaliser le corps complet pour debug
-            const text = await response.text();
-            console.groupCollapsed(`[apiPost] Réponse non-JSON (statut ${response.status}) - ${response.url}`);
-            console.log(text);
-            console.groupEnd();
+            // Non-JSON: réutiliser 'raw' (ne pas relire le corps)
+            console.error(`[apiPost] Réponse non-JSON (statut ${response.status}) - ${response.url}`);
+            console.error('[apiPost] Corps:', raw);
 
             const err = new Error(`Réponse non-JSON (statut ${response.status})`);
             err.status = response.status;
-            err.body = text;
+            err.body = raw;
             err.url = response.url;
             err.userMessage = normalizeUserMessage(response.status);
             throw err;
@@ -148,27 +157,12 @@ function parseTarifIdFromName(name) {
     return m ? m[1] : null;
 }
 
+function euroFromCents(cents) {
+    const n = (parseInt(cents, 10) || 0) / 100;
+    return n.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
+}
+
 // Exposer globalement
 window.apiPost = apiPost;
 window.showFlash = showFlash;
 
-
-/* Exemples d'usage:
-
-// 1) Appel JSON
-apiPost('/reservation/validate-access-code', { event_id, code })
-  .then((data) => {
-   //Traiter le retour data, genre data.success
-   })
-  .catch((e) => { console.error(e); });
-
-// 2) Upload fichier
-const fd = new FormData();
-fd.append('file', fileInput.files[0]);
-fd.append('event_id', eventId);
-apiPost('/fichiers/upload', fd)
-  .then((data) => {
-   //Traiter le retour data, genre data.success
-   })
-    .catch((e) => { console.error(e); });
-*/

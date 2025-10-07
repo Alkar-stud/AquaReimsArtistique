@@ -4,7 +4,9 @@ namespace app\Controllers\Ajax;
 
 use app\Attributes\Route;
 use app\Controllers\AbstractController;
+use app\DTO\ReservationComplementItemDTO;
 use app\DTO\ReservationDetailItemDTO;
+use app\Repository\Tarif\TarifRepository;
 use app\Services\Reservation\ReservationQueryService;
 use app\Services\Reservation\ReservationSessionService;
 use app\Services\DataValidation\ReservationDataValidationService;
@@ -226,11 +228,18 @@ class ReservationAjaxController extends AbstractController
         }
 
         //On construit le DTO pour persister le code dans $_SESSION
-        // On récupère les détails actuels pour y ajouter le nouveau
-        $currentDetails = $this->reservationSessionService->getReservationSession()['reservation_detail'] ?? [];
-        $dto = ReservationDetailItemDTO::fromArrayWithSpecialPrice($result['tarif']['id'], [], $code);
-        $currentDetails[] = $dto->jsonSerialize();
-        $this->reservationSessionService->setReservationSession('reservation_detail', $currentDetails);
+        // On récupère les détails actuels pour y ajouter le nouveau (reservation_detail ou reservation_complement selon si place assises dans le tarif)
+        if ($result['tarif']['seat_count'] === null) {
+            $currentDetails = $this->reservationSessionService->getReservationSession()['reservation_complement'] ?? [];
+            $dto = ReservationComplementItemDTO::fromArrayWithSpecialPrice($result['tarif']['id'], [], $code);
+            $currentDetails[] = $dto->jsonSerialize();
+            $this->reservationSessionService->setReservationSession('reservation_complement', $currentDetails);
+        } else {
+            $currentDetails = $this->reservationSessionService->getReservationSession()['reservation_detail'] ?? [];
+            $dto = ReservationDetailItemDTO::fromArrayWithSpecialPrice($result['tarif']['id'], [], $code);
+            $currentDetails[] = $dto->jsonSerialize();
+            $this->reservationSessionService->setReservationSession('reservation_detail', $currentDetails);
+        }
 
         $this->json([
             'success'            => true,
@@ -253,12 +262,26 @@ class ReservationAjaxController extends AbstractController
             return;
         }
 
-        // Récupérer les détails actuels de la session
-        $currentDetails = $this->reservationSessionService->getReservationSession()['reservation_detail'] ?? [];
-        // Utiliser le service pour retirer le tarif
-        $newDetails = $this->tarifService->removeTarifFromDetails($currentDetails, $tarifId);
-        // Mettre à jour la session
-        $this->reservationSessionService->setReservationSession('reservation_detail', $newDetails);
+        //On va chercher le tarif correspondant s'il y en a un
+        $tarifRepository = new TarifRepository();
+        $result = $tarifRepository->findById($tarifId);
+
+        //Selon s'il y a des places assises ou non, on est dans reservation_detail ou reservation_complement
+        if ($result->getSeatCount() === null) {
+            // Récupérer les détails actuels de la session
+            $currentDetails = $this->reservationSessionService->getReservationSession()['reservation_complement'] ?? [];
+            // Utiliser le service pour retirer le tarif
+            $newDetails = $this->tarifService->removeTarifFromDetails($currentDetails, $tarifId);
+            // Mettre à jour la session
+            $this->reservationSessionService->setReservationSession('reservation_complement', $newDetails);
+        } else {
+            // Récupérer les détails actuels de la session
+            $currentDetails = $this->reservationSessionService->getReservationSession()['reservation_detail'] ?? [];
+            // Utiliser le service pour retirer le tarif
+            $newDetails = $this->tarifService->removeTarifFromDetails($currentDetails, $tarifId);
+            // Mettre à jour la session
+            $this->reservationSessionService->setReservationSession('reservation_detail', $newDetails);
+        }
 
         $this->json(['success' => true], 200, 'reservation');
     }

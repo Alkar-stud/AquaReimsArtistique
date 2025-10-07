@@ -127,7 +127,8 @@ class ReservationController extends AbstractController
         // Préparation des données à envoyer à la vue, construit le "pré-remplissage" s'il existe déjà un tarif avec code en session à l'aide du tableau des tarifs de cet event
         $dataForViewSpecialCode = $this->tarifService->getAllTarifAndPrepareViewWithSpecialCode(
             $allTarifsWithSeatForThisEvent,
-            $session
+            $session,
+            'reservation_detail'
         );
         //Préparation des données déjà saisie à cette étape, regroupé par id et quantité
         $arrayTarifForForm = $this->reservationSessionService->arraySessionForFormStep3($session['reservation_detail'], $allTarifsWithSeatForThisEvent);
@@ -213,7 +214,16 @@ class ReservationController extends AbstractController
 
         // Récupération des tarifs avec tarif sans place non assise de cet event
         $allTarifsWithoutSeatForThisEvent = $this->eventTarifRepository->findTarifsByEvent($session['event_id'], false);
-        //On ajoute si les sièges sont numérotées pour el retour dans la vue
+
+        // Préparation des données à envoyer à la vue, construit le "pré-remplissage" s'il existe déjà un tarif avec code en session à l'aide du tableau des tarifs de cet event
+        $dataForViewSpecialCode = $this->tarifService->getAllTarifAndPrepareViewWithSpecialCode(
+            $allTarifsWithoutSeatForThisEvent,
+            $session,
+            'reservation_complement'
+        );
+
+
+        //On ajoute si les sièges sont numérotées pour le bouton retour dans la vue
         $event = $this->eventRepository->findById($session['event_id'], true);
 
         //Préparation des données déjà saisie à cette étape, regroupé par id et quantité
@@ -223,6 +233,7 @@ class ReservationController extends AbstractController
             'reservation'                       => $session,
             'previousStep'                      => $event->getPiscine()->getNumberedSeats() ? 'etape5Display' : 'etape4Display',
             'allTarifsWithoutSeatForThisEvent'  => $allTarifsWithoutSeatForThisEvent,
+            'specialTarifSession'               => $dataForViewSpecialCode,         //Tarif du code spécial saisi en tableau
             'arrayTarifForForm'                 => $arrayTarifForForm,
         ], 'Réservations');
     }

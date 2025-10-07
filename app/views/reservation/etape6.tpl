@@ -40,6 +40,15 @@
 
         <hr>
         <div class="mb-3">
+            <label for="specialCode" class="form-label">Vous avez un code ?</label>
+            <div class="input-group">
+                <input type="text" class="form-control" id="specialCode" placeholder="Saisissez votre code" style="max-width: 250px;">
+                <button type="button" class="btn btn-outline-primary" id="validateCodeBtn">Valider le code</button>
+            </div>
+            <div id="specialCodeFeedback" class="form-text text-danger"></div>
+        </div>
+        <div id="specialTarifContainer"></div>
+        <br>
         <div class="row">
             <div class="col-12 col-md-6 mb-2 mb-md-0">
                 <a href="/reservation/{{ $previousStep }}" class="btn btn-secondary w-100 w-md-auto">Modifier mon choix précédent</a>
@@ -52,6 +61,10 @@
 
 
 </div>
+
+<script>
+    window.specialTarifSession  = {{! json_encode($specialTarifSession ?? null) !}}; // préremplissage code spécial
+</script>
 
 <script src="/assets/js/reservation/reservation_common.js" defer></script>
 <script src="/assets/js/reservation/reservation_etape6.js" defer></script>

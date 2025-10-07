@@ -13,7 +13,9 @@ final class ReservationDetailItemDTO extends AbstractDTO implements JsonSerializ
         public ?string $justificatif_original_name = null,
         public ?string $tarif_access_code = null,
         public ?int $place_id = null
-    ) {
+    )  {
+        $this->name = $name !== null ? mb_strtoupper($name, 'UTF-8') : null;
+        $this->firstname = $firstname !== null ? mb_convert_case($firstname, MB_CASE_TITLE, 'UTF-8') : null;
     }
 
     /**

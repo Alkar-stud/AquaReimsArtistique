@@ -2,22 +2,18 @@
 
 namespace app\Services\Tarif;
 
-use app\Repository\Event\EventTarifRepository;
 use app\Repository\Tarif\TarifRepository;
 
 class TarifService
 {
     private TarifRepository $tarifRepository;
-    private EventTarifRepository $eventTarifRepository;
 
 
     public function __construct(
         TarifRepository $tarifRepository,
-        EventTarifRepository $eventTarifRepository,
     )
     {
         $this->tarifRepository = $tarifRepository;
-        $this->eventTarifRepository = $eventTarifRepository;
     }
 
     /**
@@ -81,7 +77,7 @@ class TarifService
                         'description' => $tarif->getDescription(),
                         'seat_count' => $tarif->getSeatCount(),
                         'price' => $tarif->getPrice()
-                    ]
+                    ],
                 ];
             }
         }
@@ -111,14 +107,15 @@ class TarifService
     /**
      * Construit le "pré-remplissage" s'il existe déjà un tarif avec code en session.
      *
-     * @param array $allTarifsWithSeatForThisEvent
+     * @param array $allTarifsForThisEvent
      * @param array $session
+     * @param string $dto Le texte du DTO attendu (detail ou complement)
      * @return array|null
      */
-    public function getAllTarifAndPrepareViewWithSpecialCode(array $allTarifsWithSeatForThisEvent, array $session): ?array
+    public function getAllTarifAndPrepareViewWithSpecialCode(array $allTarifsForThisEvent, array $session, string $dto): ?array
     {
         $specialTarifSession = null;
-        $details = $session['reservation_detail'] ?? [];
+        $details = $session[$dto] ?? [];
 
         if (is_array($details) && !empty($details)) {
             foreach ($details as $d) {
@@ -127,7 +124,7 @@ class TarifService
                 if (!$code || $tarifId <= 0) {
                     continue;
                 }
-                foreach ($allTarifsWithSeatForThisEvent as $tarif) {
+                foreach ($allTarifsForThisEvent as $tarif) {
                     if ($tarif->getId() === $tarifId) {
                         $specialTarifSession = [
                             'id'         => $tarif->getId(),

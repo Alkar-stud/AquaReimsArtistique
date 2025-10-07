@@ -59,10 +59,9 @@ readonly class ReservationDataPersist
 
         if ($dto instanceof ReservationComplementItemDTO) {
             // Empile les compléments sélectionnés
-            $session = $this->reservationSessionService->getReservationSession() ?? [];
-            $complements = $session['reservation_complements'] ?? [];
-            $complements[] = $dto->jsonSerialize(); // ou logique de fusion par tarifId si besoin
-            $this->reservationSessionService->setReservationSession('reservation_complements', $complements);
+            $this->reservationSessionService->setReservationSession(['reservation_complement', $key, 'tarif_id'], $dto->tarif_id);
+            $this->reservationSessionService->setReservationSession(['reservation_complement', $key, 'qty'], $dto->qty);
+            $this->reservationSessionService->setReservationSession(['reservation_complement', $key, 'tarif_access_code'], $dto->tarif_access_code);
             return;
         }
 

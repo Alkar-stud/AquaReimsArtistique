@@ -6,6 +6,7 @@ use app\Attributes\Route;
 use app\Controllers\AbstractController;
 use app\Repository\Event\EventRepository;
 use app\Repository\Event\EventSessionRepository;
+use app\Repository\Swimmer\SwimmerRepository;
 use app\Repository\Tarif\TarifRepository;
 use app\Services\DataValidation\ReservationDataValidationService;
 
@@ -15,12 +16,14 @@ class ReservationConfirmationController extends AbstractController
     private EventRepository $eventRepository;
     private TarifRepository $tarifRepository;
     private EventSessionRepository $eventSessionRepository;
+    private SwimmerRepository $swimmerRepository;
 
     public function __construct(
         ReservationDataValidationService $reservationDataValidationService,
         EventRepository $eventRepository,
         TarifRepository $tarifRepository,
         EventSessionRepository $eventSessionRepository,
+        SwimmerRepository $swimmerRepository,
     )
     {
         parent::__construct(true); // route publique
@@ -28,6 +31,7 @@ class ReservationConfirmationController extends AbstractController
         $this->eventRepository = $eventRepository;
         $this->tarifRepository = $tarifRepository;
         $this->eventSessionRepository = $eventSessionRepository;
+        $this->swimmerRepository = $swimmerRepository;
     }
 
     /**
@@ -68,23 +72,31 @@ class ReservationConfirmationController extends AbstractController
         }
         $eventSession = $this->eventSessionRepository->findById($session['event_session_id']);
         $swimmer = null;
-        if (!$event->getLimitationPerSwimmer()) {
-
+        if ($event->getLimitationPerSwimmer() !== null) {
+            $swimmer = $this->swimmerRepository->findById($session['swimmer_id'], true);
         }
+
+        //Préparation des détails pour la vue
+        $reservationDetails = $this->reservationSessionService->prepareReservationDetailToView($session['reservation_detail'], $tarifsById);
+        // Préparation des compléments pour la vue
+        $reservationComplements = $this->reservationSessionService->prepareReservationComplementToView($session['reservation_complement'] ?? [], $tarifsById);
+
 /*
 echo '<pre>';
+print_r($reservationDetails);
+echo '<hr>';
 print_r($session);
 echo '<hr>';
 print_r($event);
 echo '<hr>';
 print_r($tarifsById);
-echo '<hr>';
-print_r($eventSession);
 die;
 */
 
         $this->render('reservation/confirmation', [
             'reservation'           => $session,
+            'details'               => $reservationDetails,
+            'complements'           => $reservationComplements,
             'event'                 => $event,
             'tarifs'                => $tarifsById,
             'eventSession'          => $eventSession,

@@ -3,6 +3,7 @@
 namespace app\Services\Reservation;
 
 use app\Models\Reservation\ReservationDetail;
+use app\Models\Tarif\Tarif;
 use app\Utils\DurationHelper;
 use JsonSerializable;
 
@@ -153,5 +154,78 @@ class ReservationSessionService
         return $tarifQuantities;
     }
 
+    /**
+     * Pour préparer reservation_detail de $_SESSION en tableau prêt, en regroupant les packs et indexé par tarif_id
+     *
+     * @param array $reservationDetails
+     * @param array $tarifsById
+     * @return array
+     */
+    public function prepareReservationDetailToView(array $reservationDetails, array $tarifsById): array
+    {
+        //On boucle sur les details
+        $details = [];
+        foreach ($reservationDetails as $detail) {
+            $details[$detail['tarif_id']]['tarif_name'] = $tarifsById[$detail['tarif_id']]->getName();
+            $details[$detail['tarif_id']]['description'] = $tarifsById[$detail['tarif_id']]->getDescription();
+            $details[$detail['tarif_id']]['price'] = $tarifsById[$detail['tarif_id']]->getPrice();
+            $details[$detail['tarif_id']][] = $detail;
+        }
 
+        return $details;
+    }
+
+
+    /**
+     * Prépare `reservation_complement` pour la vue:
+     * - groupe par tarif_id
+     * - somme les qty
+     * - liste les codes distincts non vides
+     * - ajoute les infos du tarif (name, description, price)
+     *
+     * @param array $reservationComplement
+     * @param array<int,Tarif> $tarifsById
+     * @return array
+     */
+    public function prepareReservationComplementToView(array $reservationComplement, array $tarifsById): array
+    {
+        if (empty($reservationComplement)) {
+            return [];
+        }
+
+        $complements = [];
+        foreach ($reservationComplement as $row) {
+            $tarifId = (int)($row['tarif_id'] ?? 0);
+            if ($tarifId <= 0 || !isset($tarifsById[$tarifId])) {
+                continue;
+            }
+
+            $qty  = max(0, (int)($row['qty'] ?? 0));
+            $code = trim((string)($row['tarif_access_code'] ?? ''));
+
+            if (!isset($complements[$tarifId])) {
+                $tarif = $tarifsById[$tarifId];
+                $complements[$tarifId] = [
+                    'tarif_name'  => $tarif->getName(),
+                    'description' => $tarif->getDescription(),
+                    'price'       => $tarif->getPrice(),
+                    'qty'         => 0,
+                    'codes'       => [],
+                ];
+            }
+
+            $complements[$tarifId]['qty'] += $qty;
+            if ($code !== '') {
+                $complements[$tarifId]['codes'][$code] = true;
+            }
+        }
+
+        // Normalise les codes en liste simple
+        foreach ($complements as &$group) {
+            $group['codes'] = array_keys($group['codes']);
+        }
+        unset($group);
+
+        return $complements;
+    }
 }

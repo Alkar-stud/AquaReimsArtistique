@@ -39,7 +39,7 @@
                         data-includes_program="{{ $tarif_loop['item']->getIncludesProgram() ? '1' : '0' }}"
                         data-requires_proof="{{ $tarif_loop['item']->getRequiresProof() ? '1' : '0' }}"
                         data-access_code="{{ $tarif_loop['item']->getAccessCode() ?? '' }}"
-                        data-is_active="{{ $tarif_loop['item']->getIsActive() ? '1' : '0' }}"
+                        data-is_active="{{ $tarif_loop['item']->isActive() ? '1' : '0' }}"
                         onclick="openTarifModal('edit', this.dataset)">
                     Éditer
                 </button>
@@ -175,7 +175,7 @@
                 <td class="text-center"><input type="checkbox" name="includes_program" {{ $tarif_loop['item']->getIncludesProgram() ? 'checked' : '' }} form="form-update-{{ $tarif_loop['item']->getId() }}"></td>
                 <td class="text-center"><input type="checkbox" name="requires_proof" {{ $tarif_loop['item']->getRequiresProof() ? 'checked' : '' }} form="form-update-{{ $tarif_loop['item']->getId() }}"></td>
                 <td><input type="text" name="access_code" class="form-control" value="{{ $tarif_loop['item']->getAccessCode() ?? '' }}" form="form-update-{{ $tarif_loop['item']->getId() }}"></td>
-                <td class="text-center"><input type="checkbox" name="is_active" {{ $tarif_loop['item']->getIsActive() ? 'checked' : '' }} form="form-update-{{ $tarif_loop['item']->getId() }}"></td>
+                <td class="text-center"><input type="checkbox" name="is_active" {{ $tarif_loop['item']->isActive() ? 'checked' : '' }} form="form-update-{{ $tarif_loop['item']->getId() }}"></td>
                 <td class="d-flex gap-2">
                     <button type="submit" class="btn btn-secondary btn-sm" form="form-update-{{ $tarif_loop['item']->getId() }}">Enregistrer</button>
                     <form action="/gestion/tarifs/delete" method="POST" onsubmit="return confirm('Supprimer ce tarif ?');" class="d-inline">

@@ -59,7 +59,7 @@ class TarifService
      * @param string $code
      * @return array ['success' => bool, 'error' => ?string, 'tarif' => ?array]
      */
-    public function validateSpecialCode(int $eventId, string $code): array
+    public function validateSpecialCode(int $eventId, string $code, $withSeat = true): array
     {
         if (!$eventId || empty($code)) {
             return ['success' => false, 'error' => 'Paramètres manquants.'];

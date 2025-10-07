@@ -156,6 +156,37 @@ class TarifRepository extends AbstractRepository
     }
 
     /**
+     * Compte le nombre de tarifs ayant le même access_code normalisé (trim + lower)
+     * dans le même type (avec places vs sans places).
+     * N’inclut pas l’ID fourni (en modification).
+     * @param string $normalizedCode
+     * @param bool $hasSeats
+     * @param int|null $excludeId
+     * @return int
+     */
+    public function countByAccessCodeAndSeatType(string $normalizedCode, bool $hasSeats, ?int $excludeId = null): int
+    {
+        $seatCond = $hasSeats
+            ? 'seat_count IS NOT NULL AND seat_count > 0'
+            : '(seat_count IS NULL OR seat_count = 0)';
+
+        $sql = "SELECT COUNT(*) AS cnt
+                FROM {$this->tableName}
+                WHERE access_code IS NOT NULL
+                  AND LOWER(TRIM(access_code)) = :code
+                  AND {$seatCond}";
+        $params = ['code' => $normalizedCode];
+
+        if (!empty($excludeId)) {
+            $sql .= " AND id <> :exclude_id";
+            $params['exclude_id'] = (int)$excludeId;
+        }
+
+        $rows = $this->query($sql, $params);
+        return (int)($rows[0]['cnt'] ?? 0);
+    }
+
+    /**
      * @return int ID inséré (0 si échec)
      */
     public function insert(Tarif $tarif): int

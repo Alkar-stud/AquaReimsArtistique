@@ -55,7 +55,8 @@ class TarifController extends AbstractController
         $redirectUrl = '/gestion/tarifs' . ($onglet ? '?onglet=' . urlencode($onglet) : '');
 
         // Validation des données centralisée
-        $error = $this->tarifDataValidationService->checkData($_POST);
+        $error = $this->tarifDataValidationService->checkData($_POST, null);
+
         if ($error) {
             $this->flashMessageService->setFlashMessage('danger', $error);
             $this->redirect($redirectUrl);
@@ -98,7 +99,8 @@ class TarifController extends AbstractController
         }
 
         // Validation des données centralisée
-        $error = $this->tarifDataValidationService->checkData($_POST);
+        $error = $this->tarifDataValidationService->checkData($_POST, $tarif->getId());
+
         if ($error) {
             $this->flashMessageService->setFlashMessage('danger', $error);
             $this->redirect($redirectUrl);

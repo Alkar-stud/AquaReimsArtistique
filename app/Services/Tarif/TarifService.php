@@ -195,5 +195,37 @@ class TarifService
         return $indexed;
     }
 
+    /**
+     * Vérifie si un code d'accès est déjà utilisé dans le même type (avec/sans places).
+     * - Insensible à la casse et aux espaces.
+     * - Inclut les tarifs inactifs.
+     * - Exclut l'ID courant si fourni.
+     */
+    public function isAccessCodeDuplicateForSeatType(?string $code, bool $hasSeats, ?int $excludeId = null): bool
+    {
+        $normalized = $this->normalizeCode($code);
+        if ($normalized === null) {
+            return false; // pas de code => pas de contrôle
+        }
+
+        $count = $this->tarifRepository->countByAccessCodeAndSeatType($normalized, $hasSeats, $excludeId);
+        return $count > 0;
+    }
+
+    /**
+     * Normalise un code (trim + lower). Retourne null si vide.
+     */
+    private function normalizeCode(?string $code): ?string
+    {
+        if ($code === null) {
+            return null;
+        }
+        $trimmed = trim($code);
+        if ($trimmed === '') {
+            return null;
+        }
+        return mb_strtolower($trimmed);
+    }
+
 
 }

@@ -11,6 +11,8 @@ class ReservationUserDTO extends AbstractDTO implements JsonSerializable
         public string $email,
         public ?string $phone = null
     ) {
+        $this->name = $name !== null ? mb_strtoupper($name, 'UTF-8') : null;
+        $this->firstname = $firstname !== null ? mb_convert_case($firstname, MB_CASE_TITLE, 'UTF-8') : null;
     }
 
     public static function fromArray(array $data): self

@@ -264,6 +264,14 @@ class ReservationDataValidationService
             }
         }
 
+        if ($step > 6) {
+            $dto3 = ReservationComplementItemDTO::fromArray($effective);
+            $check = $this->validateStep3($dto3);
+            if (!$check['success']) {
+                return ['success' => false, 'errors' => $check['errors']];
+            }
+        }
+
         return ['success' => true];
     }
 
@@ -434,6 +442,66 @@ class ReservationDataValidationService
                 $provided = isset($d['tarif_access_code']) ? trim((string)$d['tarif_access_code']) : '';
                 if ($provided === '' || $provided !== $requiredCode) {
                     $errors["reservation_detail.$idx.tarif_access_code"] = 'Code d\'accès invalide pour ce tarif.';
+                }
+            }
+        }
+
+        if (!empty($errors)) {
+            return ['success' => false, 'errors' => $errors];
+        }
+
+        return ['success' => true, 'errors' => []];
+    }
+
+    /**
+     * @param $dto
+     * @return array
+     */
+    public function validateStep6($dto): array
+    {
+        $errors = [];
+
+        // Récupération de la session et des détails saisis à l’étape 6
+        $session  = $this->reservationSessionService->getReservationSession() ?? [];
+        $eventId  = (int)($session['event_id'] ?? 0);
+        $complements  = $session['reservation_complement'] ?? [];
+
+        if ($eventId <= 0) {
+            $errors['event_id'] = 'Événement incohérent.';
+        }
+
+        if (empty($complements) || !is_array($complements)) {
+            $errors['tarifs'] = 'Aucun tarif sélectionné.';
+        }
+
+        if (!empty($errors)) {
+            return ['success' => false, 'errors' => $errors];
+        }
+
+        // Tarifs disponibles pour l’événement, indexés par ID
+        $tarifsById = $this->eventTarifRepository->findTarifsByEvent($eventId);
+
+        foreach ($complements as $idx => $d) {
+            $tid = (int)($d['tarif_id'] ?? 0);
+
+            if ($tid <= 0 || !isset($tarifsById[$tid])) {
+                $errors["reservation_complement.$idx.tarif_id"] = 'Tarif inconnu pour cet événement.';
+                continue;
+            }
+
+            $tarif = $tarifsById[$tid];
+
+            // Tarif actif
+            if (!$tarif->isActive()) {
+                $errors["reservation_complement.$idx.tarif_id"] = 'Tarif inactif.';
+            }
+
+            // Validation éventuelle du code d’accès requis
+            $requiredCode = $tarif->getAccessCode();
+            if ($requiredCode !== null) {
+                $provided = isset($d['tarif_access_code']) ? trim((string)$d['tarif_access_code']) : '';
+                if ($provided === '' || $provided !== $requiredCode) {
+                    $errors["reservation_complement.$idx.tarif_access_code"] = 'Code d\'accès invalide pour ce tarif.';
                 }
             }
         }

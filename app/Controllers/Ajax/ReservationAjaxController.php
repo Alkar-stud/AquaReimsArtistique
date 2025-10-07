@@ -228,7 +228,7 @@ class ReservationAjaxController extends AbstractController
         }
 
         //On construit le DTO pour persister le code dans $_SESSION
-        // On récupère les détails actuels pour y ajouter le nouveau (reservation_detail ou reservation_complement selon si place assises dans le tarif)
+        // On récupère les détails actuels pour y ajouter le nouveau (reservation_detail ou reservation_complement selon si place assises dans le tarif).
         if ($result['tarif']['seat_count'] === null) {
             $currentDetails = $this->reservationSessionService->getReservationSession()['reservation_complement'] ?? [];
             $dto = ReservationComplementItemDTO::fromArrayWithSpecialPrice($result['tarif']['id'], [], $code);

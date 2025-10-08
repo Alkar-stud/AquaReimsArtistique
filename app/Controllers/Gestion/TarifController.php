@@ -7,6 +7,7 @@ use app\Controllers\AbstractController;
 use app\Models\Tarif\Tarif;
 use app\Repository\Tarif\TarifRepository;
 use app\Services\DataValidation\TarifDataValidationService;
+use app\Services\Tarif\TarifService;
 
 class TarifController extends AbstractController
 {
@@ -19,6 +20,9 @@ class TarifController extends AbstractController
         $this->tarifRepository = new TarifRepository();
         $this->tarifDataValidationService = new TarifDataValidationService();
 
+        $this->tarifDataValidationService->setTarifService(
+            new TarifService($this->tarifRepository)
+        );
     }
 
     #[Route('/gestion/tarifs', name: 'app_gestion_tarifs')]

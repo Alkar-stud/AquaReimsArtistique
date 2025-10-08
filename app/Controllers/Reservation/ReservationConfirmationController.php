@@ -87,16 +87,6 @@ class ReservationConfirmationController extends AbstractController
 
         $grandTotal = $detailsSubtotal + $complementsSubtotal;
 
-/*
-echo '<pre>';
-print_r($detailsSubtotal);
-echo '<hr>';
-print_r($complementsSubtotal);
-echo '<hr>';
-print_r($grandTotal);
-die;
-*/
-
         $this->render('reservation/confirmation', [
             'reservation'   => $session,
             'details'       => $reservationDetails,
@@ -109,6 +99,16 @@ die;
         ], 'Réservations');
     }
 
+
+    #[Route('/reservation/payment', name: 'app_reservation_payment')]
+    public function payment(): void
+    {
+
+
+        $this->render('reservation/payment', [
+
+        ], 'Paiement réservation');
+    }
 
 
 }

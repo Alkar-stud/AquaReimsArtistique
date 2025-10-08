@@ -1,5 +1,5 @@
 <?php
-namespace app\Services;
+namespace app\Services\Reservation;
 
 interface ReservationStorageInterface
 {

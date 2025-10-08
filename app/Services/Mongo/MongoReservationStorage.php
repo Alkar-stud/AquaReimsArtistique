@@ -1,9 +1,9 @@
 <?php
 namespace app\Services\Mongo;
 
-use app\Services\ReservationStorageInterface;
+use app\Services\Reservation\ReservationStorageInterface;
 use MongoDB\BSON\ObjectId;
-use MongoDB\BSON\UTCDateTime;
+use app\Utils\NsqlIdGenerator;
 
 class MongoReservationStorage implements ReservationStorageInterface
 {
@@ -16,13 +16,15 @@ class MongoReservationStorage implements ReservationStorageInterface
 
     public function saveReservation(array $reservation): string
     {
-        // Enregistre la réservation et retourne l'ID inséré
+        // Forcer un nsql_id commun si absent
+        if (empty($reservation['nsql_id'])) {
+            $reservation['nsql_id'] = NsqlIdGenerator::new();
+        }
         return $this->mongo->create($reservation);
     }
 
     public function findReservationById(string $id): ?array
     {
-        // Recherche une réservation par son ID MongoDB
         return $this->mongo->findOne(['_id' => new ObjectId($id)]);
     }
 
@@ -36,25 +38,12 @@ class MongoReservationStorage implements ReservationStorageInterface
 
     public function deleteReservation(string $id): int
     {
-        // Supprime une réservation par son ID MongoDB
         return $this->mongo->deleteOne(['_id' => new ObjectId($id)]);
     }
 
-    /**
-     * Sauvegarde ou met à jour une réservation et retourne son ID.
-     * @param array $reservationData
-     * @return string L'ID de la réservation.
-     */
-    public function saveOrUpdateReservation(array &$reservationData): string
+    // Optionnel: faciliter la comparaison par nsql_id
+    public function findReservationByNsqlId(string $nsqlId): ?array
     {
-        $reservationId = $reservationData['reservationId'] ?? null;
-        if ($reservationId) {
-            $reservationData['updatedAt'] = new UTCDateTime(time() * 1000);
-            $this->updateReservation($reservationId, $reservationData);
-        } else {
-            $reservationData['createdAt'] = new UTCDateTime(time() * 1000);
-            $reservationId = $this->saveReservation($reservationData);
-        }
-        return $reservationId;
+        return $this->mongo->findOne(['nsql_id' => $nsqlId]);
     }
 }

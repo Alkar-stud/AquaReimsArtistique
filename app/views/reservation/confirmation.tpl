@@ -1,3 +1,9 @@
+{% if $flash_message %}
+<div class="alert alert-{{ $flash_message['type'] ?? 'danger' }}" id="ajax_flash_container">
+    {{ $flash_message['message'] ?? '' }}
+</div>
+{% endif %}
+
 <div class="container-fluid">
     <h2 class="mb-4">Confirmation de votre réservation</h2>
 

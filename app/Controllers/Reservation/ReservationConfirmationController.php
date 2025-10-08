@@ -76,31 +76,36 @@ class ReservationConfirmationController extends AbstractController
             $swimmer = $this->swimmerRepository->findById($session['swimmer_id'], true);
         }
 
-        //Préparation des détails pour la vue
-        $reservationDetails = $this->reservationSessionService->prepareReservationDetailToView($session['reservation_detail'], $tarifsById);
-        // Préparation des compléments pour la vue
-        $reservationComplements = $this->reservationSessionService->prepareReservationComplementToView($session['reservation_complement'] ?? [], $tarifsById);
+        // Préparation des détails et compléments pour la vue + calcul du grand total à partir des sous-totaux
+        $detailSummary = $this->reservationSessionService->prepareReservationDetailSummary($session['reservation_detail'], $tarifsById);
+        $reservationDetails = $detailSummary['details'];
+        $detailsSubtotal = $detailSummary['subtotal'];
+
+        $complementSummary = $this->reservationSessionService->prepareReservationComplementSummary($session['reservation_complement'] ?? [], $tarifsById);
+        $reservationComplements = $complementSummary['complements'];
+        $complementsSubtotal = $complementSummary['subtotal'];
+
+        $grandTotal = $detailsSubtotal + $complementsSubtotal;
 
 /*
 echo '<pre>';
-print_r($reservationDetails);
+print_r($detailsSubtotal);
 echo '<hr>';
-print_r($session);
+print_r($complementsSubtotal);
 echo '<hr>';
-print_r($event);
-echo '<hr>';
-print_r($tarifsById);
+print_r($grandTotal);
 die;
 */
 
         $this->render('reservation/confirmation', [
-            'reservation'           => $session,
-            'details'               => $reservationDetails,
-            'complements'           => $reservationComplements,
-            'event'                 => $event,
-            'tarifs'                => $tarifsById,
-            'eventSession'          => $eventSession,
-            'swimmer'               => $swimmer,
+            'reservation'   => $session,
+            'details'       => $reservationDetails,
+            'complements'   => $reservationComplements,
+            'grandTotal'    => $grandTotal,
+            'event'         => $event,
+            'tarifs'        => $tarifsById,
+            'eventSession'  => $eventSession,
+            'swimmer'       => $swimmer,
         ], 'Réservations');
     }
 

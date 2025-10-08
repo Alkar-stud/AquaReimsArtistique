@@ -22,22 +22,10 @@
 
     <h5>Votre panier</h5>
 
-    {% php %}$grandTotal = 0;{% endphp %}
-
+    <!-- boucle des détails préparée -->
     <ul class="list-group mb-3">
         <h5>Détail des participants : </h5>
         {% foreach $details as $tarif_id => $group %}
-        {% php %}
-        $participants = array_values(array_filter($group, 'is_array'));
-        $count = count($participants);
-        $seatCount = $tarifs[$tarif_id]->getSeatCount() ?? 0;
-        $price = $tarifs[$tarif_id]->getPrice();
-        $packs = ($seatCount > 0) ? intdiv($count, $seatCount) : $count;
-        $total = $packs * $price;
-
-        // 2) Ajoute au total global
-        $grandTotal += $total;
-        {% endphp %}
         <li class="list-group-item d-flex justify-content-between align-items-start">
             <div class="me-3">
                 <strong>{{ htmlspecialchars($group['tarif_name'] ?? '') }}</strong>
@@ -45,7 +33,7 @@
                 <small class="text-muted">— {{ htmlspecialchars($group['description']) }}</small>
                 {% endif %}
                 <div class="mt-1">
-                    {% foreach $participants as $i => $p %}
+                    {% foreach $group['participants'] as $i => $p %}
                     {{ htmlspecialchars(($p['firstname'] ?? '') . ' ' . ($p['name'] ?? '')) }}
                     {% if !empty($p['place_id']) %}
                     <em>(place {{ htmlspecialchars($p['place_id']) }})</em>
@@ -53,17 +41,17 @@
                     {% if !empty($p['tarif_access_code']) %}
                     <em>(code {{ htmlspecialchars($p['tarif_access_code']) }})</em>
                     {% endif %}
-                    {% if $i < ($count - 1) %}<br>{% endif %}
+                    {% if $i < ($group['count'] - 1) %}<br>{% endif %}
                     {% endforeach %}
                 </div>
             </div>
             <div class="ms-auto text-end">
-                <strong>{{ number_format($total / 100, 2, ',', ' ') }} €</strong>
+                <strong>{{ number_format(($group['total'] ?? 0) / 100, 2, ',', ' ') }} €</strong>
                 <div class="text-muted small">
-                    {% if $seatCount > 0 %}
-                    {{ $packs }} × {{ number_format($price / 100, 2, ',', ' ') }} € ({{ $seatCount }} place{{ $seatCount > 1 ? 's' : '' }})
+                    {% if $group['seatCount'] > 0 %}
+                    {{ $group['packs'] }} × {{ number_format($group['price'] / 100, 2, ',', ' ') }} € ({{ $group['seatCount'] }} place{{ $group['seatCount'] > 1 ? 's' : '' }})
                     {% else %}
-                    {{ $count }} × {{ number_format($price / 100, 2, ',', ' ') }} €
+                    {{ $group['count'] }} × {{ number_format($group['price'] / 100, 2, ',', ' ') }} €
                     {% endif %}
                 </div>
             </div>
@@ -71,22 +59,11 @@
         {% endforeach %}
     </ul>
 
+    <!-- boucle des compléments préparée -->
     {% if (!empty($complements)) %}
     <h5>Compléments</h5>
     <ul class="list-group mb-3">
         {% foreach $complements as $tarif_id => $group %}
-        {% php %}
-        $qty = (int)($group['qty'] ?? 0);
-        $price = (int)($group['price'] ?? 0);
-        $total = $qty * $price;
-        $codesLine = '';
-        if (!empty($group['codes'])) {
-        $codesLine = '(code ' . implode(', ', $group['codes']) . ')';
-        }
-
-        // Ajoute au total global
-        $grandTotal += $total;
-        {% endphp %}
         <li class="list-group-item d-flex justify-content-between align-items-start">
             <div class="me-3">
                 <strong>{{ htmlspecialchars($group['tarif_name'] ?? '') }}</strong>
@@ -94,16 +71,16 @@
                 <small class="text-muted">— {{ htmlspecialchars($group['description']) }}</small>
                 {% endif %}
                 <div class="mt-1">
-                    Qté&nbsp;: {{ $qty }}
+                    Qté : {{ $group['qty'] }}
                 </div>
-                {% if !empty($codesLine) %}
-                <div class="text-muted small">{{ htmlspecialchars($codesLine) }}</div>
+                {% if (!empty($group['codes'])) %}
+                <div class="text-muted small">(code {{ htmlspecialchars(implode(', ', $group['codes'])) }})</div>
                 {% endif %}
             </div>
             <div class="ms-auto text-end">
-                <strong>{{ number_format($total / 100, 2, ',', ' ') }} €</strong>
+                <strong>{{ number_format(($group['total'] ?? 0) / 100, 2, ',', ' ') }} €</strong>
                 <div class="text-muted small">
-                    {{ $qty }} × {{ number_format($price / 100, 2, ',', ' ') }} €
+                    {{ $group['qty'] }} × {{ number_format($group['price'] / 100, 2, ',', ' ') }} €
                 </div>
             </div>
         </li>
@@ -111,6 +88,7 @@
     </ul>
     {% endif %}
 
+    <!-- grandTotal fourni par le contrôleur -->
     <ul class="list-group mb-4">
         <li class="list-group-item d-flex justify-content-between align-items-center">
             <span><strong>Total à payer</strong></span>
@@ -124,10 +102,13 @@
 
     <div class="row">
         <div class="col-12 col-md-6 mb-2 mb-md-0">
-            <a href="/reservation/etape6Display" class="btn btn-secondary w-100 w-md-auto">Modifier ma réservation</a>
+            <a href="/reservation/etape6Display" class="btn btn-secondary w-100 w-md-auto" id="returnBtn">Modifier ma réservation</a>
         </div>
         <div class="col-12 col-md-6">
-            <button type="submit" class="btn btn-primary w-100 w-md-auto" id="submitButton">Valider et payer</button>
+            <form id="reservationPlacesForm">
+                <input type="hidden" id="event_id" name="event_id" value="{{ $reservation['event_id'] }}">
+                <button type="submit" class="btn btn-primary w-100 w-md-auto" id="submitButton">Valider et payer</button>
+            </form>
         </div>
     </div>
 </div>

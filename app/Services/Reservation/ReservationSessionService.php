@@ -2,7 +2,6 @@
 
 namespace app\Services\Reservation;
 
-use app\Models\Reservation\ReservationDetail;
 use app\Models\Tarif\Tarif;
 use app\Utils\DurationHelper;
 use JsonSerializable;
@@ -129,7 +128,12 @@ class ReservationSessionService
         return (time() - $last) > $ttl;
     }
 
-    public function arraySessionForFormStep3(array $reservationDetails,$allEventTarifs): array
+    /**
+     * @param array $reservationDetails
+     * @param $allEventTarifs
+     * @return array
+     */
+    public function arraySessionForFormStep3(array $reservationDetails, $allEventTarifs): array
     {
         //on parcourt le tableau pour retourner un autre tableau avec index=tarif_id et valeur=quantité de ce tarif
         if (empty($reservationDetails)) {
@@ -228,4 +232,79 @@ class ReservationSessionService
 
         return $complements;
     }
+
+
+    /**
+     * Pour calculer les totaux pour une réservation (en cours ou déjà faite)
+     *
+     * @param array $reservationDetails
+     * @param array $tarifsById
+     * @return array{details: array, subtotal: int}
+     */
+    public function prepareReservationDetailSummary(array $reservationDetails, array $tarifsById): array
+    {
+        // Réutilise l'existant pour grouper les lignes par tarif_id
+        $grouped = $this->prepareReservationDetailToView($reservationDetails, $tarifsById);
+
+        $summary = [];
+        $subtotal = 0;
+
+        foreach ($grouped as $tarifId => $group) {
+            $participants = array_values(array_filter($group, 'is_array'));
+            $count = count($participants);
+
+            $tarif = $tarifsById[$tarifId] ?? null;
+            $seatCount = $tarif ? ($tarif->getSeatCount() ?? 0) : 0;
+            $price = $tarif ? (int)$tarif->getPrice() : 0;
+
+            // évite division par zéro
+            $packs = ($seatCount > 0) ? intdiv($count, max(1, $seatCount)) : $count;
+            $total = $packs * $price;
+
+            $subtotal += $total;
+
+            $summary[$tarifId] = [
+                'tarif_name'  => $group['tarif_name'] ?? '',
+                'description' => $group['description'] ?? '',
+                'price'       => $price,
+                'seatCount'   => $seatCount,
+                'participants'=> $participants,
+                'count'       => $count,
+                'packs'       => $packs,
+                'total'       => $total,
+            ];
+        }
+
+        return ['details' => $summary, 'subtotal' => $subtotal];
+    }
+
+    /**
+     * Prépare `reservation_complement` pour la vue (groupe) et renvoie aussi le sous-total de ces compléments.
+     *
+     * @param array $reservationComplement
+     * @param array<int,Tarif> $tarifsById
+     * @return array{complements: array, subtotal: int}
+     */
+    public function prepareReservationComplementSummary(array $reservationComplement, array $tarifsById): array
+    {
+        // Réutilise l'existant pour construire les groupes
+        $complements = $this->prepareReservationComplementToView($reservationComplement, $tarifsById);
+
+        $subtotal = 0;
+        foreach ($complements as $tid => &$group) {
+            $qty = (int)($group['qty'] ?? 0);
+            $price = (int)($group['price'] ?? 0);
+            $group['total'] = $qty * $price;
+            // s'assurer que 'codes' existe comme tableau (déjà fait dans prepareReservationComplementToView)
+            $group['codes'] = $group['codes'] ?? [];
+            $subtotal += $group['total'];
+        }
+        unset($group);
+
+        return [
+            'complements' => $complements,
+            'subtotal'    => $subtotal,
+        ];
+    }
+
 }

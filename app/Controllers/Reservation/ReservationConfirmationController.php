@@ -9,6 +9,7 @@ use app\Repository\Event\EventSessionRepository;
 use app\Repository\Swimmer\SwimmerRepository;
 use app\Repository\Tarif\TarifRepository;
 use app\Services\DataValidation\ReservationDataValidationService;
+use app\Services\Reservation\ReservationSaveCartService;
 
 class ReservationConfirmationController extends AbstractController
 {
@@ -17,6 +18,7 @@ class ReservationConfirmationController extends AbstractController
     private TarifRepository $tarifRepository;
     private EventSessionRepository $eventSessionRepository;
     private SwimmerRepository $swimmerRepository;
+    private ReservationSaveCartService $reservationSaveCartService;
 
     public function __construct(
         ReservationDataValidationService $reservationDataValidationService,
@@ -24,6 +26,7 @@ class ReservationConfirmationController extends AbstractController
         TarifRepository $tarifRepository,
         EventSessionRepository $eventSessionRepository,
         SwimmerRepository $swimmerRepository,
+        ReservationSaveCartService $reservationSaveCartService,
     )
     {
         parent::__construct(true); // route publique
@@ -32,6 +35,7 @@ class ReservationConfirmationController extends AbstractController
         $this->tarifRepository = $tarifRepository;
         $this->eventSessionRepository = $eventSessionRepository;
         $this->swimmerRepository = $swimmerRepository;
+        $this->reservationSaveCartService = $reservationSaveCartService;
     }
 
     /**
@@ -77,11 +81,11 @@ class ReservationConfirmationController extends AbstractController
         }
 
         // Préparation des détails et compléments pour la vue + calcul du grand total à partir des sous-totaux
-        $detailSummary = $this->reservationSessionService->prepareReservationDetailSummary($session['reservation_detail'], $tarifsById);
+        $detailSummary = $this->reservationSaveCartService->prepareReservationDetailSummary($session['reservation_detail'], $tarifsById);
         $reservationDetails = $detailSummary['details'];
         $detailsSubtotal = $detailSummary['subtotal'];
 
-        $complementSummary = $this->reservationSessionService->prepareReservationComplementSummary($session['reservation_complement'] ?? [], $tarifsById);
+        $complementSummary = $this->reservationSaveCartService->prepareReservationComplementSummary($session['reservation_complement'] ?? [], $tarifsById);
         $reservationComplements = $complementSummary['complements'];
         $complementsSubtotal = $complementSummary['subtotal'];
 
@@ -103,6 +107,11 @@ class ReservationConfirmationController extends AbstractController
     #[Route('/reservation/payment', name: 'app_reservation_payment')]
     public function payment(): void
     {
+        $session = $this->reservationSessionService->getReservationSession();
+        if (!isset($session['event_id'])) {
+            $this->flashMessageService->setFlashMessage('danger', 'Erreur f dans le parcours, veuillez recommencer');
+            $this->redirect('/reservation');
+        }
 
 
         $this->render('reservation/payment', [

@@ -111,10 +111,7 @@
             <a href="/reservation/etape6Display" class="btn btn-secondary w-100 w-md-auto" id="returnBtn">Modifier ma réservation</a>
         </div>
         <div class="col-12 col-md-6">
-            <form id="reservationPlacesForm">
-                <input type="hidden" id="event_id" name="event_id" value="{{ $reservation['event_id'] }}">
-                <button type="submit" class="btn btn-primary w-100 w-md-auto" id="submitButton">Valider et payer</button>
-            </form>
+            <a href="/reservation/payment" class="btn btn-primary w-100 w-md-auto" id="submitButton">Valider et payer</a>
         </div>
     </div>
 </div>
@@ -123,7 +120,7 @@
 
 
 <script src="/assets/js/reservation/reservation_common.js" defer></script>
-<script src="/assets/js/reservation/reservation_confirmation.js" defer></script>
+
 Ici pour la suite, on a déjà enregistré ça :
 {% php %}
 echo '<pre>';

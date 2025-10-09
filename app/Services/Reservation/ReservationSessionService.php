@@ -53,6 +53,8 @@ class ReservationSessionService
      */
     public function getReservationSession(): ?array
     {
+        // Met à jour le timestamp à chaque modification
+        $_SESSION['reservation']['last_activity'] = time();
         return $_SESSION['reservation'] ?? null;
     }
 
@@ -108,7 +110,9 @@ class ReservationSessionService
     public function getReservationTimeoutDuration(): int
     {
         $isoDuration = defined('TIMEOUT_PLACE_RESERV') ? TIMEOUT_PLACE_RESERV : 'PT30M';
-        return DurationHelper::iso8601ToSeconds($isoDuration) ?? 1800;
+        $seconds = DurationHelper::iso8601ToSeconds($isoDuration);
+
+        return (is_int($seconds) && $seconds > 0) ? $seconds : 1800;
     }
 
 
@@ -167,13 +171,27 @@ class ReservationSessionService
      */
     public function prepareReservationDetailToView(array $reservationDetails, array $tarifsById): array
     {
-        //On boucle sur les details
         $details = [];
+
         foreach ($reservationDetails as $detail) {
-            $details[$detail['tarif_id']]['tarif_name'] = $tarifsById[$detail['tarif_id']]->getName();
-            $details[$detail['tarif_id']]['description'] = $tarifsById[$detail['tarif_id']]->getDescription();
-            $details[$detail['tarif_id']]['price'] = $tarifsById[$detail['tarif_id']]->getPrice();
-            $details[$detail['tarif_id']][] = $detail;
+            $tarifId = (int)($detail['tarif_id'] ?? 0);
+            if ($tarifId <= 0 || !isset($tarifsById[$tarifId])) {
+                // Incohérence d'entrée; on ignore la ligne invalide pour ne pas générer d'erreur en vue
+                continue;
+            }
+
+            $tarif = $tarifsById[$tarifId];
+
+            if (!isset($details[$tarifId])) {
+                $details[$tarifId] = [
+                    'tarif_name'  => $tarif->getName(),
+                    'description' => $tarif->getDescription(),
+                    'price'       => $tarif->getPrice(),
+                ];
+            }
+
+            // On empile les participants sous index numériques (attendu par le résumé)
+            $details[$tarifId][] = $detail;
         }
 
         return $details;

@@ -185,10 +185,34 @@ function submitEtape2(name, firstname, email, phone, eventId) {
                     window.location.href = data.redirect;
                     return;
                 }
-                showFlash('danger', data.error || 'Erreur');
+                // On construit un message d'erreur détaillé à partir de l'objet 'errors'
+                let errorHtml = '<ul>';
+                if (data.errors && typeof data.errors === 'object') {
+                    for (const key in data.errors) {
+                        // On échappe le message pour la sécurité
+                        const safeMessage = data.errors[key].replace(/</g, "&lt;").replace(/>/g, "&gt;");
+                        errorHtml += `<li>${safeMessage}</li>`;
+                    }
+                } else {
+                    errorHtml += '<li>Une erreur inattendue est survenue.</li>';
+                }
+                errorHtml += '</ul>';
+                showFlash('danger', errorHtml);
             }
         })
         .catch((err) => {
-            showFlash('danger', err.userMessage || err.message);
+            // On vérifie si l'erreur contient un objet 'data' avec des 'errors' détaillés
+            if (err.data && err.data.errors && typeof err.data.errors === 'object') {
+                let errorHtml = '<ul>';
+                for (const key in err.data.errors) {
+                    const safeMessage = String(err.data.errors[key]).replace(/</g, "&lt;").replace(/>/g, "&gt;");
+                    errorHtml += `<li>${safeMessage}</li>`;
+                }
+                errorHtml += '</ul>';
+                showFlash('danger', errorHtml);
+            } else {
+                // Sinon, on utilise le message d'erreur générique fourni par apiPost
+                showFlash('danger', err.userMessage || err.message);
+            }
         });
 }

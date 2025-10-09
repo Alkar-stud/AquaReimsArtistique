@@ -9,7 +9,7 @@ class MongoReservationStorage implements ReservationStorageInterface
 {
     private MongoService $mongo;
 
-    public function __construct(string $collection = 'reservation')
+    public function __construct(string $collection = 'reservations_temp')
     {
         $this->mongo = new MongoService($collection);
     }

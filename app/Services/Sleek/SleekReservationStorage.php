@@ -1,57 +1,101 @@
 <?php
 namespace app\Services\Sleek;
 
+use app\Core\DatabaseSleekDB;
 use app\Services\Reservation\ReservationStorageInterface;
 use app\Utils\NsqlIdGenerator;
+use SleekDB\Exceptions\IdNotAllowedException;
+use SleekDB\Exceptions\InvalidArgumentException;
+use SleekDB\Exceptions\IOException;
+use SleekDB\Exceptions\JsonException;
+use SleekDB\Store;
 
 /**
- * Implémentation de ReservationStorageInterface en SleekDB
+ * Implémentation du stockage de réservations utilisant SleekDB comme base de données de documents.
+ * Cette classe est le seul point d'interaction avec SleekDB pour les réservations.
  */
-class SleekReservationStorage implements ReservationStorageInterface
+final class SleekReservationStorage implements ReservationStorageInterface
 {
-    private SleekService $s;
+    /** @var Store */
+    private Store $store;
 
-    public function __construct(string $collection = 'reservation')
+    public function __construct(string $collectionName = 'reservations_temp')
     {
-        $this->s = new SleekService($collection);
+        // Utilise notre factory pour obtenir le store SleekDB, en lisant la configuration depuis .env
+        $this->store = DatabaseSleekDB::getStore($collectionName);
     }
 
+    /**
+     * Sauvegarde une réservation dans le store SleekDB.
+     *
+     * @param array $reservation Les données de la réservation.
+     * @return string L'identifiant unique (_id) généré par SleekDB.
+     */
     public function saveReservation(array $reservation): string
     {
-        // Forcer un nsql_id commun si absent
+        // Assure un identifiant logique commun si absent, pour la synchronisation.
         if (empty($reservation['nsql_id'])) {
             $reservation['nsql_id'] = NsqlIdGenerator::new();
         }
-        return $this->s->create($reservation);
+
+        try {
+            $newReservation = $this->store->insert($reservation);
+        } catch (IOException|IdNotAllowedException|InvalidArgumentException|JsonException $e) {
+
+        }
+
+        // SleekDB retourne le document complet après insertion. On extrait son _id.
+        return (string) $newReservation['_id'];
     }
 
+    /**
+     * Trouve une réservation par son identifiant SleekDB (_id).
+     *
+     * @param string $id L'identifiant SleekDB.
+     * @return array|null La réservation ou null si non trouvée.
+     * @throws InvalidArgumentException
+     */
     public function findReservationById(string $id): ?array
     {
-        $byId = $this->s->findOne(['id' => $id]) ?? $this->s->findOne(['_id' => $id]);
-        return $byId;
+        // SleekDB utilise des entiers pour les _id par défaut.
+        return $this->store->findById((int) $id);
     }
 
-    public function updateReservation(string $id, array $fields = []): int
+    /**
+     * Met à jour une réservation identifiée par son _id.
+     *
+     * @param string $id L'identifiant SleekDB.
+     * @param array $fields Les champs à mettre à jour.
+     * @return int Le nombre de documents mis à jour (0 ou 1).
+     * @throws IOException
+     * @throws InvalidArgumentException
+     * @throws JsonException
+     */
+    public function updateReservation(string $id, array $fields): int
     {
-        $updated = $this->s->update(['id' => $id], ['$merge' => $fields]);
-        if ($updated === 0) {
-            $updated = $this->s->update(['_id' => $id], ['$merge' => $fields]);
-        }
-        return $updated;
+        return $this->store->updateById((int) $id, $fields) ? 1 : 0;
     }
 
+    /**
+     * Supprime une réservation par son _id.
+     *
+     * @param string $id L'identifiant SleekDB.
+     * @return int Le nombre de documents supprimés (0 ou 1).
+     * @throws InvalidArgumentException
+     */
     public function deleteReservation(string $id): int
     {
-        $deleted = $this->s->delete(['id' => $id]);
-        if ($deleted === 0) {
-            $deleted = $this->s->delete(['_id' => $id]);
-        }
-        return $deleted;
+        return $this->store->deleteById((int) $id) ? 1 : 0;
     }
 
-    // Optionnel: faciliter la comparaison par nsql_id
+    /**
+     * @param string $nsqlId
+     * @return array|null
+     * @throws IOException
+     * @throws InvalidArgumentException
+     */
     public function findReservationByNsqlId(string $nsqlId): ?array
     {
-        return $this->s->findOne(['nsql_id' => $nsqlId]);
+        return $this->store->findOneBy(['nsql_id', '=', $nsqlId]);
     }
 }

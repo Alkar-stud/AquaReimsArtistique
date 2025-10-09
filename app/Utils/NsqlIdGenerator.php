@@ -1,6 +1,8 @@
 <?php
 namespace app\Utils;
 
+use Random\RandomException;
+
 final class NsqlIdGenerator
 {
     private function __construct() {}
@@ -8,6 +10,10 @@ final class NsqlIdGenerator
     // ID applicatif stable, portable (32 hex chars)
     public static function new(): string
     {
-        return bin2hex(random_bytes(16));
+        try {
+            return bin2hex(random_bytes(16));
+        } catch (RandomException $e) {
+
+        }
     }
 }

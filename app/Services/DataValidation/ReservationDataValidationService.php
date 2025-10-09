@@ -10,6 +10,7 @@ use app\Repository\Event\EventRepository;
 use app\Repository\Event\EventTarifRepository;
 use app\Repository\Swimmer\SwimmerRepository;
 use app\Services\Event\EventQueryService;
+use app\Services\FlashMessageService;
 use app\Services\Reservation\ReservationDataPersist;
 use app\Services\Reservation\ReservationSessionService;
 use app\Services\Swimmer\SwimmerQueryService;
@@ -25,6 +26,7 @@ class ReservationDataValidationService
     private EventQueryService           $eventQueryService;
     private EventTarifRepository        $eventTarifRepository;
     private UploadService               $uploadService;
+    private FlashMessageService $flashMessageService;
 
     public function __construct(
         EventRepository                  $eventRepository,
@@ -33,7 +35,8 @@ class ReservationDataValidationService
         ReservationSessionService        $reservationSessionService,
         EventQueryService                $eventQueryService,
         EventTarifRepository             $eventTarifRepository,
-        UploadService                    $uploadService
+        UploadService                    $uploadService,
+        FlashMessageService              $flashMessageService,
     ) {
         $this->eventRepository = $eventRepository;
         $this->swimmerRepository = $swimmerRepository;
@@ -42,6 +45,7 @@ class ReservationDataValidationService
         $this->eventQueryService = $eventQueryService;
         $this->eventTarifRepository = $eventTarifRepository;
         $this->uploadService = $uploadService;
+        $this->flashMessageService = $flashMessageService;
     }
 
     /**
@@ -141,7 +145,6 @@ class ReservationDataValidationService
                     if ($checkIfFileExisteAfterUpload === false) {
                         if (
                             !isset($data[$key]['justificatif']) ||
-                            $data[$key]['justificatif'] == '' ||
                             !isset($file['justificatif_' . $key])
                         ) {
                             return ['success' => false, 'errors' => ['message' => 'Aucun justificatif fourni'], 'data' => []];
@@ -153,6 +156,7 @@ class ReservationDataValidationService
                             $detail['tarif_id'],
                             strtolower(pathinfo($file['justificatif_' . $key]['name'], PATHINFO_EXTENSION))
                         );
+                        $orignalFileName = $file['justificatif_' . $key]['name'];
                         $retourUpload = $this->uploadService->handleUpload(
                             $file['justificatif_' . $key],
                             UPLOAD_PROOF_PATH . 'temp/',
@@ -275,6 +279,26 @@ class ReservationDataValidationService
         return ['success' => true];
     }
 
+    public function validateAllPreviousStep($session): bool
+    {
+        $eventId = (int)($session['event_id'] ?? 0);
+        //On va chercher l'Event avec la piscine pour savoir s'il faut vérifier les places numérotées
+        $event = $this->eventRepository->findById($eventId, true);
+
+        //on fait la vérification des données de toutes les étapes
+        for ($i = 1; $i <= 6;$i++) {
+            if ($i == 5 && $event->getPiscine()->getNumberedSeats() === false) {
+                continue;
+            }
+            if (!$this->checkPreviousStep($i, $session)) {
+                $this->flashMessageService->setFlashMessage('danger', 'Erreur $i dans le parcours, veuillez recommencer');
+                return false;
+            }
+        }
+
+        return true;
+    }
+
 
     /**
      * Étape 1: valide event, session, nageur ou code d'accès.
@@ -387,11 +411,69 @@ class ReservationDataValidationService
             $errors['phone'] = 'Numéro de téléphone invalide (doit être au format 0XXXXXXXXX ou +33XXXXXXXXX).';
         }
 
+        // Validation spécifique HelloAsso pour le nom et le prénom
+        if (empty($errors)) {
+            $errors = array_merge($errors, $this->validateHelloAssoNameField('nom', $dto->name));
+            $errors = array_merge($errors, $this->validateHelloAssoNameField('prénom', $dto->firstname));
+
+            // Vérification finale : nom et prénom ne doivent pas être identiques
+            if (empty($errors) && mb_strtolower($dto->name, 'UTF-8') === mb_strtolower($dto->firstname, 'UTF-8')) {
+                $errors['name'] = 'Le nom et le prénom ne peuvent pas être identiques.';
+            }
+        }
+
         if (!empty($errors)) {
             return ['success' => false, 'errors' => $errors];
         }
         return ['success' => true, 'errors' => []];
     }
+
+    /**
+     * Valide un champ (nom ou prénom) selon les règles spécifiques de HelloAsso.
+     *
+     * @param string $fieldName Le nom du champ pour les messages d'erreur (ex: 'nom', 'prénom').
+     * @param string $value La valeur à valider.
+     * @return array Les erreurs trouvées.
+     */
+    private function validateHelloAssoNameField(string $fieldName, string $value): array
+    {
+        $errors = [];
+        $lowerValue = mb_strtolower($value, 'UTF-8');
+
+        // Liste des valeurs interdites
+        $forbiddenValues = [
+            "firstname", "lastname", "unknown", "first_name", "last_name",
+            "anonyme", "user", "admin", "name", "nom", "prénom", "test"
+        ];
+
+        // Règle : 3 caractères répétitifs (ex: "aaa")
+        if (preg_match('/(.)\1{2,}/iu', $value)) {
+            $errors[$fieldName] = "Le champ $fieldName ne peut pas contenir 3 caractères identiques à la suite.";
+        }
+        // Règle : Pas de chiffre
+        elseif (preg_match('/\d/', $value)) {
+            $errors[$fieldName] = "Le champ $fieldName ne peut pas contenir de chiffres.";
+        }
+        // Règle : Pas un seul caractère
+        elseif (mb_strlen($value, 'UTF-8') < 2) {
+            $errors[$fieldName] = "Le champ $fieldName doit contenir au moins 2 caractères.";
+        }
+        // Règle : Doit contenir au moins une voyelle (y compris accentuées)
+        elseif (!preg_match('/[aeiouyàáâãäåæçèéêëìíîïòóôõöøùúûüýÿ]/iu', $value)) {
+            $errors[$fieldName] = "Le champ $fieldName doit contenir au moins une voyelle.";
+        }
+        // Règle : Ne doit pas être une valeur interdite
+        elseif (in_array($lowerValue, $forbiddenValues, true)) {
+            $errors[$fieldName] = "La valeur '$value' n'est pas autorisée pour le champ $fieldName.";
+        }
+        // Règle : Caractères autorisés (alphabet latin, accents courants, apostrophe, tiret, cédille, espace)
+        elseif (!preg_match('/^[a-zàáâãäåæçèéêëìíîïòóôõöøùúûüýÿ\'\-\s]+$/iu', $value)) {
+            $errors[$fieldName] = "Le champ $fieldName contient des caractères non autorisés.";
+        }
+
+        return $errors;
+    }
+
 
     /**
      * @param $dto
@@ -575,7 +657,7 @@ class ReservationDataValidationService
         //On cherche si tarif_id de $dtoTab existe en clé dans $effectiveByTarif
         if (array_key_exists($dtoTab['tarif_id'], $effectiveByTarif)) {
             //Si un champ vide ou null de $dtoTab existe dans une occurrence de $effectiveByTarif[$dtoTab['tarif_id']], on écrase $dtoTab avec $effectiveByTarif
-            foreach ($effectiveByTarif[$dtoTab['tarif_id']] as $key => $value) {
+            foreach ($effectiveByTarif[$dtoTab['tarif_id']] as $value) {
                 $dtoTab = array_merge($dtoTab, $value);
             }
         }

@@ -2,10 +2,10 @@
 
 use app\Controllers\ErrorController;
 use app\Core\Database;
+use app\Core\Container;
 use app\Core\Router;
 use app\Services\Log\Logger;
 use Dotenv\Dotenv;
-use Dotenv\Exception\InvalidPathException;
 use app\Services\Log\RequestContext;
 
 date_default_timezone_set('Europe/Paris');
@@ -122,10 +122,14 @@ if ($uri !== '/install' && !str_starts_with($uri, '/install/')) {
     }
 }
 
-// Utilisation du routeur
+// --- Configuration du Conteneur d'Injection de Dépendances ---
+// On crée une seule instance du conteneur qui sera utilisée partout.
+$container = new Container();
+
+// --- Utilisation du routeur ---
 $router = new Router($routes);
 try {
-    $router->dispatch($uri);
+    $router->dispatch($uri, $container); // On passe le conteneur au routeur
 } catch (Exception $e) {
     if ($e->getMessage() === '404') {
         $controller = new ErrorController();

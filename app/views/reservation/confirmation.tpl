@@ -103,7 +103,7 @@
     </ul>
 
     <div class="alert alert-info">
-        Merci de vérifier vos informations avant validation finale.
+        Merci de vérifier vos informations avant paiement.
     </div>
 
     <div class="row">

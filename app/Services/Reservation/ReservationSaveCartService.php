@@ -3,16 +3,20 @@
 namespace app\Services\Reservation;
 
 use app\Models\Tarif\Tarif;
+use app\Repository\Tarif\TarifRepository;
 
 class ReservationSaveCartService
 {
     private ReservationSessionService $reservationSessionService;
+    private TarifRepository $tarifRepository;
 
     public function __construct(
         ReservationSessionService $reservationSessionService,
+        TarifRepository $tarifRepository,
     )
     {
         $this->reservationSessionService = $reservationSessionService;
+        $this->tarifRepository = $tarifRepository;
     }
 
     /**
@@ -88,5 +92,43 @@ class ReservationSaveCartService
         ];
     }
 
+
+    /**
+     * Prépare $reservation pour sauvegarde dans NoSQL
+     *
+     * @param $session
+     * @return array
+     */
+    public function prepareReservationToSaveInNoSQL($session): array
+    {
+        // 1. Récupérer les tarifs de l'événement
+        $tarifs = $this->tarifRepository->findByEventId($session['event_id']);
+
+        // 2. Les indexer par leur ID, ce qui est crucial pour les méthodes de calcul
+        $tarifsById = [];
+        foreach ($tarifs as $tarif) {
+            $tarifsById[$tarif->getId()] = $tarif;
+        }
+
+        $detailReport       = $this->prepareReservationDetailSummary($session['reservation_detail'], $tarifsById);
+        $complementReport   = $this->prepareReservationComplementSummary($session['reservation_complement'] ?? [], $tarifsById);
+
+        return $reservation = [
+            'event_id'              => $session['event_id'],
+            'event_session_id'      => $session['event_session_id'] ?? null,
+            'swimmer_id'            => $session['swimmer_id'] ?? null,
+            'access_code_used'      => $session['access_code_used'] ?? null,
+            'booker'                => $session['booker'] ?? [],
+            'reservation_detail'    => $session['reservation_detail'] ?? [],
+            'reservation_complement'=> $session['reservation_complement'] ?? [],
+            'totals' => [
+                'details_subtotal'     => $detailReport['subtotal'],
+                'complements_subtotal' => $complementReport['subtotal'],
+                'grand_total'          => (int)$detailReport['subtotal'] + (int)$complementReport['subtotal'],
+            ],
+            'created_at' => date('c'),
+        ];
+
+    }
 
 }

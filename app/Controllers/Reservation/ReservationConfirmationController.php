@@ -9,16 +9,20 @@ use app\Repository\Event\EventSessionRepository;
 use app\Repository\Swimmer\SwimmerRepository;
 use app\Repository\Tarif\TarifRepository;
 use app\Services\DataValidation\ReservationDataValidationService;
+use app\Services\Payment\PaymentService;
+use app\Services\Reservation\ReservationWriter;
 use app\Services\Reservation\ReservationSaveCartService;
 
 class ReservationConfirmationController extends AbstractController
 {
     private ReservationDataValidationService $reservationDataValidationService;
     private EventRepository $eventRepository;
-    private TarifRepository $tarifRepository;
     private EventSessionRepository $eventSessionRepository;
     private SwimmerRepository $swimmerRepository;
     private ReservationSaveCartService $reservationSaveCartService;
+    private ReservationWriter $reservationWriter;
+    private TarifRepository $tarifRepository;
+    private PaymentService $paymentService;
 
     public function __construct(
         ReservationDataValidationService $reservationDataValidationService,
@@ -27,15 +31,20 @@ class ReservationConfirmationController extends AbstractController
         EventSessionRepository $eventSessionRepository,
         SwimmerRepository $swimmerRepository,
         ReservationSaveCartService $reservationSaveCartService,
+        ReservationWriter $reservationWriter,
+        PaymentService $paymentService,
     )
     {
         parent::__construct(true); // route publique
         $this->reservationDataValidationService = $reservationDataValidationService;
         $this->eventRepository = $eventRepository;
-        $this->tarifRepository = $tarifRepository;
         $this->eventSessionRepository = $eventSessionRepository;
         $this->swimmerRepository = $swimmerRepository;
         $this->reservationSaveCartService = $reservationSaveCartService;
+        $this->tarifRepository = $tarifRepository;
+        // On instancie le service de paiement avec ses dépendances
+        $this->reservationWriter = $reservationWriter;
+        $this->paymentService =  $paymentService;
     }
 
     /**
@@ -44,26 +53,15 @@ class ReservationConfirmationController extends AbstractController
     #[Route('/reservation/confirmation', name: 'app_reservation_confirmation')]
     public function index(): void
     {
-        // Met à jour le timestamp
-        $_SESSION['reservation']['last_activity'] = time();
         $session = $this->reservationSessionService->getReservationSession();
 
-        //On valide toutes les étapes
-        if (!$this->reservationDataValidationService->checkPreviousStep(1, $session)) {
-            $this->flashMessageService->setFlashMessage('danger', 'Erreur 1 dans le parcours, veuillez recommencer');
-            $this->redirect('/reservation');
-        }
-        if (!$this->reservationDataValidationService->checkPreviousStep(2, $session)) {
-            $this->flashMessageService->setFlashMessage('danger', 'Erreur 2 dans le parcours, veuillez recommencer');
-            $this->redirect('/reservation');
-        }
-        if (!$this->reservationDataValidationService->checkPreviousStep(3, $session)) {
-            $this->flashMessageService->setFlashMessage('danger', 'Erreur 3 dans le parcours, veuillez recommencer');
-            $this->redirect('/reservation');
+        if (!isset($session['event_id'])) {
+            $this->flashMessageService->setFlashMessage('danger', 'Le panier a expiré, veuillez recommencer');
+            $this->redirect('/reservation?session_expiree=rcc');
         }
 
-        if (!$this->reservationDataValidationService->checkPreviousStep(6, $session)) {
-            $this->flashMessageService->setFlashMessage('danger', 'Erreur 6 dans le parcours, veuillez recommencer');
+        //On vérifie toutes les étapes.
+        if (!$this->reservationDataValidationService->validateAllPreviousStep($session)) {
             $this->redirect('/reservation');
         }
 
@@ -108,15 +106,38 @@ class ReservationConfirmationController extends AbstractController
     public function payment(): void
     {
         $session = $this->reservationSessionService->getReservationSession();
+
         if (!isset($session['event_id'])) {
-            $this->flashMessageService->setFlashMessage('danger', 'Erreur f dans le parcours, veuillez recommencer');
+            $this->flashMessageService->setFlashMessage('danger', 'Le panier a expiré, veuillez recommencer');
+            $this->redirect('/reservation?session_expiree=rcp');
+        }
+
+        //On vérifie toutes les étapes.
+        if (!$this->reservationDataValidationService->validateAllPreviousStep($session)) {
             $this->redirect('/reservation');
         }
 
+        //On sauvegarde le panier en NoSQL
+        $reservation = $this->reservationSaveCartService->prepareReservationToSaveInNoSQL($session);
+        // Sauvegarde
+        $newId = $this->reservationWriter->saveReservation($reservation);
+        $savedReservation = $this->reservationWriter->findReservationById($newId);
 
+        // On tente de créer l'intention de paiement
+        $paymentResult = $this->paymentService->handlePayment($savedReservation);
+
+        // Si la création échoue...
+        if ($paymentResult['success'] === false) {
+            // On affiche le message d'erreur précis retourné par le service
+            $this->flashMessageService->setFlashMessage('danger', 'Erreur de paiement : ' . ($paymentResult['error'] ?? 'Une erreur inconnue est survenue.'));
+            // Et on redirige l'utilisateur vers la page de confirmation pour qu'il puisse corriger
+            $this->redirect('/reservation/confirmation');
+        }
+
+        // Si tout s'est bien passé, on affiche la page de paiement avec l'URL de redirection
         $this->render('reservation/payment', [
-
-        ], 'Paiement réservation');
+            'redirectUrl' => $paymentResult['redirectUrl'],
+        ], 'Paiement de votre réservation');
     }
 
 

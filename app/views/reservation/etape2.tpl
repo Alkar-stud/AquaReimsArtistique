@@ -12,12 +12,12 @@
         <div class="mb-3">
             <label for="name" class="form-label">Nom *</label>
             <input type="text" class="form-control" id="name" name="name" required
-                   value="{{ htmlspecialchars($reservation['booker']['name'] ?? 'azertyName') }}">
+                   value="{{ htmlspecialchars($reservation['booker']['name'] ?? 'alkar') }}">
         </div>
         <div class="mb-3">
             <label for="firstname" class="form-label">Prénom *</label>
             <input type="text" class="form-control" id="firstname" name="firstname" required
-                   value="{{ htmlspecialchars($reservation['booker']['firstname'] ?? 'azertyFirstName') }}">
+                   value="{{ htmlspecialchars($reservation['booker']['firstname'] ?? 'alex') }}">
         </div>
         <div class="mb-3">
             <label for="email" class="form-label">Adresse mail *</label>

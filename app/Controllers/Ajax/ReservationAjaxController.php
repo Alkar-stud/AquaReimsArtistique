@@ -196,7 +196,7 @@ class ReservationAjaxController extends AbstractController
             $this->json([
                 'success' => false,
                 'error' => 'Votre session a expiré. Merci de recommencer.',
-                'redirect' => '/reservation?session_expiree=1'
+                'redirect' => '/reservation?session_expiree=ra'
             ], 440);
         }
         // Met à jour le timestamp à chaque vérification

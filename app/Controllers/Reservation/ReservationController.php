@@ -83,7 +83,7 @@ class ReservationController extends AbstractController
         //On vérifie si la session est expirée
         if (!$session || $this->reservationSessionService->isReservationSessionExpired($session)) {
             $this->flashMessageService->setFlashMessage('warning', 'Votre session a expiré. Merci de recommencer votre réservation.');
-            $this->redirect('/reservation?session_expiree=1');
+            $this->redirect('/reservation?session_expiree=r2');
         }
 
         // Valider l'étape 1 avec le DTO
@@ -104,7 +104,7 @@ class ReservationController extends AbstractController
         //On vérifie si la session est expirée
         if (!$session || $this->reservationSessionService->isReservationSessionExpired($session)) {
             $this->flashMessageService->setFlashMessage('warning', 'Votre session a expiré. Merci de recommencer votre réservation.');
-            $this->redirect('/reservation?session_expiree=1');
+            $this->redirect('/reservation?session_expiree=r3');
         }
 
         // Valider l'étape 1
@@ -152,7 +152,7 @@ class ReservationController extends AbstractController
         //On vérifie si la session est expirée
         if (!$session || $this->reservationSessionService->isReservationSessionExpired($session)) {
             $this->flashMessageService->setFlashMessage('warning', 'Votre session a expiré. Merci de recommencer votre réservation.');
-            $this->redirect('/reservation?session_expiree=1');
+            $this->redirect('/reservation?session_expiree=r4');
         }
 
         // Valider l'étape 1
@@ -195,7 +195,7 @@ class ReservationController extends AbstractController
         //On vérifie si la session est expirée
         if (!$session || $this->reservationSessionService->isReservationSessionExpired($session)) {
             $this->flashMessageService->setFlashMessage('warning', 'Votre session a expiré. Merci de recommencer votre réservation.');
-            $this->redirect('/reservation?session_expiree=1');
+            $this->redirect('/reservation?session_expiree=r6');
         }
 
         //Il faut valider les étapes précédentes

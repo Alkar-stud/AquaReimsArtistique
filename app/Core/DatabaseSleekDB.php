@@ -28,7 +28,7 @@ class DatabaseSleekDB
             return self::$stores[$name];
         }
 
-        $basePath = $_ENV['SLEEKDB_PATH'] ?? sys_get_temp_dir() . '/sleekdb';
+        $basePath = __DIR__ . '/../..' . $_ENV['SLEEKDB_PATH'] ?? sys_get_temp_dir() . '/storage/sleekdb';
         if (!is_dir($basePath)) {
             if (!mkdir($basePath, 0755, true) && !is_dir($basePath)) {
                 throw new RuntimeException('Impossible de créer le dossier SleekDB : ' . $basePath);
@@ -41,7 +41,10 @@ class DatabaseSleekDB
 
         try {
             // API commune : new \SleekDB\Store($storeName, $storePath)
-            $store = new Store($name, $basePath);
+            $configuration = [
+                'timeout' => false // timeout "Deprecated"
+            ];
+            $store = new Store($name, $basePath, $configuration);
         } catch (Throwable $e) {
             // Si l'API diffère (ex: v2), remonter l'erreur pour ajuster
             throw new RuntimeException('Impossible d\'instancier SleekDB Store: ' . $e->getMessage(), 0, $e);

@@ -17,6 +17,7 @@ use app\Repository\Reservation\ReservationComplementRepository;
 use app\Repository\Reservation\ReservationDetailRepository;
 use app\Repository\Reservation\ReservationMailSentRepository;
 use app\Repository\Reservation\ReservationPaymentRepository;
+use app\Repository\Reservation\ReservationPlaceTempRepository;
 use app\Repository\Reservation\ReservationRepository;
 use app\Services\Log\Logger;
 use app\Services\Mails\MailPrepareService;
@@ -36,6 +37,8 @@ readonly class ReservationDataPersist
     private PaymentRecordService $paymentRecordService;
     private EventSessionRepository $eventSessionRepository;
     private ReservationPaymentRepository $reservationPaymentRepository;
+    private ReservationPlaceTempRepository $reservationPlaceTempRepository;
+    private ReservationTempWriter $reservationTempWriter;
 
     public function __construct(
         ReservationSessionService $reservationSessionService,
@@ -46,7 +49,9 @@ readonly class ReservationDataPersist
         ReservationDetailRepository $reservationDetailRepository,
         PaymentRecordService $paymentRecordService,
         EventSessionRepository $eventSessionRepository,
-        ReservationPaymentRepository $reservationPaymentRepository
+        ReservationPaymentRepository $reservationPaymentRepository,
+        ReservationPlaceTempRepository $reservationPlaceTempRepository,
+        ReservationTempWriter $reservationTempWriter,
     ) {
         $this->reservationSessionService = $reservationSessionService;
         $this->tokenGenerateService = $tokenGenerateService;
@@ -57,6 +62,8 @@ readonly class ReservationDataPersist
         $this->paymentRecordService = $paymentRecordService;
         $this->eventSessionRepository = $eventSessionRepository;
         $this->reservationPaymentRepository = $reservationPaymentRepository;
+        $this->reservationPlaceTempRepository = $reservationPlaceTempRepository;
+        $this->reservationTempWriter = $reservationTempWriter;
     }
 
     /**
@@ -153,11 +160,8 @@ readonly class ReservationDataPersist
             // Envoyer l'email de confirmation et enregistrer l'envoi
             $this->sendAndRecordConfirmationEmail($reservation, 'paiement_confirme');
 
-/*
-        // Nettoyer les données temporaires
-        $this->cleanupTemporaryData($tempReservation);
-*/
-
+            // Nettoyer les données temporaires
+            $this->cleanupTemporaryData($tempReservation);
 
             // Commit si tout est OK
             $pdo->commit();
@@ -332,5 +336,22 @@ readonly class ReservationDataPersist
         }
     }
 
+
+    /**
+     * Nettoie les données temporaires (NoSQL et MySQL).
+     */
+    private function cleanupTemporaryData(array $tempReservation): void
+    {
+
+        $primaryId = (string) ($tempReservation['_id'] ?? $tempReservation['reservationId']);
+
+        $this->reservationTempWriter->deleteReservation($primaryId);
+        $userSessionId = $tempReservation['php_session_id'] ?? session_id();
+        if ($userSessionId) {
+            $this->reservationPlaceTempRepository->deleteBySession($userSessionId);
+        } else {
+            error_log("Impossible de nettoyer les places temporaires pour la réservation " . $tempReservation['_id'] . ": php_session_id manquant.");
+        }
+    }
 
 }

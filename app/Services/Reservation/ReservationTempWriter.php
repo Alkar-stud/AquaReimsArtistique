@@ -132,6 +132,8 @@ final class ReservationTempWriter implements ReservationStorageInterface
     }
 
     /**
+     * Supprimer la réservation temporaire dans les bases
+     *
      * @param string $id
      * @return int
      * @throws InvalidArgumentException
@@ -139,6 +141,7 @@ final class ReservationTempWriter implements ReservationStorageInterface
     public function deleteReservation(string $id): int
     {
         $count = $this->primaryStorage->deleteReservation($id);
+
         foreach ($this->secondaryStorages as $index => $storage) {
             try {
                 $storage->deleteReservation($id);

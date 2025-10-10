@@ -185,18 +185,12 @@ document.addEventListener('DOMContentLoaded', function () {
             special = { [sid]: (s.code || null) };
         }
 
-console.log('event_id : ', event_id);
-console.log('tarifs : ', tarifs);
-
         try {
             submitEtape6({event_id, tarifs, special});
         } catch (err) {
             showFlash('danger', err.userMessage || err.message || 'Erreur lors de la validation de l’étape 3.');
             submitButton && (submitButton.disabled = false);
         }
-
-
-
 
         function submitEtape6(payload) {
             apiPost('/reservation/valid/6', payload)

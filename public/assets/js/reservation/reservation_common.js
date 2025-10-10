@@ -134,7 +134,7 @@ console.log('fetchBody : ', fetchBody);
                     throw err;
                 }
 
-                console.log('[apiPost] Réponse JSON:', data);
+console.log('[apiPost] Réponse JSON:', data);
                 return data;
             }
 

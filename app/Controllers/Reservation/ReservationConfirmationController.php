@@ -4,8 +4,11 @@ namespace app\Controllers\Reservation;
 
 use app\Attributes\Route;
 use app\Controllers\AbstractController;
+use app\Models\Reservation\ReservationPayment;
 use app\Repository\Event\EventRepository;
 use app\Repository\Event\EventSessionRepository;
+use app\Repository\Reservation\ReservationPaymentRepository;
+use app\Repository\Reservation\ReservationRepository;
 use app\Repository\Swimmer\SwimmerRepository;
 use app\Repository\Tarif\TarifRepository;
 use app\Services\DataValidation\ReservationDataValidationService;
@@ -145,34 +148,61 @@ class ReservationConfirmationController extends AbstractController
     #[Route('/reservation/success-payment', name: 'app_reservation_success-payment')]
     public function success(): void
     {
-        //On récupère la réservation pour avoir le montant. La vue n'a pas la même chose à afficher selon si c'est 0€ ou plus
-        $reservation = $this->reservationSessionService->getReservationSession();
-
-        if (!isset($reservation['event_id'])) {
-            $this->flashMessageService->setFlashMessage('danger', 'Le panier a expiré, veuillez recommencer');
-            $this->redirect('/reservation?session_expiree=rcs');
-        }
-
-        $event = $this->eventRepository->findById((int)$reservation['event_id'], true);
-        //On récupère dans $_GET checkoutIntentId et orderId et on ajoute orderId dans la BDD NoSQL
-
-echo '<pre>reservation : ';
-print_r($reservation);
-die;
-
-        //Si $_GET['code'] == 'succeeded', on demande au JS de la vue de vérifier si le callback a bien enregistré en définitif
-        //C'est le JS qui va faire ça avec checkoutIntentId ou le primary_id.
-        //C'est aussi le callback qui envoie le mail et qui fait nettoie les BDD NoSQL et la session
-        //Si au bout d'un certain temps le callback n'a rien donné, on va chercher directement chez HelloAsso avec le checkoutIntentId
-        //Si tout bon, le JS renvoi vers /reservation/merci avec le token généré à l'enregistrement de la réservation.
-
-
         $this->render('reservation/payment-success', [
-            'reservation' => $reservation,
-            'event'       => $event,
-
         ], 'Réservation confirmée');
     }
+
+
+
+
+    #[Route('/reservation/checkPayment', name: 'app_reservation_checkPayment', methods: ['POST'])]
+    public function checkPayment(): void
+    {
+        $input = json_decode(file_get_contents('php://input'), true);
+        $checkoutIntentId = $input['checkoutIntentId'] ?? null;
+        if (!$checkoutIntentId) {
+            $this->json(['success' => false, 'error' => 'checkoutId manquant']);
+            return;
+        }
+
+        // Vérifier dans la BDD si un paiement avec cet ID a été enregistré (par le webhook)
+        $paymentsRepository = new ReservationPaymentRepository();
+        $payment = $paymentsRepository->findByCheckoutId((int)$checkoutIntentId);
+
+        // Renvoyer le statut au front
+        if ($payment && in_array($payment->getStatusPayment(), ['Authorized', 'Processed'])) {
+            $this->handleSuccessfulCheck($payment);
+        } else {
+            // Le paiement n'est pas encore trouvé ou n'a pas le bon statut, on indique au front de patienter.
+            $this->json(['success' => false, 'status' => 'pending']);
+        }
+    }
+
+
+
+    /**
+     * Gère la réponse JSON pour une vérification de paiement réussie.
+     * @param ReservationPayment $payment
+     * @return void
+     */
+    private function handleSuccessfulCheck(ReservationPayment $payment): void
+    {
+        $reservationsRepository = new ReservationRepository();
+        $reservation = $reservationsRepository->findById($payment->getReservation());
+
+        if ($reservation) {
+            unset($_SESSION['reservation'][session_id()]);
+            $this->json(['success' => true, 'token' => $reservation->getToken()]);
+        } else {
+            // Cas peu probable où le paiement existe, mais pas la réservation associée
+            $this->json(['success' => false, 'error' => 'Paiement trouvé mais réservation introuvable.']);
+        }
+    }
+
+    //C'est aussi le callback qui envoie le mail et qui fait nettoie les BDD NoSQL et la session
+    //Si au bout d'un certain temps le callback n'a rien donné, on va chercher directement chez HelloAsso avec le checkoutIntentId
+    //Si tout bon, le JS renvoi vers /reservation/merci avec le token généré à l'enregistrement de la réservation.
+
 
 
 }

@@ -4,6 +4,7 @@ namespace app\Services\Payment;
 
 use app\DTO\HelloAssoCartDTO;
 use app\Repository\Event\EventRepository;
+use app\Repository\Reservation\ReservationRepository;
 use app\Services\Reservation\ReservationDataPersist;
 use app\Services\Reservation\ReservationSessionService;
 use app\Services\Reservation\ReservationTempWriter;
@@ -18,6 +19,7 @@ class PaymentService
     private ReservationTempWriter $reservationWriter;
     private ReservationSessionService $reservationSessionService;
     private ReservationDataPersist $reservationDataPersist;
+    private ReservationRepository $reservationRepository;
 
     public function __construct(
         HelloAssoCartDTO          $helloAssoCartDTO,
@@ -26,6 +28,7 @@ class PaymentService
         ReservationTempWriter     $reservationWriter,
         ReservationSessionService $reservationSessionService,
         ReservationDataPersist    $reservationDataPersist,
+        ReservationRepository     $reservationRepository,
     )
     {
         $this->helloAssoCartDTO = $helloAssoCartDTO;
@@ -34,6 +37,7 @@ class PaymentService
         $this->reservationWriter = $reservationWriter;
         $this->reservationSessionService = $reservationSessionService;
         $this->reservationDataPersist = $reservationDataPersist;
+        $this->reservationRepository = $reservationRepository;
     }
 
     /**
@@ -47,7 +51,13 @@ class PaymentService
     {
         //Si le montant total est égal à 0, on redirige directement pour l'enregistrement définitif
         if($reservation['totals']['total_amount'] == 0) {
-            $this->reservationDataPersist->finalizeFreeReservation($reservation);
+            if ($_SERVER['REQUEST_URI'] == '/reservation/payment') { $context = 'new_reservation'; }
+            elseif ($_SERVER['REQUEST_URI'] == '/modifData') { $context = 'balance_payment'; }
+            else { $context = 'other'; }
+            $this->reservationDataPersist->persistConfirmReservation((object)$reservation, $reservation, $context, true);
+            $finalReservation = $this->reservationRepository->findByTempId($reservation['primary_id']);
+
+            return ['success' => true, 'token' => $finalReservation->getToken()];
         }
 
         //On prépare le panier pour HelloAsso avec le DTO

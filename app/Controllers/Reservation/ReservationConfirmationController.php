@@ -136,6 +136,9 @@ class ReservationConfirmationController extends AbstractController
             $this->flashMessageService->setFlashMessage('danger', 'Erreur de paiement : ' . ($paymentResult['error'] ?? 'Une erreur inconnue est survenue.'));
             // Et on redirige l'utilisateur vers la page de confirmation pour qu'il puisse corriger
             $this->redirect('/reservation/confirmation');
+        } elseif ($paymentResult['success'] === true && isset($paymentResult['token'])) {
+            // Si on a déjà un token, c'est que c'était un panier à 0€, on renvoie directement sur la bonne route
+            $this->redirect('/reservation/merci');
         }
 
         // Si tout s'est bien passé, on affiche la page de paiement avec l'URL de redirection
@@ -178,6 +181,17 @@ class ReservationConfirmationController extends AbstractController
         }
     }
 
+    #[Route('/reservation/merci', name: 'app_reservation_merci')]
+    public function merci(): void
+    {
+
+
+
+        $this->render('reservation/merci', [
+
+        ], 'Réservation confirmée');
+
+    }
 
 
     /**

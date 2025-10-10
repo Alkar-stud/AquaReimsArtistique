@@ -46,7 +46,7 @@ class ReservationprocessAndPersistService
         }
 
         // Utilise le service pour persister la réservation
-        return $this->reservationDataPersist->persistPaidReservation($paymentData, $tempReservation, $context);
+        return $this->reservationDataPersist->persistConfirmReservation($paymentData, $tempReservation, $context);
     }
 
 }

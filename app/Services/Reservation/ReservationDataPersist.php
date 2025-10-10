@@ -123,10 +123,12 @@ readonly class ReservationDataPersist
      * Persiste une réservation complète en base de données MySQL à partir des données de paiement et de la réservation temporaire.
      *
      * @param object $paymentData Les données de la commande/paiement reçues de HelloAsso (le contenu de $result→data).
-     * @param array $tempReservation La réservation temporaire récupérée depuis MongoDB.
+     * @param array $tempReservation La réservation temporaire récupérée depuis NoSQL.
+     * @param string $context
+     * @param bool $freeReservation
      * @return Reservation|null L'objet Reservation persistant ou null en cas d'erreur.
      */
-    public function persistPaidReservation(object $paymentData, array $tempReservation, string $context): ?Reservation
+    public function persistConfirmReservation(object $paymentData, array $tempReservation, string $context, bool $freeReservation = false): ?Reservation
     {
         $pdo = Database::getInstance();
 
@@ -152,16 +154,18 @@ readonly class ReservationDataPersist
             $reservation->setDetails($this->reservationDetailRepository->findByReservation($newReservationId, false, true, true));
             $reservation->setComplements($this->reservationsComplementsRepository->findByReservation($newReservationId, false, true));
 
-            // Détail du paiement
-            $this->paymentRecordService->createPaymentRecord($newReservationId, $paymentData, $context);
-            //On hydrate l'objet dans Reservation
-            $reservation->setPayments($this->reservationPaymentRepository->findByReservation($newReservationId));
+            if (!$freeReservation) {
+                // Détail du paiement
+                $this->paymentRecordService->createPaymentRecord($newReservationId, $paymentData, $context);
+                //On hydrate l'objet dans Reservation
+                $reservation->setPayments($this->reservationPaymentRepository->findByReservation($newReservationId));
+            }
 
             // Envoyer l'email de confirmation et enregistrer l'envoi
             $this->sendAndRecordConfirmationEmail($reservation, 'paiement_confirme');
 
             // Nettoyer les données temporaires
-            $this->cleanupTemporaryData($tempReservation);
+            //$this->cleanupTemporaryData($tempReservation);
 
             // Commit si tout est OK
             $pdo->commit();
@@ -169,10 +173,11 @@ readonly class ReservationDataPersist
             // Relecture hydratée complète
             return $this->reservationRepository->findById($newReservationId, true, true, true);
         } catch (Throwable $e) {
+
             if ($pdo->inTransaction()) {
                 $pdo->rollBack();
             }
-            Logger::get()->error('persistPaidReservation', $e->getMessage(), (array)'ReservationDataPersist::persistPaidReservation');
+            Logger::get()->error('persistConfirmReservation', $e->getMessage(), (array)'ReservationDataPersist::persistConfirmReservation');
             return null;
         }
     }
@@ -224,7 +229,7 @@ readonly class ReservationDataPersist
 
         $this->reservation->setEvent($tempReservation['event_id'])
             ->setEventSession($tempReservation['event_session_id'])
-            ->setReservationTempId((string) ($tempReservation['_id'] ?? $tempReservation['reservationId']))
+            ->setReservationTempId((string) ($tempReservation['_id'] ?? $tempReservation['primary_id']))
             ->setName($tempReservation['booker']['name'])
             ->setFirstName($tempReservation['booker']['firstname'])
             ->setEmail($tempReservation['booker']['email'])
@@ -286,29 +291,6 @@ readonly class ReservationDataPersist
     }
 
     /**
-     * Enregistre une réservation à 0€, qui ne passe donc pas par HelloAsso.
-     *
-     * @param array $reservation
-     * @return void
-     */
-    public function finalizeFreeReservation(array $reservation): void
-    {
-        echo 'Vous êtes bien dans la méthode `finalizeFreeReservation`, mais l\'implémentation de la persistence est en cours de développement.';
-        die;
-        // Utilisation du service de persistance pour les réservations gratuites
-        $persistedReservation = $this->persistenceService->persistFreeReservation($reservation);
-
-        //on renvoie avec le token généré plutôt qu'un UUID qui ne servirait que ici
-        if ($persistedReservation) {
-            // Nettoyer la session de réservation
-            unset($_SESSION['reservation'][$sessionId]);
-            $this->json(['success' => true, 'reservationUuid' => $persistedReservation->getUuid()]);
-        } else {
-            $this->json(['success' => false, 'error' => 'Erreur serveur lors de la sauvegarde de la réservation.']);
-        }
-    }
-
-    /**
      * Envoie l'email de confirmation et enregistre l'envoi.
      *
      * @param Reservation $reservation
@@ -343,7 +325,7 @@ readonly class ReservationDataPersist
     private function cleanupTemporaryData(array $tempReservation): void
     {
 
-        $primaryId = (string) ($tempReservation['_id'] ?? $tempReservation['reservationId']);
+        $primaryId = (string) ($tempReservation['_id'] ?? $tempReservation['primary_id']);
 
         $this->reservationTempWriter->deleteReservation($primaryId);
         $userSessionId = $tempReservation['php_session_id'] ?? session_id();

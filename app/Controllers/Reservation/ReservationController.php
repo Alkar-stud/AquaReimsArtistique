@@ -6,7 +6,6 @@ use app\Attributes\Route;
 use app\Controllers\AbstractController;
 use app\Repository\Event\EventRepository;
 use app\Repository\Event\EventTarifRepository;
-use app\Repository\Tarif\TarifRepository;
 use app\Services\DataValidation\ReservationDataValidationService;
 use app\Services\Event\EventQueryService;
 use app\Services\Reservation\ReservationSessionService;

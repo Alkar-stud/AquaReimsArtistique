@@ -10,7 +10,6 @@ use DateTimeInterface;
 
 class Reservation extends AbstractModel
 {
-    private ?string $uuid = null;
     // FK vers event
     private int $event;
     private ?Event $eventObject = null;
@@ -45,7 +44,6 @@ class Reservation extends AbstractModel
     private array $mailSent = [];
 
     // --- GETTERS ---
-    public function getUuid(): ?string { return $this->uuid; }
     public function getEvent(): int { return $this->event; }
     public function getEventObject(): ?Event { return $this->eventObject; }
     public function getEventSession(): int { return $this->event_session; }
@@ -70,8 +68,6 @@ class Reservation extends AbstractModel
     public function getMailSent(): array { return $this->mailSent; }
 
     // --- SETTERS ---
-    public function setUuid(?string $uuid): self { $this->uuid = $uuid; return $this; }
-
     public function setEvent(int $event): self { $this->event = $event; return $this; }
     public function setEventObject(?Event $eventObject): self {
         $this->eventObject = $eventObject;

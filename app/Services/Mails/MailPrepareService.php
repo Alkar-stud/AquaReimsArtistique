@@ -69,7 +69,7 @@ readonly class MailPrepareService
         $recapHtml = '';
         $recapText = '';
         if (!empty($reservation->getDetails())) {
-            $recapHtml .= '<h4 style="margin-top: 15px; margin-bottom: 5px;">Participants avec places assises</h4>';
+            $recapHtml .= '<h4 style="margin-top: 15px; margin-bottom: 5px;">Participants</h4>';
             $recapText .= 'Participants avec places assises
             ';
             $recapHtml .= '<table cellpadding="5" cellspacing="0" style="width: 100%; border-collapse: collapse;">';

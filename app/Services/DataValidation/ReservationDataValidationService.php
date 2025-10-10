@@ -26,7 +26,8 @@ class ReservationDataValidationService
     private EventQueryService           $eventQueryService;
     private EventTarifRepository        $eventTarifRepository;
     private UploadService               $uploadService;
-    private FlashMessageService $flashMessageService;
+    private FlashMessageService         $flashMessageService;
+    private ReservationDataPersist      $reservationDataPersist;
 
     public function __construct(
         EventRepository                  $eventRepository,
@@ -37,6 +38,7 @@ class ReservationDataValidationService
         EventTarifRepository             $eventTarifRepository,
         UploadService                    $uploadService,
         FlashMessageService              $flashMessageService,
+        ReservationDataPersist           $reservationDataPersist,
     ) {
         $this->eventRepository = $eventRepository;
         $this->swimmerRepository = $swimmerRepository;
@@ -46,6 +48,7 @@ class ReservationDataValidationService
         $this->eventTarifRepository = $eventTarifRepository;
         $this->uploadService = $uploadService;
         $this->flashMessageService = $flashMessageService;
+        $this->reservationDataPersist = $reservationDataPersist;
     }
 
     /**
@@ -210,14 +213,11 @@ class ReservationDataValidationService
             return ['success' => false, 'errors' => ['message' => 'Aucune étape ne correspond.'], 'data' => []];
         }
         //Une fois les données validées, on persiste
-        $reservationDataPersist = new ReservationDataPersist($this->reservationSessionService);
-        //Selon si c'est un tableau ou un objet direct
-        if ($dto != null) {
-            $reservationDataPersist->persistDataInSession($dto);
+        if ($dto !== null) {
+            $this->reservationDataPersist->persistDataInSession($dto);
         } else {
-            //On fait au cas par cas
-            foreach ($dtos as $key => $dto) {
-                $reservationDataPersist->persistDataInSession($dto, $key);
+            foreach ($dtos as $key => $dtoItem) {
+                $this->reservationDataPersist->persistDataInSession($dtoItem, $key);
             }
         }
 
@@ -269,8 +269,8 @@ class ReservationDataValidationService
         }
 
         if ($step > 6) {
-            $dto3 = ReservationComplementItemDTO::fromArray($effective);
-            $check = $this->validateStep3($dto3);
+            $dt6 = ReservationComplementItemDTO::fromArray($effective);
+            $check = $this->validateStep6($dt6);
             if (!$check['success']) {
                 return ['success' => false, 'errors' => $check['errors']];
             }
@@ -291,7 +291,7 @@ class ReservationDataValidationService
                 continue;
             }
             if (!$this->checkPreviousStep($i, $session)) {
-                $this->flashMessageService->setFlashMessage('danger', 'Erreur $i dans le parcours, veuillez recommencer');
+                $this->flashMessageService->setFlashMessage('danger', 'Erreur ' . $i . ' dans le parcours, veuillez recommencer');
                 return false;
             }
         }

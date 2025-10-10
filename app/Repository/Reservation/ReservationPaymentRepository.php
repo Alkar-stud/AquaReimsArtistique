@@ -75,6 +75,55 @@ class ReservationPaymentRepository extends AbstractRepository
     }
 
     /**
+     * Trouve un paiement par son checkoutIntentId
+     * @param int $checkoutId
+     * @return ReservationPayment|null
+     */
+    public function findByCheckoutId(int $checkoutId): ?ReservationPayment
+    {
+        $sql = "SELECT * FROM $this->tableName WHERE checkout_id = :checkoutId LIMIT 1";
+        $result = $this->query($sql, ['checkoutId' => $checkoutId]);
+
+        if (empty($result)) {
+            return null;
+        }
+        return $this->hydrate($result[0]);
+    }
+
+    /**
+     * Trouve un paiement par son id de paiement
+     * @param int $paymentId
+     * @return ReservationPayment|null
+     */
+    public function findByPaymentId(int $paymentId): ?ReservationPayment
+    {
+        $sql = "SELECT * FROM $this->tableName WHERE payment_id = :payment_id LIMIT 1";
+        $result = $this->query($sql, ['payment_id' => $paymentId]);
+
+        if (empty($result)) {
+            return null;
+        }
+        return $this->hydrate($result[0]);
+    }
+
+
+    /**
+     * Trouve un paiement par son order id
+     * @param int $orderId
+     * @return ReservationPayment|null
+     */
+    public function findByOrderId(int $orderId): ?ReservationPayment
+    {
+        $sql = "SELECT * FROM $this->tableName WHERE order_id = :order_id LIMIT 1";
+        $result = $this->query($sql, ['order_id' => $orderId]);
+
+        if (empty($result)) {
+            return null;
+        }
+        return $this->hydrate($result[0]);
+    }
+
+    /**
      * Insère un nouveau paiement.
      * @return int ID inséré (0 si échec)
      */

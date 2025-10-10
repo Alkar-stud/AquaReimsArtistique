@@ -3,7 +3,6 @@ namespace app\Services\Sleek;
 
 use app\Core\DatabaseSleekDB;
 use app\Services\Reservation\ReservationStorageInterface;
-use app\Utils\NsqlIdGenerator;
 use SleekDB\Exceptions\IdNotAllowedException;
 use SleekDB\Exceptions\InvalidArgumentException;
 use SleekDB\Exceptions\IOException;
@@ -33,14 +32,9 @@ final class SleekReservationStorage implements ReservationStorageInterface
      */
     public function saveReservation(array $reservation): string
     {
-        // Assure un identifiant logique commun si absent, pour la synchronisation.
-        if (empty($reservation['nsql_id'])) {
-            $reservation['nsql_id'] = NsqlIdGenerator::new();
-        }
-
         try {
             $newReservation = $this->store->insert($reservation);
-        } catch (IOException|IdNotAllowedException|InvalidArgumentException|JsonException $e) {
+        } catch (IOException|IdNotAllowedException|InvalidArgumentException|JsonException) {
 
         }
 
@@ -53,12 +47,15 @@ final class SleekReservationStorage implements ReservationStorageInterface
      *
      * @param string $id L'identifiant SleekDB.
      * @return array|null La réservation ou null si non trouvée.
-     * @throws InvalidArgumentException
      */
     public function findReservationById(string $id): ?array
     {
         // SleekDB utilise des entiers pour les _id par défaut.
-        return $this->store->findById((int) $id);
+        try {
+            return $this->store->findById((int)$id);
+        } catch (InvalidArgumentException) {
+            return null;
+        }
     }
 
     /**
@@ -77,6 +74,33 @@ final class SleekReservationStorage implements ReservationStorageInterface
     }
 
     /**
+     * Met à jour une réservation identifiée par son primary_id.
+     *
+     * @param string $primaryId L'identifiant logique partagé.
+     * @param array $fields Les champs à mettre à jour.
+     * @return int Le nombre de documents mis à jour.
+     */
+    public function updateReservationByPrimaryId(string $primaryId, array $fields): int
+    {
+        // Trouver le document correspondant au primary_id
+        // Pour le stockage primaire (SleekDB), le primary_id est son propre _id.
+        try {
+            $document = $this->store->findById((int)$primaryId);
+        } catch (InvalidArgumentException) {
+            return 0;
+        }
+
+        // Mettre à jour le document en utilisant son _id natif
+        try {
+            $wasUpdated = $this->store->updateById((int)$primaryId, $fields);
+        } catch (IOException|InvalidArgumentException|JsonException) {
+            return 0;
+        }
+
+        return $wasUpdated ? 1 : 0;
+    }
+
+    /**
      * Supprime une réservation par son _id.
      *
      * @param string $id L'identifiant SleekDB.
@@ -89,13 +113,13 @@ final class SleekReservationStorage implements ReservationStorageInterface
     }
 
     /**
-     * @param string $nsqlId
+     * @param string $primaryId
      * @return array|null
      * @throws IOException
      * @throws InvalidArgumentException
      */
-    public function findReservationByNsqlId(string $nsqlId): ?array
+    public function findReservationByPirmaryId(string $primaryId): ?array
     {
-        return $this->store->findOneBy(['nsql_id', '=', $nsqlId]);
+        return $this->store->findOneBy(['primary_id', '=', $primaryId]);
     }
 }

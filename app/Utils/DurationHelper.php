@@ -9,7 +9,7 @@ use Throwable;
 class DurationHelper
 {
     /**
-     * Convertit une durée ISO 8601 en secondes totales.
+     * Convertit une durée ISO 8601 en secondes.
      * Retourne null si invalide ou secondes
      * Ne doit pas dépasser 24h PT24h
      * @param string $iso8601Duration

@@ -1,7 +1,6 @@
 -- Création de la table reservation
 CREATE TABLE IF NOT EXISTS `reservation` (
     `id` bigint NOT NULL AUTO_INCREMENT PRIMARY KEY,
-    `uuid` VARCHAR(255) DEFAULT NULL UNIQUE,
     `event` bigint NOT NULL,
     FOREIGN KEY (`event`) REFERENCES `event`(`id`),
     `event_session` bigint NOT NULL,

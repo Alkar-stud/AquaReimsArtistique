@@ -101,10 +101,10 @@ class ReservationSaveCartService
      */
     public function prepareReservationToSaveInNoSQL($session): array
     {
-        // 1. Récupérer les tarifs de l'événement
+        // Récupérer les tarifs de l'événement
         $tarifs = $this->tarifRepository->findByEventId($session['event_id']);
 
-        // 2. Les indexer par leur ID, ce qui est crucial pour les méthodes de calcul
+        // Les indexer par leur ID pour faciliter le calcul
         $tarifsById = [];
         foreach ($tarifs as $tarif) {
             $tarifsById[$tarif->getId()] = $tarif;
@@ -113,7 +113,14 @@ class ReservationSaveCartService
         $detailReport       = $this->prepareReservationDetailSummary($session['reservation_detail'], $tarifsById);
         $complementReport   = $this->prepareReservationComplementSummary($session['reservation_complement'] ?? [], $tarifsById);
 
-        return $reservation = [
+        // on enregistre aussi dans $_SESSION
+        $this->reservationSessionService->setReservationSession('totals', [
+            'details_subtotal'     => $detailReport['subtotal'],
+            'complements_subtotal' => $complementReport['subtotal'],
+            'total_amount'          => (int)$detailReport['subtotal'] + (int)$complementReport['subtotal'],
+        ]);
+
+        return [
             'event_id'              => $session['event_id'],
             'event_session_id'      => $session['event_session_id'] ?? null,
             'swimmer_id'            => $session['swimmer_id'] ?? null,
@@ -124,7 +131,7 @@ class ReservationSaveCartService
             'totals' => [
                 'details_subtotal'     => $detailReport['subtotal'],
                 'complements_subtotal' => $complementReport['subtotal'],
-                'grand_total'          => (int)$detailReport['subtotal'] + (int)$complementReport['subtotal'],
+                'total_amount'          => (int)$detailReport['subtotal'] + (int)$complementReport['subtotal'],
             ],
             'created_at' => date('c'),
         ];

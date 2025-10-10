@@ -4,7 +4,9 @@ namespace app\Services\Reservation;
 use app\Services\Log\Logger;
 use app\Services\Mongo\MongoReservationStorage;
 use app\Services\Sleek\SleekReservationStorage;
-use app\Utils\NsqlIdGenerator;
+use SleekDB\Exceptions\InvalidArgumentException;
+use SleekDB\Exceptions\IOException;
+use SleekDB\Exceptions\JsonException;
 use Throwable;
 
 /**
@@ -12,23 +14,28 @@ use Throwable;
  * Le premier stockage de la liste est considéré comme le "primaire" (source de vérité).
  * Les suivants sont des "secondaires" synchronisés en "best effort".
  */
-final class ReservationWriter implements ReservationStorageInterface
+final class ReservationTempWriter implements ReservationStorageInterface
 {
     private ReservationStorageInterface $primaryStorage;
     /** @var ReservationStorageInterface[] */
     private array $secondaryStorages;
+    private ReservationSessionService $reservationSessionService;
 
-    public function __construct() {
+    public function __construct(
+        ReservationSessionService $reservationSessionService,
+    ) {
         // SleekDB est le primaire, MongoDB est le secondaire.
         $this->primaryStorage = new SleekReservationStorage();
         $this->secondaryStorages = [new MongoReservationStorage()];
+        $this->reservationSessionService = $reservationSessionService;
     }
 
+    /**
+     * @param array $reservation
+     * @return string
+     */
     public function saveReservation(array $reservation): string
     {
-        // Assure un identifiant logique commun aux deux backends
-        $reservation['nsql_id'] = $reservation['nsql_id'] ?? NsqlIdGenerator::new();
-
         // Écriture sur le stockage primaire (source de vérité)
         $primaryId = $this->primaryStorage->saveReservation($reservation);
 
@@ -44,15 +51,24 @@ final class ReservationWriter implements ReservationStorageInterface
                 Logger::get()->error('storage_replication', 'Failed to save on secondary storage #' . $index, ['exception' => $e]);
             }
         }
+        $this->reservationSessionService->setReservationSession('primary_id', $primaryId );
 
         return $primaryId;
     }
 
+    /**
+     * @param string $id
+     * @return array|null
+     */
     public function findReservationById(string $id): ?array
     {
         // On cherche d'abord dans le primaire
         $doc = $this->primaryStorage->findReservationById($id);
         if ($doc !== null) {
+            // On s'assure que le document retourné contient toujours le primary_id.
+            // Pour le stockage primaire, son propre _id EST le primary_id.
+            $doc['primary_id'] = (string)($doc['_id'] ?? $id);
+
             return $doc;
         }
 
@@ -73,6 +89,14 @@ final class ReservationWriter implements ReservationStorageInterface
         return null;
     }
 
+    /**
+     * @param string $id
+     * @param array $fields
+     * @return int
+     * @throws IOException
+     * @throws InvalidArgumentException
+     * @throws JsonException
+     */
     public function updateReservation(string $id, array $fields): int
     {
         $count = $this->primaryStorage->updateReservation($id, $fields);
@@ -86,6 +110,32 @@ final class ReservationWriter implements ReservationStorageInterface
         return $count;
     }
 
+    /**
+     * @param string $primaryId
+     * @param array $fields
+     * @return int
+     */
+    public function updateReservationByPrimaryId(string $primaryId, array $fields): int
+    {
+        // On met à jour le primaire
+        $count = $this->primaryStorage->updateReservationByPrimaryId($primaryId, $fields);
+
+        // On réplique la mise à jour sur les secondaires
+        foreach ($this->secondaryStorages as $index => $storage) {
+            try {
+                $storage->updateReservationByPrimaryId($primaryId, $fields);
+            } catch (Throwable $e) {
+                Logger::get()->error('storage_replication', 'Failed to update by primary_id on secondary storage #' . $index, ['primary_id' => $primaryId, 'exception' => $e]);
+            }
+        }
+        return $count;
+    }
+
+    /**
+     * @param string $id
+     * @return int
+     * @throws InvalidArgumentException
+     */
     public function deleteReservation(string $id): int
     {
         $count = $this->primaryStorage->deleteReservation($id);

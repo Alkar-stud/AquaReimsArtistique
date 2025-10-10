@@ -151,22 +151,38 @@ class ReservationRepository extends AbstractRepository
     }
 
     /**
+     * Trouve une réservation par son ID MongoDB
+     * @param string $primaryId
+     * @return Reservation|null
+     */
+    public function findByTempId(string $primaryId): ?Reservation
+    {
+        $sql = "SELECT * FROM $this->tableName WHERE reservation_temp_id = :primaryId";
+        $result = $this->query($sql, ['primaryId' => $primaryId]);
+
+        if (!$result) {
+            return null;
+        }
+
+        return $this->hydrate($result[0]);
+    }
+
+    /**
      * Ajoute une réservation
      * @return int ID inséré
      */
     public function insert(Reservation $reservation): int
     {
         $sql = "INSERT INTO $this->tableName
-            (event, event_session, reservation_temp_id, uuid, name, firstname, email, phone, swimmer_if_limitation,
+            (event, event_session, reservation_temp_id, name, firstname, email, phone, swimmer_if_limitation,
              total_amount, total_amount_paid, token, token_expire_at, comments, created_at)
-            VALUES (:event, :event_session, :reservation_temp_id, :uuid, :name, :firstname, :email, :phone, :swimmer_if_limitation,
+            VALUES (:event, :event_session, :reservation_temp_id, :name, :firstname, :email, :phone, :swimmer_if_limitation,
              :total_amount, :total_amount_paid, :token, :token_expire_at, :comments, :created_at)";
 
         $ok = $this->execute($sql, [
             'event' => $reservation->getEvent(),
             'event_session' => $reservation->getEventSession(),
             'reservation_temp_id' => $reservation->getReservationTempId(),
-            'uuid' => $reservation->getUuid(),
             'name' => $reservation->getName(),
             'firstname' => $reservation->getFirstName(),
             'email' => $reservation->getEmail(),
@@ -192,7 +208,6 @@ class ReservationRepository extends AbstractRepository
             event = :event,
             event_session = :event_session,
             reservation_temp_id = :reservation_temp_id,
-            uuid = :uuid,
             name = :name,
             firstname = :firstname,
             email = :email,
@@ -211,7 +226,6 @@ class ReservationRepository extends AbstractRepository
             'event' => $reservation->getEvent(),
             'event_session' => $reservation->getEventSession(),
             'reservation_temp_id' => $reservation->getReservationTempId(),
-            'uuid' => $reservation->getUuid(),
             'name' => $reservation->getName(),
             'firstname' => $reservation->getFirstName(),
             'email' => $reservation->getEmail(),
@@ -364,7 +378,6 @@ class ReservationRepository extends AbstractRepository
         $r = new Reservation();
 
         $r->setId((int)$data['id'])
-            ->setUuid($data['uuid'] ?? null)
             ->setEvent((int)$data['event'])
             ->setEventSession((int)$data['event_session'])
             ->setReservationTempId($data['reservation_temp_id'] ?? null)

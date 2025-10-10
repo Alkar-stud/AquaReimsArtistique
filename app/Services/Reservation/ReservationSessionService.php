@@ -110,6 +110,7 @@ class ReservationSessionService
     public function getReservationTimeoutDuration(): int
     {
         $isoDuration = defined('TIMEOUT_PLACE_RESERV') ? TIMEOUT_PLACE_RESERV : 'PT30M';
+        error_log('TIMEOUT_PLACE_RESERV : ' . TIMEOUT_PLACE_RESERV . ' | isoDuration : ' . $isoDuration);
         $seconds = DurationHelper::iso8601ToSeconds($isoDuration);
 
         return (is_int($seconds) && $seconds > 0) ? $seconds : 1800;

@@ -111,7 +111,7 @@
             <a href="/reservation/etape6Display" class="btn btn-secondary w-100 w-md-auto" id="returnBtn">Modifier ma réservation</a>
         </div>
         <div class="col-12 col-md-6">
-            <a href="/reservation/payment" class="btn btn-primary w-100 w-md-auto" id="submitButton">Valider et payer</a>
+            <a href="/reservation/payment" class="btn btn-primary w-100 w-md-auto" id="submitButton">Valider et {{ $grandTotal == 0 ? 'enregistrer':'payer' }}</a>
         </div>
     </div>
 </div>

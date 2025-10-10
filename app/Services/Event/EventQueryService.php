@@ -124,6 +124,7 @@ class EventQueryService
      {
          $periodesOuvertes = [];
          $nextPublicOuvertures = [];
+         $periodesCloses = [];
          $now = new DateTime();
 
          foreach ($events as $event) {
@@ -149,6 +150,12 @@ class EventQueryService
                          $nextPublicPeriod = $date;
                      }
                  }
+
+                 //Relever les périodes terminées (pour le texte adequate dans la vue)
+                 if ($end < $now) {
+                     $periodesCloses[$event->getId()] = $date;
+                 }
+
              }
 
              if ($activePeriod) {
@@ -162,6 +169,7 @@ class EventQueryService
          return [
              'periodesOuvertes' => $periodesOuvertes,
              'nextPublicOuvertures' => $nextPublicOuvertures,
+             'periodesCloses' => $periodesCloses,
          ];
      }
 

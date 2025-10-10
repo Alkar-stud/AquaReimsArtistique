@@ -102,7 +102,11 @@
                             <span id="access_code_status_{{ $event->getId() }}" class="ms-2"></span>
                         </div>
                         {% else %}
-                        Les inscriptions ne sont pas ouvertes pour cet événement.
+                            {% if (isset($periodesCloses[$event->getId()])) %}
+                                Les inscriptions sont closes depuis le {{ $periodesCloses[$event->getId()]->getCloseRegistrationAt()->format('d/m/Y H:i') }}.
+                            {% else %}
+                                Les inscriptions ne sont pas ouvertes pour cet événement.
+                            {% endif %}
                         {% endif %}
 
                         {% if $nextPublic %}

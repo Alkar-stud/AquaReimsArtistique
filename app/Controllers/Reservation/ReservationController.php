@@ -68,6 +68,7 @@ class ReservationController extends AbstractController
             'events' => $events,
             'periodesOuvertes' => $inscriptionPeriodsStatus['periodesOuvertes'],
             'nextPublicOuvertures' => $inscriptionPeriodsStatus['nextPublicOuvertures'],
+            'periodesCloses' => $inscriptionPeriodsStatus['periodesCloses'],
             'groupes' => $groupes,
             'swimmerPerGroup' => $swimmerPerGroup
         ], 'Réservations');

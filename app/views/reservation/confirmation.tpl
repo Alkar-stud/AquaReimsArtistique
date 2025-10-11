@@ -102,8 +102,8 @@
         </li>
     </ul>
 
-    <div class="alert alert-info">
-        Merci de vérifier vos informations avant paiement.
+    <div class="alert alert-info text-center">
+        Merci de vérifier vos informations{{ $grandTotal == 0 ? ' avant de valider':' avant paiement' }}.
     </div>
 
     <div class="row">
@@ -115,9 +115,6 @@
         </div>
     </div>
 </div>
-
-
-
 
 <script src="/assets/js/reservation/reservation_common.js" defer></script>
 

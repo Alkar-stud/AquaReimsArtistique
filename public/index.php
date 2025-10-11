@@ -7,6 +7,7 @@ use app\Core\Router;
 use app\Services\Log\Logger;
 use Dotenv\Dotenv;
 use app\Services\Log\RequestContext;
+use Dotenv\Exception\InvalidPathException;
 
 date_default_timezone_set('Europe/Paris');
 

@@ -66,6 +66,8 @@ class MailTemplateRepository extends AbstractRepository
 
     /**
      * Met à jour un template existant.
+     * @param MailTemplate $mailTemplate
+     * @return bool
      */
     public function update(MailTemplate $mailTemplate): bool
     {
@@ -83,6 +85,8 @@ class MailTemplateRepository extends AbstractRepository
 
     /**
      * Hydrate un objet MailTemplate à partir d'une ligne BDD.
+     * @param array $data
+     * @return MailTemplate
      */
     protected function hydrate(array $data): MailTemplate
     {

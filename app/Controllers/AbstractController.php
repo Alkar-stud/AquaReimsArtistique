@@ -93,7 +93,10 @@ abstract class AbstractController
         $uri = strtok($_SERVER['REQUEST_URI'], '?');
         $data['uri'] = $uri;
         $data['is_gestion_page'] = str_starts_with($uri, '/gestion');
-        $data['load_ckeditor'] = $data['is_gestion_page'] && (str_starts_with($uri, '/gestion/mail_templates') || str_starts_with($uri, '/gestion/accueil'));
+        //$data['load_ckeditor'] = $data['is_gestion_page'] && (str_starts_with($uri, '/gestion/mails_templates') || str_starts_with($uri, '/gestion/accueil'));
+        // Charge CKEditor sur /gestion/mails_templates[/...] et /gestion/accueil[/...]
+        $data['load_ckeditor'] = $data['is_gestion_page']
+            && (bool)preg_match('#^/gestion/(mails_templates|accueil)(/|$)#', $uri);
 
         // Centralisation de la récupération des messages flash
         $data['flash_message'] = $this->flashMessageService->getFlashMessage();
@@ -509,7 +512,7 @@ abstract class AbstractController
      */
     protected function checkIfCurrentUserIsAllowedToManagedThis(int $minRoleLevel = 99, ?string $urlReturn = null): void
     {
-        if ($urlReturn !== null && !preg_match('/^[a-z-]*$/', $urlReturn)) {
+        if ($urlReturn !== null && !preg_match('/^[a-z_-]*$/', $urlReturn)) {
             http_response_code(404);
             exit;
         }

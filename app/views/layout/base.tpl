@@ -19,6 +19,7 @@
     <link rel="stylesheet" href="/assets/css/ckeditor.css">
     <link rel="stylesheet" href="/assets/ckeditor5/ckeditor5.css">
     {% endif %}
+
     <script type="text/javascript" src="/assets/js/scripts.js" charset="UTF8"></script>
     <title>{{ ($_ENV['APP_NAME'] ?? 'Titre') . ' - ' . ($title ?? '') }}</title>
 </head>

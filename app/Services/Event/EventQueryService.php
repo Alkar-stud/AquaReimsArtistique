@@ -129,6 +129,7 @@ class EventQueryService
 
          foreach ($events as $event) {
              $activePeriod = null;
+             $activePublicPeriod = null;
              $nextPublicPeriod = null;
 
              // Les périodes sont déjà triées par start_registration_at dans le repository
@@ -138,29 +139,38 @@ class EventQueryService
                  $start = $date->getStartRegistrationAt();
                  $end = $date->getCloseRegistrationAt();
 
-                 // Chercher la période actuellement active
-                 if ($activePeriod === null && $start <= $now && $end > $now) {
-                     $activePeriod = $date;
+                 // Périodes actives
+                 if ($start <= $now && $end > $now) {
+                     // Mémorise la première période active trouvée
+                     if ($activePeriod === null) {
+                         $activePeriod = $date;
+                     }
+                     // Si période active sans code, on la privilégie
+                     if ($date->getAccessCode() === null && $activePublicPeriod === null) {
+                         $activePublicPeriod = $date;
+                     }
                  }
 
-                 // Chercher la prochaine période publique (sans code)
+                 // Prochaine période publique (sans code)
                  if ($date->getAccessCode() === null && $start > $now) {
-                     // Si on n'a pas encore de prochaine période publique, ou si celle-ci est plus proche
                      if ($nextPublicPeriod === null || $start < $nextPublicPeriod->getStartRegistrationAt()) {
                          $nextPublicPeriod = $date;
                      }
                  }
 
-                 //Relever les périodes terminées (pour le texte adequate dans la vue)
+                 // Dernière période close (pour le message)
                  if ($end < $now) {
                      $periodesCloses[$event->getId()] = $date;
                  }
-
              }
 
-             if ($activePeriod) {
+             // Si une période publique est active, on la choisit; sinon la première active
+             if ($activePublicPeriod !== null) {
+                 $periodesOuvertes[$event->getId()] = $activePublicPeriod;
+             } elseif ($activePeriod !== null) {
                  $periodesOuvertes[$event->getId()] = $activePeriod;
              }
+
              if ($nextPublicPeriod) {
                  $nextPublicOuvertures[$event->getId()] = $nextPublicPeriod;
              }

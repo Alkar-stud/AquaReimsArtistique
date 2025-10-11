@@ -166,8 +166,7 @@ const editorConfig = {
 			'imageStyle:inline',
 			'imageStyle:block',
 			'imageStyle:side',
-			'|',
-			'linkImage'
+			'|'
 		],
 		resizeUnit: 'px'
 	},
@@ -216,62 +215,32 @@ class CustomUploadAdapter {
 	upload() {
 		return this.loader.file.then(file => {
 			const form = this.editor.sourceElement.closest('form');
-			const csrfTokenInput = form.querySelector('[name="csrf_token"]');
 			const displayUntilInput = form.querySelector('[name="display_until"]');
-
-			if (!csrfTokenInput) {
-				return Promise.reject(new Error('Le token CSRF est introuvable dans le formulaire.'));
-			}
-
-			const csrfToken = csrfTokenInput.value;
 			const displayUntilValue = displayUntilInput ? displayUntilInput.value : '';
 
 			const formData = new FormData();
 			formData.append('upload', file);
 
 			const url = `/gestion/accueil/upload?displayUntil=${encodeURIComponent(displayUntilValue)}`;
+
 			return fetch(url, {
 				method: 'POST',
-				headers: {
-					'X-CSRF-TOKEN': csrfToken
-				},
 				body: formData
 			})
 				.then(response => {
-					// On vérifie si la réponse est bien du JSON.
-					const contentType = response.headers.get('content-type');
-					if (response.ok && contentType && contentType.includes('application/json')) {
-						// Si tout va bien, on parse le JSON.
-						return response.json();
+					if (!response.ok) {
+						throw new Error(`Erreur HTTP: ${response.status}`);
 					}
-
-					// Si la réponse n'est pas du JSON (ex: une page d'erreur HTML),
-					// on lit la réponse comme du texte pour l'afficher en console.
-					return response.text().then(text => {
-						console.error("--- ERREUR CÔTÉ SERVEUR (Réponse non-JSON) ---");
-						console.error("URL de la requête :", response.url);
-						console.error("Statut de la réponse :", response.status);
-						console.error("Contenu de la réponse (HTML/Texte) :");
-						//console.log(text); // On affiche le HTML complet de l'erreur.
-
-						// On rejette la promesse avec un message clair.
-						throw new Error(`Le serveur a renvoyé une réponse non-JSON (statut: ${response.status}). Consultez la console pour voir le détail de l'erreur HTML.`);
-					});
+					return response.json();
 				})
 				.then(data => {
 					if (data.url) {
-						// Si le serveur a renvoyé un nouveau token CSRF, on met à jour le champ du formulaire.
-						if (data.csrfToken) {
-							const form = this.editor.sourceElement.closest('form');
-							const csrfInput = form.querySelector('input[name="csrf_token"]');
-							if (csrfInput) csrfInput.value = data.csrfToken;
-						}
 						return { default: data.url };
 					} else if (data.error) {
-						// Erreur JSON "contrôlée" par le serveur
-						throw new Error(data.error.message || 'Une erreur est survenue lors de l\'upload.');
+						console.error('Erreur d\'upload:', data.error);
+						throw new Error(data.error.message || 'Détails d\'erreur non disponibles');
 					} else {
-						throw new Error('Format de réponse JSON inattendu du serveur.');
+						throw new Error('Format de réponse inattendu');
 					}
 				});
 		});

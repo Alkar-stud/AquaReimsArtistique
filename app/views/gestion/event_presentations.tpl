@@ -16,8 +16,8 @@
         <a href="/gestion/accueil" class="btn {{ ($searchParam ?? 'displayed') == 'displayed' ? 'btn-primary' : 'btn-outline-primary' }}">
             Contenus à venir
         </a>
-        <a href="/gestion/accueil/list/0" class="btn {{ ($searchParam ?? '') == '0' ? 'btn-primary' : 'btn-outline-primary' }}">
-            Tous les contenus (y compris passés)
+        <a href="/gestion/accueil/0" class="btn {{ ($searchParam ?? '') == '0' ? 'btn-primary' : 'btn-outline-primary' }}">
+            Contenus passés
         </a>
     </div>
 
@@ -56,13 +56,12 @@
                 <td>
                     <div class="d-flex gap-1">
                         <button type="button"
-                                class="btn btn-primary btn-sm"
+                                class="btn btn-secondary btn-sm"
                                 data-bs-toggle="modal"
                                 data-bs-target="#editModal-{{ $item->getId() }}">
                             <i class="bi bi-pencil-square me-1"></i> Modifier
                         </button>
                         <form method="POST" action="/gestion/accueil/delete" onsubmit="return confirm('Supprimer cette présentation ?');">
-                            <input type="hidden" name="csrf_token" value="{{ $csrf_token }}">
                             <input type="hidden" name="id" value="{{ $item->getId() }}">
                             <button type="submit" class="btn btn-danger btn-sm"><i class="bi bi-trash"></i> Supprimer</button>
                         </form>

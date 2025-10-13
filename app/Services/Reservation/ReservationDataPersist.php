@@ -240,7 +240,7 @@ readonly class ReservationDataPersist
             ->setEmail($tempReservation['booker']['email'])
             ->setPhone($tempReservation['booker']['phone'])
             ->setSwimmerId($tempReservation['swimmer_id'] ?? null)
-            ->setTotalAmount($tempReservation['total'] ?? 0)
+            ->setTotalAmount($tempReservation['totals']['total_amount'] ?? 0)
             ->setTotalAmountPaid($paymentData->amount->total ?? 0)
             ->setToken($tokenGenerated['token'])
             ->setTokenExpireAt($tokenGenerated['expires_at_str'])

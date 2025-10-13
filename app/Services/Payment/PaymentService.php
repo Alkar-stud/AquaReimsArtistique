@@ -55,7 +55,7 @@ class PaymentService
             elseif ($_SERVER['REQUEST_URI'] == '/modifData') { $context = 'balance_payment'; }
             else { $context = 'other'; }
             $this->reservationDataPersist->persistConfirmReservation((object)$reservation, $reservation, $context, true);
-            $finalReservation = $this->reservationRepository->findByTempId($reservation['primary_id']);
+            $finalReservation = $this->reservationRepository->findByTempId($session['primary_id']);
 
             return ['success' => true, 'token' => $finalReservation->getToken()];
         }
@@ -67,6 +67,15 @@ class PaymentService
         $intentTimestamp = $session['paymentIntentTimestamp'] ?? 0;
         // L'URL est valide pendant 15 minutes, on la régénère au bout de 10 minutes par sécurité.
         $isIntentValid = ($now - $intentTimestamp) < 600; // 10 minutes = 600 seconds
+
+echo "Il faudra retirer cela lorsque HelloAsso-sandbox fonctionnera de nouveau<br>PaymentService ligne 73";
+echo '<pre>';
+print_r($reservation);
+echo '<hr>';
+print_r($session);
+echo '<hr>';
+print_r($checkoutCart);
+die;
 
         // Si un checkoutIntentId et une URL de redirection existent déjà en session ET sont valides, on les réutilise.
         if (

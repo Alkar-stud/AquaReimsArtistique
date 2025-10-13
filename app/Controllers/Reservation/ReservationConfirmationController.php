@@ -56,8 +56,10 @@ class ReservationConfirmationController extends AbstractController
     #[Route('/reservation/confirmation', name: 'app_reservation_confirmation')]
     public function index(): void
     {
+        //On récupère la session
         $session = $this->reservationSessionService->getReservationSession();
 
+        //On redirige si la session est expirée
         if (!isset($session['event_id'])) {
             $this->flashMessageService->setFlashMessage('danger', 'Le panier a expiré, veuillez recommencer');
             $this->redirect('/reservation?session_expiree=rcc');
@@ -68,14 +70,20 @@ class ReservationConfirmationController extends AbstractController
             $this->redirect('/reservation');
         }
 
-        //On récupère les infos de l'évent
-        $event = $this->eventRepository->findById($session['event_id'], true);
-        $tarifs = $this->tarifRepository->findByEventId($session['event_id']);
+        //On récupère les infos de l'évent avec les tarifs associés
+        $event = $this->eventRepository->findById($session['event_id'], true, true, false, true);
+        //On fait un tableau des tarifs indexés par leur ID
         $tarifsById = [];
-        foreach ($tarifs as $tarif) {
+        foreach ($event->getTarifs() as $tarif) {
             $tarifsById[$tarif->getId()] = $tarif;
         }
+        //On récupère la session choisie de l'événement
         $eventSession = $this->eventSessionRepository->findById($session['event_session_id']);
+        //On vérifie que la session appartient bien à l'événement courant
+        if ($eventSession && $eventSession->getEventId() !== (int)$session['event_id']) {
+            $eventSession = null;
+        }
+
         $swimmer = null;
         if ($event->getLimitationPerSwimmer() !== null) {
             $swimmer = $this->swimmerRepository->findById($session['swimmer_id'], true);
@@ -90,13 +98,13 @@ class ReservationConfirmationController extends AbstractController
         $reservationComplements = $complementSummary['complements'];
         $complementsSubtotal = $complementSummary['subtotal'];
 
-        $grandTotal = $detailsSubtotal + $complementsSubtotal;
+        $totalAmount = $detailsSubtotal + $complementsSubtotal;
 
         $this->render('reservation/confirmation', [
             'reservation'   => $session,
             'details'       => $reservationDetails,
             'complements'   => $reservationComplements,
-            'grandTotal'    => $grandTotal,
+            'grandTotal'    => $totalAmount,
             'event'         => $event,
             'tarifs'        => $tarifsById,
             'eventSession'  => $eventSession,
@@ -120,15 +128,19 @@ class ReservationConfirmationController extends AbstractController
             $this->redirect('/reservation');
         }
 
-        //On sauvegarde le panier en NoSQL
-        $reservation = $this->reservationSaveCartService->prepareReservationToSaveInNoSQL($session);
+        //On prépare le panier pour la sauvegarde
+        $reservation = $this->reservationSaveCartService->prepareReservationToSaveTemporarily($session);
+
         // Sauvegarde le panier
         $newId = $this->reservationTempWriter->saveReservation($reservation);
-        //On récupère le tout sauvegardé dans la base de données
-        $savedReservation = $this->reservationTempWriter->findReservationById($newId);
+        //Pour retrouver après et envoyer si besoin à HelloAsso
+        $this->reservationSessionService->setReservationSession('primary_id', $newId);
+        //Et on met à jour $session
+        $session = $this->reservationSessionService->getReservationSession();
+        $reservation['primary_id'] = $newId;
 
         // On tente de créer l'intention de paiement
-        $paymentResult = $this->paymentService->handlePayment($savedReservation, $session);
+        $paymentResult = $this->paymentService->handlePayment($reservation, $session);
 
         // Si la création échoue...
         if ($paymentResult['success'] === false) {
@@ -138,7 +150,7 @@ class ReservationConfirmationController extends AbstractController
             $this->redirect('/reservation/confirmation');
         } elseif ($paymentResult['success'] === true && isset($paymentResult['token'])) {
             // Si on a déjà un token, c'est que c'était un panier à 0€, on renvoie directement sur la bonne route
-            $this->redirect('/reservation/merci');
+            $this->redirect('/reservation/merci?token=' . $paymentResult['token']);
         }
 
         // Si tout s'est bien passé, on affiche la page de paiement avec l'URL de redirection
@@ -184,6 +196,9 @@ class ReservationConfirmationController extends AbstractController
     #[Route('/reservation/merci', name: 'app_reservation_merci')]
     public function merci(): void
     {
+        $this->flashMessageService->setFlashMessage('success', 'Votre réservation a été confirmée, vous avez reçu un récapitulatif par mail.');
+
+        //On va chercher la réservation
 
 
 

@@ -253,34 +253,36 @@ readonly class ReservationDataPersist
     }
 
     /**
-     * Insère détails et compléments. Lance une exception si une insertion échoue.
+     * Insère détails et compléments.
      *
      * @param int $newReservationId
      * @param array $tempReservation
      */
     private function persistDetailsAndComplements(int $newReservationId, array $tempReservation): void
     {
-        foreach ($tempReservation['reservation_detail'] ?? [] as $detailData) {
-            $detail = (new ReservationDetail())
-                ->setReservation($newReservationId)
-                ->setName($detailData['name'] ?? null)
-                ->setFirstName($detailData['firstname'] ?? null)
-                ->setTarif((int)$detailData['tarif_id'])
-                ->setTarifAccessCode($detailData['tarif_access_code'] ?? null)
-                ->setJustificatifName($detailData['justificatif_name'] ?? null)
-                ->setPlaceNumber($detailData['place_number'] ?? null);
+        foreach ($tempReservation['reservation_detail'] ?? [] as $tarifId => $detailData) {
+            foreach ($detailData['participants'] as $participant) {
+                $detail = (new ReservationDetail())
+                    ->setReservation($newReservationId)
+                    ->setName($participant['name'] ?? null)
+                    ->setFirstName($participant['firstname'] ?? null)
+                    ->setTarif((int)$tarifId)
+                    ->setTarifAccessCode($participant['tarif_access_code'] ?? null)
+                    ->setJustificatifName($participant['justificatif_name'] ?? null)
+                    ->setPlaceNumber($participant['place_number'] ?? null);
 
-            $id = $this->reservationDetailRepository->insert($detail);
-            if ($id <= 0) {
-                throw new \RuntimeException('Échec insertion détail.');
+                $id = $this->reservationDetailRepository->insert($detail);
+                if ($id <= 0) {
+                    throw new \RuntimeException('Échec insertion détail.');
+                }
             }
         }
 
-        foreach ($tempReservation['reservation_complement'] ?? [] as $complementData) {
+        foreach ($tempReservation['reservation_complement'] ?? [] as $tarifId => $complementData) {
             $complement = (new ReservationComplement())
                 ->setReservation($newReservationId)
-                ->setTarif((int)$complementData['tarif_id'])
-                ->setTarifAccessCode($complementData['tarif_access_code'] ?? null)
+                ->setTarif((int)$tarifId)
+                ->setTarifAccessCode($complementData['codes'][0] ?? null)
                 ->setQty((int)$complementData['qty']);
 
             $id = $this->reservationsComplementsRepository->insert($complement);

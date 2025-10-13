@@ -31,6 +31,7 @@ final class ReservationTempWriter implements ReservationStorageInterface
     }
 
     /**
+     * Persiste en BDD la réservation temporaire
      * @param array $reservation
      * @return string
      */

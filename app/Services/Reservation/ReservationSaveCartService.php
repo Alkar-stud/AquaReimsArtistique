@@ -99,7 +99,7 @@ class ReservationSaveCartService
      * @param $session
      * @return array
      */
-    public function prepareReservationToSaveInNoSQL($session): array
+    public function prepareReservationToSaveTemporarily($session): array
     {
         // Récupérer les tarifs de l'événement
         $tarifs = $this->tarifRepository->findByEventId($session['event_id']);
@@ -126,8 +126,8 @@ class ReservationSaveCartService
             'swimmer_id'            => $session['swimmer_id'] ?? null,
             'access_code_used'      => $session['access_code_used'] ?? null,
             'booker'                => $session['booker'] ?? [],
-            'reservation_detail'    => $session['reservation_detail'] ?? [],
-            'reservation_complement'=> $session['reservation_complement'] ?? [],
+            'reservation_detail'    => $detailReport['details'] ?? [],
+            'reservation_complement'=> $complementReport['complements'] ?? [],
             'totals' => [
                 'details_subtotal'     => $detailReport['subtotal'],
                 'complements_subtotal' => $complementReport['subtotal'],

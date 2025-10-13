@@ -80,7 +80,6 @@
     <div class="modal-dialog modal-dialog-centered modal-xl">
         <div class="modal-content">
             <form method="POST" action="/gestion/accueil/add">
-                <input type="hidden" id="csrf_token" name="csrf_token" value="{{ $csrf_token }}">
                 <div class="modal-header">
                     <h5 class="modal-title" id="addModalLabel">Ajouter un nouveau contenu</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
@@ -132,7 +131,6 @@
     <div class="modal-dialog modal-dialog-centered modal-xl">
         <div class="modal-content">
             <form method="POST" action="/gestion/accueil/edit">
-                <input type="hidden" name="csrf_token" value="{{ $csrf_token }}">
                 <input type="hidden" name="id" value="{{ $item->getId() }}">
                 <div class="modal-header">
                     <h5 class="modal-title" id="editModalLabel-{{ $item->getId() }}">Modifier le contenu</h5>

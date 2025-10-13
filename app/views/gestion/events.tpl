@@ -97,7 +97,6 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
                 </div>
                 <form id="eventForm" method="POST" action="/gestion/events/add" novalidate>
-                    <input type="hidden" name="csrf_token" value="{{ $csrf_token }}">
                     <input type="hidden" name="event_id" id="event_id" value="">
                     <div class="modal-body">
                         <!-- Zone pour les messages d'erreur de validation -->

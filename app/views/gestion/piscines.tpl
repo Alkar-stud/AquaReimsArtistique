@@ -36,7 +36,6 @@
                 </div>
                 <form action="/gestion/piscines/add" method="POST">
                     <div class="modal-body">
-                        <input type="hidden" name="csrf_token" value="{{ $csrf_token }}">
                         <div class="mb-3">
                             <label for="add-label" class="form-label">Nom</label>
                             <input type="text" name="label" id="add-label" class="form-control" required>
@@ -78,7 +77,6 @@
                 </div>
                 <form action="/gestion/piscines/update" method="POST">
                     <div class="modal-body">
-                        <input type="hidden" name="csrf_token" value="{{ $csrf_token }}">
                         <input type="hidden" name="piscine_id" value="{{ $piscine_loop['item']->getId() }}">
                         <div class="mb-3">
                             <label for="edit-label-{{ $piscine_loop['item']->getId() }}" class="form-label">Nom</label>
@@ -107,7 +105,6 @@
                     </div>
                     <div class="modal-footer justify-content-between">
                         <form action="/gestion/piscines/delete" method="POST" onsubmit="return confirm('Supprimer cette piscine ?');">
-                            <input type="hidden" name="csrf_token" value="{{ $csrf_token }}">
                             <input type="hidden" name="piscine_id" value="{{ $piscine_loop['item']->getId() }}">
                             <button type="submit" class="btn btn-danger">Supprimer</button>
                         </form>
@@ -139,7 +136,6 @@
             <!-- Ligne formulaire d’ajout -->
             <tr>
                 <form action="/gestion/piscines/add" method="POST" id="form-add-piscine" class="d-contents"></form>
-                <td><input type="hidden" name="csrf_token" value="{{ $csrf_token }}" form="form-add-piscine">
                     <input type="text" name="label" class="form-control" required form="form-add-piscine"></td>
                 <td><input type="text" name="address" class="form-control" form="form-add-piscine"></td>
                 <td><input type="number" name="capacity" class="form-control" min="0" form="form-add-piscine"></td>
@@ -156,7 +152,6 @@
             <tr>
                 <form action="/gestion/piscines/update" method="POST" id="form-update-piscine-{{ $piscine_loop['item']->getId() }}" class="d-contents"></form>
                 <td>
-                    <input type="hidden" name="csrf_token" value="{{ $csrf_token }}" form="form-update-piscine-{{ $piscine_loop['item']->getId() }}">
                     <input type="hidden" name="piscine_id" value="{{ $piscine_loop['item']->getId() }}" form="form-update-piscine-{{ $piscine_loop['item']->getId() }}">
                     <input type="text" name="label" class="form-control" required value="{{ $piscine_loop['item']->getLabel() }}" form="form-update-piscine-{{ $piscine_loop['item']->getId() }}">
                 </td>
@@ -174,7 +169,6 @@
                 <td class="d-flex gap-2">
                     <button type="submit" class="btn btn-secondary btn-sm" form="form-update-piscine-{{ $piscine_loop['item']->getId() }}">Enregistrer</button>
                     <form action="/gestion/piscines/delete" method="POST" onsubmit="return confirm('Supprimer cette piscine ?');">
-                        <input type="hidden" name="csrf_token" value="{{ $csrf_token }}">
                         <input type="hidden" name="piscine_id" value="{{ $piscine_loop['item']->getId() }}">
                         <button type="submit" class="btn btn-danger btn-sm">Supprimer</button>
                     </form>

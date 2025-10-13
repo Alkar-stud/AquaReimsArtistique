@@ -37,7 +37,6 @@
             <div class="card-body">
                 <h6 class="card-title">Ajouter un nageur</h6>
                 <form action="/gestion/swimmers/add" method="POST">
-                    <input type="hidden" name="csrf_token" value="{{ $csrf_token }}">
                     <div class="mb-2">
                         <label class="form-label">Nom</label>
                         <input type="text" name="name" class="form-control form-control-sm" required>
@@ -82,14 +81,12 @@
                             Éditer
                         </button>
                         <form method="POST" action="/gestion/swimmers/delete" onsubmit="return confirm('Supprimer ce nageur ?');">
-                            <input type="hidden" name="csrf_token" value="{{ $csrf_token }}">
                             <input type="hidden" name="swimmer_id" value="{{ $swimmer->getId() }}">
                             <button type="submit" class="btn btn-danger btn-sm">Supprimer</button>
                         </form>
                     </div>
                 </div>
                 <form action="/gestion/swimmers/update" method="POST" class="mt-2" style="display:none">
-                    <input type="hidden" name="csrf_token" value="{{ $csrf_token }}">
                     <input type="hidden" name="form_anchor" value="config-card-{{ $swimmer->getId() }}">
                     <input type="hidden" name="swimmer_id" value="{{ $swimmer->getId() }}">
                     <input type="hidden" name="context" value="mobile">
@@ -134,7 +131,6 @@
             <tbody>
             <tr>
                 <form action="/gestion/swimmers/add" method="POST">
-                    <input type="hidden" name="csrf_token" value="{{ $csrf_token }}">
                     <td>
                         <input type="text" name="name" class="form-control" required>
                     </td>
@@ -157,7 +153,6 @@
             {% foreach $swimmers as $swimmer %}
             <tr>
                 <form action="/gestion/swimmers/update" method="POST">
-                    <input type="hidden" name="csrf_token" value="{{ $csrf_token }}">
                     <input type="hidden" name="form_anchor" value="config-row-{{ $swimmer->getId() }}">
                     <input type="hidden" name="swimmer_id" value="{{ $swimmer->getId() }}">
                     <input type="hidden" name="context" value="desktop">
@@ -178,7 +173,6 @@
                         <button type="submit" class="btn btn-secondary btn-sm">Enregistrer</button>
                     </form>
                 <form method="POST" action="/gestion/swimmers/delete" onsubmit="return confirm('Supprimer ce groupe ?');" class="d-inline">
-                    <input type="hidden" name="csrf_token" value="{{ $csrf_token }}">
                     <input type="hidden" name="swimmer_id" value="{{ $swimmer->getId() }}">
                     <button type="submit" class="btn btn-danger btn-sm">Supprimer</button>
                 </form>

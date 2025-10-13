@@ -24,7 +24,6 @@
             <!-- Ajout -->
             <tr>
                 <form method="POST" action="/gestion/users/add">
-                    <input type="hidden" name="csrf_token" value="{{ $csrf_token }}">
                     <td><input type="text" name="username" class="form-control" required></td>
                     <td><input type="email" name="email" class="form-control" required></td>
                     <td><input type="text" name="display_name" class="form-control"></td>
@@ -57,7 +56,6 @@
             {% foreach $users as $user %}
             <tr id="user-row-{{ $user->getId() }}">
                 <form method="POST" action="/gestion/users/edit">
-                    <input type="hidden" name="csrf_token" value="{{ $csrf_token }}">
                     <input type="hidden" name="form_anchor" value="user-row-{{ $user->getId() }}">
                     <input type="hidden" name="user_id" value="{{ $user->getId() }}">
                     <td><input type="text" name="username" class="form-control" value="{{ $user->getUsername() }}" required></td>
@@ -93,7 +91,6 @@
                         <button type="submit" class="btn btn-secondary btn-sm w-100">Modifier</button>
                 </form>
                 <form method="POST" action="/gestion/users/delete" onsubmit="return confirm('Supprimer cet utilisateur ?');" class="d-inline">
-                    <input type="hidden" name="csrf_token" value="{{ $csrf_token }}">
                     <input type="hidden" name="form_anchor" value="user-row-{{ $user->getId() }}">
                     <input type="hidden" name="user_id" value="{{ $user->getId() }}">
                     <button type="submit" class="btn btn-danger btn-sm w-100">Supprimer</button>
@@ -116,7 +113,6 @@
         <div class="card mb-3 border-success">
             <div class="card-body">
                 <form method="POST" action="/gestion/users/add">
-                    <input type="hidden" name="csrf_token" value="{{ $csrf_token }}">
                     <div class="mb-2">
                         <input type="text" name="username" class="form-control" placeholder="Nom d'utilisateur *" required>
                     </div>
@@ -155,7 +151,6 @@
         <div class="card mb-3 border-success" id="user-card-{{ $user->getId() }}">
             <div class="card-body">
                 <form method="POST" action="/gestion/users/edit" id="form-edit-{{ $user->getId() }}">
-                    <input type="hidden" name="csrf_token" value="{{ $csrf_token }}">
                     <input type="hidden" name="form_anchor" value="user-card-{{ $user->getId() }}">
                     <input type="hidden" name="user_id" value="{{ $user->getId() }}">
                     <div class="mb-2">
@@ -197,7 +192,6 @@
                 <div class="d-flex flex-column gap-2 mt-2">
                     <button type="submit" form="form-edit-{{ $user->getId() }}" class="btn btn-secondary btn-sm w-100">Modifier</button>
                     <form method="POST" action="/gestion/users/delete" onsubmit="return confirm('Supprimer cet utilisateur ?');">
-                        <input type="hidden" name="csrf_token" value="{{ $csrf_token }}">
                         <input type="hidden" name="form_anchor" value="user-card-{{ $user->getId() }}">
                         <input type="hidden" name="user_id" value="{{ $user->getId() }}">
                         <button type="submit" class="btn btn-danger btn-sm w-100">Supprimer</button>

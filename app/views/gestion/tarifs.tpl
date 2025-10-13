@@ -58,7 +58,6 @@
                 </div>
                 <form id="modal-tarif-form" method="POST">
                     <div class="modal-body">
-                        <input type="hidden" name="csrf_token" value="{{ $csrf_token }}">
                         <input type="hidden" name="onglet" value="{{ $onglet }}">
                         <input type="hidden" name="tarif_id" id="modal-tarif-id">
                         <div class="row">
@@ -123,7 +122,6 @@
                     </div>
                 </form>
                 <form id="modal-tarif-delete-form" action="/gestion/tarifs/delete" method="POST" class="d-none">
-                    <input type="hidden" name="csrf_token" value="{{ $csrf_token }}">
                     <input type="hidden" name="onglet" value="{{ $onglet }}">
                     <input type="hidden" name="tarif_id" id="modal-tarif-delete-id">
                 </form>
@@ -140,7 +138,6 @@
             <tbody>
             <tr>
                 <form action="/gestion/tarifs/add" method="POST">
-                    <input type="hidden" name="csrf_token" value="{{ $csrf_token }}">
                     <input type="hidden" name="onglet" value="{{ $onglet }}">
                     <td><input type="text" name="name" class="form-control" required></td>
                     <td><input type="text" name="description" class="form-control"></td>
@@ -161,7 +158,6 @@
             <tr>
                 <form action="/gestion/tarifs/update" method="POST" id="form-update-{{ $tarif_loop['item']->getId() }}" class="d-contents"></form>
                 <td>
-                    <input type="hidden" name="csrf_token" value="{{ $csrf_token }}" form="form-update-{{ $tarif_loop['item']->getId() }}">
                     <input type="hidden" name="onglet" value="{{ $onglet }}" form="form-update-{{ $tarif_loop['item']->getId() }}">
                     <input type="hidden" name="tarif_id" value="{{ $tarif_loop['item']->getId() }}" form="form-update-{{ $tarif_loop['item']->getId() }}">
                     <input type="text" name="name" class="form-control" required value="{{ $tarif_loop['item']->getName() ?? '' }}" size="50" form="form-update-{{ $tarif_loop['item']->getId() }}">
@@ -179,7 +175,6 @@
                 <td class="d-flex gap-2">
                     <button type="submit" class="btn btn-secondary btn-sm" form="form-update-{{ $tarif_loop['item']->getId() }}">Enregistrer</button>
                     <form action="/gestion/tarifs/delete" method="POST" onsubmit="return confirm('Supprimer ce tarif ?');" class="d-inline">
-                        <input type="hidden" name="csrf_token" value="{{ $csrf_token }}">
                         <input type="hidden" name="onglet" value="{{ $onglet }}">
                         <input type="hidden" name="tarif_id" value="{{ $tarif_loop['item']->getId() }}">
                         <button type="submit" class="btn btn-danger btn-sm">Supprimer</button>

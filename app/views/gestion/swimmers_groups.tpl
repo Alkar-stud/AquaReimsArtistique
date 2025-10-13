@@ -41,7 +41,6 @@
                     <button type="button" class="btn-close" aria-label="Fermer" onclick="document.getElementById('modal-ajout-groupe').style.display='none'"></button>
                 </div>
                 <form action="/gestion/swimmers-groups/add" method="POST">
-                    <input type="hidden" name="csrf_token" value="{{ $csrf_token }}">
                     <div class="mb-2">
                         <label>Nom du groupe <input type="text" name="name" class="form-control" required></label>
                     </div>
@@ -82,7 +81,6 @@
             <tr>
                 <form action="/gestion/swimmers-groups/add" method="POST" id="form-add" class="d-contents"></form>
                 <td>
-                    <input type="hidden" name="csrf_token" value="{{ $csrf_token }}" form="form-add">
                     <input type="text" name="name" class="form-control" required form="form-add">
                 </td>
                 <td><input type="text" name="coach" class="form-control" form="form-add"></td>
@@ -97,7 +95,6 @@
                 <!-- Le formulaire update -->
                 <form action="/gestion/swimmers-groups/update" method="POST" id="form-update-{{ $groupe->getId() }}" class="d-contents">
                 <td>
-                        <input type="hidden" name="csrf_token" value="{{ $csrf_token }}">
                         <input type="hidden" name="group_id" value="{{ $groupe->getId() }}">
                         <input type="text" name="name" class="form-control" required value="{{ $groupe->getName() }}">
                 </td>
@@ -113,7 +110,6 @@
                     <button type="submit" class="btn btn-secondary btn-sm" form="form-update-{{ $groupe->getId() }}">Enregistrer</button>
                 </form>
                 <form method="POST" action="/gestion/swimmers-groups/delete" onsubmit="return confirm('Supprimer ce groupe ?');" class="d-inline">
-                    <input type="hidden" name="csrf_token" value="{{ $csrf_token }}">
                     <input type="hidden" name="form_anchor" value="config-row-{{ $groupe->getId() }}">
                     <input type="hidden" name="group_id" value="{{ $groupe->getId() }}">
                     <button type="submit" class="btn btn-danger btn-sm">Supprimer</button>

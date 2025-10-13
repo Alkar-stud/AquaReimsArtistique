@@ -41,7 +41,7 @@ class EventRepository extends AbstractRepository
         bool $withPiscine = false,
         bool $withSessions = false,
         bool $withInscriptionDates = false,
-        bool $withTarifs = false,
+        bool $withTarifs = true,
         bool $withPresentations = false
     ): ?Event {
         $sql = "SELECT * FROM $this->tableName WHERE id = :id";

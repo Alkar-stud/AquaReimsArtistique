@@ -55,7 +55,7 @@ class PaymentService
             elseif ($_SERVER['REQUEST_URI'] == '/modifData') { $context = 'balance_payment'; }
             else { $context = 'other'; }
             $this->reservationDataPersist->persistConfirmReservation((object)$reservation, $reservation, $context, true);
-            $finalReservation = $this->reservationRepository->findByTempId($session['primary_id']);
+            $finalReservation = $this->reservationRepository->findByField('reservation_temp_id', $session['primary_id']);
 
 
             return ['success' => true, 'token' => $finalReservation->getToken()];

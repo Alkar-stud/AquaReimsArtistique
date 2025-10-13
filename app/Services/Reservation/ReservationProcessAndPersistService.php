@@ -5,7 +5,7 @@ namespace app\Services\Reservation;
 use app\Models\Reservation\Reservation;
 use app\Repository\Reservation\ReservationRepository;
 
-class ReservationprocessAndPersistService
+class ReservationProcessAndPersistService
 {
     private ReservationRepository $reservationRepository;
     private ReservationTempWriter $reservationTempWriter;
@@ -33,7 +33,7 @@ class ReservationprocessAndPersistService
     public function processAndPersistReservation(object $paymentData, string $primaryTempId, string $context): ?Reservation
     {
         // Vérifie si cette réservation a déjà été persistée pour éviter les doublons
-        $existingReservation = $this->reservationRepository->findByTempId($primaryTempId);
+        $existingReservation = $this->reservationRepository->findByField('reservation_temp_id', $primaryTempId);
         if ($existingReservation) {
             error_log("Tentative de double traitement pour la réservation temporaire ID: " . $primaryTempId);
             return $existingReservation;

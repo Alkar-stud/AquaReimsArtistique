@@ -2,6 +2,7 @@
 
 namespace app\Services\Reservation;
 
+use app\Models\Reservation\Reservation;
 use app\Models\Reservation\ReservationMailSent;
 use app\Repository\Event\EventRepository;
 use app\Repository\Mail\MailTemplateRepository;
@@ -143,8 +144,56 @@ class ReservationQueryService
             return ['success' => false, 'error' => 'Au moins 1 mail n\'a pas été renvoyé car cela avait déjà été fait (vérifiez vos spams).'];
         }
         return ['success' => true];
-
     }
 
+
+    /**
+     * Pour vérifier si la réservation peut être modifiée par le visiteur (annulation ou date expirée).
+     * @param Reservation $reservation
+     * @return bool
+     */
+    public function checkIfReservationCanBeModified(Reservation $reservation): bool
+    {
+        $return = true;
+        if ($reservation->isCanceled()) {
+            $return = false;
+        }
+        $eventInscriptionDates = $reservation->getEventObject()->getInscriptionDates();
+        //on prend la date la plus éloignée de fin d'inscription
+        $dateEndInscription = null;
+        foreach ($eventInscriptionDates as $inscriptionDate) {
+            if ($inscriptionDate->getCloseRegistrationAt() > $dateEndInscription) {
+                $dateEndInscription = $inscriptionDate->getCloseRegistrationAt();
+            }
+        }
+        if ($dateEndInscription <= new DateTime()) {
+            $return = false;
+        }
+
+        return $return;
+    }
+
+
+    /**
+     * Pour préparer reservation détail et complement prête pour que la vue n'ait plus qu'à boucler sans faire de calcul
+     * @param Reservation $reservation
+     * @return array
+     */
+    public function prepareReservationDetailsAndComplementsToView(Reservation $reservation): array
+    {
+        //Pour les détails
+        $readyForView = [];
+        foreach ($reservation->getDetails() as $detail) {
+            $readyForView[$detail->getTarifObject()->getId()][]['name'] = $detail->getName();
+
+
+        }
+
+echo '<pre>';
+print_r($readyForView);
+die;
+
+        return $readyForView;
+    }
 
 }

@@ -344,7 +344,8 @@ readonly class ReservationDataPersist
 
         $primaryId = (string) $tempReservation['primary_id'];
 
-        $this->reservationTempWriter->deleteReservation($primaryId);
+        //Tant qu'on utilise SleekDB on ne supprime pas, car l'ID dépend du nombre de document dans le dossier
+        //$this->reservationTempWriter->deleteReservation($primaryId);
         $userSessionId = $tempReservation['php_session_id'] ?? session_id();
         if ($userSessionId) {
             $this->reservationPlaceTempRepository->deleteBySession($userSessionId);

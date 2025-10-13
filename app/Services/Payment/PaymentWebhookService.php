@@ -2,7 +2,7 @@
 
 namespace app\Services\Payment;
 
-use app\Services\Reservation\ReservationprocessAndPersistService;
+use app\Services\Reservation\ReservationProcessAndPersistService;
 
 
 /**
@@ -10,10 +10,10 @@ use app\Services\Reservation\ReservationprocessAndPersistService;
  */
 class PaymentWebhookService
 {
-    private ReservationprocessAndPersistService $reservationProcessService;
+    private ReservationProcessAndPersistService $reservationProcessService;
 
     public function __construct(
-        ReservationprocessAndPersistService $reservationProcessService,
+        ReservationProcessAndPersistService $reservationProcessService,
     )
     {
         $this->reservationProcessService = $reservationProcessService;

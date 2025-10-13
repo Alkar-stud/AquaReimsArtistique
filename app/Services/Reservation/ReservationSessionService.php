@@ -170,14 +170,14 @@ class ReservationSessionService
      * @param array $tarifsById
      * @return array
      */
-    public function prepareReservationDetailToView(array $reservationDetails, array $tarifsById): array
+    public function prepareSessionReservationDetailToView(array $reservationDetails, array $tarifsById): array
     {
         $details = [];
 
         foreach ($reservationDetails as $detail) {
             $tarifId = (int)($detail['tarif_id'] ?? 0);
             if ($tarifId <= 0 || !isset($tarifsById[$tarifId])) {
-                // Incohérence d'entrée; on ignore la ligne invalide pour ne pas générer d'erreur en vue
+                // Incohérence d'entrée : on ignore la ligne invalide pour ne pas générer d'erreur en vue
                 continue;
             }
 

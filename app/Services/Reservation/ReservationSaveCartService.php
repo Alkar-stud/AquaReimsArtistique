@@ -29,7 +29,7 @@ class ReservationSaveCartService
     public function prepareReservationDetailSummary(array $reservationDetails, array $tarifsById): array
     {
         // Réutilise l'existant pour grouper les lignes par tarif_id
-        $grouped = $this->reservationSessionService->prepareReservationDetailToView($reservationDetails, $tarifsById);
+        $grouped = $this->reservationSessionService->prepareSessionReservationDetailToView($reservationDetails, $tarifsById);
 
         $summary = [];
         $subtotal = 0;

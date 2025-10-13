@@ -17,12 +17,14 @@ class ReservationRepository extends AbstractRepository
      * Retourne toutes les réservations (DESC par date de création)
      * @param bool $withEvent
      * @param bool $withEventSession
+     * @param bool $withEventInscriptionDates
      * @param bool $withChildren
      * @return Reservation[]
      */
     public function findAll(
         bool $withEvent = false,
         bool $withEventSession = false,
+        bool $withEventInscriptionDates = false,
         bool $withChildren = false
     ): array {
         $sql = "SELECT * FROM $this->tableName ORDER BY created_at DESC";
@@ -30,7 +32,7 @@ class ReservationRepository extends AbstractRepository
 
         $list = array_map([$this, 'hydrate'], $rows);
         foreach ($list as $r) {
-            $this->hydrateOptionalRelations($r, $withEvent, $withEventSession);
+            $this->hydrateOptionalRelations($r, $withEvent, $withEventSession, $withEventInscriptionDates);
         }
 
         return $withChildren ? $this->hydrateRelations($list) : $list;
@@ -42,6 +44,7 @@ class ReservationRepository extends AbstractRepository
      * @param int  $id L'ID de la réservation.
      * @param bool $withEvent Si true, hydrate l'objet Event associé.
      * @param bool $withEventSession Si true, hydrate l'objet EventSession associé.
+     * @param bool $withEventInscriptionDates Si true, hydrate les dates d'inscription de l'événement.
      * @param bool $withChildren Si true, hydrate les relations enfants (détails, compléments, paiements, mails envoyés).
      * @return Reservation|null La réservation trouvée, ou null si elle n'existe pas.
      */
@@ -49,6 +52,7 @@ class ReservationRepository extends AbstractRepository
         int $id,
         bool $withEvent = false,
         bool $withEventSession = false,
+        bool $withEventInscriptionDates = false,
         bool $withChildren = true
     ): ?Reservation {
         $sql = "SELECT * FROM $this->tableName WHERE id = :id";
@@ -56,7 +60,7 @@ class ReservationRepository extends AbstractRepository
         if (!$rows) return null;
 
         $r = $this->hydrate($rows[0]);
-        $this->hydrateOptionalRelations($r, $withEvent, $withEventSession);
+        $this->hydrateOptionalRelations($r, $withEvent, $withEventSession, $withEventInscriptionDates);
 
         if ($withChildren) {
             return $this->hydrateRelations([$r])[0];
@@ -67,17 +71,19 @@ class ReservationRepository extends AbstractRepository
     /**
      * Retourne une réservation par un champ défini
      * @param string $field
-     * @param string $fieldValue
+     * @param string|int $fieldValue
      * @param bool $withEvent Si true, hydrate l'objet Event associé.
      * @param bool $withEventSession Si true, hydrate l'objet EventSession associé.
+     * @param bool $withEventInscriptionDates
      * @param bool $withChildren Si true, hydrate les relations enfants (détails, compléments, paiements).
      * @return Reservation|null La réservation trouvée, ou null si elle n'existe pas.
-    */
+     */
     public function findByField(
         string $field,
-        string $fieldValue,
+        string|int $fieldValue,
         bool $withEvent = false,
         bool $withEventSession = false,
+        bool $withEventInscriptionDates = true,
         bool $withChildren = true
     ): ?Reservation {
         $sql = "SELECT * FROM $this->tableName WHERE " . $field . " = :" . $field . ";";
@@ -85,7 +91,7 @@ class ReservationRepository extends AbstractRepository
         if (!$rows) return null;
 
         $r = $this->hydrate($rows[0]);
-        $this->hydrateOptionalRelations($r, $withEvent, $withEventSession);
+        $this->hydrateOptionalRelations($r, $withEvent, $withEventSession, $withEventInscriptionDates);
         return $withChildren ? $this->hydrateRelations([$r])[0] : $r;
     }
 
@@ -125,7 +131,7 @@ class ReservationRepository extends AbstractRepository
      * puis hydrate chaque enregistrement exactement comme `findById`.
      *
      * Les options variadiques `$with` doivent suivre le même ordre que celles de `findById`
-     * (par exemple: withEvent, withEventSession, withSwimmer, withDetails, withComplements, withPayments, ...).
+     * (par exemple : withEvent, withEventSession, withSwimmer, withDetails, withComplements, withPayments, ...).
      * @param string $email
      * @param int $eventId
      * @param bool ...$with
@@ -133,7 +139,7 @@ class ReservationRepository extends AbstractRepository
      */
     public function findByEmailAndEvent(string $email, int $eventId, bool ...$with): array
     {
-        $sql = "SELECT id FROM {$this->tableName} WHERE email = :email AND event = :eventId";
+        $sql = "SELECT id FROM $this->tableName WHERE email = :email AND event = :eventId";
         $rows = $this->query($sql, ['email' => $email, 'eventId' => $eventId]);
 
         $reservations = [];
@@ -151,41 +157,13 @@ class ReservationRepository extends AbstractRepository
     }
 
     /**
-     * Trouve une réservation par son ID MongoDB
-     * @param string $primaryId
+     * Pour trouver une réservation par son token
+     * @param string $token
+     * @param bool $withEvent
+     * @param bool $withEventSession
+     * @param bool $withChildren
      * @return Reservation|null
      */
-    public function findByTempId(string $primaryId): ?Reservation
-    {
-        $sql = "SELECT * FROM $this->tableName WHERE reservation_temp_id = :primaryId";
-        $rows = $this->query($sql, ['primaryId' => $primaryId]);
-
-        if (!$rows) {
-            return null;
-        }
-
-        return $this->hydrate($rows[0]);
-    }
-
-    public function findByToken(
-        string $token,
-        bool $withEvent = false,
-        bool $withEventSession = false,
-        bool $withChildren = true
-    ): ?Reservation
-    {
-        $sql = "SELECT * FROM $this->tableName WHERE token = :token";
-        $rows = $this->query($sql, ['token' => $token]);
-        if (!$rows) return null;
-
-        $r = $this->hydrate($rows[0]);
-        $this->hydrateOptionalRelations($r, $withEvent, $withEventSession);
-
-        if ($withChildren) {
-            return $this->hydrateRelations([$r])[0];
-        }
-        return $r;
-    }
 
     /**
      * Ajoute une réservation
@@ -422,19 +400,37 @@ class ReservationRepository extends AbstractRepository
      * @param Reservation $r
      * @param bool $withEvent
      * @param bool $withEventSession
+     * @param bool $withEventInscriptionDates
      * @return void
      */
-    private function hydrateOptionalRelations(Reservation $r, bool $withEvent, bool $withEventSession): void
+    private function hydrateOptionalRelations(
+        Reservation $r,
+        bool $withEvent,
+        bool $withEventSession,
+        bool $withEventInscriptionDates = false
+    ): void
     {
-        if ($withEvent) {
-            $eventRepo = new EventRepository();
-            $event = $eventRepo->findById($r->getEvent(), true);
-            if ($event) { $r->setEventObject($event); }
-        }
+        // Sessions
         if ($withEventSession) {
             $sessionRepo = new EventSessionRepository();
             $session = $sessionRepo->findById($r->getEventSession());
-            if ($session) { $r->setEventSessionObject($session); }
+            if ($session) {
+                $r->setEventSessionObject($session);
+            }
+        }
+
+        // Événement (et éventuellement ses dates d'inscription)
+        if ($withEvent || $withEventInscriptionDates) {
+            $eventRepo = new EventRepository();
+            $event = $eventRepo->findById(
+                $r->getEvent(),
+                true,                  // withPiscine
+                false,                 // withSessions
+                $withEventInscriptionDates // withInscriptionDates
+            );
+            if ($event) {
+                $r->setEventObject($event);
+            }
         }
     }
 }

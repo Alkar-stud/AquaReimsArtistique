@@ -158,13 +158,33 @@ class ReservationRepository extends AbstractRepository
     public function findByTempId(string $primaryId): ?Reservation
     {
         $sql = "SELECT * FROM $this->tableName WHERE reservation_temp_id = :primaryId";
-        $result = $this->query($sql, ['primaryId' => $primaryId]);
+        $rows = $this->query($sql, ['primaryId' => $primaryId]);
 
-        if (!$result) {
+        if (!$rows) {
             return null;
         }
 
-        return $this->hydrate($result[0]);
+        return $this->hydrate($rows[0]);
+    }
+
+    public function findByToken(
+        string $token,
+        bool $withEvent = false,
+        bool $withEventSession = false,
+        bool $withChildren = true
+    ): ?Reservation
+    {
+        $sql = "SELECT * FROM $this->tableName WHERE token = :token";
+        $rows = $this->query($sql, ['token' => $token]);
+        if (!$rows) return null;
+
+        $r = $this->hydrate($rows[0]);
+        $this->hydrateOptionalRelations($r, $withEvent, $withEventSession);
+
+        if ($withChildren) {
+            return $this->hydrateRelations([$r])[0];
+        }
+        return $r;
     }
 
     /**
@@ -335,10 +355,10 @@ class ReservationRepository extends AbstractRepository
     public function hasReservationsForSession(int $sessionId): bool
     {
         $sql = "SELECT 1 FROM $this->tableName WHERE event_session = :sessionId AND is_canceled = 0 LIMIT 1";
-        $result = $this->query($sql, ['sessionId' => $sessionId]);
+        $rows = $this->query($sql, ['sessionId' => $sessionId]);
 
         // Si la requête retourne au moins une ligne, cela signifie qu'il y a des réservations.
-        return !empty($result);
+        return !empty($rows);
     }
 
     /**
@@ -349,10 +369,10 @@ class ReservationRepository extends AbstractRepository
     public function hasReservations(int $eventId): bool
     {
         $sql = "SELECT 1 FROM $this->tableName WHERE event = :event AND is_canceled = 0 LIMIT 1;";
-        $result = $this->query($sql, ['event' => $eventId]);
+        $rows = $this->query($sql, ['event' => $eventId]);
 
         // Si la requête retourne au moins une ligne, cela signifie qu'il y a des réservations.
-        return !empty($result);
+        return !empty($rows);
     }
 
     /**

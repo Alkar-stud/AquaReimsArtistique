@@ -26,6 +26,7 @@ class ReservationConfirmationController extends AbstractController
     private ReservationTempWriter $reservationTempWriter;
     private TarifRepository $tarifRepository;
     private PaymentService $paymentService;
+    private ReservationRepository $reservationRepository;
 
     public function __construct(
         ReservationDataValidationService $reservationDataValidationService,
@@ -36,6 +37,7 @@ class ReservationConfirmationController extends AbstractController
         ReservationSaveCartService       $reservationSaveCartService,
         ReservationTempWriter            $reservationTempWriter,
         PaymentService                   $paymentService,
+        ReservationRepository            $reservationRepository,
     )
     {
         parent::__construct(true); // route publique
@@ -45,9 +47,9 @@ class ReservationConfirmationController extends AbstractController
         $this->swimmerRepository = $swimmerRepository;
         $this->reservationSaveCartService = $reservationSaveCartService;
         $this->tarifRepository = $tarifRepository;
-        // On instancie le service de paiement avec ses dépendances
         $this->reservationTempWriter = $reservationTempWriter;
         $this->paymentService =  $paymentService;
+        $this->reservationRepository = $reservationRepository;
     }
 
     /**
@@ -168,8 +170,10 @@ class ReservationConfirmationController extends AbstractController
     }
 
 
-
-
+    /**
+     * Pour vérifier si le callback a bien enregistré le paiement envoyé par HelloAsso
+     * @return void
+     */
     #[Route('/reservation/checkPayment', name: 'app_reservation_checkPayment', methods: ['POST'])]
     public function checkPayment(): void
     {
@@ -196,14 +200,22 @@ class ReservationConfirmationController extends AbstractController
     #[Route('/reservation/merci', name: 'app_reservation_merci')]
     public function merci(): void
     {
-        $this->flashMessageService->setFlashMessage('success', 'Votre réservation a été confirmée, vous avez reçu un récapitulatif par mail.');
+        $token = $_GET['token'] ?? null;
+        if (!$token) {
+            $this->flashMessageService->setFlashMessage('warning', "Ce token n'est associé à aucune commande. Veuillez vérifier le lien présent dans votre mail ou vous rapprocher des organisateurs.");
+        } else {
+            $token = htmlspecialchars($token);
+            //On va chercher la réservation pour afficher la date et heure ainsi que l'adresse du rendez-vous, en rappelant l'ouverture des portes.
+            $reservation = $this->reservationRepository->findByToken($token, true, true, false);
+        }
 
-        //On va chercher la réservation
+
+
 
 
 
         $this->render('reservation/merci', [
-
+            'reservation' => $reservation ?? null,
         ], 'Réservation confirmée');
 
     }
@@ -216,8 +228,7 @@ class ReservationConfirmationController extends AbstractController
      */
     private function handleSuccessfulCheck(ReservationPayment $payment): void
     {
-        $reservationsRepository = new ReservationRepository();
-        $reservation = $reservationsRepository->findById($payment->getReservation());
+        $reservation = $this->reservationRepository->findById($payment->getReservation());
 
         if ($reservation) {
             unset($_SESSION['reservation'][session_id()]);

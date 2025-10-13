@@ -3,21 +3,21 @@
     {{ $flash_message['message'] ?? '' }}
 </div>
 {% endif %}
-<ul class="nav nav-tabs mb-3" id="tarifTabs">
-    <li class="nav-item">
-        <a class="nav-link {{ !$onglet ? 'active' : '' }}" id="tab-all" href="/gestion/tarifs">Tous</a>
-    </li>
-    <li class="nav-item">
-        <a class="nav-link {{ $onglet === 'places' ? 'active' : '' }}" id="tab-places" href="/gestion/tarifs?onglet=places">Places assises</a>
-    </li>
-    <li class="nav-item">
-        <a class="nav-link {{ $onglet === 'autres' ? 'active' : '' }}" id="tab-autres" href="/gestion/tarifs?onglet=autres">Autres</a>
-    </li>
-</ul>
-<div id="content-places" style="{{ $onglet === 'places' ? '' : 'display:none;' }}"></div>
-<div id="content-autres" style="{{ $onglet === 'autres' ? '' : 'display:none;' }}"></div>
 <div class="container-fluid">
     <h2 class="mb-4">Gestion des tarifs</h2>
+    <ul class="nav nav-tabs mb-3" id="tarifTabs">
+        <li class="nav-item">
+            <a class="nav-link {{ !$onglet ? 'active' : '' }}" id="tab-all" href="/gestion/tarifs">Tous</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link {{ $onglet === 'places' ? 'active' : '' }}" id="tab-places" href="/gestion/tarifs?onglet=places">Places assises</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link {{ $onglet === 'autres' ? 'active' : '' }}" id="tab-autres" href="/gestion/tarifs?onglet=autres">Autres</a>
+        </li>
+    </ul>
+    <div id="content-places" style="{{ $onglet === 'places' ? '' : 'display:none;' }}"></div>
+    <div id="content-autres" style="{{ $onglet === 'autres' ? '' : 'display:none;' }}"></div>
     <div class="d-md-none mb-4">
         {% if !empty($data) %}
         <ul class="list-group mb-3">
@@ -39,7 +39,7 @@
                         data-includes_program="{{ $tarif_loop['item']->getIncludesProgram() ? '1' : '0' }}"
                         data-requires_proof="{{ $tarif_loop['item']->getRequiresProof() ? '1' : '0' }}"
                         data-access_code="{{ $tarif_loop['item']->getAccessCode() ?? '' }}"
-                        data-is_active="{{ $tarif_loop['item']->getIsActive() ? '1' : '0' }}"
+                        data-is_active="{{ $tarif_loop['item']->isActive() ? '1' : '0' }}"
                         onclick="openTarifModal('edit', this.dataset)">
                     Éditer
                 </button>
@@ -175,7 +175,7 @@
                 <td class="text-center"><input type="checkbox" name="includes_program" {{ $tarif_loop['item']->getIncludesProgram() ? 'checked' : '' }} form="form-update-{{ $tarif_loop['item']->getId() }}"></td>
                 <td class="text-center"><input type="checkbox" name="requires_proof" {{ $tarif_loop['item']->getRequiresProof() ? 'checked' : '' }} form="form-update-{{ $tarif_loop['item']->getId() }}"></td>
                 <td><input type="text" name="access_code" class="form-control" value="{{ $tarif_loop['item']->getAccessCode() ?? '' }}" form="form-update-{{ $tarif_loop['item']->getId() }}"></td>
-                <td class="text-center"><input type="checkbox" name="is_active" {{ $tarif_loop['item']->getIsActive() ? 'checked' : '' }} form="form-update-{{ $tarif_loop['item']->getId() }}"></td>
+                <td class="text-center"><input type="checkbox" name="is_active" {{ $tarif_loop['item']->isActive() ? 'checked' : '' }} form="form-update-{{ $tarif_loop['item']->getId() }}"></td>
                 <td class="d-flex gap-2">
                     <button type="submit" class="btn btn-secondary btn-sm" form="form-update-{{ $tarif_loop['item']->getId() }}">Enregistrer</button>
                     <form action="/gestion/tarifs/delete" method="POST" onsubmit="return confirm('Supprimer ce tarif ?');" class="d-inline">

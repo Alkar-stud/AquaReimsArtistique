@@ -80,11 +80,16 @@ class UploadService
      * @param array $file Le tableau de fichier provenant de $_FILES (ex: $_FILES['justificatifs']).
      * @param string $destinationPath Le chemin complet du dossier de destination.
      * @param string $newFileName Le nom final du fichier (sans le chemin).
-     * @param array $options Options de validation.
      * @return array ['success' => bool, 'error' => ?string]
      */
-    public function handleUpload(array $file, string $destinationPath, string $newFileName, array $options = []): array
+    public function handleUpload(array $file, string $destinationPath, string $newFileName): array
     {
+        $destinationPath = __DIR__ . '/../../' . $destinationPath;
+        $options = [
+            'max_size_mb' => MAX_UPLOAD_PROOF_SIZE,
+            'allowed_extensions' => ['pdf', 'jpg', 'jpeg', 'png'],
+            'allowed_mime_types' => ['application/pdf', 'image/jpeg', 'image/png']
+            ];
         // --- Vérification des erreurs d'upload initiales ---
         if (!isset($file['error']) || is_array($file['error'])) {
             return ['success' => false, 'error' => 'Paramètres de fichier invalides.'];
@@ -100,8 +105,8 @@ class UploadService
         }
 
         // --- Validation du type MIME et de l'extension ---
-        $allowedExtensions = $options['allowed_extensions'] ?? ['pdf', 'jpg', 'jpeg', 'png'];
-        $allowedMimeTypes = $options['allowed_mime_types'] ?? ['application/pdf', 'image/jpeg', 'image/png'];
+        $allowedExtensions = $options['allowed_extensions'];
+        $allowedMimeTypes = $options['allowed_mime_types'];
 
         $extension = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
         $mimeType = mime_content_type($file['tmp_name']);
@@ -120,7 +125,9 @@ class UploadService
 
         // --- Déplacement du fichier ---
         $finalPath = rtrim($destinationPath, '/') . '/' . $newFileName;
-        if (!move_uploaded_file($file['tmp_name'], $finalPath)) {
+        $moveFile = move_uploaded_file($file['tmp_name'], $finalPath);
+
+        if (!$moveFile) {
             return ['success' => false, 'error' => 'Échec du déplacement du fichier téléchargé.'];
         }
 
@@ -147,5 +154,59 @@ class UploadService
         };
     }
 
+    /**
+     * Test l'existence d'un fichier après un upload.
+     *
+     * @param string $path
+     * @param string $fileName
+     * @return bool
+     */
+    public function checkIfFileExisteAfterUpload(string $path, string $fileName): bool
+    {
+        $filePath = __DIR__ . '/../../' . $path;
+        if (file_exists($filePath . $fileName)) {
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Déplace un fichier justificatif du dossier temporaire vers le dossier final.
+     *
+     * @param string|null $fileName Le nom du fichier à déplacer.
+     * @return bool True si le déplacement a réussi ou si aucun fichier n'était à déplacer, false en cas d'erreur.
+     */
+    public function moveProofFile(?string $fileName): bool
+    {
+        // Si aucun nom de fichier n'est fourni, il n'y a rien à faire.
+        if (empty($fileName)) {
+            return true;
+        }
+
+        $tempPath = realpath(__DIR__ . '/../../' . UPLOAD_PROOF_PATH . 'temp/');
+        $finalPath = realpath(__DIR__ . '/../../' . UPLOAD_PROOF_PATH);
+
+        if (!$tempPath || !$finalPath) {
+            error_log("Le chemin des justificatifs temporaire ou final est invalide.");
+            return false;
+        }
+
+        $sourceFile = $tempPath . DIRECTORY_SEPARATOR . $fileName;
+        $destinationFile = $finalPath . DIRECTORY_SEPARATOR . $fileName;
+
+        // On vérifie que le fichier source existe bien
+        if (!file_exists($sourceFile)) {
+            error_log("Tentative de déplacement d'un fichier justificatif non trouvé : " . $sourceFile);
+            return false; // On retourne false pour signaler un problème potentiel.
+        }
+
+        // On déplace le fichier
+        if (!rename($sourceFile, $destinationFile)) {
+            error_log("Échec du déplacement du fichier justificatif de {$sourceFile} vers {$destinationFile}");
+            return false;
+        }
+
+        return true;
+    }
 
 }

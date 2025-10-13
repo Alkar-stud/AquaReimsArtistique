@@ -42,12 +42,13 @@ class EventPresentationsController extends AbstractController
     public function index(string $search = 'displayed'): void
     {
         if ($search === 'displayed') {
-            $eventPresentations = $this->eventPresentationsRepository->findFuturePresentations(true);
+            $eventPresentations = $this->eventPresentationsRepository->findAll(true, true);
         } else {
-            $eventPresentations = $this->eventPresentationsRepository->findAll(true);
+            $eventPresentations = $this->eventPresentationsRepository->findAll(false, true);
         }
 
-        $events = $this->eventRepository->findAll();
+        $events = $this->eventRepository->findAllSortByDate(true);
+
         $eventSessions = $this->eventSessionRepository->findAllLastSessionDateByEvent();
 
         $this->render('/gestion/event_presentations', [
@@ -56,6 +57,17 @@ class EventPresentationsController extends AbstractController
             'eventSessions' => $eventSessions,
             'searchParam' => $search
         ], "Gestion de la page d'accueil");
+    }
+
+    #[Route(
+        '/gestion/accueil/{search}',
+        name: 'app_gestion_accueil_search',
+        methods: ['GET'],
+        requirements: ['search' => '(?:displayed|0)']
+    )]
+    public function indexWithSearch(string $search): void
+    {
+        $this->index($search);
     }
 
     #[Route('/gestion/accueil/upload', name: 'app_gestion_accueil_upload')]

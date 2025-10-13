@@ -128,11 +128,11 @@ class TarifRepository extends AbstractRepository
     }
 
     /**
-     * Retourne les tarifs en fonction de la présence de places assises.
+     * Retourne les tarifs en fonction de la présence de places assises ou non
      * @param bool $hasSeats true pour les tarifs avec places, false pour les autres.
      * @return Tarif[]
      */
-    public function findBySeatType(bool $hasSeats): array
+    public function findBySeatType(bool $hasSeats, int $eventId = 0): array
     {
         if ($hasSeats) {
             $sql = "SELECT * FROM $this->tableName WHERE seat_count IS NOT NULL AND seat_count > 0 ORDER BY name";
@@ -156,6 +156,37 @@ class TarifRepository extends AbstractRepository
     }
 
     /**
+     * Compte le nombre de tarifs ayant le même access_code normalisé (trim + lower)
+     * dans le même type (avec places vs sans places).
+     * N’inclut pas l’ID fourni (en modification).
+     * @param string $normalizedCode
+     * @param bool $hasSeats
+     * @param int|null $excludeId
+     * @return int
+     */
+    public function countByAccessCodeAndSeatType(string $normalizedCode, bool $hasSeats, ?int $excludeId = null): int
+    {
+        $seatCond = $hasSeats
+            ? 'seat_count IS NOT NULL AND seat_count > 0'
+            : '(seat_count IS NULL OR seat_count = 0)';
+
+        $sql = "SELECT COUNT(*) AS cnt
+                FROM {$this->tableName}
+                WHERE access_code IS NOT NULL
+                  AND LOWER(TRIM(access_code)) = :code
+                  AND {$seatCond}";
+        $params = ['code' => $normalizedCode];
+
+        if (!empty($excludeId)) {
+            $sql .= " AND id <> :exclude_id";
+            $params['exclude_id'] = (int)$excludeId;
+        }
+
+        $rows = $this->query($sql, $params);
+        return (int)($rows[0]['cnt'] ?? 0);
+    }
+
+    /**
      * @return int ID inséré (0 si échec)
      */
     public function insert(Tarif $tarif): int
@@ -175,7 +206,7 @@ class TarifRepository extends AbstractRepository
             'includes_program' => $tarif->getIncludesProgram() ? 1 : 0,
             'requires_proof' => $tarif->getRequiresProof() ? 1 : 0,
             'access_code' => $tarif->getAccessCode(),
-            'is_active' => $tarif->getIsActive() ? 1 : 0,
+            'is_active' => $tarif->isActive() ? 1 : 0,
             'created_at' => $tarif->getCreatedAt()->format('Y-m-d H:i:s'),
         ]);
         return $ok ? $this->getLastInsertId() : 0;
@@ -214,8 +245,20 @@ class TarifRepository extends AbstractRepository
             'includes_program' => $tarif->getIncludesProgram() ? 1 : 0,
             'requires_proof' => $tarif->getRequiresProof() ? 1 : 0,
             'access_code' => $tarif->getAccessCode(),
-            'is_active' => $tarif->getIsActive() ? 1 : 0,
+            'is_active' => $tarif->isActive() ? 1 : 0,
         ]);
+    }
+
+
+    /**
+     * Expose l’hydratation pour réutilisation depuis d’autres repositories.
+     * Garantit une source unique de vérité si le modèle \`Tarif\` évolue.
+     *
+     * @param array<string,mixed> $row
+     */
+    public function hydrateFromRow(array $row): Tarif
+    {
+        return $this->hydrate($row);
     }
 
     /**

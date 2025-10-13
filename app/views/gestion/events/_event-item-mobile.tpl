@@ -9,7 +9,7 @@ Variables attendues :
         <small class="text-muted">{{ $event->getPiscine() ? $event->getPiscine()->getLabel() : 'Lieu non défini' }}</small>
     </div>
     <div>
-        <button class="btn btn-sm btn-primary edit-event-btn"
+        <button class="btn btn-sm btn-secondary edit-event-btn"
                 data-event-id="{{ $event->getId() }}" data-event-json="{% php %}
                 $eventData = [
                 'id' => $event->getId(),

@@ -10,7 +10,6 @@ use DateTimeInterface;
 
 class Reservation extends AbstractModel
 {
-    private ?string $uuid = null;
     // FK vers event
     private int $event;
     private ?Event $eventObject = null;
@@ -23,9 +22,9 @@ class Reservation extends AbstractModel
     private string $email;
     private ?string $phone = null;
 
-    // FK nageuse si limitation active
-    private ?int $nageuse_si_limitation = null;
-    private ?Swimmer $nageuse = null;
+    // FK swimmer si limitation active
+    private ?int $swimmer_if_limitation = null;
+    private ?Swimmer $swimmer = null;
 
     private int $total_amount = 0;
     private int $total_amount_paid = 0;
@@ -42,9 +41,9 @@ class Reservation extends AbstractModel
     private array $details = [];
     private array $complements = [];
     private array $payments = [];
+    private array $mailSent = [];
 
     // --- GETTERS ---
-    public function getUuid(): ?string { return $this->uuid; }
     public function getEvent(): int { return $this->event; }
     public function getEventObject(): ?Event { return $this->eventObject; }
     public function getEventSession(): int { return $this->event_session; }
@@ -54,8 +53,8 @@ class Reservation extends AbstractModel
     public function getFirstName(): string { return $this->firstname; }
     public function getEmail(): string { return $this->email; }
     public function getPhone(): ?string { return $this->phone; }
-    public function getSwimmerId(): ?int { return $this->nageuse_si_limitation; }
-    public function getSwimmer(): ?Swimmer { return $this->nageuse; }
+    public function getSwimmerId(): ?int { return $this->swimmer_if_limitation; }
+    public function getSwimmer(): ?Swimmer { return $this->swimmer; }
     public function getTotalAmount(): int { return $this->total_amount; }
     public function getTotalAmountPaid(): int { return $this->total_amount_paid; }
     public function getToken(): ?string { return $this->token; }
@@ -66,10 +65,9 @@ class Reservation extends AbstractModel
     public function getDetails(): array { return $this->details; }
     public function getComplements(): array { return $this->complements; }
     public function getPayments(): array { return $this->payments; }
+    public function getMailSent(): array { return $this->mailSent; }
 
     // --- SETTERS ---
-    public function setUuid(?string $uuid): self { $this->uuid = $uuid; return $this; }
-
     public function setEvent(int $event): self { $this->event = $event; return $this; }
     public function setEventObject(?Event $eventObject): self {
         $this->eventObject = $eventObject;
@@ -97,10 +95,10 @@ class Reservation extends AbstractModel
     public function setEmail(string $email): self { $this->email = $email; return $this; }
     public function setPhone(?string $phone): self { $this->phone = ($phone === '' ? null : $phone); return $this; }
 
-    public function setSwimmerId(?int $nageuse_si_limitation): self { $this->nageuse_si_limitation = $nageuse_si_limitation; return $this; }
-    public function setSwimmer(?Swimmer $nageuse): self {
-        $this->nageuse = $nageuse;
-        if ($nageuse) { $this->nageuse_si_limitation = $nageuse->getId(); }
+    public function setSwimmerId(?int $swimmer_if_limitation): self { $this->swimmer_if_limitation = $swimmer_if_limitation; return $this; }
+    public function setSwimmer(?Swimmer $swimmer): self {
+        $this->swimmer = $swimmer;
+        if ($swimmer) { $this->swimmer_if_limitation = $swimmer->getId(); }
         return $this;
     }
 
@@ -121,4 +119,5 @@ class Reservation extends AbstractModel
     public function setDetails(array $details): self { $this->details = $details; return $this; }
     public function setComplements(array $complements): self { $this->complements = $complements; return $this; }
     public function setPayments(array $payments): self { $this->payments = $payments; return $this; }
+    public function setMailSent(array $mailSent): self { $this->mailSent = $mailSent; return $this; }
 }

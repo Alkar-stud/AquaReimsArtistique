@@ -6,6 +6,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="content-type" content="no-cache">
     <meta http-equiv="refresh" content="no-cache">
+    <meta name="csrf-token" content="{{ $csrf_token ?? '' }}">
+    <meta name="csrf-context" content="{{ $csrf_context ?? '' }}">
     <meta charset="UTF-8">
     <link rel="icon" href="/assets/images/favicon.ico" type="image/x-icon" />
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-LN+7fdVzj6u52u30Kp6M/trliBMCMKTyK833zpbD+pXdCLuTusPj697FH4R/5mcr" crossorigin="anonymous">
@@ -17,6 +19,7 @@
     <link rel="stylesheet" href="/assets/css/ckeditor.css">
     <link rel="stylesheet" href="/assets/ckeditor5/ckeditor5.css">
     {% endif %}
+
     <script type="text/javascript" src="/assets/js/scripts.js" charset="UTF8"></script>
     <title>{{ ($_ENV['APP_NAME'] ?? 'Titre') . ' - ' . ($title ?? '') }}</title>
 </head>
@@ -29,6 +32,7 @@
 <main id="main-page" class="flex-grow-1">
     {{! $content !}}
 </main>
+
 {% include 'footer.tpl' %}
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/js/bootstrap.bundle.min.js" integrity="sha384-ndDqU0Gzau9qJ1lfW4pNLlhNTkCfHzAVBReH9diLvGRem5+R9g2FzA8ZGN954O5Q" crossorigin="anonymous"></script>
 {% if $load_ckeditor %}
@@ -52,8 +56,9 @@
     </div>
     <div id="debug-bar">
         <div id="screen-dimensions-display"></div>
-        {% if ($user_is_authenticated ?? false) %}
+        {% if ($user_is_authenticated ?? false) || ($reservation_session_active ?? false) %}
         <span style="color: #666;">|</span>
+        {% if ($user_is_authenticated ?? false) %}
         <div>
             <span style="color: #aaa;">User:</span> {{ $debug_user_info['name'] }} ({{ $debug_user_info['id'] }})
         </div>
@@ -62,10 +67,7 @@
             <span style="color: #aaa;">Role:</span> {{ $debug_user_info['role_label'] }} ({{ $debug_user_info['role_id'] }})
         </div>
         <span style="color: #666;">|</span>
-        <div title="Session ID">
-            <span style="color: #aaa;">SID:</span> <span style="font-size: 10px;">{{ $debug_user_info['session_id'] }}</span>
-        </div>
-        <span style="color: #666;">|</span>
+        {% endif %}
         <div id="session-timeout-display"></div>
         {% endif %}
     </div>

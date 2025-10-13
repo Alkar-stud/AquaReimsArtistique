@@ -29,7 +29,6 @@ class ErrorController extends AbstractController
             ]
         );
 
-
         $this->render('errors/404', [
             'uri' => $uri,
             'redirectUrl' => $redirectUrl,

@@ -9,17 +9,19 @@ use app\Services\FlashMessageService;
 use app\Services\Log\Logger;
 use app\Services\Log\LoggingBootstrap;
 use app\Services\Log\RequestContext;
+use app\Services\Reservation\ReservationSessionService;
 use app\Services\Security\SessionValidateService;
 use app\Services\Security\CsrfService;
 use app\Utils\DurationHelper;
-use JetBrains\PhpStorm\NoReturn;
+use Exception;
 use Throwable;
 
 abstract class AbstractController
 {
     protected FlashMessageService $flashMessageService;
     private SessionValidateService $sessionValidateService;
-    protected CsrfService $csrfService;
+    protected ?CsrfService $csrfService = null;
+    protected ReservationSessionService $reservationSessionService;
     private static bool $globalHandlersRegistered = false;
 
     protected ?User $currentUser = null;
@@ -30,25 +32,35 @@ abstract class AbstractController
         LoggingBootstrap::ensureInitialized();
         self::registerGlobalErrorHandlers();
 
+        // Configuration et démarrage de la session
         $this->configureSession();
         if (session_status() === PHP_SESSION_NONE) {
             session_start();
         }
+
         RequestContext::boot();
 
-        $this->flashMessageService = new FlashMessageService();
+        // Validation de la session utilisateur (y compris la régénération)
         $this->sessionValidateService = new SessionValidateService();
-        $this->csrfService = new CsrfService();
+        // On initialise le service de messages flash ici, car il peut être appelé
+        // par logoutAndRedirect() à l'intérieur de checkUserSession().
+        $this->flashMessageService = new FlashMessageService();
 
-        // Valide automatiquement le CSRF pour les méthodes non sûres
-        $this->maybeEnforceCsrf();
+        // On initialise le service de session de réservation ici pour qu'il soit toujours disponible.
+        $this->reservationSessionService = new ReservationSessionService();
 
-        // Vérifier la session de l'utilisateur
         try {
             $this->checkUserSession($isPublicRoute);
         } catch (Throwable) {
             $this->logoutAndRedirect('Une erreur de session est survenue. Veuillez vous reconnecter.');
         }
+
+        // Initialisation des services qui dépendent d'une session stable
+        $this->csrfService = new CsrfService();
+
+        // Validation du token CSRF pour les requêtes POST, PUT, etc.
+        // Doit se faire après l'initialisation de CsrfService.
+        $this->maybeEnforceCsrf();
 
         // Journaliser la requête dans le channel "url" (maintenant que l'utilisateur est connu)
         Logger::get()->info(
@@ -61,17 +73,30 @@ abstract class AbstractController
         );
     }
 
-    protected function render(string $view, array $data = [], string $title = '', bool $partial = false): void
+    /**
+     * Injecte les données demandées par le controller dans la vue, en ajoutant les données communes, comme token CSRF ou les messages flashes
+     *
+     * @param string $view
+     * @param array $data
+     * @param string $title
+     * @param int $statusCode
+     * @param string $csrfContext
+     * @param bool $partial
+     * @return void
+     */
+    protected function render(string $view, array $data = [], string $title = '', int $statusCode = 200, string $csrfContext = 'default', bool $partial = false): void
     {
+        http_response_code($statusCode);
+
         $engine = new TemplateEngine();
 
         $uri = strtok($_SERVER['REQUEST_URI'], '?');
         $data['uri'] = $uri;
         $data['is_gestion_page'] = str_starts_with($uri, '/gestion');
-        $data['load_ckeditor'] = $data['is_gestion_page'] && (str_starts_with($uri, '/gestion/mail_templates') || str_starts_with($uri, '/gestion/accueil'));
-
-        // Injecte automatiquement le token CSRF si non fourni
-        $data['csrf_token'] ??= $this->csrfService->getToken($this->getCsrfContext());
+        //$data['load_ckeditor'] = $data['is_gestion_page'] && (str_starts_with($uri, '/gestion/mails_templates') || str_starts_with($uri, '/gestion/accueil'));
+        // Charge CKEditor sur /gestion/mails_templates[/...] et /gestion/accueil[/...]
+        $data['load_ckeditor'] = $data['is_gestion_page']
+            && (bool)preg_match('#^/gestion/(mails_templates|accueil)(/|$)#', $uri);
 
         // Centralisation de la récupération des messages flash
         $data['flash_message'] = $this->flashMessageService->getFlashMessage();
@@ -80,6 +105,10 @@ abstract class AbstractController
         if (($_ENV['APP_DEBUG'] ?? 'false') === 'true') {
             $data['user_is_authenticated'] = isset($_SESSION['user']['id']);
             $data['debug_user_info'] = null;
+
+            // Assurer que la clé debug existe pour le JS
+            $data['js_data']['debug'] ??= [];
+
             if ($data['user_is_authenticated']) {
                 $data['debug_user_info'] = [
                     'name' => $_SESSION['user']['username'] ?? 'N/A',
@@ -88,17 +117,25 @@ abstract class AbstractController
                     'role_id' => $_SESSION['user']['role']['id'] ?? 'N/A',
                     'session_id' => session_id()
                 ];
-            }
-            $timeoutValue = defined('TIMEOUT_SESSION') ? TIMEOUT_SESSION : 0;
-            $durationInSeconds = 0;
 
-            if (is_numeric($timeoutValue)) {
-                $durationInSeconds = (int)$timeoutValue;
-            } elseif (is_string($timeoutValue) && str_starts_with($timeoutValue, 'PT')) {
-                $durationInSeconds = DurationHelper::iso8601ToSeconds($timeoutValue);
+                // Données pour le timeout de la session utilisateur
+                $timeoutValue = defined('TIMEOUT_SESSION') ? TIMEOUT_SESSION : 0;
+                $durationInSeconds = is_numeric($timeoutValue) ? (int)$timeoutValue : DurationHelper::iso8601ToSeconds($timeoutValue);
+
+                $data['js_data']['debug']['sessionTimeoutDuration'] = $durationInSeconds;
+                $data['js_data']['debug']['sessionLastActivity'] = $_SESSION['user']['LAST_ACTIVITY'] ?? time();
+                $data['js_data']['debug']['isUserSession'] = true;
+
+            } else {
+                // Si pas d'utilisateur connecté, on vérifie s'il y a une session de réservation
+                $reservationSession = $this->reservationSessionService->getReservationSession();
+                if ($reservationSession && !empty($reservationSession['event_id'])) {
+                    $data['reservation_session_active'] = true;
+                    $data['js_data']['debug']['sessionTimeoutDuration'] = $this->reservationSessionService->getReservationTimeoutDuration();
+                    $data['js_data']['debug']['sessionLastActivity'] = $reservationSession['last_activity'] ?? time();
+                    $data['js_data']['debug']['isUserSession'] = false;
+                }
             }
-            $data['js_data']['debug']['sessionTimeoutDuration'] = $durationInSeconds;
-            $data['js_data']['debug']['sessionLastActivity'] = $_SESSION['user']['LAST_ACTIVITY'] ?? time();
         }
 
         $templateTpl = __DIR__ . '/../views/' . $view . '.tpl';
@@ -116,7 +153,7 @@ abstract class AbstractController
             Logger::get()->error(
                 LogType::APPLICATION->value,
                 'template_render',
-                ['exception' => $e, 'view' => $view, 'uri' => $data['uri'] ?? null]
+                ['exception' => $e, 'view' => $view, 'uri' => $data['uri']]
             );
 
             http_response_code(500);
@@ -135,17 +172,32 @@ abstract class AbstractController
                 : '';
         }
 
+        // Pour les pages de réservation, forcer le contexte unifié
+        if (str_starts_with($view, 'reservation/')) {
+            $csrfContext = '/reservation';
+        } else {
+            $csrfContext = $this->getCurrentPath();
+        }
+
         if ($partial) {
             echo $content;
         } else {
             $layoutData = array_merge($data, [
                 'title' => $title,
-                'content' => $content
+                'content' => $content,
+                'csrf_token' => $this->csrfService->getToken($csrfContext),
+                'csrf_context' => $csrfContext
             ]);
             echo $engine->render(__DIR__ . '/../views/layout/base.tpl', $layoutData);
         }
     }
 
+    /**
+     * Pour le moteur de template, enrichit les tableaux pour faciliter les boucles dans les vues
+     *
+     * @param array $data
+     * @return array
+     */
     private function prepareLoopData(array $data): array
     {
         foreach ($data as $key => $value) {
@@ -167,6 +219,13 @@ abstract class AbstractController
         return $data;
     }
 
+    /**
+     * Vérifie si le User est connecté (et non expiré) pour les routes non publiques
+     *
+     * @param bool $isPublicRoute
+     * @return void
+     * @throws Exception
+     */
     public function checkUserSession(bool $isPublicRoute = false): void
     {
         if ($isPublicRoute) {
@@ -182,7 +241,6 @@ abstract class AbstractController
             $this->logoutAndRedirect('Votre session a expiré pour cause d\'inactivité. Veuillez vous reconnecter.', true);
             return;
         }
-
         $userRepository = new UserRepository();
         $user = $userRepository->findById((int)$_SESSION['user']['id']);
 
@@ -206,6 +264,14 @@ abstract class AbstractController
         }
     }
 
+    /**
+     * Supprime la session et redirige vers la page de login avec un message si besoin
+     * Enregistre l'URL en cours pour pouvoir y retourner après le login
+     *
+     * @param string $message
+     * @param bool $saveRedirectUrl
+     * @return void
+     */
     private function logoutAndRedirect(string $message, bool $saveRedirectUrl = false): void
     {
         $redirectUrlAfterLogin = null;
@@ -229,6 +295,11 @@ abstract class AbstractController
         $this->redirect('/login');
     }
 
+    /**
+     * Applique les paramètres de sécurité des cookies de session
+     *
+     * @return void
+     */
     protected function configureSession(): void
     {
         if (session_status() !== PHP_SESSION_NONE) {
@@ -240,7 +311,6 @@ abstract class AbstractController
         $envRaw = strtolower($_ENV['APP_ENV'] ?? 'local');
         $envKey = match ($envRaw) {
             'prod', 'production' => 'production',
-            'dev', 'development', 'local' => 'local',
             default => 'local',
         };
 
@@ -263,6 +333,10 @@ abstract class AbstractController
         ]);
     }
 
+    /**
+     * @param bool $destroyOldSession
+     * @return void
+     */
     protected function regenerateSessionId(bool $destroyOldSession = false): void
     {
         if (session_status() === PHP_SESSION_ACTIVE) {
@@ -270,69 +344,175 @@ abstract class AbstractController
         }
     }
 
-    protected function json(array $data, int $statusCode = 200): void
+    /**
+     * Prépare et envoie une réponse JSON avec gestion automatique du contexte CSRF
+     *
+     * @param array $data
+     * @param int $statusCode
+     * @param string|null $csrfContext Contexte CSRF (si null, utilise l'en-tête X-CSRF-Context)
+     * @return void
+     */
+    protected function json(array $data, int $statusCode = 200, ?string $csrfContext = null): void
     {
-        http_response_code($statusCode);
-        header('Content-Type: application/json; charset=utf-8');
-        echo json_encode($data);
-        exit;    }
+        // Détection automatique du contexte CSRF depuis les en-têtes HTTP
+        if ($csrfContext === null) {
+            $csrfContext = $_SERVER['HTTP_X_CSRF_CONTEXT'] ?? $this->getCsrfContext();
+        }
 
+        $newToken = $this->csrfService->getToken($csrfContext);
+
+        // Ajouter des informations de débogage en environnement de développement
+        if (($_ENV['APP_DEBUG'] ?? 'false') === 'true') {
+            $data['_debug'] = [
+                'csrf_context' => $csrfContext,
+                'http_x_csrf_context' => $_SERVER['HTTP_X_CSRF_CONTEXT'] ?? null,
+                'referer_path' => $this->getSameOriginRefererPath(),
+                'current_path' => $this->getCurrentPath(),
+            ];
+        }
+
+        http_response_code($statusCode);
+        header('Content-Type: application/json; charset=UTF-8');
+        header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+        header('Pragma: no-cache');
+        header('X-CSRF-Token: ' . $newToken);
+        header('X-CSRF-Context: ' . $csrfContext);
+
+        echo json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        exit;
+    }
+
+    /**
+     * Vérifie si la redirection est bien interne
+     *
+     * @param string $url
+     * @return bool
+     */
     private function isValidInternalRedirect(string $url): bool
     {
         return str_starts_with($url, '/') && !str_starts_with($url, '//') && !str_contains($url, '://');
     }
 
+    /**
+     * Détermine le contexte CSRF à partir de l'URL courante
+     *
+     * @return string
+     */
     protected function getCsrfContext(): string
     {
-        // Pour les requêtes AJAX/Fetch, le contexte correct est la page d'où vient la requête.
-        // On se base sur le Referer, en s'assurant qu'il vient bien du même domaine pour la sécurité.
-        if (isset($_SERVER['HTTP_REFERER'])) {
-            $refererHost = parse_url($_SERVER['HTTP_REFERER'], PHP_URL_HOST);
-            $serverHost = $_SERVER['HTTP_HOST'] ?? '';
+        $uri = $_SERVER['REQUEST_URI'] ?? '';
 
-            // Si le referer vient du même hôte, on l'utilise comme contexte.
-            if ($refererHost === $serverHost) {
-                $refererPath = parse_url($_SERVER['HTTP_REFERER'], PHP_URL_PATH);
-                if ($refererPath) {
-                    return $refererPath;
-                }
-            }
+        // Pour toutes les routes de réservation (avec ou sans slash final)
+        if ($uri === '/reservation' || str_starts_with($uri, '/reservation/')) {
+            return '/reservation';
         }
 
-        // Comportement par défaut pour les chargements de page classiques.
+        // Pour les autres routes
+        $path = parse_url($uri, PHP_URL_PATH) ?: '/';
+        $segments = explode('/', trim($path, '/'));
+        return !empty($segments[0]) ? '/' . $segments[0] : 'default';
+    }
+
+
+    /**
+     * Chemin de la page courante (sans query)
+     *
+     * @return string
+     */
+    protected function getCurrentPath(): string
+    {
         return parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
     }
 
+    // Referer si même origine (hôte comparé en ignorant le port)
+
+    /**
+     * @return string|null
+     */
+    private function getSameOriginRefererPath(): ?string
+    {
+        if (empty($_SERVER['HTTP_REFERER'])) {
+            return null;
+        }
+
+        $refererHost = parse_url($_SERVER['HTTP_REFERER'], PHP_URL_HOST);
+        $serverHostRaw = $_SERVER['HTTP_X_FORWARDED_HOST'] ?? ($_SERVER['HTTP_HOST'] ?? '');
+        $serverHost = parse_url('https://' . $serverHostRaw, PHP_URL_HOST); // normalise et ignore le port
+
+        if ($refererHost && $serverHost && strcasecmp($refererHost, $serverHost) === 0) {
+            $path = parse_url($_SERVER['HTTP_REFERER'], PHP_URL_PATH);
+            return $path ?: null;
+        }
+
+        return null;
+    }
+
+    /**
+     * @return CsrfService
+     */
+    protected function csrf(): CsrfService
+    {
+        return $this->csrfService ??= new CsrfService();
+    }
+
+    /**
+     * Vérifie la validité du token CSRF pour les requêtes modifiant l'état
+     *
+     * @return void
+     */
     private function maybeEnforceCsrf(): void
     {
-        $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
-        if (!in_array($method, ['POST', 'PUT', 'PATCH', 'DELETE'], true)) {
+        // En debug, on ne valide/consomme pas le jeton CSRF
+        if (($_ENV['APP_DEBUG'] ?? 'false') === 'true') {
             return;
         }
 
-        $context = null;
-        if (isset($_SERVER['HTTP_REFERER'])) {
-            $refererPath = parse_url($_SERVER['HTTP_REFERER'], PHP_URL_PATH);
-            $refererHost = parse_url($_SERVER['HTTP_REFERER'], PHP_URL_HOST);
-            $serverHost = $_SERVER['HTTP_HOST'] ?? '';
+        $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
+        // Si c'est une requête qui modifie l'état (POST, PUT, PATCH, DELETE)
+        if (in_array($method, ['POST', 'PUT', 'PATCH', 'DELETE'], true)) {
+            $csrfToken = null;
+            $csrfContext = null;
 
-            if ($refererPath && $refererHost === $serverHost) {
-                $context = $refererPath;
+            // Recherche le token dans l'entête
+            if (isset($_SERVER['HTTP_X_CSRF_TOKEN'])) {
+                $csrfToken = $_SERVER['HTTP_X_CSRF_TOKEN'];
             }
-        }
+            // Recherche le contexte du token dans l'entête
+            if (isset($_SERVER['HTTP_X_CSRF_CONTEXT'])) {
+                $csrfContext = $_SERVER['HTTP_X_CSRF_CONTEXT'];
+            }
 
-        $token = $_SERVER['HTTP_X_CSRF_TOKEN'] ?? ($_POST['csrf_token'] ?? '');
+            // Si CSRF échoue -> redirection avec message d'erreur
+            if ($csrfToken && !$this->csrfService->validateAndConsume($csrfToken, $csrfContext)) {
+                http_response_code(419);
+                header('Content-Type: application/json; charset=UTF-8');
 
-        if ($context === null || !$this->csrfService->validateAndConsume($token, $context)) {
-            $this->flashMessageService->setFlashMessage('danger', 'Token CSRF invalide ou manquant.');
-            header('Location: ' . ($context ?: '/'));
-            exit;
+                // Générer un nouveau token pour remplacer celui qui vient d'échouer
+                $newToken = $this->csrfService->getToken($csrfContext);
+                header('X-CSRF-Token: ' . $newToken);
+                header('X-CSRF-Context: ' . $csrfContext);
+
+                echo json_encode([
+                    'success' => false,
+                    'error' => 'Jeton de sécurité invalide ou expiré.',
+                    'csrf_token' => $newToken
+                ]);
+                exit;
+            }
         }
     }
 
+
+    /**
+     * Vérifie que le User connecté a bien le droit de faire ce qu'il demande
+     *
+     * @param int $minRoleLevel
+     * @param string|null $urlReturn
+     * @return void
+     */
     protected function checkIfCurrentUserIsAllowedToManagedThis(int $minRoleLevel = 99, ?string $urlReturn = null): void
     {
-        if ($urlReturn !== null && !preg_match('/^[a-z-]*$/', $urlReturn)) {
+        if ($urlReturn !== null && !preg_match('/^[a-z_-]*$/', $urlReturn)) {
             http_response_code(404);
             exit;
         }
@@ -346,12 +526,27 @@ abstract class AbstractController
         }
     }
 
+    /**
+     * Redirige vers une url donnée
+     *
+     * @param string $url
+     * @return void
+     */
     protected function redirect(string $url): void
     {
         header('Location: ' . $url);
         exit;
     }
 
+    /**
+     * Récupère l'ancre et redirige vers celle-ci
+     *
+     * @param string $url
+     * @param string $anchorKey
+     * @param int $id
+     * @param string|null $context
+     * @return void
+     */
     protected function redirectWithAnchor(string $url, string $anchorKey = 'form_anchor', int $id = 0, ?string $context = null): void
     {
         $anchor = '';
@@ -367,6 +562,9 @@ abstract class AbstractController
         $this->redirect($url);
     }
 
+    /**
+     * @return void
+     */
     private static function registerGlobalErrorHandlers(): void
     {
         if (self::$globalHandlersRegistered) {
@@ -385,6 +583,10 @@ abstract class AbstractController
         self::$globalHandlersRegistered = true;
     }
 
+    /**
+     * @param Throwable $e
+     * @return void
+     */
     public static function handleUncaughtException(Throwable $e): void
     {
         // Toujours initialiser le logger si besoin
@@ -399,6 +601,13 @@ abstract class AbstractController
         self::respondHttp500($e);
     }
 
+    /**
+     * @param int $errno
+     * @param string $errstr
+     * @param string $errfile
+     * @param int $errline
+     * @return bool
+     */
     public static function handlePhpError(int $errno, string $errstr, string $errfile, int $errline): bool
     {
         LoggingBootstrap::ensureInitialized();
@@ -421,6 +630,9 @@ abstract class AbstractController
         return false;
     }
 
+    /**
+     * @return void
+     */
     public static function handleShutdown(): void
     {
         $err = error_get_last();
@@ -445,6 +657,10 @@ abstract class AbstractController
         }
     }
 
+    /**
+     * @param Throwable|string|null $e
+     * @return void
+     */
     private static function respondHttp500(null|Throwable|string $e): void
     {
         // Évite tout output parasite si on est déjà en train de sortir quelque chose

@@ -17,7 +17,7 @@ class Router
      * @throws Exception
      * @throws ReflectionException
      */
-    public function dispatch(string $uri): void
+     public function dispatch(string $uri, Container $container): void
     {
         foreach ($this->routes as $route) {
             // Remplace les placeholders comme {id} par une expression régulière.
@@ -39,8 +39,6 @@ class Router
                 $methodName = $route['method'];
 
                 if (class_exists($controllerClass)) {
-                    // --- Utilisation de notre nouveau conteneur ---
-                    $container = new Container();
                     // On demande simplement le contrôleur, le conteneur fait tout le travail !
                     $controller = $container->get($controllerClass);
 

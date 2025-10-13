@@ -4,26 +4,30 @@ namespace app\Services\Security;
 use app\Services\Log\Logger;
 use app\Utils\DurationHelper;
 use DateTimeImmutable;
+use DateTimeInterface;
 use DateTimeZone;
 use Exception;
 
 class TokenGenerateService
 {
     /**
-     * Génère un token avec une date d'expiration optionnelle.
+     * Génère un token avec une date d'expiration optionnelle (expirationInterval OU expiresAt OU expiresAtStr)
      *
      * @param int $length Longueur en octets (le token hex sera x2).
      * @param string|null $expirationInterval Ex : 'PT1H'. Null = pas d'expiration.
+     * @param DateTimeInterface|null $expiresAt
+     * @param string|null $expiresAtStr
      * @return array|null ['token' => string, 'expires_at' => int|null]
      */
-    public function generateToken(int $length, ?string $expirationInterval = null): ?array
+    public function generateToken(int $length, ?string $expirationInterval = null, ?DateTimeInterface $expiresAt = null, ?string $expiresAtStr = null): ?array
     {
+        //
         $token = $this->generate($length);
         if ($token === null) {
             return null;
         }
 
-        $expiresAt = $expiresAtStr = null;
+        //On calcule en fonction de ce qu'on a reçu
         if ($expirationInterval !== null) {
             $seconds = DurationHelper::Iso8601ToSeconds($expirationInterval);
             if ($seconds === null) {
@@ -46,6 +50,18 @@ class TokenGenerateService
                 ]);
                 return null;
             }
+        } elseif ($expiresAt !== null) {
+            // On a reçu un objet DateTime, on le convertit.
+            $expiresAtStr = $expiresAt->format('Y-m-d H:i:s');
+        } elseif ($expiresAtStr !== null) {
+            // On a reçu une chaîne de caractères, on la convertit en objet DateTime
+            try {
+                $tz = new DateTimeZone(\date_default_timezone_get() ?: 'Europe/Paris');
+                $dt = new DateTimeImmutable($expiresAtStr, $tz);
+                $expiresAt = $dt->getTimestamp();
+            } catch (Exception) {
+                $expiresAt = null; // La chaîne était invalide
+            }
         }
 
         return [
@@ -55,6 +71,12 @@ class TokenGenerateService
         ];
     }
 
+    /**
+     * Génère un token d'une longueur donnée
+     *
+     * @param int $length
+     * @return string|null
+     */
     private function generate(int $length): ?string
     {
         try {

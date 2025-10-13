@@ -2,18 +2,18 @@
 
 namespace app\Repository;
 
-use AllowDynamicProperties;
 use app\Services\Log\Logger;
 use app\Traits\HasPdoConnection;
 use PDOException;
 use PDOStatement;
 
-#[AllowDynamicProperties] abstract class AbstractRepository
+abstract class AbstractRepository
 {
     use HasPdoConnection;
 
     protected string $tableName;
     private ?PDOStatement $lastStatement = null;
+    private ?string $lastError;
 
     public function __construct(string $tableName)
     {
@@ -120,17 +120,6 @@ use PDOStatement;
             $this->logQuery($operation, $sql, $params, $startTime, $affectedRows);
             return false;
         }
-    }
-
-
-    /**
-     * @param string $sql
-     * @param array $params
-     * @return array
-     */
-    protected function fetchAll(string $sql, array $params = []): array
-    {
-        return $this->query($sql, $params);
     }
 
     /**

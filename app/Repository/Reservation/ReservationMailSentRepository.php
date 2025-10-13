@@ -2,6 +2,7 @@
 namespace app\Repository\Reservation;
 
 use app\Models\Reservation\ReservationMailSent;
+
 use app\Repository\AbstractRepository;
 use app\Repository\Mail\MailTemplateRepository;
 use app\Repository\Reservation\ReservationRepository as ResRepo;
@@ -51,22 +52,22 @@ class ReservationMailSentRepository extends AbstractRepository
     }
 
     /**
-     * Retourne les envois pour une réservation.
-     *
-     * @param int $reservationId
-     * @param bool $withReservation
-     * @param bool $withTemplate
+     * Retourne les envois pour une liste d'IDs de réservations.
+     * @param int[] $reservationIds
+     * * @param bool $withReservation
      * @return ReservationMailSent[]
-     * @throws DateMalformedStringException
      */
-    public function findByReservation(int $reservationId, bool $withReservation = false, bool $withTemplate = false): array
+    public function findByReservations(array $reservationIds, bool $withReservation = false): array
     {
-        $sql = "SELECT * FROM $this->tableName WHERE reservation = :reservationId ORDER BY sent_at DESC";
-        $rows = $this->query($sql, ['reservationId' => $reservationId]);
+        if (empty($reservationIds)) return [];
+        $placeholders = implode(',', array_fill(0, count($reservationIds), '?'));
+        $sql = "SELECT * FROM $this->tableName WHERE reservation IN ($placeholders) ORDER BY sent_at";
+        $rows = $this->query($sql, $reservationIds);
 
         $list = array_map([$this, 'hydrate'], $rows);
-        return $this->hydrateRelations($list, $withReservation, $withTemplate);
+        return $this->hydrateRelations($list, $withReservation, true);
     }
+
 
     /**
      * Retourne les envois pour un template donné.

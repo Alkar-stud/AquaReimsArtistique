@@ -14,12 +14,12 @@ class ReservationsController extends AbstractController
 
     }
 
-    #[Route('/gestion/reservations', name: 'app_gestion_reservations')]
+    #[Route('/gestion/reservation', name: 'app_gestion_reservations')]
     public function index(?string $search = null): void
     {
         // Le template de base est une coquille vide.
         // Le contenu est chargé dynamiquement via les routes 'upcoming' et 'past'.
-        $this->render('/gestion/reservations', [], "Gestion des réservations");
+        $this->render('/gestion/reservation', [], "Gestion des réservations");
     }
 
 

@@ -2,8 +2,12 @@
 
 namespace app\Services\DataValidation;
 
+use app\Services\Tarif\TarifService;
+
 class TarifDataValidationService
 {
+    private ?TarifService $tarifService = null;
+
     private ?string $name = null;
     private ?string $description = null;
     private ?int $seat_count = null;
@@ -16,8 +20,23 @@ class TarifDataValidationService
     private ?string $access_code = null;
     private ?bool $is_active = null;
 
-    public function checkData(array $data): ?string
+    /**
+     * Injection optionnelle pour permettre le contrôle d'unicité.
+     */
+    public function setTarifService(TarifService $tarifService): self
     {
+        $this->tarifService = $tarifService;
+        return $this;
+    }
+
+    /**
+     * Valide et normalise les données. Si $excludeId est fourni, il est exclu de la vérification d'unicité.
+     */
+    public function checkData(array $data, ?int $excludeId = null): ?string
+    {
+        // Conserver le code brut pour la vérification (évite htmlspecialchars dans la comparaison DB)
+        $rawAccessCode = isset($data['access_code']) ? trim((string)$data['access_code']) : '';
+
         // Normalisation
         $nameValue = trim($data['name'] ?? '');
         $this->name = !empty($nameValue) ? htmlspecialchars(mb_convert_case($nameValue, MB_CASE_TITLE, "UTF-8")) : '';
@@ -36,18 +55,16 @@ class TarifDataValidationService
         $this->price = !empty($data['price']) && is_numeric($data['price']) ? (int)($data['price'] * 100) : 0;
         $this->includes_program = isset($data['includes_program']);
         $this->requires_proof = isset($data['requires_proof']);
-        $this->access_code = !empty($data['access_code']) ? htmlspecialchars(trim($data['access_code'])) : null;
+        $this->access_code = !empty($rawAccessCode) ? htmlspecialchars($rawAccessCode) : null;
         $this->is_active = isset($data['is_active']);
 
-        // Validation
+        // Validation de base
         if (empty($this->name)) {
             return "Le nom du tarif est obligatoire.";
         }
-
         if ($this->price < 0) {
             return "Le prix doit être un nombre supérieur ou égal à 0.";
         }
-
         if ($this->min_age !== null && $this->min_age < 0) {
             return "L'âge minimum doit être un nombre positif.";
         }
@@ -57,12 +74,20 @@ class TarifDataValidationService
         if ($this->min_age !== null && $this->max_age !== null && $this->min_age > $this->max_age) {
             return "L'âge minimum ne peut pas être supérieur à l'âge maximum.";
         }
-
         if ($this->seat_count !== null && $this->seat_count < 0) {
             return "Le nombre de sièges doit être un nombre positif.";
         }
         if ($this->max_tickets !== null && $this->max_tickets < 0) {
             return "Le nombre maximum de tickets doit être un nombre positif.";
+        }
+
+        // Contrôle d'unicité du code par type (avec/sans places), insensible à la casse et aux espaces.
+        if ($this->tarifService && $rawAccessCode !== '') {
+            $hasSeats = ($this->seat_count !== null && $this->seat_count > 0);
+            $duplicate = $this->tarifService->isAccessCodeDuplicateForSeatType($rawAccessCode, $hasSeats, $excludeId);
+            if ($duplicate) {
+                return "Ce code est déjà utilisé pour un tarif " . ($hasSeats ? "avec places" : "sans places") . ".";
+            }
         }
 
         return null;

@@ -57,6 +57,27 @@ class SwimmerGroupRepository extends AbstractRepository
     }
 
     /**
+     * Trouve les groupes actifs par leurs IDs.
+     *
+     * @param int[] $ids
+     * @return SwimmerGroup[]
+     */
+    public function findActiveByIds(array $ids): array
+    {
+        if (empty($ids)) {
+            return [];
+        }
+        // On s'assure que les IDs sont bien des entiers pour la sécurité
+        $ids = array_map('intval', $ids);
+        $placeholders = implode(',', array_fill(0, count($ids), '?'));
+        $sql = "SELECT * FROM {$this->tableName} WHERE id IN ({$placeholders}) AND is_active = 1 ORDER BY `order` ASC";
+
+        $rows = $this->query($sql, $ids);
+
+        return array_map([$this, 'hydrate'], $rows);
+    }
+
+    /**
      * Ajoute un groupe de nageurs
      * @param SwimmerGroup $g
      * @return int

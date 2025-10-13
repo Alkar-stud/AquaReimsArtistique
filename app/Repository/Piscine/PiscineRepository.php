@@ -46,7 +46,7 @@ class PiscineRepository extends AbstractRepository
             return [];
         }
         // Assure que les IDs sont des entiers pour la sécurité
-        $ids = array_map('intval', $ids);
+        $ids = array_map('intval', array_values($ids));
         $placeholders = implode(',', array_fill(0, count($ids), '?'));
 
         $sql = "SELECT * FROM $this->tableName WHERE id IN ($placeholders)";

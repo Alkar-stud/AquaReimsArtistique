@@ -4,7 +4,7 @@
 </div>
 {% endif %}
 
-<div class="container">
+<div class="container-fluid">
     <h2 class="mb-4">Mon compte</h2>
     {% if $_SESSION['user']['role']['level'] > 0 %}
     <!-- Formulaire de modification des informations -->

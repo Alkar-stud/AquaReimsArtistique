@@ -53,7 +53,7 @@ class PasswordResetController extends AbstractController
         }
 
         //Génération du token
-        $token = $this->tokenGenerate->generateToken($_ENV['NB_CARACTERE_TOKEN'], 'PT1H');
+        $token = $this->tokenGenerate->generateToken((int)NB_CARACTERE_TOKEN, 'PT1H');
 
         // Sauvegarder le token et la date dans la BDD
         $this->userRepository->savePasswordResetToken($user->getId(), $token['token'], $token['expires_at_str']);

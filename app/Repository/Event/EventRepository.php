@@ -84,17 +84,29 @@ class EventRepository extends AbstractRepository
 
     /**
      * Retourne tous les événements à venir ou passés ordonnés par date de début
+     * @param bool|null $isUpComing
      * @return array
      */
-    public function findAllSortByDate(): array
+    public function findAllSortByDate(?bool $isUpComing = null): array
     {
-        $sql = "SELECT e.* FROM $this->tableName e
-            LEFT JOIN (
-                SELECT event, MIN(event_start_at) as first_session_date FROM event_session GROUP BY event
-            ) s ON s.event = e.id
-            GROUP BY e.id
-            ORDER BY s.first_session_date DESC, e.created_at DESC";
-        $rows = $this->query($sql);
+        $sql = "SELECT e.*  FROM $this->tableName e
+                 LEFT JOIN (
+                     SELECT event, MAX(event_start_at) as last_session_date 
+                     FROM event_session 
+                     GROUP BY event
+                 ) s ON s.event = e.id";
+
+        $params = [];
+        if ($isUpComing === true) {
+            // Événements à venir : ceux dont la dernière session n'est pas passée,
+            $sql .= " WHERE s.last_session_date >= NOW()";
+        } elseif ($isUpComing === false) {
+            // Événements passés : ceux dont la dernière session est passée.
+            $sql .= " WHERE s.last_session_date < NOW()";
+        }
+
+        $sql .= " ORDER BY s.last_session_date";
+        $rows = $this->query($sql, $params);
         return array_map([$this, 'hydrate'], $rows);
     }
 

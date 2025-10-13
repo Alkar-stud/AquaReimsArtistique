@@ -2,14 +2,20 @@
 // php
 namespace app\Repository\Event;
 
+use app\Models\Tarif\Tarif;
 use app\Repository\AbstractRepository;
-use Throwable;
+use app\Repository\Tarif\TarifRepository;
 
 class EventTarifRepository extends AbstractRepository
 {
-    public function __construct()
+    private TarifRepository $tarifRepository;
+
+    public function __construct(
+        TarifRepository $tarifRepository,
+    )
     {
         parent::__construct('event_tarif');
+        $this->tarifRepository = $tarifRepository;
     }
 
     /**
@@ -59,6 +65,35 @@ class EventTarifRepository extends AbstractRepository
     }
 
     /**
+     * Retourne les tarifs avec places ou sans pour un événement.
+     * Retourne une liste (array indexé numériquement).
+     *
+     * @param int $eventId
+     * @param bool $withSeat
+     * @return Tarif[]|array<int,Tarif>
+     */
+    public function findTarifsByEvent(int $eventId, bool $withSeat = true): array
+    {
+        $withSeat === true ? $sqlWithSeat = ' AND t.seat_count IS NOT NULL':$sqlWithSeat = ' AND t.seat_count IS NULL';
+        $sql = "SELECT t.*
+                FROM tarif t
+                INNER JOIN event_tarif et ON et.tarif = t.id
+                WHERE et.event = :event_id AND t.is_active = 1" . $sqlWithSeat . "
+                ORDER BY t.seat_count DESC, t.name";
+
+        $rows = $this->query($sql, ['event_id' => $eventId]);
+
+        //On indexe le tableau par ID
+        $rowsMapped = array();
+        foreach ($rows as $row) {
+            $rowsMapped[$row['id']] = $row;
+        }
+
+        // Hydratation centralisée via TarifRepository
+        return array_map([$this->tarifRepository, 'hydrateFromRow'], $rowsMapped);
+    }
+
+    /**
      * Vérifie si un tarif est déjà associé à un événement
      * @param int $eventId
      * @param int $tarifId
@@ -72,6 +107,10 @@ class EventTarifRepository extends AbstractRepository
 
     /**
      * Remplace la liste des tarifs d’un événement (transactionnel)
+     *
+     * @param int $eventId
+     * @param array $tarifIds
+     * @return bool
      */
     public function replaceForEvent(int $eventId, array $tarifIds): bool
     {

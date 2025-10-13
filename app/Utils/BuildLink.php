@@ -12,9 +12,15 @@ class BuildLink
      */
     public static function buildResetLink(string $url, string $token): string
     {
-        $scheme = 'https://';
+        $baseLink = self::buildBasicLink();
+        return $baseLink . $url . '?token=' . rawurlencode($token);
+    }
+
+    public static function buildBasicLink(string $uri = ''): string
+    {
+        $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' || $_SERVER['SERVER_PORT'] == 443) ? "https://" : "http://";
         $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
-        return $scheme . $host . $url . '?token=' . rawurlencode($token);
+        return $protocol . $host . $uri;
     }
 
 

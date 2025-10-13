@@ -23,7 +23,9 @@ use app\Services\Log\Logger;
 use app\Services\Mails\MailPrepareService;
 use app\Services\Payment\PaymentRecordService;
 use app\Services\Security\TokenGenerateService;
+use app\Services\UploadService;
 use DateTime;
+use SleekDB\Exceptions\InvalidArgumentException;
 use Throwable;
 
 readonly class ReservationDataPersist
@@ -39,6 +41,7 @@ readonly class ReservationDataPersist
     private ReservationPaymentRepository $reservationPaymentRepository;
     private ReservationPlaceTempRepository $reservationPlaceTempRepository;
     private ReservationTempWriter $reservationTempWriter;
+    private UploadService $uploadService;
 
     public function __construct(
         ReservationSessionService $reservationSessionService,
@@ -52,6 +55,7 @@ readonly class ReservationDataPersist
         ReservationPaymentRepository $reservationPaymentRepository,
         ReservationPlaceTempRepository $reservationPlaceTempRepository,
         ReservationTempWriter $reservationTempWriter,
+        UploadService $uploadService,
     ) {
         $this->reservationSessionService = $reservationSessionService;
         $this->tokenGenerateService = $tokenGenerateService;
@@ -64,6 +68,7 @@ readonly class ReservationDataPersist
         $this->reservationPaymentRepository = $reservationPaymentRepository;
         $this->reservationPlaceTempRepository = $reservationPlaceTempRepository;
         $this->reservationTempWriter = $reservationTempWriter;
+        $this->uploadService = $uploadService;
     }
 
     /**
@@ -165,7 +170,7 @@ readonly class ReservationDataPersist
             $this->sendAndRecordConfirmationEmail($reservation, 'paiement_confirme');
 
             // Nettoyer les données temporaires
-            //$this->cleanupTemporaryData($tempReservation);
+            $this->cleanupTemporaryData($tempReservation);
 
             // Commit si tout est OK
             $pdo->commit();
@@ -323,11 +328,21 @@ readonly class ReservationDataPersist
 
     /**
      * Nettoie les données temporaires (NoSQL et MySQL).
+     * Déplace les fichiers justificatifs de proofs/temp vers proofs
+     * @param array $tempReservation
+     * @throws InvalidArgumentException
      */
     private function cleanupTemporaryData(array $tempReservation): void
     {
+        //On déplace les fichiers justificatifs hors du dossier temp
+        foreach ($tempReservation['reservation_detail'] ?? [] as $tarifId => $detailGroup) {
+            foreach ($detailGroup['participants'] ?? [] as $participant) {
+                // On utilise le nom de fichier unique généré lors de l'upload
+                $this->uploadService->moveProofFile($participant['justificatif_name'] ?? null);
+            }
+        }
 
-        $primaryId = (string) ($tempReservation['_id'] ?? $tempReservation['primary_id']);
+        $primaryId = (string) $tempReservation['primary_id'];
 
         $this->reservationTempWriter->deleteReservation($primaryId);
         $userSessionId = $tempReservation['php_session_id'] ?? session_id();

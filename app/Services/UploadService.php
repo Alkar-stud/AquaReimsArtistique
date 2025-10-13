@@ -168,7 +168,45 @@ class UploadService
             return true;
         }
         return false;
+    }
 
+    /**
+     * Déplace un fichier justificatif du dossier temporaire vers le dossier final.
+     *
+     * @param string|null $fileName Le nom du fichier à déplacer.
+     * @return bool True si le déplacement a réussi ou si aucun fichier n'était à déplacer, false en cas d'erreur.
+     */
+    public function moveProofFile(?string $fileName): bool
+    {
+        // Si aucun nom de fichier n'est fourni, il n'y a rien à faire.
+        if (empty($fileName)) {
+            return true;
+        }
+
+        $tempPath = realpath(__DIR__ . '/../../' . UPLOAD_PROOF_PATH . 'temp/');
+        $finalPath = realpath(__DIR__ . '/../../' . UPLOAD_PROOF_PATH);
+
+        if (!$tempPath || !$finalPath) {
+            error_log("Le chemin des justificatifs temporaire ou final est invalide.");
+            return false;
+        }
+
+        $sourceFile = $tempPath . DIRECTORY_SEPARATOR . $fileName;
+        $destinationFile = $finalPath . DIRECTORY_SEPARATOR . $fileName;
+
+        // On vérifie que le fichier source existe bien
+        if (!file_exists($sourceFile)) {
+            error_log("Tentative de déplacement d'un fichier justificatif non trouvé : " . $sourceFile);
+            return false; // On retourne false pour signaler un problème potentiel.
+        }
+
+        // On déplace le fichier
+        if (!rename($sourceFile, $destinationFile)) {
+            error_log("Échec du déplacement du fichier justificatif de {$sourceFile} vers {$destinationFile}");
+            return false;
+        }
+
+        return true;
     }
 
 }

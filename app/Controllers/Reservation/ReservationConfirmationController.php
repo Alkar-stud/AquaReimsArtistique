@@ -239,10 +239,7 @@ class ReservationConfirmationController extends AbstractController
         }
     }
 
-    //C'est aussi le callback qui envoie le mail et qui fait nettoie les BDD NoSQL et la session
     //Si au bout d'un certain temps le callback n'a rien donné, on va chercher directement chez HelloAsso avec le checkoutIntentId
     //Si tout bon, le JS renvoi vers /reservation/merci avec le token généré à l'enregistrement de la réservation.
-
-
 
 }

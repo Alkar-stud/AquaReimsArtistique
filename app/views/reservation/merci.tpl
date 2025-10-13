@@ -10,7 +10,7 @@
         <h2 class="mb-4 text-success">
             🎉 Votre paiement a bien été reçu et votre réservation enregistrée. 🎉
             <br><br>
-            Un email de confirmation vous a été envoyé. !
+            Un email de confirmation vous a été envoyé.
         </h2>
         {% else %}
         <h2 class="mb-4 text-success">

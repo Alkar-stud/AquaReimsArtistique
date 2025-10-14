@@ -26,6 +26,11 @@ class ReservationDeletionService
         $this->reservationMailSentRepository = new ReservationMailSentRepository();
     }
 
+    /**
+     * Pour supprimer une réservation et ses détails.
+     * @param int $reservationId
+     * @return void
+     */
     public function deleteReservation(int $reservationId): void
     {
         //On supprime d'abord les "enfants".

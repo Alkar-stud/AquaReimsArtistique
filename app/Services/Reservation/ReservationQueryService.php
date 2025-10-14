@@ -16,16 +16,19 @@ class ReservationQueryService
     private ReservationRepository $reservationRepository;
     private EventRepository $eventRepository;
     private MailPrepareService $mailPrepareService;
+    private ReservationPriceCalculator $priceCalculator;
 
     public function __construct(
         ReservationRepository $reservationRepository,
         EventRepository $eventRepository,
         MailPrepareService $mailPrepareService,
+        ReservationPriceCalculator $priceCalculator,
     )
     {
         $this->reservationRepository = $reservationRepository;
         $this->eventRepository = $eventRepository;
         $this->mailPrepareService = $mailPrepareService;
+        $this->priceCalculator = $priceCalculator;
     }
 
     /**
@@ -179,19 +182,92 @@ class ReservationQueryService
      * @param Reservation $reservation
      * @return array
      */
+    /**
+     * Prépare détails et compléments prêts pour la vue et y ajoute packs/sous-totaux/totaux via le calcul partagé.
+     */
     public function prepareReservationDetailsAndComplementsToView(Reservation $reservation): array
     {
-        //Pour les détails
-        $readyForView = [];
+        $readyForView = ['details' => [], 'complements' => []];
+
+        // Grouper participants par tarif
         foreach ($reservation->getDetails() as $detail) {
-            $readyForView[$detail->getTarifObject()->getId()][]['name'] = $detail->getName();
+            $tarif = $detail->getTarifObject();
+            $tarifId = $tarif->getId();
 
+            if (!isset($readyForView['details'][$tarifId])) {
+                $readyForView['details'][$tarifId] = [
+                    'tarif' => $tarif,
+                    'participants' => [],
+                ];
+            }
 
+            $readyForView['details'][$tarifId]['participants'][] = [
+                'name' => $detail->getName(),
+                'firstname' => $detail->getFirstName(),
+                'place_number' => method_exists($detail, 'getPlaceNumber')
+                    ? $detail->getPlaceNumber()
+                    : (method_exists($detail->getPlaceObject() ?: null, 'getId')
+                        ? $detail->getPlaceObject()->getId()
+                        : null),
+                'tarif_access_code' => method_exists($detail, 'getTarifAccessCode')
+                    ? $detail->getTarifAccessCode()
+                    : null,
+            ];
         }
 
-echo '<pre>';
-print_r($readyForView);
-die;
+        // Calcul des totaux pour les détails
+        $detailsSubtotal = 0;
+        foreach ($readyForView['details'] as $tid => &$group) {
+            $tarif = $group['tarif'];
+            $price = (int)($tarif->getPrice() ?? 0);
+            $seatCount = (int)($tarif->getSeatCount() ?? 0);
+            $count = count($group['participants']);
+
+            $calc = $this->priceCalculator->computeDetailTotals($count, $seatCount, $price);
+
+            $group['price'] = $price;
+            $group['seatCount'] = $seatCount;
+            $group['count'] = $count;
+            $group['packs'] = $calc['packs'];
+            $group['total'] = $calc['total'];
+
+            $detailsSubtotal += $group['total'];
+        }
+        unset($group);
+
+        // Grouper compléments par tarif (somme des quantités)
+        $complementBuckets = [];
+        foreach ($reservation->getComplements() as $complement) {
+            $tarif = $complement->getTarifObject();
+            $tarifId = $tarif->getId();
+            if (!isset($complementBuckets[$tarifId])) {
+                $complementBuckets[$tarifId] = ['tarif' => $tarif, 'qty' => 0];
+            }
+            $complementBuckets[$tarifId]['qty'] += (int)$complement->getQty();
+        }
+
+        // Calcul des totaux pour les compléments
+        $complementsSubtotal = 0;
+        foreach ($complementBuckets as $tid => $bucket) {
+            $tarif = $bucket['tarif'];
+            $qty = (int)$bucket['qty'];
+            $price = (int)($tarif->getPrice() ?? 0);
+            $total = $this->priceCalculator->computeComplementTotal($qty, $price);
+
+            $readyForView['complements'][$tid] = [
+                'tarif' => $tarif,
+                'qty' => $qty,
+                'price' => $price,
+                'total' => $total,
+            ];
+            $complementsSubtotal += $total;
+        }
+
+        $readyForView['totals'] = [
+            'details_subtotal' => $detailsSubtotal,
+            'complements_subtotal' => $complementsSubtotal,
+            'total_amount' => $detailsSubtotal + $complementsSubtotal,
+        ];
 
         return $readyForView;
     }

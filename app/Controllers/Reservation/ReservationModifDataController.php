@@ -46,7 +46,7 @@ class ReservationModifDataController extends AbstractController
             throw new Exception('404');
         }
 
-        //On vérifie si c'est encore modifiable (annulation ou date de fin d'inscription dépassée
+        //On vérifie si c'est encore modifiable (annulation ou date de fin d'inscription dépassée)
         $canBeModified = $this->reservationQueryService->checkIfReservationCanBeModified($reservation);
 
         if (!$canBeModified) {
@@ -56,12 +56,11 @@ class ReservationModifDataController extends AbstractController
         //On prépare les détails et les compléments pour la vue
         $readyForView = $this->reservationQueryService->prepareReservationDetailsAndComplementsToView($reservation);
 
-
-
         $this->render('reservation/modif_data', [
             'reservation' => $reservation,
             'reservationView' => $readyForView,
             'canBeModified' => $canBeModified,
+            'amountDue' => $reservation->getTotalAmount() - $reservation->getTotalAmountPaid(),
         ], 'Récapitulatif de la réservation');
 
     }

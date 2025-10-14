@@ -330,7 +330,6 @@ readonly class ReservationDataPersist
      * Nettoie les données temporaires (NoSQL et MySQL).
      * Déplace les fichiers justificatifs de proofs/temp vers proofs
      * @param array $tempReservation
-     * @throws InvalidArgumentException
      */
     private function cleanupTemporaryData(array $tempReservation): void
     {

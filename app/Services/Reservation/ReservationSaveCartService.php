@@ -9,26 +9,21 @@ class ReservationSaveCartService
 {
     private ReservationSessionService $reservationSessionService;
     private TarifRepository $tarifRepository;
+    private ReservationPriceCalculator $priceCalculator;
 
     public function __construct(
         ReservationSessionService $reservationSessionService,
         TarifRepository $tarifRepository,
+        ReservationPriceCalculator $priceCalculator,
     )
     {
         $this->reservationSessionService = $reservationSessionService;
         $this->tarifRepository = $tarifRepository;
+        $this->priceCalculator = $priceCalculator;
     }
 
-    /**
-     * Pour calculer les totaux pour une réservation (en cours ou déjà faite)
-     *
-     * @param array $reservationDetails
-     * @param array $tarifsById
-     * @return array{details: array, subtotal: int}
-     */
     public function prepareReservationDetailSummary(array $reservationDetails, array $tarifsById): array
     {
-        // Réutilise l'existant pour grouper les lignes par tarif_id
         $grouped = $this->reservationSessionService->prepareSessionReservationDetailToView($reservationDetails, $tarifsById);
 
         $summary = [];
@@ -39,12 +34,12 @@ class ReservationSaveCartService
             $count = count($participants);
 
             $tarif = $tarifsById[$tarifId] ?? null;
-            $seatCount = $tarif ? ($tarif->getSeatCount() ?? 0) : 0;
+            $seatCount = $tarif ? (int)($tarif->getSeatCount() ?? 0) : 0;
             $price = $tarif ? (int)$tarif->getPrice() : 0;
 
-            // évite division par zéro
-            $packs = ($seatCount > 0) ? intdiv($count, max(1, $seatCount)) : $count;
-            $total = $packs * $price;
+            $calc = $this->priceCalculator->computeDetailTotals($count, $seatCount, $price);
+            $packs = $calc['packs'];
+            $total = $calc['total'];
 
             $subtotal += $total;
 
@@ -63,24 +58,15 @@ class ReservationSaveCartService
         return ['details' => $summary, 'subtotal' => $subtotal];
     }
 
-    /**
-     * Prépare `reservation_complement` pour la vue (groupe) et renvoie aussi le sous-total de ces compléments.
-     *
-     * @param array $reservationComplement
-     * @param array<int,Tarif> $tarifsById
-     * @return array{complements: array, subtotal: int}
-     */
     public function prepareReservationComplementSummary(array $reservationComplement, array $tarifsById): array
     {
-        // Réutilise l'existant pour construire les groupes
         $complements = $this->reservationSessionService->prepareReservationComplementToView($reservationComplement, $tarifsById);
 
         $subtotal = 0;
         foreach ($complements as $tid => &$group) {
             $qty = (int)($group['qty'] ?? 0);
             $price = (int)($group['price'] ?? 0);
-            $group['total'] = $qty * $price;
-            // s'assurer que 'codes' existe comme tableau (déjà fait dans prepareReservationComplementToView)
+            $group['total'] = $this->priceCalculator->computeComplementTotal($qty, $price);
             $group['codes'] = $group['codes'] ?? [];
             $subtotal += $group['total'];
         }
@@ -92,50 +78,37 @@ class ReservationSaveCartService
         ];
     }
 
-
-    /**
-     * Prépare $reservation pour sauvegarde dans NoSQL
-     *
-     * @param $session
-     * @return array
-     */
     public function prepareReservationToSaveTemporarily($session): array
     {
-        // Récupérer les tarifs de l'événement
         $tarifs = $this->tarifRepository->findByEventId($session['event_id']);
-
-        // Les indexer par leur ID pour faciliter le calcul
         $tarifsById = [];
         foreach ($tarifs as $tarif) {
             $tarifsById[$tarif->getId()] = $tarif;
         }
 
-        $detailReport       = $this->prepareReservationDetailSummary($session['reservation_detail'], $tarifsById);
-        $complementReport   = $this->prepareReservationComplementSummary($session['reservation_complement'] ?? [], $tarifsById);
+        $detailReport     = $this->prepareReservationDetailSummary($session['reservation_detail'], $tarifsById);
+        $complementReport = $this->prepareReservationComplementSummary($session['reservation_complement'] ?? [], $tarifsById);
 
-        // on enregistre aussi dans $_SESSION
         $this->reservationSessionService->setReservationSession('totals', [
             'details_subtotal'     => $detailReport['subtotal'],
             'complements_subtotal' => $complementReport['subtotal'],
-            'total_amount'          => (int)$detailReport['subtotal'] + (int)$complementReport['subtotal'],
+            'total_amount'         => (int)$detailReport['subtotal'] + (int)$complementReport['subtotal'],
         ]);
 
         return [
-            'event_id'              => $session['event_id'],
-            'event_session_id'      => $session['event_session_id'] ?? null,
-            'swimmer_id'            => $session['swimmer_id'] ?? null,
-            'access_code_used'      => $session['access_code_used'] ?? null,
-            'booker'                => $session['booker'] ?? [],
-            'reservation_detail'    => $detailReport['details'] ?? [],
-            'reservation_complement'=> $complementReport['complements'] ?? [],
+            'event_id'               => $session['event_id'],
+            'event_session_id'       => $session['event_session_id'] ?? null,
+            'swimmer_id'             => $session['swimmer_id'] ?? null,
+            'access_code_used'       => $session['access_code_used'] ?? null,
+            'booker'                 => $session['booker'] ?? [],
+            'reservation_detail'     => $detailReport['details'] ?? [],
+            'reservation_complement' => $complementReport['complements'] ?? [],
             'totals' => [
                 'details_subtotal'     => $detailReport['subtotal'],
                 'complements_subtotal' => $complementReport['subtotal'],
-                'total_amount'          => (int)$detailReport['subtotal'] + (int)$complementReport['subtotal'],
+                'total_amount'         => (int)$detailReport['subtotal'] + (int)$complementReport['subtotal'],
             ],
             'created_at' => date('c'),
         ];
-
     }
-
 }

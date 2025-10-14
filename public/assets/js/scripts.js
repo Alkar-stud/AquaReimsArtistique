@@ -156,71 +156,70 @@ async function apiPost(url, body, opts = {}) {
 
     const fetchBody = shouldJsonEncode ? JSON.stringify(body) : body;
 
-    try {
-        const response = await fetch(url, {
-            method: 'POST',
-            headers,
-            body: fetchBody,
-            credentials: 'same-origin',
-            referrerPolicy: 'same-origin',
-            redirect: 'follow'
-        });
+    return fetch(url, {
+        method: 'POST',
+        headers,
+        body: fetchBody,
+        credentials: 'same-origin',
+        referrerPolicy: 'same-origin',
+        redirect: 'follow'
+    })
+        .then(async (response) => {
+            // Récupère le nouveau token côté réponse et le met à jour
+            const csrfHeader = response.headers.get('X-CSRF-Token');
+            if (csrfHeader) updateCsrfToken(csrfHeader);
 
-        // Récupère le nouveau token côté réponse et le met à jour
-        const csrfHeader = response.headers.get('X-CSRF-Token');
-        if (csrfHeader) updateCsrfToken(csrfHeader);
+            const contentType = response.headers.get('content-type') || '';
+            const raw = await response.text(); // Lire le corps UNE seule fois
+            const isJson = contentType.includes('application/json');
 
-        const contentType = response.headers.get('content-type') || '';
-        const raw = await response.text(); // Lire le corps UNE seule fois
-        const isJson = contentType.includes('application/json');
-
-        if (!isJson) {
-            console.error(`[apiPost] Réponse non-JSON (statut ${response.status}) - ${response.url}`);
-            console.error('[apiPost] Corps:', raw);
-            const err = new Error(`Réponse non-JSON (statut ${response.status})`);
-            err.status = response.status;
-            err.body = raw;
-            err.url = response.url;
-            err.userMessage = normalizeUserMessage(response.status);
-            throw err;
-        }
-
-        let data;
-        try {
-            data = raw ? JSON.parse(raw) : null;
-        } catch {
-            console.error('[apiPost] Échec du parsing JSON. Corps brut:');
-            console.error(raw);
-            const err = new Error('Réponse JSON invalide');
-            err.status = response.status;
-            err.body = raw;
-            err.url = response.url;
-            err.userMessage = normalizeUserMessage(response.status);
-            throw err;
-        }
-
-        if (!response.ok) {
-            if (response.status === 419) {
-                console.warn('Jeton CSRF expiré, actualisation du jeton...');
-                throw { userMessage: 'Session expirée, veuillez réessayer.' };
+            if (!isJson) {
+                console.error(`[apiPost] Réponse non-JSON (statut ${response.status}) - ${response.url}`);
+                console.error('[apiPost] Corps:', raw);
+                const err = new Error(`Réponse non-JSON (statut ${response.status})`);
+                err.status = response.status;
+                err.body = raw;
+                err.url = response.url;
+                err.userMessage = normalizeUserMessage(response.status);
+                return Promise.reject(err);
             }
-            const msg = data && (data.error || data.message) || `HTTP ${response.status}`;
-            const err = new Error(msg);
-            err.status = response.status;
-            err.data = data;
-            err.url = response.url;
-            err.userMessage = normalizeUserMessage(response.status, data && (data.userMessage || data.error || data.message));
-            console.error(`[apiPost] HTTP ${response.status} - ${response.url}`);
-            console.error('[apiPost] Corps:', raw);
-            throw err;
-        }
 
-        return data;
+            let data;
+            try {
+                data = raw ? JSON.parse(raw) : null;
+            } catch {
+                console.error('[apiPost] Échec du parsing JSON. Corps brut:');
+                console.error(raw);
+                const err = new Error('Réponse JSON invalide');
+                err.status = response.status;
+                err.body = raw;
+                err.url = response.url;
+                err.userMessage = normalizeUserMessage(response.status);
+                return Promise.reject(err);
+            }
 
-    } catch (error) {
-        // Gérer les erreurs réseau et les erreurs levées manuellement
-        console.error('[apiPost] Erreur attrapée:', error);
-        // Renvoyer une promesse rejetée pour que le .catch() du code appelant fonctionne
-        throw error;
-    }
+            if (!response.ok) {
+                if (response.status === 419) {
+                    console.warn('Jeton CSRF expiré, actualisation du jeton...');
+                    return Promise.reject({ userMessage: 'Session expirée, veuillez réessayer.' });
+                }
+                const msg = data && (data.error || data.message) || `HTTP ${response.status}`;
+                const err = new Error(msg);
+                err.status = response.status;
+                err.data = data;
+                err.url = response.url;
+                err.userMessage = normalizeUserMessage(response.status, data && (data.userMessage || data.error || data.message));
+                console.error(`[apiPost] HTTP ${response.status} - ${response.url}`);
+                console.error('[apiPost] Corps:', raw);
+                return Promise.reject(err);
+            }
+
+            return data;
+        })
+        .catch((error) => {
+            // Gérer les erreurs réseau (ex: fetch échoue) et les rejets manuels
+            console.error('[apiPost] Erreur attrapée:', error);
+            // Renvoyer une promesse rejetée pour que le .catch() du code appelant fonctionne
+            return Promise.reject(error);
+        });
 }

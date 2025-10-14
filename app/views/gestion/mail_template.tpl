@@ -79,7 +79,7 @@
                             </div>
                             <div class="mb-3">
                                 <label class="form-label">Corps texte brut</label>
-                                <textarea name="body_text" class="form-control" rows="8" style="font-family:monospace;">{{ htmlspecialchars($template->getBodyText() ?? '') }}</textarea>
+                                <textarea name="body_text" class="form-control" rows="8" style="font-family:monospace;">{{! htmlspecialchars($template->getBodyText() ?? '') !}}</textarea>
                             </div>
                         </div>
                         <div class="modal-footer flex-column flex-sm-row">

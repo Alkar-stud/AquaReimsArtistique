@@ -12,9 +12,9 @@ class PiscineDataValidationService
     public function checkData(array $data): ?string
     {
         // Normalisation
-        $this->label = htmlspecialchars(trim($data['label'] ?? ''));
+        $this->label = trim($data['label'] ?? '');
         $addressValue = trim($data['address'] ?? '');
-        $this->address = $addressValue !== '' ? htmlspecialchars($addressValue) : null;
+        $this->address = $addressValue !== '' ? $addressValue : null;
         $this->max_places = isset($data['capacity']) && is_numeric($data['capacity']) ? (int)$data['capacity'] : 0;
         $this->numbered_seats = ($data['numberedSeats'] ?? 'non') === 'oui';
 

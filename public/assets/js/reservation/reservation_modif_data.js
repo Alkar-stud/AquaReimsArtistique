@@ -48,7 +48,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const totalToPayWithDonationEl = document.getElementById('total-to-pay-with-donation');
     const paySection = document.getElementById('pay-balance-section');
 
-    function updateDonationUI() {
+    function updateDonation() {
         if (!donationSlider) return;
         const donationEuros = parseFloat(donationSlider.value) || 0;
         const donationCents = Math.round(donationEuros * 100);
@@ -102,8 +102,8 @@ document.addEventListener('DOMContentLoaded', function () {
             ? localStorage.getItem(`donation_reservation_${container.dataset.reservationId}`)
             : null;
         if (saved !== null && !isNaN(parseFloat(saved))) donationSlider.value = String(saved);
-        updateDonationUI();
-        donationSlider.addEventListener('input', updateDonationUI);
+        updateDonation();
+        donationSlider.addEventListener('input', updateDonation);
     }
 
 

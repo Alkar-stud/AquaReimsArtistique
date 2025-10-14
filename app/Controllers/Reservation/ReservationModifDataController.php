@@ -7,7 +7,10 @@ use app\Attributes\Route;
 use app\Controllers\AbstractController;
 use app\Repository\Reservation\ReservationRepository;
 use app\Services\Reservation\ReservationQueryService;
+use app\Services\Reservation\ReservationUpdateService;
+use DateTime;
 use Exception;
+use InvalidArgumentException;
 
 class ReservationModifDataController extends AbstractController
 {
@@ -77,6 +80,50 @@ class ReservationModifDataController extends AbstractController
 
     }
 
+    #[Route('/modifData/update', name: 'app_reservation_update', methods: ['POST'])]
+    public function update(): void
+    {
+        $return = ['success' => false, 'message' => 'pas d\'erreur !'];
+
+        //On récupère toutes les données susceptibles d'être envoyées
+        $data = json_decode(file_get_contents('php://input'), true);
+        $typeField = $data['typeField'];
+        $token = $data['token'] ?? null;
+        $field = $data['field'] ?? null;
+        $value = $data['value'] ?? null;
+
+        //Si pas de token
+        if (!$token || !ctype_alnum($token)) {
+            $this->json(['success' => false, 'message' => 'Modification non autorisée.']);
+            return;
+        }
+        //On récupère la réservation
+        $reservation = $this->reservationRepository->findByField('token', $token, false, false, false, false);
+        if (!$reservation) {
+            $this->json(['success' => false, 'message' => 'Modification non autorisée.']);
+        }
+
+        // On vérifie que le token est toujours valide
+        if ($reservation->getTokenExpireAt() < new DateTime) {
+            $this->json(['success' => false, 'message' => 'La modification n\'est plus autorisée.']);
+        }
+
+        if ($typeField == 'contact') {
+            try {
+                $updateService = new ReservationUpdateService($this->reservationRepository);
+                $success = $updateService->updateContactField($reservation, $field, $value);
+                $return = [
+                    'success' => $success,
+                    'message' => $success ? 'Mise à jour réussie.' : 'La mise à jour a échoué.'
+                ];
+            } catch (InvalidArgumentException $e) {
+                $return = ['success' => false, 'message' => $e->getMessage()];
+            }
+        }
+
+
+        $this->json($return);
+    }
 
 
 }

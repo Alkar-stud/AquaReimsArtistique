@@ -63,9 +63,9 @@ $checkoutIntentId = $_GET['checkoutIntentId'] ?? null;
                                     <span class="input-group-text">Nom</span>
                                     <input type="text"
                                            class="form-control editable-contact"
-                                           data-field="nom"
+                                           data-field="name"
                                            value="{{ method_exists($reservation,'getNom') ? $reservation->getNom() : (method_exists($reservation,'getName') ? $reservation->getName() : '') }}"
-                                           aria-label="Nom">
+                                           aria-label="name">
                                     <span class="input-group-text feedback-span"></span>
                                 </div>
                             </div>
@@ -74,7 +74,7 @@ $checkoutIntentId = $_GET['checkoutIntentId'] ?? null;
                                     <span class="input-group-text">Prénom</span>
                                     <input type="text"
                                            class="form-control editable-contact"
-                                           data-field="prenom"
+                                           data-field="firstname"
                                            value="{{ method_exists($reservation,'getPrenom') ? $reservation->getPrenom() : (method_exists($reservation,'getFirstName') ? $reservation->getFirstName() : '') }}"
                                            aria-label="Prénom">
                                     <span class="input-group-text feedback-span"></span>

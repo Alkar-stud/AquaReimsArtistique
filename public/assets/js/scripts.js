@@ -217,7 +217,7 @@ async function apiPost(url, body, opts = {}) {
             return data;
         })
         .catch((error) => {
-            // Gérer les erreurs réseau (ex: fetch échoue) et les rejets manuels
+            // Gérer les erreurs réseau (ex : fetch échoue) et les rejets manuels
             console.error('[apiPost] Erreur attrapée:', error);
             // Renvoyer une promesse rejetée pour que le .catch() du code appelant fonctionne
             return Promise.reject(error);

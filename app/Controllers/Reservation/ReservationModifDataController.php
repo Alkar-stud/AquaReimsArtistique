@@ -56,11 +56,23 @@ class ReservationModifDataController extends AbstractController
         //On prépare les détails et les compléments pour la vue
         $readyForView = $this->reservationQueryService->prepareReservationDetailsAndComplementsToView($reservation);
 
+        // Calcul du montant dû (en centimes)
+        $amountDue = $reservation->getTotalAmount() - $reservation->getTotalAmountPaid();
+
+        // Calcul du montant total de la commande (en centimes) pour le calcul du don
+        $grandTotal = $readyForView['totals']['total_amount'] ?? $reservation->getTotalAmount();
+
+        // Calcul du don maximum (en euros, formaté pour l'attribut HTML)
+        // (total / 100 pour passer en euros) * (pourcentage / 100)
+        $maxDonationEuros = number_format(($grandTotal / 100) * (DONATION_SLIDER_MAX_PERCENTAGE / 100), 2, '.', '');
+
+
         $this->render('reservation/modif_data', [
             'reservation' => $reservation,
             'reservationView' => $readyForView,
             'canBeModified' => $canBeModified,
-            'amountDue' => $reservation->getTotalAmount() - $reservation->getTotalAmountPaid(),
+            'amountDue' => $amountDue,
+            'maxDonationEuros' => $maxDonationEuros,
         ], 'Récapitulatif de la réservation');
 
     }

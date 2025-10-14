@@ -206,12 +206,6 @@ $checkoutIntentId = $_GET['checkoutIntentId'] ?? null;
         {% endif %}
 
         <!-- Totaux + Don -->
-        {% php %}
-        $amountDue = $reservation->getTotalAmount() - $reservation->getTotalAmountPaid();
-        $grandTotal = $reservationView['totals']['total_amount'] ?? $reservation->getTotalAmount();
-        // 10% du total commande en euros (valeur pour l'attribut max du slider)
-        $maxDonationEuros = number_format($grandTotal / 1000, 2, '.', '');
-        {% endphp %}
         <div class="card mt-4" id="totals-card">
             <div class="card-body text-end">
 

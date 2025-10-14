@@ -217,10 +217,10 @@ class ReservationQueryService
 
         // Calcul des totaux pour les détails
         $detailsSubtotal = 0;
-        foreach ($readyForView['details'] as $tid => &$group) {
+        foreach ($readyForView['details'] as &$group) {
             $tarif = $group['tarif'];
-            $price = (int)($tarif->getPrice() ?? 0);
-            $seatCount = (int)($tarif->getSeatCount() ?? 0);
+            $price = $tarif->getPrice() ?? 0;
+            $seatCount = $tarif->getSeatCount() ?? 0;
             $count = count($group['participants']);
 
             $calc = $this->priceCalculator->computeDetailTotals($count, $seatCount, $price);
@@ -251,7 +251,7 @@ class ReservationQueryService
         foreach ($complementBuckets as $tid => $bucket) {
             $tarif = $bucket['tarif'];
             $qty = (int)$bucket['qty'];
-            $price = (int)($tarif->getPrice() ?? 0);
+            $price = $tarif->getPrice() ?? 0;
             $total = $this->priceCalculator->computeComplementTotal($qty, $price);
 
             $readyForView['complements'][$tid] = [

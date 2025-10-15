@@ -115,9 +115,9 @@ $checkoutIntentId = $_GET['checkoutIntentId'] ?? null;
             {% foreach $reservationView['details'] as $tarif_id => $group %}
             <li class="list-group-item d-flex justify-content-between align-items-start">
                 <div class="me-3">
-                    <strong>{{ htmlspecialchars($group['tarif']->getName() ?? '') }}</strong>
+                    <strong>{{ $group['tarif']->getName() ?? '' }}</strong>
                     {% if !empty($group['tarif']->getDescription()) %}
-                    <small class="text-muted">— {{ htmlspecialchars($group['tarif']->getDescription()) }}</small>
+                    <small class="text-muted">— {{ $group['tarif']->getDescription() ?? '' }}</small>
                     {% endif %}
 
                     <div class="mt-1">
@@ -139,7 +139,7 @@ $checkoutIntentId = $_GET['checkoutIntentId'] ?? null;
                             </div>
                         </div>
                         {% if !empty($p['place_number']) %}
-                        <em>(place {{ htmlspecialchars($p['place_number']) }})</em>
+                        <em>(place {{ $p['place_number'] }}</em>
                         {% endif %}
                         {% if $i < ($group['count'] - 1) %}<br>{% endif %}
                         {% endforeach %}
@@ -172,13 +172,13 @@ $checkoutIntentId = $_GET['checkoutIntentId'] ?? null;
             {% foreach $reservationView['complements'] as $tarif_id => $complementGroup %}
             <li class="list-group-item d-flex justify-content-between align-items-start">
                 <div class="me-3">
-                    <strong>{{ htmlspecialchars($complementGroup['tarif']->getName() ?? '') }}</strong>
+                    <strong>{{ $complementGroup['tarif']->getName() ?? '' }}</strong>
                     {% if !empty($complementGroup['tarif']->getDescription()) %}
-                    <small class="text-muted">— {{ htmlspecialchars($complementGroup['tarif']->getDescription()) }}</small>
+                    <small class="text-muted">— {{ $complementGroup['tarif']->getDescription() }}</small>
                     {% endif %}
                     <div class="mt-1">Qté : {{ $complementGroup['qty'] }}</div>
                     {% if isset($complementGroup['codes']) && !empty($complementGroup['codes']) %}
-                    <div class="text-muted small">(code {{ htmlspecialchars(implode(', ', $complementGroup['codes'])) }})</div>
+                    <div class="text-muted small">(code {{ implode(', ', $complementGroup['codes']) }})</div>
                     {% endif %}
                 </div>
 

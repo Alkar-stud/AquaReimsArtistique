@@ -122,7 +122,22 @@ $checkoutIntentId = $_GET['checkoutIntentId'] ?? null;
 
                     <div class="mt-1">
                         {% foreach $group['participants'] as $i => $p %}
-                        {{ htmlspecialchars(($p['name'] ?? '') . ' ' . ($p['firstname'] ?? '')) }}
+                        <div class="row g-2 mb-2">
+                            <div class="col-md-6">
+                                <div class="input-group input-group-sm">
+                                    <span class="input-group-text">Nom</span>
+                                    <input type="text" class="form-control editable-detail" data-detail-id="{{ $p['id'] }}" data-field="name" value="{{ $p['name'] }}" aria-label="Nom du participant">
+                                    <span class="input-group-text feedback-span"></span>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="input-group input-group-sm">
+                                    <span class="input-group-text">Prénom</span>
+                                    <input type="text" class="form-control editable-detail" data-detail-id="{{ $p['id'] }}" data-field="firstname" value="{{ $p['firstname'] }}" aria-label="Prénom du participant">
+                                    <span class="input-group-text feedback-span"></span>
+                                </div>
+                            </div>
+                        </div>
                         {% if !empty($p['place_number']) %}
                         <em>(place {{ htmlspecialchars($p['place_number']) }})</em>
                         {% endif %}
@@ -300,4 +315,5 @@ $checkoutIntentId = $_GET['checkoutIntentId'] ?? null;
 </div>
 {% endif %}
 
+<script src="/assets/js/reservation/reservation_common.js" defer></script>
 <script src="/assets/js/reservation/reservation_modif_data.js" defer></script>

@@ -145,8 +145,8 @@ document.addEventListener('DOMContentLoaded', function () {
             const data = {
                 typeField: 'contact',
                 token: reservationToken, //token de la réservation
-                field: this.dataset.field,
-                value: this.value
+                field: field,
+                value: value
             };
 
             if (feedbackSpan) {
@@ -154,6 +154,30 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         });
     });
+
+    // --- Gestion des participants ---
+    const editableDetails = document.querySelectorAll('.editable-detail');
+    if (editableDetails.length > 0) {
+        editableDetails.forEach(input => {
+            input.addEventListener('blur', function () {
+                const feedbackSpan = this.parentElement.querySelector('.feedback-span');
+                const field = this.dataset.field;
+                const value = this.value;
+
+                const data = {
+                    typeField: 'detail',
+                    token: reservationToken,
+                    id: this.dataset.detailId,
+                    field: field,
+                    value: value
+                };
+
+                if (feedbackSpan) {
+                    updateField(feedbackSpan, data);
+                }
+            });
+        });
+    }
 
     // --- Fonction pour afficher les feedbacks ---
     function showFeedback(feedbackSpan, status, message = '') {

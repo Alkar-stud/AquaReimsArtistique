@@ -202,6 +202,7 @@ class ReservationQueryService
             }
 
             $readyForView['details'][$tarifId]['participants'][] = [
+                'id' => $detail->getId(),
                 'name' => $detail->getName(),
                 'firstname' => $detail->getFirstName(),
                 'place_number' => method_exists($detail, 'getPlaceNumber')

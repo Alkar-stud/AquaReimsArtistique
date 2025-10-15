@@ -16,15 +16,18 @@ class ReservationModifDataController extends AbstractController
 {
     private ReservationRepository $reservationRepository;
     private ReservationQueryService $reservationQueryService;
+    private ReservationUpdateService $reservationUpdateService;
 
     public function __construct(
         ReservationRepository $reservationRepository,
         ReservationQueryService $reservationQueryService,
+        ReservationUpdateService $reservationUpdateService,
     )
     {
         parent::__construct(true); // route publique
         $this->reservationRepository = $reservationRepository;
         $this->reservationQueryService = $reservationQueryService;
+        $this->reservationUpdateService = $reservationUpdateService;
     }
 
     /**
@@ -69,7 +72,6 @@ class ReservationModifDataController extends AbstractController
         // (total / 100 pour passer en euros) * (pourcentage / 100)
         $maxDonationEuros = number_format(($grandTotal / 100) * (DONATION_SLIDER_MAX_PERCENTAGE / 100), 2, '.', '');
 
-
         $this->render('reservation/modif_data', [
             'reservation' => $reservation,
             'reservationView' => $readyForView,
@@ -88,6 +90,7 @@ class ReservationModifDataController extends AbstractController
         //On récupère toutes les données susceptibles d'être envoyées
         $data = json_decode(file_get_contents('php://input'), true);
         $typeField = $data['typeField'];
+        $fieldId = $data['id'] ?? null;
         $token = $data['token'] ?? null;
         $field = $data['field'] ?? null;
         $value = $data['value'] ?? null;
@@ -110,8 +113,17 @@ class ReservationModifDataController extends AbstractController
 
         if ($typeField == 'contact') {
             try {
-                $updateService = new ReservationUpdateService($this->reservationRepository);
-                $success = $updateService->updateContactField($reservation, $field, $value);
+                $success = $this->reservationUpdateService->updateContactField($reservation, $field, $value);
+                $return = [
+                    'success' => $success,
+                    'message' => $success ? 'Mise à jour réussie.' : 'La mise à jour a échoué.'
+                ];
+            } catch (InvalidArgumentException $e) {
+                $return = ['success' => false, 'message' => $e->getMessage()];
+            }
+        } elseif ($typeField == 'detail') {
+            try {
+                $success = $this->reservationUpdateService->updateDetailField((int)$fieldId, $field, $value);
                 $return = [
                     'success' => $success,
                     'message' => $success ? 'Mise à jour réussie.' : 'La mise à jour a échoué.'

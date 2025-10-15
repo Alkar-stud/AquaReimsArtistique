@@ -216,9 +216,6 @@ class ReservationDetailRepository extends AbstractRepository
      */
     public function updateSingleField(int $id, string $field, ?string $value): bool
     {
-        $allowedFields = ['name', 'firstname'];
-        if (!in_array($field, $allowedFields, true)) return false;
-
         $sql = "UPDATE $this->tableName SET `$field` = :value, updated_at = NOW() WHERE id = :id";
         return $this->execute($sql, ['id' => $id, 'value' => $value]);
     }

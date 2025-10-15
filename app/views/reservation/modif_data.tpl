@@ -206,9 +206,9 @@ $checkoutIntentId = $_GET['checkoutIntentId'] ?? null;
         </ul>
         {% endif %}
 
-        <!-- Ajouter des articles si disponible -->
+        <!-- Ajouter des articles si disponibles -->
         {% if isset($availableComplements) && !empty($availableComplements) %}
-        <h5 class="mt-4">Ajouter des articles</h5>
+        <h5 class="mt-4">Ajouter des compléments</h5>
         <div class="list-group mb-3">
             {% foreach $availableComplements as $tarif %}
             <div class="list-group-item">
@@ -236,6 +236,9 @@ $checkoutIntentId = $_GET['checkoutIntentId'] ?? null;
                 <div class="mb-3">
                     <label for="donation-slider" class="form-label fs-6 fw-normal">
                         Faire un don à l'association : <strong id="donation-amount-display">0,00 €</strong>
+                        <button type="button" id="round-up-donation-btn" class="btn btn-outline-secondary btn-sm d-none ms-2" title="Arrondir à l'euro supérieur" style="font-size: 0.7rem; padding: 0.1rem 0.3rem;">
+                            Arrondir
+                        </button>
                     </label>
                     <div class="donation-slider-container ms-auto">
                         <input

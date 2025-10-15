@@ -47,6 +47,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const creditMsg = document.getElementById('credit-message');
     const paySection = document.getElementById('pay-balance-section');
     const reservationToken = container.dataset.token;
+    const roundUpBtn = document.getElementById('round-up-donation-btn');
 
     // Récupération du montant dû initial depuis l'attribut data
     const baseDueCents = parseInt(container.dataset.baseDueCents || '0', 10);
@@ -104,12 +105,21 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         }
 
-        // 4. Afficher ou masquer le bouton de paiement
+        // Afficher ou masquer le bouton de paiement
         if (paySection) {
             if (totalToPayCents > 0) {
                 paySection.classList.remove('d-none');
             } else {
                 paySection.classList.add('d-none');
+            }
+        }
+        // Gérer le bouton "Arrondir"
+        if (roundUpBtn) {
+            const centsPart = totalToPayCents % 100;
+            if (centsPart > 0) {
+                roundUpBtn.classList.remove('d-none');
+            } else {
+                roundUpBtn.classList.add('d-none');
             }
         }
     }
@@ -118,6 +128,23 @@ document.addEventListener('DOMContentLoaded', function () {
     if (donationSlider && donationAmountDisplay && amountDueEl) {
         // Mettre à jour l'affichage une première fois au chargement
         updateDonation();
+        // Ajouter l'écouteur pour le bouton "Arrondir"
+        if (roundUpBtn) {
+            roundUpBtn.addEventListener('click', function() {
+                const currentDonationCents = Math.round(parseFloat(donationSlider.value) * 100);
+                const currentTotalCents = baseDueCents + currentDonationCents;
+                const centsPart = currentTotalCents % 100;
+
+                if (centsPart > 0) {
+                    const donationToAddCents = 100 - centsPart;
+                    const newDonationEuros = (currentDonationCents + donationToAddCents) / 100;
+                    donationSlider.value = newDonationEuros;
+                    // Déclencher manuellement la mise à jour de l'interface
+                    updateDonation();
+                }
+            });
+        }
+
         // Ajouter l'écouteur pour les changements sur le slider
         donationSlider.addEventListener('input', updateDonation);
     }

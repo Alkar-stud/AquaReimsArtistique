@@ -5,16 +5,22 @@ namespace app\Services\Reservation;
 use app\DTO\ReservationUserDTO;
 use app\DTO\ReservationDetailItemDTO;
 use app\Models\Reservation\Reservation;
-use app\Repository\Reservation\ReservationDetailRepository;
+use app\Repository\Reservation\ReservationComplementRepository;
 use app\Repository\Reservation\ReservationRepository;
+use app\Repository\Tarif\TarifRepository;
+use app\Repository\Reservation\ReservationDetailRepository;
 use InvalidArgumentException;
 use TypeError;
 
 readonly class ReservationUpdateService
 {
+
     public function __construct(
         private ReservationRepository $reservationRepository,
-        private ReservationDetailRepository $reservationDetailRepository
+        private ReservationDetailRepository $reservationDetailRepository,
+        private ReservationComplementRepository $reservationComplementRepository,
+        private TarifRepository $tarifRepository,
+        private ReservationPriceCalculator $priceCalculator
     )
     {
     }
@@ -112,6 +118,93 @@ readonly class ReservationUpdateService
         $normalizedValue = $dto->{$field};
 
         return $this->reservationDetailRepository->updateSingleField($detailId, $field, $normalizedValue);
+    }
+
+    /**
+     * @param int $reservationId
+     * @param int $complementId
+     * @param string $action
+     * @return bool True si la mise à jour a réussi.
+     * @throws InvalidArgumentException Si le complément n'est pas trouvé.
+     */
+    public function updateComplementQuantity(int $reservationId, int $complementId, string $action): bool
+    {
+        $complement = $this->reservationComplementRepository->findById($complementId);
+        if (!$complement) {
+            throw new InvalidArgumentException('Complément non trouvé.');
+        }
+
+        $qty = $complement->getQty();
+        if ($action === 'plus') {
+            $qty++;
+        } else {
+            $qty--;
+        }
+        $complement->setQty($qty);
+
+        if ($qty <= 0) {
+            $success = $this->reservationComplementRepository->delete($complement->getId());
+        } else {
+            $success = $this->reservationComplementRepository->update($complement);
+        }
+
+        if ($success) {
+            $this->recalculateAndSaveTotal($reservationId);
+        }
+
+        return $success;
+    }
+
+
+    /**
+     * Pour recalculer le total à payer de la réservation
+     * @param int $reservationId
+     * @return void
+     */
+    private function recalculateAndSaveTotal(int $reservationId): void
+    {
+        $reservation = $this->reservationRepository->findById($reservationId, false, false, false, false);
+        if (!$reservation) {
+            return; // Ne rien faire si la réservation n'existe pas
+        }
+
+        // Récupérer toutes les données nécessaires
+        $allEventTarifs = $this->tarifRepository->findByEventId($reservation->getEvent());
+        $allReservationDetails = $this->reservationDetailRepository->findByReservation($reservationId);
+        $allReservationComplements = $this->reservationComplementRepository->findByReservation($reservationId);
+
+        // Créer un lookup-map pour les tarifs par ID pour un accès rapide
+        $tarifsById = [];
+        foreach ($allEventTarifs as $tarif) {
+            $tarifsById[$tarif->getId()] = $tarif;
+        }
+
+        // Calculer le sous-total des détails (participants)
+        $detailsSubtotal = 0;
+        $detailsGroupedByTarif = [];
+        foreach ($allReservationDetails as $detail) {
+            $detailsGroupedByTarif[$detail->getTarif()][] = $detail;
+        }
+        foreach ($detailsGroupedByTarif as $tarifId => $participants) {
+            $tarif = $tarifsById[$tarifId] ?? null;
+            if ($tarif) {
+                $calc = $this->priceCalculator->computeDetailTotals(count($participants), (int)$tarif->getSeatCount(), $tarif->getPrice());
+                $detailsSubtotal += $calc['total'];
+            }
+        }
+
+        // Calculer le sous-total des compléments
+        $complementsSubtotal = 0;
+        foreach ($allReservationComplements as $complement) {
+            $tarif = $tarifsById[$complement->getTarif()] ?? null;
+            if ($tarif) {
+                $complementsSubtotal += $this->priceCalculator->computeComplementTotal($complement->getQty(), $tarif->getPrice());
+            }
+        }
+
+        // Sauvegarder le nouveau total
+        $newTotalAmount = $detailsSubtotal + $complementsSubtotal;
+        $this->reservationRepository->updateSingleField($reservationId, 'total_amount', (string)$newTotalAmount);
     }
 
 }

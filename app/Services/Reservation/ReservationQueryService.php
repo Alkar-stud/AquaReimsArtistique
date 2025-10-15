@@ -242,7 +242,11 @@ class ReservationQueryService
             $tarif = $complement->getTarifObject();
             $tarifId = $tarif->getId();
             if (!isset($complementBuckets[$tarifId])) {
-                $complementBuckets[$tarifId] = ['tarif' => $tarif, 'qty' => 0];
+                $complementBuckets[$tarifId] = [
+                    'tarif' => $tarif,
+                    'qty' => 0,
+                    'id'  => $complement->getId(),
+                ];
             }
             $complementBuckets[$tarifId]['qty'] += (int)$complement->getQty();
         }
@@ -256,10 +260,11 @@ class ReservationQueryService
             $total = $this->priceCalculator->computeComplementTotal($qty, $price);
 
             $readyForView['complements'][$tid] = [
-                'tarif' => $tarif,
-                'qty' => $qty,
-                'price' => $price,
-                'total' => $total,
+                'id'          => $bucket['id'],
+                'tarif'       => $tarif,
+                'qty'         => $qty,
+                'price'       => $price,
+                'total'       => $total,
             ];
             $complementsSubtotal += $total;
         }

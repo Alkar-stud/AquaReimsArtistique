@@ -91,9 +91,11 @@ class ReservationModifDataController extends AbstractController
         $data = json_decode(file_get_contents('php://input'), true);
         $typeField = $data['typeField'];
         $fieldId = $data['id'] ?? null;
+        $tarifId = $data['tarifId'] ?? null;
         $token = $data['token'] ?? null;
         $field = $data['field'] ?? null;
         $value = $data['value'] ?? null;
+        $action = $data['action'] ?? null;
 
         //Si pas de token
         if (!$token || !ctype_alnum($token)) {
@@ -128,6 +130,21 @@ class ReservationModifDataController extends AbstractController
                     'success' => $success,
                     'message' => $success ? 'Mise à jour réussie.' : 'La mise à jour a échoué.'
                 ];
+            } catch (InvalidArgumentException $e) {
+                $return = ['success' => false, 'message' => $e->getMessage()];
+            }
+        } elseif ($typeField == 'complement') {
+            try {
+                if ($fieldId) { // Mise à jour d'un complément existant
+                    $success = $this->reservationUpdateService->updateComplementQuantity($reservation->getId(), (int)$fieldId, $action);
+                    $return = [
+                        'success' => $success,
+                        'message' => $success ? 'Mise à jour réussie.' : 'La mise à jour a échoué.',
+                        'reload' => $success // Demander un rechargement si succès
+                    ];
+                } elseif ($tarifId) { // Ajout d'un nouveau complément
+                    //$success = $this->reservationUpdateService->addComplement($reservation->getId(), (int)$tarifId);
+                }
             } catch (InvalidArgumentException $e) {
                 $return = ['success' => false, 'message' => $e->getMessage()];
             }

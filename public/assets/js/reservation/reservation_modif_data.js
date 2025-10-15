@@ -179,6 +179,73 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
+    // --- Gestion des quantités de compléments ---
+    const complementBtns = document.querySelectorAll('.complement-qty-btn');
+    if (complementBtns.length > 0) {
+        complementBtns.forEach(btn => {
+            btn.addEventListener('click', function() {
+                const action = this.dataset.action;
+                const complementId = this.dataset.complementId;
+                const qtyInput = document.getElementById(`qty-complement-${complementId}`);
+
+                if (action === 'minus') {
+                    //Selon si la diminution de 1 entre la suppression complète
+                    let confirmationMessage;
+                    if (qtyInput.value <= 1) {
+                        confirmationMessage = "Souhaitez-vous vraiment supprimer cet élément de votre commande ?\nLe trop perçu ne sera pas remboursé !!\nMais il peut servir à prendre autre chose en ligne uniquement !";
+                    } else {
+                        confirmationMessage = "Souhaitez-vous vraiment retirer 1 ticket de cet élément de votre commande ?\nLe trop perçu ne sera pas remboursé !!\nMais il peut servir à prendre autre chose en ligne uniquement !";
+                    }
+                    if (!confirm(confirmationMessage)) {
+                        return;
+                    }
+                } else {
+                    const confirmationMessage = "Confirmez-vous l'ajout de cet article ?\nLe montant total de votre réservation sera mis à jour.";
+                    if (!confirm(confirmationMessage)) {
+                        return;
+                    }
+                }
+
+                const data = {
+                    typeField: 'complement',
+                    token: reservationToken,
+                    id: complementId,
+                    action: action
+                };
+                updateField(null, data);
+            });
+        });
+    }
+
+    // --- Gestion de l'ajout de compléments ---
+    const addComplementBtns = document.querySelectorAll('.add-complement-btn');
+    if (addComplementBtns.length > 0) {
+        addComplementBtns.forEach(btn => {
+            btn.addEventListener('click', function() {
+                const confirmationMessage = "Confirmez-vous l'ajout de cet article ?\nLe montant total de votre réservation sera mis à jour.";
+                if (!confirm(confirmationMessage)) {
+                    return;
+                }
+                const tarifId = this.dataset.tarifId;
+
+                const data = {
+                    typeField: 'complement',
+                    token: reservationToken,
+                    tarifId: tarifId,
+                    qty: 1
+                };
+
+                updateField(null, data);
+            });
+        });
+    }
+
+
+
+
+
+
+
     // --- Fonction pour afficher les feedbacks ---
     function showFeedback(feedbackSpan, status, message = '') {
         if (!feedbackSpan) return;
@@ -198,7 +265,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if (feedbackSpan) {
             showFeedback(feedbackSpan, 'loading');
         }
-
+console.log('data send : ', data);
         apiPost('/modifData/update', data)
             .then((result) => {
                 if (result.success) {
@@ -207,6 +274,12 @@ document.addEventListener('DOMContentLoaded', function () {
                     }
                     if (successCallback) {
                         successCallback(result);
+                    }
+                    // Si le backend demande un rechargement.
+                    if (result.reload) {
+                        //Sauvegarde de la position
+                        scrollManager.savePosition();
+                        window.location.reload();
                     }
                 } else {
                     showFlash('danger', result.message);

@@ -183,6 +183,14 @@ $checkoutIntentId = $_GET['checkoutIntentId'] ?? null;
                 </div>
 
                 <div class="ms-auto text-end">
+                    <div class="input-group input-group-sm" style="max-width: 100px;">
+                        <button class="btn btn-outline-secondary btn-sm complement-qty-btn" type="button" data-action="minus" data-complement-id="{{ $complementGroup['id'] }}">-</button>
+                        <input type="text" class="form-control text-center" id="qty-complement-{{ $complementGroup['id'] }}" value="{{ $complementGroup['qty'] }}" readonly>
+                        {% if ($complementGroup['qty'] > $complementGroup['tarif']->getMaxTickets()) %}
+                        <button class="btn btn-outline-secondary btn-sm complement-qty-btn" type="button" data-action="plus" data-complement-id="{{ $complementGroup['id'] }}">+</button>
+                        {% endif %}
+                    </div>
+
                     <strong>{{ number_format(($complementGroup['total'] ?? 0) / 100, 2, ',', ' ') }} €</strong>
                     <div class="text-muted small">
                         {{ $complementGroup['qty'] ?? 0 }}

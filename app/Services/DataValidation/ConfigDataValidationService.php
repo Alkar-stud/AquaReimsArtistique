@@ -12,11 +12,11 @@ class ConfigDataValidationService
     public function checkData(array $data): ?string
     {
         // Normalisation
-        $this->label = htmlspecialchars(trim($data['label'] ?? ''), ENT_QUOTES, 'UTF-8');
+        $this->label = trim($data['label'] ?? '');
         $this->config_key = strtoupper(trim($data['config_key'] ?? ''));
-        $this->config_value = htmlspecialchars(trim($data['config_value'] ?? ''), ENT_QUOTES, 'UTF-8');
+        $this->config_value = trim($data['config_value'] ?? '');
         $type = trim($data['config_type'] ?? '');
-        $this->config_type = $type === '' ? null : htmlspecialchars($type, ENT_QUOTES, 'UTF-8');
+        $this->config_type = $type === '' ? null : $type;
 
         // Validation
         if (empty($this->label)) {

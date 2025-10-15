@@ -5,6 +5,7 @@ namespace app\Services\Reservation;
 use app\DTO\ReservationUserDTO;
 use app\DTO\ReservationDetailItemDTO;
 use app\Models\Reservation\Reservation;
+use app\Models\Reservation\ReservationComplement;
 use app\Repository\Reservation\ReservationComplementRepository;
 use app\Repository\Reservation\ReservationRepository;
 use app\Repository\Tarif\TarifRepository;
@@ -121,6 +122,7 @@ readonly class ReservationUpdateService
     }
 
     /**
+     * Pour mettre à jour une ligne de complément
      * @param int $reservationId
      * @param int $complementId
      * @param string $action
@@ -155,6 +157,37 @@ readonly class ReservationUpdateService
         return $success;
     }
 
+    /**
+     * Pour ajouter un complément à une réservation
+     * @param int $reservationId
+     * @param int $tarifId
+     * @return bool True si l'ajout ou la mise à jour a réussi.
+     */
+    public function addComplement(int $reservationId, int $tarifId): bool
+    {
+        // On vérifie si un complément avec ce tarif existe déjà pour cette réservation
+        $existing = $this->reservationComplementRepository->findByReservationAndTarif($reservationId, $tarifId);
+
+        // Si oui, on incrémente simplement sa quantité en réutilisant la méthode existante
+        if ($existing) {
+            return $this->updateComplementQuantity($reservationId, $existing->getId(), 'plus');
+        }
+
+        // Sinon, on en crée un nouveau
+        $newComplement = new ReservationComplement();
+        $newComplement->setReservation($reservationId)
+            ->setTarif($tarifId)
+            ->setQty(1);
+
+        $newId = $this->reservationComplementRepository->insert($newComplement);
+
+        if ($newId > 0) {
+            $this->recalculateAndSaveTotal($reservationId);
+            return true;
+        }
+
+        return false;
+    }
 
     /**
      * Pour recalculer le total à payer de la réservation

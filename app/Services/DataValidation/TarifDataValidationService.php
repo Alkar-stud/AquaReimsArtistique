@@ -39,12 +39,12 @@ class TarifDataValidationService
 
         // Normalisation
         $nameValue = trim($data['name'] ?? '');
-        $this->name = !empty($nameValue) ? htmlspecialchars(mb_convert_case($nameValue, MB_CASE_TITLE, "UTF-8")) : '';
+        $this->name = !empty($nameValue) ? mb_convert_case($nameValue, MB_CASE_TITLE, "UTF-8") : '';
 
         $descriptionValue = trim($data['description'] ?? '');
         if (!empty($descriptionValue)) {
             $firstChar = mb_substr($descriptionValue, 0, 1, 'UTF-8');
-            $this->description = htmlspecialchars(mb_strtoupper($firstChar, 'UTF-8') . mb_substr($descriptionValue, 1, null, 'UTF-8'));
+            $this->description = mb_strtoupper($firstChar, 'UTF-8') . mb_substr($descriptionValue, 1, null, 'UTF-8');
         } else {
             $this->description = null;
         }
@@ -55,7 +55,7 @@ class TarifDataValidationService
         $this->price = !empty($data['price']) && is_numeric($data['price']) ? (int)($data['price'] * 100) : 0;
         $this->includes_program = isset($data['includes_program']);
         $this->requires_proof = isset($data['requires_proof']);
-        $this->access_code = !empty($rawAccessCode) ? htmlspecialchars($rawAccessCode) : null;
+        $this->access_code = !empty($rawAccessCode) ? $rawAccessCode : null;
         $this->is_active = isset($data['is_active']);
 
         // Validation de base

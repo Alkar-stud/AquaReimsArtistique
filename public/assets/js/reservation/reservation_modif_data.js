@@ -253,13 +253,14 @@ document.addEventListener('DOMContentLoaded', function () {
                 if (!confirm(confirmationMessage)) {
                     return;
                 }
+                const action = this.dataset.action;
                 const tarifId = this.dataset.tarifId;
 
                 const data = {
                     typeField: 'complement',
                     token: reservationToken,
                     tarifId: tarifId,
-                    qty: 1
+                    action: action
                 };
 
                 updateField(null, data);

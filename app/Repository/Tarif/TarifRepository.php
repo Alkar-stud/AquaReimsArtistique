@@ -77,6 +77,39 @@ class TarifRepository extends AbstractRepository
     }
 
     /**
+     * Récupère les compléments (tarifs sans place) disponibles pour un événement,
+     * en excluant certains IDs de tarifs déjà possédés.
+     *
+     * @param int $eventId L'ID de l'événement.
+     * @param int[] $excludeTarifIds Les IDs des tarifs à exclure.
+     * @return Tarif[]
+     */
+    public function findAvailableComplementsForEvent(int $eventId, array $excludeTarifIds = []): array
+    {
+        $sql = "SELECT t.* FROM $this->tableName t
+                 INNER JOIN event_tarif et ON t.id = et.tarif
+                 WHERE et.event = :event_id
+                 AND (t.seat_count IS NULL OR t.seat_count = 0)";
+
+        $params = ['event_id' => $eventId];
+
+        if (!empty($excludeTarifIds)) {
+            $excludePlaceholders = [];
+            foreach ($excludeTarifIds as $key => $id) {
+                $placeholder = ':exclude_id_' . $key;
+                $excludePlaceholders[] = $placeholder;
+                // On ajoute directement au tableau de paramètres avec la clé nommée
+                $params[$placeholder] = $id;
+            }
+            $sql .= " AND t.id NOT IN (" . implode(',', $excludePlaceholders) . ")";
+        }
+
+        $sql .= " ORDER BY t.name";
+        $results = $this->query($sql, $params);
+        return array_map([$this, 'hydrate'], $results);
+    }
+
+    /**
      * Retourne tous les tarifs pour une liste d'événements, groupés par event_id
      * @param int[] $eventIds
      * @return array<int, Tarif[]>

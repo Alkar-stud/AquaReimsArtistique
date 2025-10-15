@@ -214,10 +214,10 @@ $checkoutIntentId = $_GET['checkoutIntentId'] ?? null;
             <div class="list-group-item">
                 <div class="row align-items-center">
                     <div class="col-md-12 d-flex justify-content-between align-items-center">
-                        <span class="fw-bold">
-                            {{ htmlspecialchars($tarif->getName() ?? $tarif->getLibelle() ?? '') }}
-                            <small class="text-muted">({{ number_format(($tarif->getPrice() ?? 0) / 100, 2, ',', ' ') }} €)</small>
-                        </span>
+                         <span class="fw-bold">
+                             {{ $tarif->getName() ?? $tarif->getName() ?? '' }}
+                             <small class="text-muted">({{ number_format(($tarif->getPrice() ?? 0) / 100, 2, ',', ' ') }} €)</small>
+                         </span>
                         <button class="btn btn-success btn-sm add-complement-btn" type="button" data-tarif-id="{{ $tarif->getId() }}">
                             <i class="bi bi-plus-circle"></i> Ajouter
                         </button>

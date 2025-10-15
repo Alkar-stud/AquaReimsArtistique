@@ -66,6 +66,22 @@ class ReservationComplementRepository extends AbstractRepository
     }
 
     /**
+     * Trouve un complément par son ID de réservation et son ID de tarif.
+     * @param int $reservationId
+     * @param int $tarifId
+     * @return ReservationComplement|null
+     */
+    public function findByReservationAndTarif(int $reservationId, int $tarifId): ?ReservationComplement
+    {
+        $sql = "SELECT * FROM $this->tableName WHERE reservation = :reservationId AND tarif = :tarifId";
+        $rows = $this->query($sql, ['reservationId' => $reservationId, 'tarifId' => $tarifId]);
+        if (!$rows) {
+            return null;
+        }
+        return $this->hydrate($rows[0]);
+    }
+
+    /**
      * Compléments pour une liste d'IDs de réservations.
      * @param int[] $reservationIds
      * @param bool $withReservation

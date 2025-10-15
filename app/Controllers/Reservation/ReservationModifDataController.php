@@ -6,6 +6,7 @@ namespace app\Controllers\Reservation;
 use app\Attributes\Route;
 use app\Controllers\AbstractController;
 use app\Repository\Reservation\ReservationRepository;
+use app\Repository\Tarif\TarifRepository;
 use app\Services\Reservation\ReservationQueryService;
 use app\Services\Reservation\ReservationUpdateService;
 use DateTime;
@@ -17,17 +18,20 @@ class ReservationModifDataController extends AbstractController
     private ReservationRepository $reservationRepository;
     private ReservationQueryService $reservationQueryService;
     private ReservationUpdateService $reservationUpdateService;
+    private TarifRepository $tarifRepository;
 
     public function __construct(
         ReservationRepository $reservationRepository,
         ReservationQueryService $reservationQueryService,
         ReservationUpdateService $reservationUpdateService,
+        TarifRepository $tarifRepository,
     )
     {
         parent::__construct(true); // route publique
         $this->reservationRepository = $reservationRepository;
         $this->reservationQueryService = $reservationQueryService;
         $this->reservationUpdateService = $reservationUpdateService;
+        $this->tarifRepository = $tarifRepository;
     }
 
     /**
@@ -62,6 +66,13 @@ class ReservationModifDataController extends AbstractController
         //On prépare les détails et les compléments pour la vue
         $readyForView = $this->reservationQueryService->prepareReservationDetailsAndComplementsToView($reservation);
 
+        // Récupérer les compléments disponibles pour l'ajout
+        $existingComplementTarifIds = array_keys($readyForView['complements'] ?? []);
+        $availableComplements = $this->tarifRepository->findAvailableComplementsForEvent(
+            $reservation->getEvent(),
+            $existingComplementTarifIds
+        );
+
         // Calcul du montant dû (en centimes)
         $amountDue = $reservation->getTotalAmount() - $reservation->getTotalAmountPaid();
 
@@ -77,6 +88,7 @@ class ReservationModifDataController extends AbstractController
             'reservationView' => $readyForView,
             'canBeModified' => $canBeModified,
             'amountDue' => $amountDue,
+            'availableComplements' => $availableComplements,
             'maxDonationEuros' => $maxDonationEuros,
         ], 'Récapitulatif de la réservation');
 
@@ -143,7 +155,14 @@ class ReservationModifDataController extends AbstractController
                         'reload' => $success // Demander un rechargement si succès
                     ];
                 } elseif ($tarifId) { // Ajout d'un nouveau complément
-                    //$success = $this->reservationUpdateService->addComplement($reservation->getId(), (int)$tarifId);
+                    $success = $this->reservationUpdateService->addComplement($reservation->getId(), (int)$tarifId);
+                    $return = [
+                        'success' => $success,
+                        'message' => $success ? 'Complément ajouté avec succès.' : "Erreur lors de l'ajout du complément.",
+                        'reload' => $success
+                    ];
+                } else {
+                    $return = ['success' => false, 'message' => 'Action sur complément non valide.'];
                 }
             } catch (InvalidArgumentException $e) {
                 $return = ['success' => false, 'message' => $e->getMessage()];

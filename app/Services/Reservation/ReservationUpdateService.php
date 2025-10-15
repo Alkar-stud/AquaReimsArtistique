@@ -196,7 +196,7 @@ readonly class ReservationUpdateService
      */
     private function recalculateAndSaveTotal(int $reservationId): void
     {
-        $reservation = $this->reservationRepository->findById($reservationId, false, false, false, false);
+        $reservation = $this->reservationRepository->findById($reservationId, false, false, false, true);
         if (!$reservation) {
             return; // Ne rien faire si la réservation n'existe pas
         }

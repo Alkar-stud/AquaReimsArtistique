@@ -186,7 +186,8 @@ $checkoutIntentId = $_GET['checkoutIntentId'] ?? null;
                     <div class="input-group input-group-sm" style="max-width: 100px;">
                         <button class="btn btn-outline-secondary btn-sm complement-qty-btn" type="button" data-action="minus" data-complement-id="{{ $complementGroup['id'] }}">-</button>
                         <input type="text" class="form-control text-center" id="qty-complement-{{ $complementGroup['id'] }}" value="{{ $complementGroup['qty'] }}" readonly>
-                        {% if ($complementGroup['qty'] > $complementGroup['tarif']->getMaxTickets()) %}
+
+                        {% if (is_null($complementGroup['tarif']->getMaxTickets()) || $complementGroup['qty'] < $complementGroup['tarif']->getMaxTickets()) %}
                         <button class="btn btn-outline-secondary btn-sm complement-qty-btn" type="button" data-action="plus" data-complement-id="{{ $complementGroup['id'] }}">+</button>
                         {% endif %}
                     </div>

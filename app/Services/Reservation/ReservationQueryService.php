@@ -6,6 +6,7 @@ use app\Models\Reservation\Reservation;
 use app\Models\Reservation\ReservationMailSent;
 use app\Repository\Event\EventRepository;
 use app\Repository\Mail\MailTemplateRepository;
+use app\Repository\Reservation\ReservationComplementRepository;
 use app\Repository\Reservation\ReservationMailSentRepository;
 use app\Repository\Reservation\ReservationRepository;
 use app\Services\Mails\MailPrepareService;
@@ -17,22 +18,26 @@ class ReservationQueryService
     private EventRepository $eventRepository;
     private MailPrepareService $mailPrepareService;
     private ReservationPriceCalculator $priceCalculator;
+    private ReservationComplementRepository $reservationComplementRepository;
 
     public function __construct(
         ReservationRepository $reservationRepository,
         EventRepository $eventRepository,
         MailPrepareService $mailPrepareService,
         ReservationPriceCalculator $priceCalculator,
+        ReservationComplementRepository $reservationComplementRepository,
     )
     {
         $this->reservationRepository = $reservationRepository;
         $this->eventRepository = $eventRepository;
         $this->mailPrepareService = $mailPrepareService;
         $this->priceCalculator = $priceCalculator;
+        $this->reservationComplementRepository = $reservationComplementRepository;
     }
 
     /**
      * Compte le nombre de réservations actives pour un événement
+     *
      * @param int $eventId L'ID de l'événement
      * @param int|null $swimmerId Si fourni, compte uniquement les réservations pour cette nageuse.
      * @return int
@@ -152,6 +157,7 @@ class ReservationQueryService
 
     /**
      * Pour vérifier si la réservation peut être modifiée par le visiteur (annulation ou date expirée).
+     *
      * @param Reservation $reservation
      * @return bool
      */
@@ -179,11 +185,9 @@ class ReservationQueryService
 
     /**
      * Pour préparer reservation détail et complement prête pour que la vue n'ait plus qu'à boucler sans faire de calcul
+     *
      * @param Reservation $reservation
      * @return array
-     */
-    /**
-     * Prépare détails et compléments prêts pour la vue et y ajoute packs/sous-totaux/totaux via le calcul partagé.
      */
     public function prepareReservationDetailsAndComplementsToView(Reservation $reservation): array
     {
@@ -277,5 +281,25 @@ class ReservationQueryService
 
         return $readyForView;
     }
+
+    /**
+     * Pour vérifier si un complément est déjà dans la réservation, permet de savoir si on ajoute ou update (dans le cas d'ajout de code access par exemple).
+     *
+     * @param Reservation $reservation
+     * @param $tarif_id
+     * @return bool
+     */
+    public function checkIfComplementIsAlreadyInReservation(Reservation $reservation, $tarif_id): bool
+    {
+        $result = $this->reservationComplementRepository->findByReservationAndTarif($reservation->getId(), $tarif_id) !== null;
+
+        if ($result == null) {
+            return false;
+        }
+        return true;
+
+    }
+
+
 
 }

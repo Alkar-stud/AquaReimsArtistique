@@ -268,6 +268,64 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
+    // --- Gestion du code spécial pour ajouter un complément ---
+    const validateCodeBtn = document.getElementById('validateCodeBtn');
+    const specialCodeInput = document.getElementById('specialCode');
+    const specialCodeFeedback = document.getElementById('specialCodeFeedback');
+    const specialTarifContainer = document.getElementById('specialTarifContainer');
+
+    if (validateCodeBtn && specialCodeInput && specialCodeFeedback && specialTarifContainer) {
+        validateCodeBtn.addEventListener('click', function() {
+            const code = specialCodeInput.value.trim();
+            if (!code) {
+                specialCodeFeedback.textContent = 'Veuillez saisir un code.';
+                return;
+            }
+
+            validateCodeBtn.disabled = true;
+            specialCodeFeedback.textContent = 'Validation en cours...';
+
+            const data = {
+                token: reservationToken,
+                code: code
+            };
+
+            apiPost('/modifData/add-code', data)
+                .then(result => {
+                    if (result.success) {
+                        // Si le backend demande un rechargement (ce qui est le plus simple
+                        // après l'ajout d'un article), on le fait.
+                        if (result.reload) {
+                            scrollManager.savePosition(); // Sauvegarde de la position avant de recharger
+                            window.location.reload();
+                        } else {
+                            // Alternative si vous ne voulez pas recharger (plus complexe)
+                            specialCodeFeedback.classList.remove('text-danger');
+                            specialCodeFeedback.classList.add('text-success');
+                            specialCodeFeedback.textContent = 'Article ajouté avec succès !';
+                            specialCodeInput.value = ''; // Vider le champ
+                        }
+                    } else {
+                        // Afficher l'erreur retournée par le backend
+                        specialCodeFeedback.classList.remove('text-success');
+                        specialCodeFeedback.classList.add('text-danger');
+                        specialCodeFeedback.textContent = result.message || 'Code invalide ou erreur.';
+                    }
+                })
+                .catch(err => {
+                    specialCodeFeedback.classList.remove('text-success');
+                    specialCodeFeedback.classList.add('text-danger');
+                    specialCodeFeedback.textContent = err.userMessage || 'Une erreur de communication est survenue.';
+                })
+                .finally(() => {
+                    // On réactive le bouton seulement si l'opération n'a pas entraîné de rechargement
+                    const shouldReload = document.querySelector('#ajax_flash_container.alert-success');
+                    if (!shouldReload) {
+                        validateCodeBtn.disabled = false;
+                    }
+                });
+        });
+    }
 
 
 

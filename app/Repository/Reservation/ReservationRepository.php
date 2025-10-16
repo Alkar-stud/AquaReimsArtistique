@@ -294,7 +294,7 @@ class ReservationRepository extends AbstractRepository
         }
 
         $complementsRepository = new ReservationComplementRepository();
-        $allComplements = $complementsRepository->findByReservations($reservationIds, false, true);
+        $allComplements = $complementsRepository->findByReservationIds($reservationIds, false, true);
         $complementsByReservationId = [];
         foreach ($allComplements as $complement) {
             $complementsByReservationId[$complement->getReservation()][] = $complement;

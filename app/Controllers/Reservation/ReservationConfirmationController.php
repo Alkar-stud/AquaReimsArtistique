@@ -24,14 +24,12 @@ class ReservationConfirmationController extends AbstractController
     private SwimmerRepository $swimmerRepository;
     private ReservationSaveCartService $reservationSaveCartService;
     private ReservationTempWriter $reservationTempWriter;
-    private TarifRepository $tarifRepository;
     private PaymentService $paymentService;
     private ReservationRepository $reservationRepository;
 
     public function __construct(
         ReservationDataValidationService $reservationDataValidationService,
         EventRepository                  $eventRepository,
-        TarifRepository                  $tarifRepository,
         EventSessionRepository           $eventSessionRepository,
         SwimmerRepository                $swimmerRepository,
         ReservationSaveCartService       $reservationSaveCartService,
@@ -46,7 +44,6 @@ class ReservationConfirmationController extends AbstractController
         $this->eventSessionRepository = $eventSessionRepository;
         $this->swimmerRepository = $swimmerRepository;
         $this->reservationSaveCartService = $reservationSaveCartService;
-        $this->tarifRepository = $tarifRepository;
         $this->reservationTempWriter = $reservationTempWriter;
         $this->paymentService =  $paymentService;
         $this->reservationRepository = $reservationRepository;
@@ -206,7 +203,7 @@ class ReservationConfirmationController extends AbstractController
         } else {
             $token = htmlspecialchars($token);
             //On va chercher la réservation pour afficher la date et heure ainsi que l'adresse du rendez-vous, en rappelant l'ouverture des portes.
-            $reservation = $this->reservationRepository->findByToken($token, true, true, false);
+            $reservation = $this->reservationRepository->findByField('token', $token, true, true, false);
         }
 
 

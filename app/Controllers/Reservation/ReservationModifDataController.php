@@ -5,10 +5,12 @@ namespace app\Controllers\Reservation;
 
 use app\Attributes\Route;
 use app\Controllers\AbstractController;
+use app\Models\Reservation\Reservation;
 use app\Repository\Reservation\ReservationRepository;
 use app\Repository\Tarif\TarifRepository;
 use app\Services\Reservation\ReservationQueryService;
 use app\Services\Reservation\ReservationUpdateService;
+use app\Services\Tarif\TarifService;
 use DateTime;
 use Exception;
 use InvalidArgumentException;
@@ -19,12 +21,14 @@ class ReservationModifDataController extends AbstractController
     private ReservationQueryService $reservationQueryService;
     private ReservationUpdateService $reservationUpdateService;
     private TarifRepository $tarifRepository;
+    private TarifService $tarifService;
 
     public function __construct(
         ReservationRepository $reservationRepository,
         ReservationQueryService $reservationQueryService,
         ReservationUpdateService $reservationUpdateService,
         TarifRepository $tarifRepository,
+        TarifService $tarifService,
     )
     {
         parent::__construct(true); // route publique
@@ -32,6 +36,7 @@ class ReservationModifDataController extends AbstractController
         $this->reservationQueryService = $reservationQueryService;
         $this->reservationUpdateService = $reservationUpdateService;
         $this->tarifRepository = $tarifRepository;
+        $this->tarifService = $tarifService;
     }
 
     /**
@@ -104,26 +109,13 @@ class ReservationModifDataController extends AbstractController
         $typeField = $data['typeField'];
         $fieldId = $data['id'] ?? null;
         $tarifId = $data['tarifId'] ?? null;
-        $token = $data['token'] ?? null;
+        $reservationToken = $data['token'] ?? null;
         $field = $data['field'] ?? null;
         $value = $data['value'] ?? null;
         $action = $data['action'] ?? null;
 
-        //Si pas de token
-        if (!$token || !ctype_alnum($token)) {
-            $this->json(['success' => false, 'message' => 'Modification non autorisée.']);
-            return;
-        }
-        //On récupère la réservation
-        $reservation = $this->reservationRepository->findByField('token', $token, false, false, false, false);
-        if (!$reservation) {
-            $this->json(['success' => false, 'message' => 'Modification non autorisée.']);
-        }
-
-        // On vérifie que le token est toujours valide
-        if ($reservation->getTokenExpireAt() < new DateTime) {
-            $this->json(['success' => false, 'message' => 'La modification n\'est plus autorisée.']);
-        }
+        //On vérifie si le token existe bien et peut être modifiable
+        $reservation = $this->getTokenVerifyItAndGetReservation($reservationToken);
 
         if ($typeField == 'contact') {
             try {
@@ -169,9 +161,68 @@ class ReservationModifDataController extends AbstractController
             }
         }
 
-
         $this->json($return);
     }
 
+    #[Route('/modifData/add-code', name: 'app_reservation_add_code', methods: ['POST'])]
+    public function addCode(): void
+    {
+        $input = json_decode(file_get_contents('php://input'), true);
+        $reservationToken = trim($input['token'] ?? '');
+        $code = trim($input['code'] ?? '');
+
+        //On vérifie si le token existe bien et peut être modifiable
+        $reservation = $this->getTokenVerifyItAndGetReservation($reservationToken);
+
+        //On va chercher le tarif correspondant s'il y en a un
+        $result = $this->tarifService->validateSpecialCode($reservation->getEvent(), $code, false);
+        if (!$result['success']) {
+            $this->json($result, 200, 'reservation');
+        }
+
+        //On vérifie si le tarif correspondant à ce code ne fait pas déjà partie de la commande (car si c'est le cas, il faut cliquer sur le plus si maxTicket l'autorise).
+        if ($this->reservationQueryService->checkIfComplementIsAlreadyInReservation($reservation, (int)$result['tarif']['id'])) {
+            $this->json([
+                'success' => false,
+                'message' => 'Ce code a déjà été ajouté à la commande',
+                'reload' => false
+            ]);
+        }
+
+        $success = $this->reservationUpdateService->addComplement($reservation->getId(), (int)$result['tarif']['id']);
+
+        $this->json([
+            'success' => $success,
+            'message' => $success ? 'Complément ajouté avec succès.' : "Erreur lors de l'ajout du complément.",
+            'reload' => $success
+        ]);
+    }
+
+
+    /**
+     * Pour vérifier si le token existe et qu'il n'est pas expiré pour retourner la réservation
+     * @param string $token
+     * @return Reservation|null
+     */
+    private function getTokenVerifyItAndGetReservation(string $token): ?Reservation
+    {
+
+        //Si pas de token
+        if (!$token || !ctype_alnum($token)) {
+            $this->json(['success' => false, 'message' => 'Modification non autorisée.']);
+        }
+        //On récupère la réservation
+        $reservation = $this->reservationRepository->findByField('token', $token, false, false, false, true);
+        if (!$reservation) {
+            $this->json(['success' => false, 'message' => 'Modification non autorisée.']);
+        }
+
+        // On vérifie que le token est toujours valide
+        if ($reservation->getTokenExpireAt() < new DateTime) {
+            $this->json(['success' => false, 'message' => 'La modification n\'est plus autorisée.']);
+        }
+
+        return $reservation;
+    }
 
 }

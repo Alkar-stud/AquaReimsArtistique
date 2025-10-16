@@ -168,6 +168,7 @@ readonly class ReservationUpdateService
         // On vérifie si un complément avec ce tarif existe déjà pour cette réservation
         $existing = $this->reservationComplementRepository->findByReservationAndTarif($reservationId, $tarifId);
 
+
         // Si oui, on incrémente simplement sa quantité en réutilisant la méthode existante
         if ($existing) {
             return $this->updateComplementQuantity($reservationId, $existing->getId(), 'plus');

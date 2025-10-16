@@ -88,7 +88,7 @@ class ReservationComplementRepository extends AbstractRepository
      * @param bool $withTarif
      * @return ReservationComplement[]
      */
-    public function findByReservations(array $reservationIds, bool $withReservation = false, bool $withTarif = false): array
+    public function findByReservationIds(array $reservationIds, bool $withReservation = false, bool $withTarif = false): array
     {
         if (empty($reservationIds)) return [];
 

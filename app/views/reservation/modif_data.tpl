@@ -212,20 +212,29 @@ $checkoutIntentId = $_GET['checkoutIntentId'] ?? null;
         <h5 class="mt-4">Ajouter des compléments</h5>
         <div class="list-group mb-3">
             {% foreach $availableComplements as $tarif %}
+            {% if !$tarif->getAccessCode() %}
             <div class="list-group-item">
-                <div class="row align-items-center">
-                    <div class="col-md-12 d-flex justify-content-between align-items-center">
-                         <span class="fw-bold">
-                             {{ $tarif->getName() ?? $tarif->getName() ?? '' }}
-                             <small class="text-muted">({{ number_format(($tarif->getPrice() ?? 0) / 100, 2, ',', ' ') }} €)</small>
-                         </span>
-                        <button class="btn btn-success btn-sm add-complement-btn" type="button" data-tarif-id="{{ $tarif->getId() }}">
-                            <i class="bi bi-plus-circle"></i> Ajouter
-                        </button>
-                    </div>
+                <div class="d-flex justify-content-between align-items-center">
+                     <span class="fw-bold">
+                         {{ $tarif->getName() ?? '' }}
+                         <small class="text-muted">({{ number_format(($tarif->getPrice() ?? 0) / 100, 2, ',', ' ') }} €)</small>
+                     </span>
+                    <button class="btn btn-success btn-sm add-complement-btn" type="button" data-tarif-id="{{ $tarif->getId() }}">
+                        <i class="bi bi-plus-circle"></i> Ajouter
+                    </button>
                 </div>
             </div>
+            {% endif %}
             {% endforeach %}
+            <div class="mb-3">
+                <label for="specialCode" class="form-label">Vous avez un code ?</label>
+                <div class="input-group">
+                    <input type="text" class="form-control" id="specialCode" placeholder="Saisissez votre code" style="max-width: 250px;">
+                    <button type="button" class="btn btn-outline-primary" id="validateCodeBtn">Valider le code</button>
+                </div>
+                <div id="specialCodeFeedback" class="form-text text-danger"></div>
+            </div>
+            <div id="specialTarifContainer"></div>
         </div>
         {% endif %}
 

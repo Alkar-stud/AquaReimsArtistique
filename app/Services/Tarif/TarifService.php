@@ -200,6 +200,10 @@ class TarifService
      * - Insensible à la casse et aux espaces.
      * - Inclut les tarifs inactifs.
      * - Exclut l'ID courant si fourni.
+     * @param string|null $code
+     * @param bool $hasSeats
+     * @param int|null $excludeId
+     * @return bool
      */
     public function isAccessCodeDuplicateForSeatType(?string $code, bool $hasSeats, ?int $excludeId = null): bool
     {
@@ -214,6 +218,8 @@ class TarifService
 
     /**
      * Normalise un code (trim + lower). Retourne null si vide.
+     * @param string|null $code
+     * @return string|null
      */
     private function normalizeCode(?string $code): ?string
     {

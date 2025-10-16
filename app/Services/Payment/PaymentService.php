@@ -3,6 +3,7 @@
 namespace app\Services\Payment;
 
 use app\DTO\HelloAssoCartDTO;
+use app\Models\Reservation\Reservation;
 use app\Repository\Event\EventRepository;
 use app\Repository\Reservation\ReservationRepository;
 use app\Services\Reservation\ReservationDataPersist;
@@ -20,6 +21,7 @@ class PaymentService
     private ReservationSessionService $reservationSessionService;
     private ReservationDataPersist $reservationDataPersist;
     private ReservationRepository $reservationRepository;
+    private BuildLink $buildLink;
 
     public function __construct(
         HelloAssoCartDTO          $helloAssoCartDTO,
@@ -29,6 +31,7 @@ class PaymentService
         ReservationSessionService $reservationSessionService,
         ReservationDataPersist    $reservationDataPersist,
         ReservationRepository     $reservationRepository,
+        BuildLink                 $buildLink,
     )
     {
         $this->helloAssoCartDTO = $helloAssoCartDTO;
@@ -38,6 +41,7 @@ class PaymentService
         $this->reservationSessionService = $reservationSessionService;
         $this->reservationDataPersist = $reservationDataPersist;
         $this->reservationRepository = $reservationRepository;
+        $this->buildLink = $buildLink;
     }
 
     /**
@@ -138,6 +142,55 @@ class PaymentService
         return $this->helloAssoCartDTO;
     }
 
+    /**
+     * Prépare le DTO HelloAsso pour un paiement de solde sur une réservation existante.
+     *
+     * @param Reservation $reservation L'objet Reservation persistant.
+     * @param int $amountToPay Le montant total à payer en centimes (incluant le don).
+     * @param bool $containsDonation Indique si le montant inclut un don.
+     * @return HelloAssoCartDTO
+     */
+    public function prepareCheckOutDataForBalance(Reservation $reservation, int $amountToPay, bool $containsDonation): HelloAssoCartDTO
+    {
+
+        $token = $reservation->getToken();
+        $baseUrl = $this->buildLink->buildBasicLink('/modifData?token=' . $token);
+
+        // URLs de redirection spécifiques à la page de modification
+        $successUrl = $baseUrl . '&status=success';
+        $errorUrl = $baseUrl . '&status=error';
+        $returnUrl = $baseUrl . '&status=return';
+
+        $itemName = "Règlement du solde de la réservation #" . $reservation->getId();
+        if ($containsDonation) {
+            $itemName .= " (incluant un don)";
+        }
+
+        // On crée une nouvelle instance du DTO pour ne pas interférer avec le flux de réservation initial
+        $cartDTO = new HelloAssoCartDTO();
+        $cartDTO->setTotalAmount($amountToPay);
+        $cartDTO->setInitialAmount($amountToPay);
+        $cartDTO->setItemName($itemName);
+        $cartDTO->setBackUrl($returnUrl);
+        $cartDTO->setErrorUrl($errorUrl);
+        $cartDTO->setReturnUrl($successUrl);
+        $cartDTO->setContainsDonation($containsDonation);
+
+        $cartDTO->setPayer([
+            'firstName' => $reservation->getFirstName(),
+            'lastName'  => $reservation->getName(),
+            'email'     => $reservation->getEmail(),
+            'country'   => 'FRA'
+        ]);
+
+        // Métadonnées cruciales pour le webhook
+        $cartDTO->setMetaData([
+            'context'   => 'balance_payment',
+            'primaryId' => $reservation->getId() // ID SQL de la réservation
+        ]);
+
+        return $cartDTO;
+    }
 
     /**
      * Crée une intention de paiement auprès du fournisseur (HelloAsso).

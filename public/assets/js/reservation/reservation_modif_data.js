@@ -1,4 +1,4 @@
-document.addEventListener('DOMContentLoaded', function () {
+document.addEventListener('DOMContentLoaded', async function () {
     const container = document.getElementById('reservation-data-container');
     if (!container) {
         return; // Ne rien faire si le conteneur principal n'est pas trouvé
@@ -10,16 +10,16 @@ document.addEventListener('DOMContentLoaded', function () {
     // Gestionnaire de défilement
     const scrollManager = {
         // Obtenir la position actuelle de manière fiable
-        getPosition: function() {
+        getPosition: function () {
             return currentScrollPosition;
         },
         // Sauvegarder la position
-        savePosition: function() {
+        savePosition: function () {
             const pos = this.getPosition();
             localStorage.setItem('scrollpos', pos);
         },
         // Restaurer la position
-        restorePosition: function() {
+        restorePosition: function () {
             const pos = localStorage.getItem('scrollpos');
             if (pos) {
                 window.scrollTo(0, parseInt(pos, 10));
@@ -29,7 +29,7 @@ document.addEventListener('DOMContentLoaded', function () {
     };
 
     // Suivre en temps réel la position de défilement
-    window.addEventListener('scroll', function() {
+    window.addEventListener('scroll', function () {
         currentScrollPosition = window.scrollY || document.documentElement.scrollTop || document.body.scrollTop || 0;
     });
 
@@ -130,7 +130,7 @@ document.addEventListener('DOMContentLoaded', function () {
         updateDonation();
         // Ajouter l'écouteur pour le bouton "Arrondir"
         if (roundUpBtn) {
-            roundUpBtn.addEventListener('click', function() {
+            roundUpBtn.addEventListener('click', function () {
                 const currentDonationCents = Math.round(parseFloat(donationSlider.value) * 100);
                 const currentTotalCents = baseDueCents + currentDonationCents;
                 const centsPart = currentTotalCents % 100;
@@ -210,7 +210,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const complementBtns = document.querySelectorAll('.complement-qty-btn');
     if (complementBtns.length > 0) {
         complementBtns.forEach(btn => {
-            btn.addEventListener('click', function() {
+            btn.addEventListener('click', function () {
                 const action = this.dataset.action;
                 const complementId = this.dataset.complementId;
                 const qtyInput = document.getElementById(`qty-complement-${complementId}`);
@@ -248,7 +248,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const addComplementBtns = document.querySelectorAll('.add-complement-btn');
     if (addComplementBtns.length > 0) {
         addComplementBtns.forEach(btn => {
-            btn.addEventListener('click', function() {
+            btn.addEventListener('click', function () {
                 const confirmationMessage = "Confirmez-vous l'ajout de cet article ?\nLe montant total de votre réservation sera mis à jour.";
                 if (!confirm(confirmationMessage)) {
                     return;
@@ -275,7 +275,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const specialTarifContainer = document.getElementById('specialTarifContainer');
 
     if (validateCodeBtn && specialCodeInput && specialCodeFeedback && specialTarifContainer) {
-        validateCodeBtn.addEventListener('click', function() {
+        validateCodeBtn.addEventListener('click', function () {
             const code = specialCodeInput.value.trim();
             if (!code) {
                 specialCodeFeedback.textContent = 'Veuillez saisir un code.';
@@ -329,7 +329,7 @@ document.addEventListener('DOMContentLoaded', function () {
     // --- Gestion de l'annulation de la réservation ---
     const cancelBtn = document.querySelector('.cancel-button');
     if (cancelBtn) {
-        cancelBtn.addEventListener('click', function() {
+        cancelBtn.addEventListener('click', function () {
             if (confirm("Êtes-vous sûr de vouloir annuler cette réservation ?\nCette action est irréversible.")) {
                 if (confirm("Êtes-vous toujours sûr ?\n Vous ne pourrez prétendre à aucun remboursement !")) {
                     const data = {
@@ -343,12 +343,20 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
+    // Initialisation du bouton de paiement
+    const payBalanceBtn = document.getElementById('pay-balance-btn');
+    if (payBalanceBtn) {
+        payBalanceBtn.addEventListener('click', handlePayBalance);
+    }
 
-
-
-
-
-
+    // Détecter si nous sommes en mode vérification de paiement
+    const paymentCheckContainer = document.getElementById('payment-check-container');
+    if (paymentCheckContainer) {
+        const checkoutIntentId = paymentCheckContainer.dataset.checkoutId;
+        if (checkoutIntentId) {
+            await checkPaymentStatus(checkoutIntentId, 0);
+        }
+    }
 
     // --- Fonction pour afficher les feedbacks ---
     function showFeedback(feedbackSpan, status, message = '') {
@@ -369,7 +377,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if (feedbackSpan) {
             showFeedback(feedbackSpan, 'loading');
         }
-console.log('data send : ', data);
+
         apiPost('/modifData/update', data)
             .then((result) => {
                 if (result.success) {
@@ -396,6 +404,177 @@ console.log('data send : ', data);
                 showFlash('danger', err.userMessage || err.message);
             });
 
+    }
+
+    async function handlePayBalance(event) {
+        event.preventDefault(); // Empêche le lien de naviguer vers "#"
+
+        const payBalanceBtn = document.getElementById('pay-balance-btn');
+        const container = document.getElementById('reservation-data-container');
+        const reservationToken = container.dataset.token;
+        const payBalanceImg = payBalanceBtn.querySelector('img');
+
+        const amountDueEl = document.getElementById('amount-due');
+        const donationSlider = document.getElementById('donation-slider');
+
+        // Convertir le texte "12,34 €" en nombre de centimes
+        const amountDueInCents = Math.round(parseFloat(amountDueEl.textContent.replace(',', '.').replace('€', '').trim()) * 100);
+        const donationInCents = Math.round(parseFloat(donationSlider.value) * 100);
+
+        if (amountDueInCents <= 0) {
+            showFlash('danger', 'Le montant à payer est nul ou invalide.');
+            return;
+        }
+
+        // Désactiver le lien et montrer un état de chargement
+        payBalanceBtn.style.pointerEvents = 'none';
+        if (payBalanceImg) payBalanceImg.style.opacity = '0.5';
+
+        const spinner = document.createElement('span');
+        spinner.className = 'spinner-border spinner-border-sm ms-2';
+        spinner.setAttribute('role', 'status');
+        payBalanceBtn.parentNode.appendChild(spinner);
+
+        const data = {
+            token: reservationToken,
+            amountToPay: amountDueInCents,
+            containsDonation: donationInCents > 0
+        };
+
+        apiPost('/modifData/createPayment', data)
+            .then(result => {
+                if (result.success && result.redirectUrl) {
+                    // Rediriger l'utilisateur vers la page de paiement HelloAsso.
+                    // Pas besoin de nettoyer l'UI (spinner, etc.) car la page va changer.
+                    window.location.href = result.redirectUrl;
+                } else {
+                    // Erreur applicative retournée par le backend (ex: "montant invalide")
+                    showFlash('danger', result.message || 'Une erreur est survenue lors de la création du paiement.');
+                    window.scrollTo(0, 0); // Remonter en haut pour voir le message flash
+                }
+            })
+            .catch(error => {
+                // Erreur réseau ou HTTP (gérée par apiPost)
+                console.error('Erreur lors de la création du paiement:', error);
+                showFlash('danger', error.userMessage || 'Une erreur technique est survenue.');
+                window.scrollTo(0, 0); // Remonter en haut pour voir le message flash
+            })
+            .finally(() => {
+                // Ce bloc s'exécute toujours, sauf en cas de redirection.
+                payBalanceBtn.style.pointerEvents = 'auto';
+                if (payBalanceImg) payBalanceImg.style.opacity = '1';
+                spinner.remove();
+                window.scrollTo(0, 0);
+            });
+    }
+
+    /**
+     * Interroge le backend pour connaître le statut du paiement.
+     * @param {string} checkoutIntentId L'ID de l'intention de paiement.
+     * @param {number} attempt Le numéro de la tentative actuelle.
+     */
+    async function checkPaymentStatus(checkoutIntentId, attempt) {
+        const maxAttempts = 1; // Tenter pendant 30 secondes max
+        const delay = 1000; // 5 secondes entre chaque tentative
+
+
+        const data = {
+            token: reservationToken,
+            checkoutIntentId: checkoutIntentId
+        };
+
+        if (attempt >= maxAttempts) {
+            // Le polling a échoué, on passe au plan B : la vérification forcée.
+            await forceCheckPayment(data);
+            return;
+        }
+
+        apiPost('/reservation/checkPayment', data)
+            .then(result => {
+                if (result.success) {
+                    // Paiement confirmé !
+                    const spinner = document.getElementById('payment-check-spinner');
+                    const msg = document.getElementById('payment-check-message');
+                    const successMsg = document.getElementById('payment-check-success');
+
+                    if(spinner) spinner.style.display = 'none';
+                    if(msg) msg.style.display = 'none';
+                    if(successMsg) successMsg.style.display = 'block';
+
+                    // Recharger la page de modification pour voir le solde mis à jour.
+                    setTimeout(() => {
+                        // On retire les paramètres GET de l'URL pour éviter une boucle
+                        const url = new URL(window.location.href);
+                        url.searchParams.delete('status');
+                        url.searchParams.delete('checkout_intent_id');
+                        url.searchParams.delete('id');
+                        window.location.href = url.toString();
+                    }, 3000);
+
+                } else {
+                    // Le paiement est en attente, on réessaie.
+                    setTimeout(() => checkPaymentStatus(checkoutIntentId, attempt + 1), delay);
+                }
+            })
+            .catch(error => {
+                console.error("Erreur lors de la vérification du paiement :", error);
+                displayPaymentError("Une erreur technique est survenue lors de la vérification. Nous allons vérifier manuellement.", checkoutIntentId);
+            });
+
+    }
+
+    /**
+     * Interroge directement HelloAsso via le backend si le polling simple a échoué.
+     * @param data
+     */
+    async function forceCheckPayment(data) {
+        const msg = document.getElementById('payment-check-message');
+        if (msg) msg.textContent = "La confirmation automatique prend du temps. Nous lançons une vérification manuelle...";
+
+        apiPost('/reservation/checkPayment', data)
+            .then(result => {
+                if (result.success) {
+                    // La vérification forcée a fonctionné ! On affiche le succès.
+                    // On appelle la même logique que si le polling avait réussi.
+                    const successMsg = document.getElementById('payment-check-success');
+                    document.getElementById('payment-check-spinner').style.display = 'none';
+                    document.getElementById('payment-check-message').style.display = 'none';
+                    successMsg.style.display = 'block';
+                    // Rediriger en nettoyant l'URL
+                    setTimeout(() => {
+                        const url = new URL(window.location.href);
+                        url.searchParams.delete('status');
+                        url.searchParams.delete('checkout_intent_id');
+                        window.location.href = url.toString();
+                    }, 3000);            } else {
+                    // Même la vérification forcée a échoué.
+                    displayPaymentError(result.message || "La vérification du paiement a échoué. Nous allons vérifier manuellement. Votre réservation est bien enregistrée.", data.checkoutIntentId);
+                }
+            })
+            .catch(error => {
+                displayPaymentError("Une erreur technique est survenue lors de la vérification finale. Nous allons vérifier manuellement.", data.checkoutIntentId);
+            });
+
+
+    }
+
+
+    /**
+     * Affiche un message d'erreur en cas d'échec de la vérification.
+     * @param {string} message Le message à afficher.
+     * @param {string} checkoutIntentId
+     */
+    function displayPaymentError(message, checkoutIntentId) {
+        const spinner = document.getElementById('payment-check-spinner');
+        const msg = document.getElementById('payment-check-message');
+        const errorContainer = document.getElementById('payment-check-error');
+
+        if(spinner) spinner.style.display = 'none';
+        if(msg) msg.style.display = 'none';
+        if(errorContainer) {
+            errorContainer.innerHTML = message + `<br><small>ID de transaction pour référence : ${checkoutIntentId}</small>`;
+            errorContainer.style.display = 'block';
+        }
     }
 
 });

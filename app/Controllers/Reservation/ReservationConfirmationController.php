@@ -166,34 +166,6 @@ class ReservationConfirmationController extends AbstractController
         ], 'Réservation confirmée');
     }
 
-
-    /**
-     * Pour vérifier si le callback a bien enregistré le paiement envoyé par HelloAsso
-     * @return void
-     */
-    #[Route('/reservation/checkPayment', name: 'app_reservation_checkPayment', methods: ['POST'])]
-    public function checkPayment(): void
-    {
-        $input = json_decode(file_get_contents('php://input'), true);
-        $checkoutIntentId = $input['checkoutIntentId'] ?? null;
-        if (!$checkoutIntentId) {
-            $this->json(['success' => false, 'error' => 'checkoutId manquant']);
-            return;
-        }
-
-        // Vérifier dans la BDD si un paiement avec cet ID a été enregistré (par le webhook)
-        $paymentsRepository = new ReservationPaymentRepository();
-        $payment = $paymentsRepository->findByCheckoutId((int)$checkoutIntentId);
-
-        // Renvoyer le statut au front
-        if ($payment && in_array($payment->getStatusPayment(), ['Authorized', 'Processed'])) {
-            $this->handleSuccessfulCheck($payment);
-        } else {
-            // Le paiement n'est pas encore trouvé ou n'a pas le bon statut, on indique au front de patienter.
-            $this->json(['success' => false, 'status' => 'pending']);
-        }
-    }
-
     #[Route('/reservation/merci', name: 'app_reservation_merci')]
     public function merci(): void
     {
@@ -206,37 +178,10 @@ class ReservationConfirmationController extends AbstractController
             $reservation = $this->reservationRepository->findByField('token', $token, true, true, false);
         }
 
-
-
-
-
-
         $this->render('reservation/merci', [
             'reservation' => $reservation ?? null,
         ], 'Réservation confirmée');
 
     }
-
-
-    /**
-     * Gère la réponse JSON pour une vérification de paiement réussie.
-     * @param ReservationPayment $payment
-     * @return void
-     */
-    private function handleSuccessfulCheck(ReservationPayment $payment): void
-    {
-        $reservation = $this->reservationRepository->findById($payment->getReservation());
-
-        if ($reservation) {
-            unset($_SESSION['reservation'][session_id()]);
-            $this->json(['success' => true, 'token' => $reservation->getToken()]);
-        } else {
-            // Cas peu probable où le paiement existe, mais pas la réservation associée
-            $this->json(['success' => false, 'error' => 'Paiement trouvé mais réservation introuvable.']);
-        }
-    }
-
-    //Si au bout d'un certain temps le callback n'a rien donné, on va chercher directement chez HelloAsso avec le checkoutIntentId
-    //Si tout bon, le JS renvoi vers /reservation/merci avec le token généré à l'enregistrement de la réservation.
 
 }

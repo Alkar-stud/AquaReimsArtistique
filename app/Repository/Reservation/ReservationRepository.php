@@ -199,6 +199,9 @@ class ReservationRepository extends AbstractRepository
 
     /**
      * Met à jour une réservation
+     *
+     * @param Reservation $reservation
+     * @return bool
      */
     public function update(Reservation $reservation): bool
     {

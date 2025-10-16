@@ -9,26 +9,26 @@ $paymentStatus = $_GET['status'] ?? null;
 $checkoutIntentId = $_GET['checkoutIntentId'] ?? null;
 {% endphp %}
 
-{% if $paymentStatus == 'success' && $checkoutIntentId %}
-<div class="container text-center" id="payment-check-container" data-checkout-id="{{ $checkoutIntentId }}">
-    <h2 class="mb-4">Vérification de votre paiement...</h2>
-    <div id="payment-check-spinner" class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
-        <span class="visually-hidden">Chargement...</span>
-    </div>
-    <p id="payment-check-message" class="mt-3">Nous vérifions la confirmation de votre paiement auprès de nos services. Veuillez patienter.</p>
-    <div id="payment-check-error" class="alert alert-danger mt-3" style="display: none;"></div>
-    <div id="payment-check-success" class="alert alert-success mt-3" style="display: none;">
-        Paiement confirmé ! Vous allez être redirigé vers le récapitulatif mis à jour.
-    </div>
-</div>
-{% else %}
-
 <div class="container-fluid"
      id="reservation-data-container"
      data-reservation-id="{{ $reservation->getId() }}"
      data-token="{{ $reservation->getToken() }}"
      data-base-due-cents="{{ (int)($amountDue ?? ($reservation->getTotalAmount() - $reservation->getTotalAmountPaid())) }}"
 >
+    {% if $paymentStatus == 'success' && $checkoutIntentId %}
+    <div class="container text-center" id="payment-check-container" data-checkout-id="{{ $checkoutIntentId }}">
+        <h2 class="mb-4">Vérification de votre paiement...</h2>
+        <div id="payment-check-spinner" class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
+            <span class="visually-hidden">Chargement...</span>
+        </div>
+        <p id="payment-check-message" class="mt-3">Nous vérifions la confirmation de votre paiement auprès de nos services. Veuillez patienter.</p>
+        <div id="payment-check-error" class="alert alert-danger mt-3" style="display: none;"></div>
+        <div id="payment-check-success" class="alert alert-success mt-3" style="display: none;">
+            Paiement confirmé ! Vous allez être redirigé vers le récapitulatif mis à jour.
+        </div>
+    </div>
+    {% else %}
+
     <h2 class="mb-4">Récapitulatif de votre réservation</h2>
 
     <fieldset {{! !$canBeModified ? 'disabled' : '' !}}>
@@ -329,8 +329,8 @@ $checkoutIntentId = $_GET['checkoutIntentId'] ?? null;
         </div>
         <br>
     </fieldset>
-</div>
 {% endif %}
+</div>
 
 <script src="/assets/js/reservation/reservation_common.js" defer></script>
 <script src="/assets/js/reservation/reservation_modif_data.js" defer></script>

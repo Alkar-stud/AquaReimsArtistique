@@ -5,9 +5,11 @@ namespace app\Controllers\Reservation;
 
 use app\Attributes\Route;
 use app\Controllers\AbstractController;
+use app\DTO\HelloAssoCartDTO;
 use app\Models\Reservation\Reservation;
 use app\Repository\Reservation\ReservationRepository;
 use app\Repository\Tarif\TarifRepository;
+use app\Services\Payment\PaymentService;
 use app\Services\Reservation\ReservationQueryService;
 use app\Services\Reservation\ReservationUpdateService;
 use app\Services\Tarif\TarifService;
@@ -22,6 +24,7 @@ class ReservationModifDataController extends AbstractController
     private ReservationUpdateService $reservationUpdateService;
     private TarifRepository $tarifRepository;
     private TarifService $tarifService;
+    private PaymentService $paymentService;
 
     public function __construct(
         ReservationRepository $reservationRepository,
@@ -29,6 +32,7 @@ class ReservationModifDataController extends AbstractController
         ReservationUpdateService $reservationUpdateService,
         TarifRepository $tarifRepository,
         TarifService $tarifService,
+        PaymentService $paymentService,
     )
     {
         parent::__construct(true); // route publique
@@ -37,6 +41,7 @@ class ReservationModifDataController extends AbstractController
         $this->reservationUpdateService = $reservationUpdateService;
         $this->tarifRepository = $tarifRepository;
         $this->tarifService = $tarifService;
+        $this->paymentService = $paymentService;
     }
 
     /**
@@ -115,7 +120,7 @@ class ReservationModifDataController extends AbstractController
         $action = $data['action'] ?? null;
 
         //On vérifie si le token existe bien et peut être modifiable
-        $reservation = $this->getTokenVerifyItAndGetReservation($reservationToken);
+        $reservation = $this->getTokenToVerifyItAndGetReservation($reservationToken);
 
         if ($typeField == 'contact') {
             try {
@@ -181,7 +186,7 @@ class ReservationModifDataController extends AbstractController
         $code = trim($input['code'] ?? '');
 
         //On vérifie si le token existe bien et peut être modifiable
-        $reservation = $this->getTokenVerifyItAndGetReservation($reservationToken);
+        $reservation = $this->getTokenToVerifyItAndGetReservation($reservationToken);
 
         //On va chercher le tarif correspondant s'il y en a un
         $result = $this->tarifService->validateSpecialCode($reservation->getEvent(), $code, false);
@@ -207,15 +212,45 @@ class ReservationModifDataController extends AbstractController
         ]);
     }
 
+    /**
+     * Crée une intention de paiement pour le solde restant d'une réservation.
+     */
+    #[Route('/modifData/createPayment', name: 'app_reservation_create_payment_balance', methods: ['POST'])]
+    public function createPaymentForBalance(): void
+    {
+        $input = json_decode(file_get_contents('php://input'), true);
+        $reservationToken = trim($input['token'] ?? '');
+        $amountToPay = (int)($input['amountToPay'] ?? 0); // Montant total à régler en centimes
+        $containsDonation = (bool)($input['containsDonation'] ?? false);
+
+        //On vérifie si le token existe bien et peut être modifiable, c'est pour le paiement, on ajoute 6h de marge.
+        $reservation = $this->getTokenToVerifyItAndGetReservation($reservationToken, 6);
+
+        if ($amountToPay <= 0) {
+            $this->json(['success' => false, 'message' => 'Le montant à payer doit être positif.']);
+        }
+
+        // Préparer le panier (DTO) en utilisant la nouvelle méthode du PaymentService
+        $cartDTO = $this->paymentService->prepareCheckOutDataForBalance($reservation, $amountToPay, $containsDonation);
+
+        // Créer l'intention de paiement en utilisant la méthode existante du PaymentService
+        $result = $this->paymentService->createPaymentIntent($cartDTO);
+
+        // Renvoyer la réponse JSON au front-end
+        $this->json($result);
+    }
+
 
     /**
-     * Pour vérifier si le token existe et qu'il n'est pas expiré pour retourner la réservation
+     * Pour vérifier si le token existe et non expiré pour retourner la réservation
+     * Retour JSON fait si false, sinon retourne Reservation.
+     *
      * @param string $token
+     * @param int $extraMargin => durée en heures pour permettre de payer même si la modification n'est plus autorisée
      * @return Reservation|null
      */
-    private function getTokenVerifyItAndGetReservation(string $token): ?Reservation
+    private function getTokenToVerifyItAndGetReservation(string $token, int $extraMargin = 0): ?Reservation
     {
-
         //Si pas de token
         if (!$token || !ctype_alnum($token)) {
             $this->json(['success' => false, 'message' => 'Modification non autorisée.']);

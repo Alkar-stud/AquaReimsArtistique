@@ -44,9 +44,8 @@ class PaymentRecordService
             return null;
         }
 
-
         if ($context === 'new_reservation') { $typePayment = 'new'; }
-        else if ($orderData->metadata->context == 'balance_payment') { $typePayment = 'add'; }
+        else if ($context == 'balance_payment') { $typePayment = 'add'; }
         else { $typePayment = 'other'; }
 
         $payment = new ReservationPayment();
@@ -76,7 +75,13 @@ class PaymentRecordService
                 $newTotalPaid = $reservation->getTotalAmountPaid() + $payment->getAmountPaid();
             }
 
-            $this->reservationRepository->updateSingleField($reservationId, 'total_amount_paid', $newTotalPaid);
+            $reservation->setTotalAmountPaid($newTotalPaid);
+            //Ajout donc on doit vérifier de nouveau la commande
+            $reservation->setIsChecked(false);
+
+            $this->reservationRepository->update($reservation);
+
+            //$this->reservationRepository->updateSingleField($reservationId, 'total_amount_paid', $newTotalPaid);
         }
 
         $id = $this->paymentRepository->insert($payment);

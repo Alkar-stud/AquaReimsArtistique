@@ -17,6 +17,7 @@ CREATE TABLE IF NOT EXISTS `reservation` (
     `token` CHAR(64) NOT NULL,
     `token_expire_at` DATETIME NOT NULL,
     `is_canceled` TINYINT(1) NOT NULL DEFAULT '0',
+    `is_checked` TINYINT(1) NOT NULL DEFAULT '0',
     `comments` LONGTEXT NULL,
     `created_at` DATETIME NOT NULL,
     `updated_at` DATETIME NULL

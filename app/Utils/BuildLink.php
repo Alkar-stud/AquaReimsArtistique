@@ -5,7 +5,7 @@ namespace app\Utils;
 class BuildLink
 {
     /**
-     * Construit un lien à l'aide d'une URL et d'un token
+     * Construit un lien à l'aide d'une URL et d'un token (optionnel)
      * @param string $url
      * @param string $token
      * @return string

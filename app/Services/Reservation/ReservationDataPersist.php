@@ -26,7 +26,7 @@ use app\Services\Payment\PaymentRecordService;
 use app\Services\Security\TokenGenerateService;
 use app\Services\UploadService;
 use DateTime;
-use SleekDB\Exceptions\InvalidArgumentException;
+use RuntimeException;
 use Throwable;
 
 readonly class ReservationDataPersist
@@ -123,7 +123,6 @@ readonly class ReservationDataPersist
             $this->reservationSessionService->setReservationSession(['reservation_complement', $key, 'tarif_id'], $dto->tarif_id);
             $this->reservationSessionService->setReservationSession(['reservation_complement', $key, 'qty'], $dto->qty);
             $this->reservationSessionService->setReservationSession(['reservation_complement', $key, 'tarif_access_code'], $dto->tarif_access_code);
-            return;
         }
 
     }
@@ -149,12 +148,12 @@ readonly class ReservationDataPersist
             // Réservation principale
             $reservation = $this->createMainReservationObject($tempReservation, $paymentData);
             if (!$reservation) {
-                throw new \RuntimeException('Réservation invalide.');
+                throw new RuntimeException('Réservation invalide.');
             }
 
             $newReservationId = $reservation->getId();
             if ($newReservationId <= 0) {
-                throw new \RuntimeException('Échec insertion réservation.');
+                throw new RuntimeException('Échec insertion réservation.');
             }
 
             // Détails + compléments (échec ⇛ exception ⇛ rollback)
@@ -171,7 +170,7 @@ readonly class ReservationDataPersist
             }
 
             // Envoyer l'email de confirmation et enregistrer l'envoi
-            $this->mailService->sendAndRecordEmail($reservation, 'paiement_confirme');
+            $this->mailService->recordMailSent($reservation, 'paiement_confirme');
 
             // Nettoyer les données temporaires
             $this->cleanupTemporaryData($tempReservation);
@@ -282,7 +281,7 @@ readonly class ReservationDataPersist
 
                 $id = $this->reservationDetailRepository->insert($detail);
                 if ($id <= 0) {
-                    throw new \RuntimeException('Échec insertion détail.');
+                    throw new RuntimeException('Échec insertion détail.');
                 }
             }
         }
@@ -296,7 +295,7 @@ readonly class ReservationDataPersist
 
             $id = $this->reservationsComplementsRepository->insert($complement);
             if ($id <= 0) {
-                throw new \RuntimeException('Échec insertion complément.');
+                throw new RuntimeException('Échec insertion complément.');
             }
         }
     }
@@ -318,7 +317,7 @@ readonly class ReservationDataPersist
 
         $primaryId = (string) $tempReservation['primary_id'];
 
-        //Tant qu'on utilise SleekDB on ne supprime pas, car l'ID dépend du nombre de document dans le dossier
+        //Tant qu'on utilise SleekDB, on ne supprime pas, car l'ID dépend du nombre de documents dans le dossier
         //$this->reservationTempWriter->deleteReservation($primaryId);
         $userSessionId = $tempReservation['php_session_id'] ?? session_id();
         if ($userSessionId) {

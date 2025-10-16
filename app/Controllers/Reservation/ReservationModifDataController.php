@@ -65,7 +65,7 @@ class ReservationModifDataController extends AbstractController
         $canBeModified = $this->reservationQueryService->checkIfReservationCanBeModified($reservation);
 
         if (!$canBeModified) {
-            $this->flashMessageService->setFlashMessage('danger', 'La modification n\'est plus possible.');
+            $this->flashMessageService->setFlashMessage('danger', $reservation->isCanceled() ? 'La commande est annulée.' : 'La modification n\'est plus possible.');
         }
 
         //On prépare les détails et les compléments pour la vue

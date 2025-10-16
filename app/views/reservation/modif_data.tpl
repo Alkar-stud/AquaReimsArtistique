@@ -31,10 +31,6 @@ $checkoutIntentId = $_GET['checkoutIntentId'] ?? null;
 >
     <h2 class="mb-4">Récapitulatif de votre réservation</h2>
 
-    {% if !$canBeModified %}
-    <div class="alert alert-warning"><b>La modification n'est plus possible.</b></div>
-    {% endif %}
-
     <fieldset {{! !$canBeModified ? 'disabled' : '' !}}>
         <legend class="fs-5">Numéro d'enregistrement : <b>{{ $reservation->getId() }}</b></legend>
         {% if ($reservation->getTokenExpireAt()) %}

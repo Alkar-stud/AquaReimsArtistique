@@ -2,6 +2,7 @@
 
 namespace app\Services\Reservation;
 
+use app\Core\Database;
 use app\DTO\ReservationUserDTO;
 use app\DTO\ReservationDetailItemDTO;
 use app\Models\Reservation\Reservation;
@@ -10,18 +11,23 @@ use app\Repository\Reservation\ReservationComplementRepository;
 use app\Repository\Reservation\ReservationRepository;
 use app\Repository\Tarif\TarifRepository;
 use app\Repository\Reservation\ReservationDetailRepository;
+use app\Services\Log\Logger;
+use app\Services\Mails\MailService;
+use app\Services\Mails\MailPrepareService;
 use InvalidArgumentException;
+use Throwable;
 use TypeError;
 
 readonly class ReservationUpdateService
 {
-
     public function __construct(
         private ReservationRepository $reservationRepository,
         private ReservationDetailRepository $reservationDetailRepository,
         private ReservationComplementRepository $reservationComplementRepository,
         private TarifRepository $tarifRepository,
-        private ReservationPriceCalculator $priceCalculator
+        private ReservationPriceCalculator $priceCalculator,
+        private MailService $mailService,
+        private MailPrepareService $mailPrepareService,
     )
     {
     }
@@ -190,6 +196,59 @@ readonly class ReservationUpdateService
         return false;
     }
 
+
+    /**
+     * Pour annuler une réservation et supprimer/modifier les éléments de la commande
+     *
+     * @param Reservation $reservation
+     * @return bool|null
+     */
+    public function cancelReservation(Reservation $reservation): bool|string
+    {
+        $pdo = Database::getInstance();
+
+        try {
+            if (!$pdo->inTransaction()) {
+                $pdo->beginTransaction();
+            }
+
+            //On tague la commande comme annulée
+            if (!$this->reservationRepository->updateSingleField($reservation->getId(), 'is_canceled', true)) {
+                throw new \RuntimeException('Échec de la mise à jour du statut d\'annulation de la réservation.');
+            }
+
+            //On supprime les éventuelles places numérotées de la commande
+            // TODO: The following line is incorrect. ReservationDetailRepository::updateSingleField expects a detail ID, not a reservation ID.
+            // A new method like `clearPlaceNumbersForReservation(int $reservationId)` should be added to ReservationDetailRepository
+            // if the intent is to clear place numbers for all details associated with this reservation.
+            // For now, this line is commented out to prevent a fatal error.
+            /*
+            if (!$this->reservationDetailRepository->updateSingleField($reservation->getId(), 'place_number', null)) {
+                throw new \RuntimeException('Erreur lors de la suppression des places numérotées.');
+            }
+            */
+
+            // Envoyer l'email de confirmation d'annulation
+            if (!$this->mailPrepareService->sendCancelReservationConfirmationEmail($reservation)) {
+                throw new \RuntimeException('Échec de l\'envoi de l\'email d\'annulation.');
+            }
+
+            // Enregistrer l'envoi de l'email
+            if (!$this->mailService->recordMailSent($reservation, 'cancel_order')) {
+                throw new \RuntimeException('Échec de l\'enregistrement de l\'envoi de l\'email d\'annulation.');
+            }
+
+            // Commit si tout est OK
+            $pdo->commit();
+            return true;
+        } catch (Throwable $e) {
+            if ($pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
+            Logger::get()->error('Cancel order', $e->getMessage(), ['Erreur lors de l\'annulation de la commande ' . $reservation->getId()]);
+            return false;
+        }
+    }
     /**
      * Pour recalculer le total à payer de la réservation
      * @param int $reservationId

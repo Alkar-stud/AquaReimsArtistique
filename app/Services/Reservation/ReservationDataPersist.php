@@ -21,6 +21,7 @@ use app\Repository\Reservation\ReservationPlaceTempRepository;
 use app\Repository\Reservation\ReservationRepository;
 use app\Services\Log\Logger;
 use app\Services\Mails\MailPrepareService;
+use app\Services\Mails\MailService;
 use app\Services\Payment\PaymentRecordService;
 use app\Services\Security\TokenGenerateService;
 use app\Services\UploadService;
@@ -42,6 +43,7 @@ readonly class ReservationDataPersist
     private ReservationPlaceTempRepository $reservationPlaceTempRepository;
     private ReservationTempWriter $reservationTempWriter;
     private UploadService $uploadService;
+    private MailService $mailService;
 
     public function __construct(
         ReservationSessionService $reservationSessionService,
@@ -56,6 +58,7 @@ readonly class ReservationDataPersist
         ReservationPlaceTempRepository $reservationPlaceTempRepository,
         ReservationTempWriter $reservationTempWriter,
         UploadService $uploadService,
+        MailService $mailService,
     ) {
         $this->reservationSessionService = $reservationSessionService;
         $this->tokenGenerateService = $tokenGenerateService;
@@ -69,6 +72,7 @@ readonly class ReservationDataPersist
         $this->reservationPlaceTempRepository = $reservationPlaceTempRepository;
         $this->reservationTempWriter = $reservationTempWriter;
         $this->uploadService = $uploadService;
+        $this->mailService = $mailService;
     }
 
     /**
@@ -167,7 +171,7 @@ readonly class ReservationDataPersist
             }
 
             // Envoyer l'email de confirmation et enregistrer l'envoi
-            $this->sendAndRecordConfirmationEmail($reservation, 'paiement_confirme');
+            $this->mailService->sendAndRecordEmail($reservation, 'paiement_confirme');
 
             // Nettoyer les données temporaires
             $this->cleanupTemporaryData($tempReservation);
@@ -296,35 +300,6 @@ readonly class ReservationDataPersist
             }
         }
     }
-
-    /**
-     * Envoie l'email de confirmation et enregistre l'envoi.
-     *
-     * @param Reservation $reservation
-     * @param string $templateMailCode
-     */
-    public function sendAndRecordConfirmationEmail(Reservation $reservation, string $templateMailCode): void
-    {
-        $mailPrepareService = new MailPrepareService();
-        if ($mailPrepareService->sendReservationConfirmationEmail($reservation)) {
-            $mailTemplateRepository = new MailTemplateRepository();
-            $template = $mailTemplateRepository->findByCode('paiement_confirme');
-            if ($template) {
-                $mailSentRepository = new ReservationMailSentRepository();
-                $mailSentRecord = new ReservationMailSent();
-                $mailSentRecord->setReservation($reservation->getId())
-                    ->setMailTemplate($template->getId())
-                    ->setSentAt(date('Y-m-d H:i:s'));
-                $id = $mailSentRepository->insert($mailSentRecord);
-                if ($id <= 0) {
-                    throw new \RuntimeException('Échec insertion mail.');
-                }
-            }
-        } else {
-            error_log("Failed to send initial confirmation email for reservation ID: " . $reservation->getId());
-        }
-    }
-
 
     /**
      * Nettoie les données temporaires (NoSQL et MySQL).

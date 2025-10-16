@@ -2,6 +2,10 @@
 
 namespace app\Services\Mails;
 
+use app\Models\Reservation\Reservation;
+use app\Models\Reservation\ReservationMailSent;
+use app\Repository\Mail\MailTemplateRepository;
+use app\Repository\Reservation\ReservationMailSentRepository;
 use app\Services\Log\Logger;
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;
@@ -12,6 +16,8 @@ class MailService
     private PHPMailer $mailer;
     private bool $logOnly;
     private bool $debug;
+    private MailTemplateRepository $mailTemplateRepository;
+    private ReservationMailSentRepository $reservationMailSentRepository;
 
     /**
      * Transport SMTP + log.
@@ -19,8 +25,13 @@ class MailService
      * - debug si MAIL_DEBUG='true' -> log en plus de l'envoi (et SMTPDebug).
      * @throws Exception
      */
-    public function __construct()
+    public function __construct(
+        MailTemplateRepository $mailTemplateRepository = new MailTemplateRepository(),
+        ReservationMailSentRepository $reservationMailSentRepository = new ReservationMailSentRepository()
+    )
     {
+        $this->mailTemplateRepository = $mailTemplateRepository;
+        $this->reservationMailSentRepository = $reservationMailSentRepository;
         $this->logOnly = (($_ENV['MAIL_MAILER'] ?? '') === 'log');
         $this->debug = (($_ENV['MAIL_DEBUG'] ?? 'false') === 'true');
 
@@ -104,6 +115,47 @@ class MailService
             $logger->info('mail', 'log_only', $context);
         } else {
             $logger->debug('mail', 'prepared', $context);
+        }
+    }
+
+    /**
+     * Enregistre l'envoi d'un email pour une réservation.
+     *
+     * @param Reservation $reservation
+     * @param string $templateMailCode
+     * @return bool True si l'enregistrement a réussi, false sinon.
+     */
+    public function recordMailSent(Reservation $reservation, string $templateMailCode): bool
+    {
+        $template = $this->mailTemplateRepository->findByCode($templateMailCode);
+        if (!$template) {
+            Logger::get()->warning('mail', 'record_failure', [
+                'message' => 'Mail template not found for recording.',
+                'reservation_id' => $reservation->getId(),
+                'template_code' => $templateMailCode
+            ]);
+            return false;
+        }
+
+        $mailSentRecord = new ReservationMailSent();
+        $mailSentRecord->setReservation($reservation->getId())
+            ->setMailTemplate($template->getId())
+            ->setSentAt(date('Y-m-d H:i:s'));
+
+        try {
+            $id = $this->reservationMailSentRepository->insert($mailSentRecord);
+            if ($id <= 0) {
+                throw new \RuntimeException('Échec insertion mail sent record.');
+            }
+            return true;
+        } catch (\Exception $e) {
+            Logger::get()->error('mail', 'record_failure', [
+                'message' => 'Failed to insert mail sent record.',
+                'reservation_id' => $reservation->getId(),
+                'template_code' => $templateMailCode,
+                'error' => $e->getMessage()
+            ]);
+            return false;
         }
     }
 }

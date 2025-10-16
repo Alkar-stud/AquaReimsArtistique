@@ -246,7 +246,7 @@ class ReservationRepository extends AbstractRepository
      */
     public function updateSingleField(int $id, string $field, ?string $value): bool
     {
-        $allowed = ['name', 'firstname', 'email', 'phone', 'total_amount', 'total_amount_paid'];
+        $allowed = ['name', 'firstname', 'email', 'phone', 'total_amount', 'total_amount_paid', 'is_canceled'];
         if (!in_array($field, $allowed, true)) return false;
 
         if ($field === 'phone' && $value === '') $value = null;

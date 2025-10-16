@@ -159,6 +159,15 @@ class ReservationModifDataController extends AbstractController
             } catch (InvalidArgumentException $e) {
                 $return = ['success' => false, 'message' => $e->getMessage()];
             }
+        } elseif ($typeField == 'cancel') {
+            $success = $this->reservationUpdateService->cancelReservation($reservation);
+            $return = [
+                'success' => $success,
+                'message' => $success ? 'Commande annulée.' : 'Erreur lors de l\'annulation.',
+                'reload' => $success
+            ];
+        } else {
+            $return = ['success' => false, 'message' => 'La mise à jour a échoué.'];
         }
 
         $this->json($return);

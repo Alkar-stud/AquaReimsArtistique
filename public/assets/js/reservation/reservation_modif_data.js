@@ -293,13 +293,12 @@ document.addEventListener('DOMContentLoaded', function () {
             apiPost('/modifData/add-code', data)
                 .then(result => {
                     if (result.success) {
-                        // Si le backend demande un rechargement (ce qui est le plus simple
-                        // après l'ajout d'un article), on le fait.
+                        // Si le backend demande un rechargement, on le fait.
                         if (result.reload) {
                             scrollManager.savePosition(); // Sauvegarde de la position avant de recharger
                             window.location.reload();
                         } else {
-                            // Alternative si vous ne voulez pas recharger (plus complexe)
+                            // Alternative sans recharger
                             specialCodeFeedback.classList.remove('text-danger');
                             specialCodeFeedback.classList.add('text-success');
                             specialCodeFeedback.textContent = 'Article ajouté avec succès !';
@@ -326,6 +325,25 @@ document.addEventListener('DOMContentLoaded', function () {
                 });
         });
     }
+
+    // --- Gestion de l'annulation de la réservation ---
+    const cancelBtn = document.querySelector('.cancel-button');
+    if (cancelBtn) {
+        cancelBtn.addEventListener('click', function() {
+            if (confirm("Êtes-vous sûr de vouloir annuler cette réservation ?\nCette action est irréversible.")) {
+                if (confirm("Êtes-vous toujours sûr ?\n Vous ne pourrez prétendre à aucun remboursement !")) {
+                    const data = {
+                        typeField: 'cancel',
+                        token: reservationToken
+                    };
+
+                    updateField(null, data);
+                }
+            }
+        });
+    }
+
+
 
 
 

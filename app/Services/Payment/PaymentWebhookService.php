@@ -49,7 +49,7 @@ class PaymentWebhookService
         } elseif ($context === 'balance_payment') {
             $reservationIdSql = $payload->metadata->primaryId ?? null;
             if ($reservationIdSql) {
-                //$this->reservationProcessService->processAndPersistReservationComplement($orderData, $reservationIdSql, $context);
+                $this->reservationProcessService->processAndPersistReservationComplement($orderData, $reservationIdSql, $context);
             } else {
                 error_log("Webhook 'balance_payment' reçu sans primaryId (SQL) dans les metadata.");
             }

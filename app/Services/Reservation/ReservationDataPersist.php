@@ -9,18 +9,14 @@ use app\DTO\ReservationComplementItemDTO;
 use app\Models\Reservation\Reservation;
 use app\Models\Reservation\ReservationComplement;
 use app\Models\Reservation\ReservationDetail;
-use app\Models\Reservation\ReservationMailSent;
 use app\Repository\Event\EventRepository;
 use app\Repository\Event\EventSessionRepository;
-use app\Repository\Mail\MailTemplateRepository;
 use app\Repository\Reservation\ReservationComplementRepository;
 use app\Repository\Reservation\ReservationDetailRepository;
-use app\Repository\Reservation\ReservationMailSentRepository;
 use app\Repository\Reservation\ReservationPaymentRepository;
 use app\Repository\Reservation\ReservationPlaceTempRepository;
 use app\Repository\Reservation\ReservationRepository;
 use app\Services\Log\Logger;
-use app\Services\Mails\MailPrepareService;
 use app\Services\Mails\MailService;
 use app\Services\Payment\PaymentRecordService;
 use app\Services\Security\TokenGenerateService;
@@ -41,7 +37,6 @@ readonly class ReservationDataPersist
     private EventSessionRepository $eventSessionRepository;
     private ReservationPaymentRepository $reservationPaymentRepository;
     private ReservationPlaceTempRepository $reservationPlaceTempRepository;
-    private ReservationTempWriter $reservationTempWriter;
     private UploadService $uploadService;
     private MailService $mailService;
 
@@ -70,7 +65,6 @@ readonly class ReservationDataPersist
         $this->eventSessionRepository = $eventSessionRepository;
         $this->reservationPaymentRepository = $reservationPaymentRepository;
         $this->reservationPlaceTempRepository = $reservationPlaceTempRepository;
-        $this->reservationTempWriter = $reservationTempWriter;
         $this->uploadService = $uploadService;
         $this->mailService = $mailService;
     }

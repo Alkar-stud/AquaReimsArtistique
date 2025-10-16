@@ -218,15 +218,9 @@ readonly class ReservationUpdateService
             }
 
             //On supprime les éventuelles places numérotées de la commande
-            // TODO: The following line is incorrect. ReservationDetailRepository::updateSingleField expects a detail ID, not a reservation ID.
-            // A new method like `clearPlaceNumbersForReservation(int $reservationId)` should be added to ReservationDetailRepository
-            // if the intent is to clear place numbers for all details associated with this reservation.
-            // For now, this line is commented out to prevent a fatal error.
-            /*
             if (!$this->reservationDetailRepository->updateSingleField($reservation->getId(), 'place_number', null)) {
                 throw new \RuntimeException('Erreur lors de la suppression des places numérotées.');
             }
-            */
 
             // Envoyer l'email de confirmation d'annulation
             if (!$this->mailPrepareService->sendCancelReservationConfirmationEmail($reservation)) {

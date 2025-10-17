@@ -9,12 +9,6 @@
     </ul>
     {% endif %}
 
-    {% if $flash_message %}
-    <div class="alert alert-{{ $flash_message['type'] ?? 'info' }}">
-        {{ $flash_message['message'] ?? '' }}
-    </div>
-    {% endif %}
-
     <form action="/reset-password-submit" method="POST" class="mb-3">
         <input type="hidden" name="csrf_token" value="{{ $csrf_token ?? '' }}">
         <input type="hidden" name="token" value="{{ $token ?? '' }}">

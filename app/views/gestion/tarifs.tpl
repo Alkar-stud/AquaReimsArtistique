@@ -1,8 +1,3 @@
-{% if $flash_message %}
-<div class="alert alert-{{ $flash_message['type'] ?? 'danger' }}">
-    {{ $flash_message['message'] ?? '' }}
-</div>
-{% endif %}
 <div class="container-fluid">
     <h2 class="mb-4">Gestion des tarifs</h2>
     <ul class="nav nav-tabs mb-3" id="tarifTabs">

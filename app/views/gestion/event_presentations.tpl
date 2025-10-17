@@ -1,9 +1,3 @@
-{% if $flash_message %}
-<div class="alert alert-{{ $flash_message['type'] ?? 'danger' }}">
-    {{ $flash_message['message'] ?? '' }}
-</div>
-{% endif %}
-
 <div class="container-fluid">
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h2>Gestion de la page d'accueil</h2>

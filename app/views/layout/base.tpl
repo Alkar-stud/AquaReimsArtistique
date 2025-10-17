@@ -30,7 +30,14 @@
 >
 {% include 'header.tpl' %}
 <main id="main-page" class="flex-grow-1">
+    {% if $flash_message %}
+    <div class="alert alert-{{ $flash_message['type'] ?? 'danger' }}" id="ajax_flash_container">
+        {{ $flash_message['message'] ?? '' }}
+    </div>
+    {% endif %}
+
     {{! $content !}}
+
 </main>
 
 {% include 'footer.tpl' %}

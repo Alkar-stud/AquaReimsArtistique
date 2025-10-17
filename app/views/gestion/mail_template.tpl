@@ -1,9 +1,3 @@
-{% if $flash_message %}
-<div class="alert alert-{{ $flash_message['type'] ?? 'danger' }}">
-    {{ $flash_message['message'] ?? '' }}
-</div>
-{% endif %}
-
 <div class="container">
     <h2>Gestion des templates de mails</h2>
     <table class="table table-bordered align-middle">

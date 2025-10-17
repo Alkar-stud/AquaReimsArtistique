@@ -1,9 +1,3 @@
-{% if $flash_message %}
-<div class="alert alert-{{ $flash_message['type'] ?? 'danger' }}">
-    {{ $flash_message['message'] ?? '' }}
-</div>
-{% endif %}
-
 <div class="container-fluid">
     <h2 class="mb-4">Mon compte</h2>
     {% if $_SESSION['user']['role']['level'] > 0 %}

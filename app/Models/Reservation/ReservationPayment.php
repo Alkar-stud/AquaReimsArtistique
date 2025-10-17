@@ -2,6 +2,8 @@
 namespace app\Models\Reservation;
 
 use app\Models\AbstractModel;
+use DateTime;
+use DateTimeInterface;
 
 class ReservationPayment extends AbstractModel
 {
@@ -41,4 +43,21 @@ class ReservationPayment extends AbstractModel
     public function setOrderId(int $order_id): self { $this->order_id = $order_id; return $this; }
     public function setPaymentId(int $payment_id): self { $this->payment_id = $payment_id; return $this; }
     public function setStatusPayment(?string $status_payment): self { $this->status_payment = $status_payment; return $this; }
+
+    /**
+     * Convertit l'objet en tableau pour la réponse JSON.
+     * @return array
+     */
+    public function toArray(): array
+    {
+        return [
+            'id' => $this->getId(),
+            'type' => $this->getType(),
+            'amountPaid' => $this->getAmountPaid(),
+            'partOfDonation' => $this->getPartOfDonation(),
+            'status' => $this->getStatusPayment(),
+            'createdAt' => $this->getCreatedAt()?->format(DateTimeInterface::ATOM),
+        ];
+    }
+
 }

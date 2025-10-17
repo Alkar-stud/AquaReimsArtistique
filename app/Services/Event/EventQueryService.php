@@ -37,6 +37,7 @@ class EventQueryService
     /**
      * Récupère tous les événements avec leurs relations chargées
      *
+     * @param bool|null $isUpComing
      * @return Event[]
      */
     public function getAllEventsWithRelations(?bool $isUpComing = null): array
@@ -53,7 +54,7 @@ class EventQueryService
         }
         $eventIds = array_keys($eventsById);
 
-        // Récupérer toutes les relations en une seule fois (Eager Loading manuel)
+        // Récupérer toutes les relations en une seule fois
         $piscineIds = array_map(fn(Event $e) => $e->getPlace(), $events);
         $piscines = $this->piscineRepository->findByIds(array_unique($piscineIds));
         $piscinesById = [];

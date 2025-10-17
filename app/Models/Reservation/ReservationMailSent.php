@@ -49,4 +49,19 @@ class ReservationMailSent extends AbstractModel
         $this->sent_at = new DateTime($sent_at);
         return $this;
     }
+
+    /**
+     * Convertit l'objet en tableau pour la réponse JSON.
+     * @return array
+     */
+    public function toArray(): array
+    {
+        return [
+            'id' => $this->getId(),
+            'mailTemplateId' => $this->getMailTemplate(),
+            'mailTemplateName' => $this->getMailTemplateObject()?->getCode(),
+            'sentAt' => $this->getSentAt()->format(DateTime::ATOM), // ISO 8601
+        ];
+    }
+
 }

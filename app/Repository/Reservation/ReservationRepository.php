@@ -1,6 +1,7 @@
 <?php
 namespace app\Repository\Reservation;
 
+use app\Core\Paginator;
 use app\Models\Reservation\Reservation;
 use app\Repository\AbstractRepository;
 use app\Repository\Event\EventRepository;
@@ -98,20 +99,39 @@ class ReservationRepository extends AbstractRepository
     /**
      * Retourne toutes les réservations actives d'une session
      * @param int $sessionId
+     * @param bool|null $isCanceled : null on prend tout, puis is_canceled true ou false
+     * @param bool|null $isChecked
      * @param int|null $limit
      * @param int|null $offset
      * @param bool $withEvent
      * @param bool $withChildren
      * @return Reservation[]
      */
-    public function findActiveBySession(
+    public function findBySession(
         int $sessionId,
+        ?bool $isCanceled = false,
+        ?bool $isChecked = false,
         ?int $limit = null,
         ?int $offset = null,
         bool $withEvent = false,
         bool $withChildren = true
     ): array {
-        $sql = "SELECT * FROM $this->tableName WHERE event_session = :sessionId AND is_canceled = 0 ORDER BY created_at";
+        if ($isCanceled === true) {
+            $searchCanceled = ' AND is_canceled = 1';
+        } elseif ($isCanceled === false) {
+            $searchCanceled = ' AND is_canceled = 0';
+        } else {
+            $searchCanceled = '';
+        }
+
+        if ($isChecked === true) {
+            $searchChecked = ' AND is_checked = 1';
+        } elseif ($isChecked === false) {
+            $searchChecked = ' AND is_checked = 0';
+        } else {
+            $searchChecked = '';
+        }
+        $sql = "SELECT * FROM $this->tableName WHERE event_session = :sessionId" . $searchCanceled . $searchChecked . " ORDER BY created_at";
         if ($limit !== null && $offset !== null) {
             $sql .= " LIMIT $limit OFFSET $offset";
         }
@@ -124,6 +144,71 @@ class ReservationRepository extends AbstractRepository
         }
 
         return $withChildren ? $this->hydrateRelations($list) : $list;
+    }
+
+    /**
+     * Trouve les réservations pour une session et retourne un objet Paginator.
+     *
+     * @param int $sessionId
+     * @param int $currentPage
+     * @param int $itemsPerPage
+     * @param bool|null $isCanceled
+     * @param bool|null $isChecked
+     * @return Paginator
+     */
+    public function findBySessionPaginated(int $sessionId, int $currentPage, int $itemsPerPage, ?bool $isCanceled = false, ?bool $isChecked = false): Paginator
+    {
+        if ($sessionId <= 0) {
+            return new Paginator([], 0, $itemsPerPage, $currentPage);
+        }
+
+        // Compter le total des items
+        $totalItems = $this->countBySession($sessionId, $isCanceled, $isChecked);
+
+        // Calculer l'offset
+        $offset = ($currentPage - 1) * $itemsPerPage;
+
+        // Récupérer les items pour la page courante
+        $items = $this->findBySession($sessionId, $isCanceled, $isChecked, $itemsPerPage, $offset);
+
+        return new Paginator($items, $totalItems, $itemsPerPage, $currentPage);
+    }
+
+    /**
+     * Compte le nombre total de réservations pour une session donnée.
+     *
+     * @param int $sessionId
+     * @param bool|null $isCanceled
+     * @param bool|null $isChecked
+     * @return int
+     */
+    public function countBySession(int $sessionId, ?bool $isCanceled = null, ?bool $isChecked = null): int
+    {
+        if ($sessionId <= 0) {
+            return 0;
+        }
+
+        if ($isCanceled === true) {
+            $searchCanceled = ' AND is_canceled = 1';
+        } elseif ($isCanceled === false) {
+            $searchCanceled = ' AND is_canceled = 0';
+        } else {
+            $searchCanceled = '';
+        }
+
+        if ($isChecked === true) {
+            $searchChecked = ' AND is_checked = 1';
+        } elseif ($isChecked === false) {
+            $searchChecked = ' AND is_checked = 0';
+        } else {
+            $searchChecked = '';
+        }
+
+        $sql = "SELECT COUNT(id) as total FROM $this->tableName WHERE event_session = :sessionId" . $searchCanceled . $searchChecked;
+
+        $result = $this->query($sql, ['sessionId' => $sessionId]);
+
+        return $result[0]['total'] ?? 0;
     }
 
     /**

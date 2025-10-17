@@ -120,4 +120,42 @@ class Reservation extends AbstractModel
     public function setComplements(array $complements): self { $this->complements = $complements; return $this; }
     public function setPayments(array $payments): self { $this->payments = $payments; return $this; }
     public function setMailSent(array $mailSent): self { $this->mailSent = $mailSent; return $this; }
+
+
+    /**
+     * Convertit l'objet en tableau pour la réponse JSON.
+     * @return array
+     */
+    public function toArray(): array
+    {
+        $eventObject = $this->getEventObject();
+        $eventSessionObject = $this->getEventSessionObject();
+
+        return [
+            'id' => $this->getId(),
+            'reservationTempId' => $this->getReservationTempId(),
+            'name' => $this->getName(),
+            'firstName' => $this->getFirstName(),
+            'email' => $this->getEmail(),
+            'phone' => $this->getPhone(),
+            'totalAmount' => $this->getTotalAmount(),
+            'totalAmountPaid' => $this->getTotalAmountPaid(),
+            'isCanceled' => $this->isCanceled(),
+            'isChecked' => $this->isChecked(),
+            'comments' => $this->getComments(),
+            'token' => $this->getToken(),
+            'tokenExpireAt' => $this->getTokenExpireAt()?->format(DateTime::ATOM),
+            'event' => $eventObject ? ['id' => $eventObject->getId(), 'name' => $eventObject->getName()] : null,
+            'eventSession' => $eventSessionObject ? ['id' => $eventSessionObject->getId(), 'name' => $eventSessionObject->getSessionName()] : null,
+            'swimmer' => $this->getSwimmer() ? [
+                'id' => $this->getSwimmer()->getId(),
+                'name' => $this->getSwimmer()->getName()
+            ] : null,
+            'details' => array_map(fn($detail) => $detail->toArray(), $this->getDetails()),
+            'complements' => array_map(fn($complement) => $complement->toArray(), $this->getComplements()),
+            'payments' => array_map(fn($payment) => $payment->toArray(), $this->getPayments()),
+            'mailSent' => array_map(fn($mail) => $mail->toArray(), $this->getMailSent()),
+        ];
+    }
+
 }

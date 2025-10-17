@@ -527,6 +527,24 @@ abstract class AbstractController
     }
 
     /**
+     * Pour vérifier si le currentUser a le droit de lire, écrire, supprimer ou juste readonly (ou rien du tout)
+     *
+     * @return string
+     */
+
+    protected function whatCanDoCurrentUser():string
+    {
+        $minRoleLevel = (require __DIR__ . '/../../config/security.php')['reservations_access_level'];
+        $return = $minRoleLevel[$this->currentUser->getRole()->getLevel()] ?? '';
+
+        if (empty($return)) {
+            $this->flashMessageService->setFlashMessage('danger', "Accès refusé");
+            $this->redirect('/gestion');
+        }
+        return $return;
+    }
+
+    /**
      * Redirige vers une url donnée
      *
      * @param string $url

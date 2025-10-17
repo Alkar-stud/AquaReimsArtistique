@@ -54,4 +54,19 @@ class ReservationComplement extends AbstractModel
         $this->qty = $qty;
         return $this;
     }
+
+    /**
+     * Convertit l'objet en tableau pour la réponse JSON.
+     * @return array
+     */
+    public function toArray(): array
+    {
+        return [
+            'id' => $this->getId(),
+            'tarifId' => $this->getTarif(),
+            'tarifName' => $this->getTarifObject()?->getName(),
+            'quantity' => $this->getQty(),
+        ];
+    }
+
 }

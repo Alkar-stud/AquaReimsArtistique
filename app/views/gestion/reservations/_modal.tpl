@@ -1,0 +1,137 @@
+<div class="modal fade" id="reservationDetailModal" tabindex="-1" aria-labelledby="reservationDetailModalLabel" aria-hidden="true" data-is-readonly="{{ $isReadOnly ? 'true' : 'false' }}">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="reservationDetailModalLabel">Détails de la réservation</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="text-center">
+                    <form id="reservationDetailForm">
+                        <input type="hidden" id="modal_reservation_id" name="reservation_id" value="">
+                        <h4>Acheteur</h4>
+                        <div class="row mb-2">
+                            <div class="col-md-6 d-flex align-items-center">
+                                <div class="input-group">
+                                    <span class="input-group-text">Nom</span>
+                                    <input type="text"
+                                           id="modal_contact_name"
+                                           class="form-control editable-contact"
+                                           data-field="name"
+                                           value="" {{ $isReadOnly ? 'disabled' : '' }}
+                                           aria-label="Nom">
+                                    <span class="input-group-text feedback-span"></span>
+                                </div>
+                            </div>
+                            <div class="col-md-6 d-flex align-items-center">
+                                <div class="input-group">
+                                    <span class="input-group-text">Prénom</span>
+                                    <input type="text"
+                                           id="modal_contact_firstname"
+                                           class="form-control editable-contact"
+                                           data-field="firstname"
+                                           value="" {{ $isReadOnly ? 'disabled' : '' }}
+                                           aria-label="Prénom">
+                                    <span class="input-group-text feedback-span"></span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 d-flex align-items-center">
+                                <div class="input-group">
+                                    <span class="input-group-text">Email</span>
+                                    <input type="text"
+                                           id="modal_contact_email"
+                                           class="form-control editable-contact"
+                                           data-field="email"
+                                           value="" {{ $isReadOnly ? 'disabled' : '' }}
+                                           aria-label="Email">
+                                    <span class="input-group-text feedback-span"></span>
+                                </div>
+                            </div>
+                            <div class="col-md-6 d-flex align-items-center">
+                                <div class="input-group">
+                                    <span class="input-group-text">Téléphone</span>
+                                    <input type="tel"
+                                           id="modal_contact_phone"
+                                           class="form-control editable-contact"
+                                           data-field="phone"
+                                           value="" {{ $isReadOnly ? 'disabled' : '' }}
+                                           aria-label="Téléphone"
+                                           placeholder="Facultatif">
+                                    <span class="input-group-text feedback-span"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <hr class="my-4">
+                        <!-- section pour le paiement -->
+                        <div id="modal-payment-section">
+                            <h4>Paiements</h4>
+                            <div id="modal-payment-list" class="d-flex justify-content-around text-center p-2 bg-light rounded">
+                                <div>
+                                    <strong>Coût total</strong><br>
+                                    <span id="modal-total-cost">0,00</span> €
+                                </div>
+                                <div>
+                                    <strong>Montant payé</strong><br>
+                                    <span id="modal-amount-paid" class="text-success">0,00</span> €
+                                </div>
+                                <div>
+                                    <strong>Reste à payer</strong><br>
+                                    <span id="modal-amount-due" class="text-danger">0,00</span> €
+                                </div>
+                                <div>
+                                    <strong>Dons</strong><br>
+                                    <span id="modal-don-amount" class="text-info">0,00</span> €
+                                </div>
+                            </div>
+                            <div class="text-end mt-1">
+                                <a href="#" id="toggle-payment-details" class="small" style="display: none;">Voir le détail des paiements</a>
+                            </div>
+                            <div id="modal-payment-details-container" class="mt-2" style="display: none;">
+                                <!-- Les détails des paiements seront injectés ici par JavaScript -->
+                            </div>
+                        </div>
+
+                        <hr class="my-4">
+
+                        <!-- Section pour les participants -->
+                        <div id="modal-participants-section">
+                            <h4>Participants</h4>
+                            <div id="modal-participants-list" class="list-group text-start">
+                                <!-- Le contenu sera injecté ici par JavaScript -->
+                            </div>
+                        </div>
+
+                        <!-- Section pour les compléments -->
+                        <div id="modal-complements-section" class="mt-4" style="display: none;">
+                            <h4>Compléments</h4>
+                            <div id="modal-complements-list" class="list-group text-start">
+                                <!-- Le contenu sera injecté ici par JavaScript -->
+                            </div>
+                        </div>
+
+                    </form>
+                </div>
+            </div>
+
+            <div class="modal-footer justify-content-between">
+                <div>
+                    {% if str_contains($userPermissions, 'D') %}
+                    <button type="button" id="modal-reservation-delete-btn" class="btn btn-danger">Supprimer</button>
+                    {% endif %}
+                    {% if str_contains($userPermissions, 'U') %}
+                    <button type="button" id="modal-reservation-cancel-btn" class="btn btn-warning">Annuler</button>
+                    {% endif %}
+                </div>
+                <div>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+                    {% if str_contains($userPermissions, 'U') %}
+                    <button type="submit" class="btn btn-primary">Enregistrer</button>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

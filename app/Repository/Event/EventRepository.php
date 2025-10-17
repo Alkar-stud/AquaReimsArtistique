@@ -84,6 +84,7 @@ class EventRepository extends AbstractRepository
 
     /**
      * Retourne tous les événements à venir ou passés ordonnés par date de début
+     *
      * @param bool|null $isUpComing
      * @return array
      */

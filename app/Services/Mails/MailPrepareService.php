@@ -144,7 +144,7 @@ readonly class MailPrepareService
         $tpl = $this->templateService->render('paiement_confirme', [
             'name' => $reservation->getName(),
             'token' => $reservation->getToken(),
-            'IDreservation' => $reservation->getId(),
+            'IDreservation' => str_pad($reservation->getId(), 5, '0', STR_PAD_LEFT),
             'EventName' => $reservation->getEventObject()->getName(),
             'DateEvent' => $reservation->getEventSessionObject()->getEventStartAt()->format('d/m/Y H:i'),
             'Piscine' => $reservation->getEventObject()->getPiscine()->getLabel() . ' (' . $reservation->getEventObject()->getPiscine()->getAddress() . ' )',
@@ -183,7 +183,7 @@ readonly class MailPrepareService
     {
 
         $tpl = $this->templateService->render('cancel_order', [
-            'IDreservation' => $reservation->getId(),
+            'IDreservation' => str_pad($reservation->getId(), 5, '0', STR_PAD_LEFT),
             'SIGNATURE' => SIGNATURE,
             'email_club' => defined('EMAIL_CLUB') ? EMAIL_CLUB : '',
         ]);

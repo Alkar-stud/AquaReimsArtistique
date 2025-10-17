@@ -26,7 +26,7 @@ $checkoutIntentId = $_GET['checkoutIntentId'] ?? null;
     <h2 class="mb-4">Récapitulatif de votre réservation</h2>
 
     <fieldset {{! !$canBeModified ? 'disabled' : '' !}}>
-        <legend class="fs-5">Numéro d'enregistrement : <b>{{ $reservation->getId() }}</b></legend>
+        <legend class="fs-5">Numéro d'enregistrement : <b>ARA-{{ str_pad($reservation->getId(), 5, '0', STR_PAD_LEFT) }}</b></legend>
         {% if ($reservation->getTokenExpireAt()) %}
         <p>Modification possible jusqu'au : <u>{{ $reservation->getTokenExpireAt()->format('d/m/Y \à H\hi') }}</u></p>
         {% endif %}

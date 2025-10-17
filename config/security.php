@@ -20,5 +20,12 @@ return [
         'confirm_password',
         'current_password',
         'new_password'
+    ],
+    'reservations_access_level' => [
+        0 => 'CRUD',
+        1 => 'CRUD',
+        2 => 'RU',
+        3 => 'RU',
+        4 => 'R',
     ]
 ];

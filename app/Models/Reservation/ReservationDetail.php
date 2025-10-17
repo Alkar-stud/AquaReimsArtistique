@@ -93,4 +93,26 @@ class ReservationDetail extends AbstractModel
         return $this;
     }
 
+    /**
+     * Convertit l'objet en tableau pour la réponse JSON.
+     * @return array
+     */
+    public function toArray(): array
+    {
+        $tarifObject = $this->getTarifObject();
+        $placeObject = $this->getPlaceObject();
+
+        return [
+            'id' => $this->getId(),
+            'name' => $this->getName(),
+            'firstname' => $this->getFirstName(),
+            'tarifId' => $this->getTarif(),
+            'tarifName' => $tarifObject?->getName(),
+            'tarifDescription' => $tarifObject?->getDescription(),
+            'tarifPrice' => $tarifObject?->getPrice(),
+            'placeNumber' => $this->getPlaceNumber(),
+            'fullPlaceName' => $placeObject?->getFullPlaceName(),
+        ];
+    }
+
 }

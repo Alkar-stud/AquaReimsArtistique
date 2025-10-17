@@ -113,7 +113,7 @@ class TemplateEngine
     {
         // Chemin absolu (à partir de la racine des templates)
         if (str_starts_with($path, '/')) {
-            return __DIR__ . '/../views/templates' . $path;
+            return __DIR__ . '/../views' . $path;
         }
         // Chemin relatif au template courant
         return rtrim($this->baseDir, '/\\') . DIRECTORY_SEPARATOR . $path;

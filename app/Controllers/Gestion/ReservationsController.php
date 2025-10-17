@@ -2,25 +2,100 @@
 
 namespace app\Controllers\Gestion;
 
+use app\Core\Paginator;
 use app\Attributes\Route;
 use app\Controllers\AbstractController;
+use app\Repository\Reservation\ReservationRepository;
+use app\Services\Event\EventQueryService;
+use app\Services\Pagination\PaginationService;
 
 class ReservationsController extends AbstractController
 {
+    private EventQueryService $eventQueryService;
+    private ReservationRepository $reservationRepository;
+    private PaginationService $paginationService;
 
-    function __construct()
+    function __construct(
+        EventQueryService $eventQueryService,
+        ReservationRepository $reservationRepository,
+        PaginationService $paginationService
+    )
     {
         parent::__construct(false);
-
+        $this->eventQueryService = $eventQueryService;
+        $this->reservationRepository = $reservationRepository;
+        $this->paginationService = $paginationService;
     }
 
     #[Route('/gestion/reservations', name: 'app_gestion_reservations')]
-    public function index(?string $search = null): void
+    public function index(): void
     {
-        // Le template de base est une coquille vide.
-        // Le contenu est chargé dynamiquement via les routes 'upcoming' et 'past'.
-        $this->render('/gestion/reservations', [], "Gestion des réservations");
+        //On vérifie si le CurrentUser a le droit de lire, de modifier ou rien du tout
+        $userPermissions = $this->whatCanDoCurrentUser();
+        $isReadOnly = !str_contains($userPermissions, 'U');
+
+        $tab = $_GET['tab'] ?? null;
+        $sessionId = (int)($_GET['s'] ?? 0);
+        $isCancel = isset($_GET['cancel']) && (bool)$_GET['cancel'];
+        $isChecked = isset($_GET['check']) ? (bool)$_GET['check'] : null;
+        $paginationConfig = $this->paginationService->createFromRequest($_GET);
+
+        if ($tab == 'extract') {
+            $events = null;
+        } elseif ($tab == 'past') {
+            //On envoie les galas passés
+            $events = $this->eventQueryService->getAllEventsWithRelations(false);
+        } else {
+            //On envoie les galas à venir
+            $events = $this->eventQueryService->getAllEventsWithRelations(true);
+        }
+
+        $paginator = null;
+        if ($sessionId > 0) {
+            $paginator = $this->reservationRepository->findBySessionPaginated(
+                $sessionId,
+                $paginationConfig->getCurrentPage(),
+                $paginationConfig->getItemsPerPage(),
+                $isCancel,
+                $isChecked
+            );
+        }
+
+        $this->render('/gestion/reservations', [
+            'events' => $events,
+            'selectedSessionId' => $sessionId,
+            'tab' => $tab,
+            'reservations' => $paginator ? $paginator->getItems() : [],
+            'currentPage' => $paginator ? $paginator->getCurrentPage() : 1,
+            'totalPages' => $paginator ? $paginator->getTotalPages() : 0,
+            'itemsPerPage' => $paginationConfig->getItemsPerPage(),
+            'userPermissions' => $userPermissions,
+            'isReadOnly' => $isReadOnly,
+            'isCancel' => $isCancel,                    //Pour les boutons de filtre
+            'isChecked' => $isChecked,                  //Pour les boutons de filtre
+        ], "Gestion des réservations");
     }
 
+
+
+    #[Route('/gestion/reservations/details/{id}', name: 'app_gestion_reservation_details', methods: ['GET'])]
+    public function getReservationDetails(int $id): void
+    {
+        // On vérifie que l'utilisateur a au moins le droit de lecture
+        $userPermissions = $this->whatCanDoCurrentUser();
+        if (!str_contains($userPermissions, 'R')) {
+            $this->json(['error' => 'Accès non autorisé'], 403);
+            return;
+        }
+
+        $reservation = $this->reservationRepository->findById($id, true, true, false, true);
+
+        if (!$reservation) {
+            $this->json(['error' => 'Réservation non trouvée'], 404);
+            return;
+        }
+
+        $this->json($reservation->toArray());
+    }
 
 }

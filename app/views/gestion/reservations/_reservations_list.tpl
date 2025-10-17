@@ -27,27 +27,30 @@
 
 {% if $selectedSessionId > 0 %}
 
-<div class="d-flex justify-content-between align-items-center mb-2">
-    <div class="btn-group" role="group" aria-label="Filtres supplémentaires">
+<div class="d-flex flex-column flex-lg-row justify-content-lg-between align-items-lg-center mb-2">
+    <div class="btn-group w-100 mb-2 mb-lg-0" role="group" aria-label="Filtres supplémentaires">
         {% php %}
         // On prépare les paramètres de base pour les liens
         $baseParams = http_build_query(['tab' => $tab, 's' => $selectedSessionId, 'per_page' => $itemsPerPage]);
         {% endphp %}
         <a href="?{{ $baseParams }}&cancel={{ $isCancel ? 0 : 1 }}{{ !is_null($isChecked) ? '&check=' . (int)$isChecked : '' }}"
            class="btn btn-sm {{ $isCancel ? 'btn-danger' : 'btn-outline-danger' }}">
-            {{ $isCancel ? 'Masquer annulées' : 'Afficher que annulées' }}
+            <i class="bi bi-x-circle-fill"></i>
+            <span class="d-none d-sm-inline ms-1">{{ $isCancel ? 'Masquer' : 'Annulées' }}</span>
         </a>
         <a href="?{{ $baseParams }}&check={{ $isChecked ? 0 : 1 }}{{ !is_null($isCancel) ? '&cancel=' . (int)$isCancel : '' }}"
            class="btn btn-sm {{ $isChecked ? 'btn-info' : 'btn-outline-info' }}">
-            {{ $isChecked ? 'Masquer vérifiées' : 'Afficher que vérifiées' }}
+            <i class="bi bi-check-circle-fill"></i>
+            <span class="d-none d-sm-inline ms-1">{{ $isChecked ? 'Masquer' : 'Vérifiées' }}</span>
         </a>
         <a href="?tab=extract&s={{ $selectedSessionId }}"
            class="btn btn-sm btn-outline-secondary">
-            Exporter les données
+            <i class="bi bi-box-arrow-up"></i>
+            <span class="d-none d-sm-inline ms-1">Exporter</span>
         </a>
     </div>
 
-    <div class="d-flex align-items-center">
+    <div class="d-flex align-items-center w-100 w-lg-auto justify-content-end">
         <label for="items-per-page-selector" class="form-label me-2 mb-0">Afficher :</label>
         <select id="items-per-page-selector" class="form-select form-select-sm" style="width: auto;">
             <option value="10" {{ $itemsPerPage == 10 ? 'selected' : '' }}>10</option>

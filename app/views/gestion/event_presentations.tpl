@@ -48,16 +48,16 @@
                     </div>
                 </td>
                 <td>
-                    <div class="d-flex gap-1">
+                    <div class="d-flex gap-2">
                         <button type="button"
                                 class="btn btn-secondary btn-sm"
                                 data-bs-toggle="modal"
                                 data-bs-target="#editModal-{{ $item->getId() }}">
-                            <i class="bi bi-pencil-square me-1"></i> Modifier
+                            <i class="bi bi-pencil-square"></i>&nbsp;Modifier
                         </button>
                         <form method="POST" action="/gestion/accueil/delete" onsubmit="return confirm('Supprimer cette présentation ?');">
                             <input type="hidden" name="id" value="{{ $item->getId() }}">
-                            <button type="submit" class="btn btn-danger btn-sm"><i class="bi bi-trash"></i> Supprimer</button>
+                            <button type="submit" class="btn btn-danger btn-sm"><i class="bi bi-trash"></i>&nbsp;Supprimer</button>
                         </form>
                     </div>
                 </td>
@@ -111,8 +111,11 @@
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
-                    <button type="submit" class="btn btn-primary">Enregistrer</button>
+                    <button type="button" class="btn btn-warning" data-bs-dismiss="modal">
+                        <i class="bi bi-x-circle"></i>&nbsp;Annuler
+                    </button>
+                    <button type="submit" class="btn btn-secondary">
+                        <i class="bi bi-save"></i>&nbsp;Enregistrer</button>
                 </div>
             </form>
         </div>
@@ -160,8 +163,12 @@
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
-                    <button type="submit" class="btn btn-primary">Enregistrer les modifications</button>
+                    <button type="button" class="btn btn-warning" data-bs-dismiss="modal">
+                        <i class="bi bi-x-circle"></i>&nbsp;Annuler
+                    </button>
+                    <button type="submit" class="btn btn-secondary">
+                        <i class="bi bi-save"></i>&nbsp;Enregistrer les modifications
+                    </button>
                 </div>
             </form>
         </div>

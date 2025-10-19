@@ -46,7 +46,9 @@
                             {% endforeach %}
                         </select>
                     </div>
-                    <button class="btn btn-success btn-sm w-100" type="submit">Ajouter</button>
+                    <button class="btn btn-success btn-sm w-100" type="submit">
+                        <i class="bi bi-plus-circle"></i>&nbsp;Ajouter
+                    </button>
                 </form>
             </div>
         </div>
@@ -72,11 +74,13 @@
                     <div class="d-flex gap-2">
                         <button class="btn btn-secondary btn-sm" type="button"
                                 onclick="const f=this.closest('.list-group-item').querySelector('form[action*=\'update\']'); f.style.display=f.style.display==='none'?'block':'none'">
-                            Éditer
+                            <i class="bi bi-pencil-square"></i>&nbsp;Éditer
                         </button>
                         <form method="POST" action="/gestion/swimmers/delete" onsubmit="return confirm('Supprimer ce nageur ?');">
                             <input type="hidden" name="swimmer_id" value="{{ $swimmer->getId() }}">
-                            <button type="submit" class="btn btn-danger btn-sm">Supprimer</button>
+                            <button type="submit" class="btn btn-danger btn-sm">
+                                <i class="bi bi-trash"></i>&nbsp;Supprimer
+                            </button>
                         </form>
                     </div>
                 </div>
@@ -98,9 +102,13 @@
                         </select>
                     </div>
                     <div class="d-flex gap-2">
-                        <button type="submit" class="btn btn-secondary btn-sm">Enregistrer</button>
-                        <button type="button" class="btn btn-outline-secondary btn-sm"
-                                onclick="this.closest('form').style.display='none'">Annuler</button>
+                        <button type="button" class="btn btn-warning btn-sm"
+                                onclick="this.closest('form').style.display='none'">
+                            <i class="bi bi-x-circle"></i>&nbsp;Annuler
+                        </button>
+                        <button type="submit" class="btn btn-secondary btn-sm">
+                            <i class="bi bi-save"></i>&nbsp;Enregistrer
+                        </button>
                     </div>
                 </form>
             </li>
@@ -139,14 +147,16 @@
                         </select>
                     </td>
                     <td>
-                        <button type="submit" class="btn btn-success btn-sm">Ajouter</button>
+                        <button type="submit" class="btn btn-success btn-sm">
+                            <i class="bi bi-plus-circle"></i>&nbsp;Ajouter
+                        </button>
                     </td>
                 </form>
             </tr>
             {% if !empty($swimmers) %}
             {% foreach $swimmers as $swimmer %}
             <tr>
-                <form action="/gestion/swimmers/update" method="POST">
+                <form action="/gestion/swimmers/update" method="POST"></form>
                     <input type="hidden" name="form_anchor" value="config-row-{{ $swimmer->getId() }}">
                     <input type="hidden" name="swimmer_id" value="{{ $swimmer->getId() }}">
                     <input type="hidden" name="context" value="desktop">
@@ -163,13 +173,18 @@
                             {% endforeach %}
                         </select>
                     </td>
-                    <td class="d-flex gap-2">
-                        <button type="submit" class="btn btn-secondary btn-sm">Enregistrer</button>
-                    </form>
-                <form method="POST" action="/gestion/swimmers/delete" onsubmit="return confirm('Supprimer ce groupe ?');" class="d-inline">
-                    <input type="hidden" name="swimmer_id" value="{{ $swimmer->getId() }}">
-                    <button type="submit" class="btn btn-danger btn-sm">Supprimer</button>
-                </form>
+                    <td>
+                        <div class="d-flex align-items-center gap-2">
+                            <button type="submit" class="btn btn-secondary btn-sm">
+                                <i class="bi bi-save"></i>&nbsp;Enregistrer
+                            </button>
+                            <form method="POST" action="/gestion/swimmers/delete" onsubmit="return confirm('Supprimer ce nageur ?');" class="d-inline">
+                                <input type="hidden" name="swimmer_id" value="{{ $swimmer->getId() }}">
+                                <button type="submit" class="btn btn-danger btn-sm">
+                                    <i class="bi bi-trash"></i>&nbsp;Supprimer
+                                </button>
+                            </form>
+                        </div>
                     </td>
             </tr>
             {% endforeach %}

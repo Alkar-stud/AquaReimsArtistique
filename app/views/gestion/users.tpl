@@ -41,7 +41,9 @@
                         </div>
                     </td>
                     <td>
-                        <button type="submit" class="btn btn-success btn-sm w-100 mb-1">Ajouter</button>
+                        <button type="submit" class="btn btn-success btn-sm w-100 mb-1">
+                            <i class="bi bi-plus-circle"></i>&nbsp;Ajouter
+                        </button>
                     </td>
                 </form>
             </tr>
@@ -49,7 +51,7 @@
             {% if !empty($users) %}
             {% foreach $users as $user %}
             <tr id="user-row-{{ $user->getId() }}">
-                <form method="POST" action="/gestion/users/edit">
+                <form method="POST" action="/gestion/users/edit"></form>
                     <input type="hidden" name="form_anchor" value="user-row-{{ $user->getId() }}">
                     <input type="hidden" name="user_id" value="{{ $user->getId() }}">
                     <td><input type="text" name="username" class="form-control" value="{{ $user->getUsername() }}" required></td>
@@ -81,14 +83,20 @@
                                    {{ $user->getIsActif() ? 'checked' : '' }}>
                         </div>
                     </td>
-                    <td class="d-flex flex-column gap-1">
-                        <button type="submit" class="btn btn-secondary btn-sm w-100">Modifier</button>
-                </form>
-                <form method="POST" action="/gestion/users/delete" onsubmit="return confirm('Supprimer cet utilisateur ?');" class="d-inline">
-                    <input type="hidden" name="form_anchor" value="user-row-{{ $user->getId() }}">
-                    <input type="hidden" name="user_id" value="{{ $user->getId() }}">
-                    <button type="submit" class="btn btn-danger btn-sm w-100">Supprimer</button>
-                </form>
+                    <td>
+                        <div class="d-flex align-items-stretch gap-2">
+                            <button type="submit" class="btn btn-secondary btn-sm w-100">
+                                <i class="bi bi-save"></i>&nbsp;Enregistrer
+                            </button>
+
+                            <form method="POST" action="/gestion/users/delete" onsubmit="return confirm('Supprimer cet utilisateur ?');" class="d-inline">
+                                <input type="hidden" name="form_anchor" value="user-row-{{ $user->getId() }}">
+                                <input type="hidden" name="user_id" value="{{ $user->getId() }}">
+                                <button type="submit" class="btn btn-danger btn-sm w-100">
+                                    <i class="bi bi-trash"></i><span class="btn-label">&nbsp;Supprimer</span>
+                                </button>
+                            </form>
+                        </div>
                 </td>
             </tr>
             {% endforeach %}
@@ -136,7 +144,9 @@
                             <input class="form-check-input" type="checkbox" checked disabled>
                         </div>
                     </div>
-                    <button type="submit" class="btn btn-success w-100">Ajouter</button>
+                    <button type="submit" class="btn btn-success w-100">
+                        <i class="bi bi-plus-circle"></i>&nbsp;Ajouter
+                    </button>
                 </form>
             </div>
         </div>
@@ -184,11 +194,15 @@
                     </div>
                 </form>
                 <div class="d-flex flex-column gap-2 mt-2">
-                    <button type="submit" form="form-edit-{{ $user->getId() }}" class="btn btn-secondary btn-sm w-100">Modifier</button>
+                    <button type="submit" form="form-edit-{{ $user->getId() }}" class="btn btn-secondary btn-sm w-100">
+                        <i class="bi bi-save"></i>&nbsp;Enregistrer
+                    </button>
                     <form method="POST" action="/gestion/users/delete" onsubmit="return confirm('Supprimer cet utilisateur ?');">
                         <input type="hidden" name="form_anchor" value="user-card-{{ $user->getId() }}">
                         <input type="hidden" name="user_id" value="{{ $user->getId() }}">
-                        <button type="submit" class="btn btn-danger btn-sm w-100">Supprimer</button>
+                        <button type="submit" class="btn btn-danger btn-sm w-100">
+                            <i class="bi bi-trash"></i><span class="btn-label">&nbsp;Supprimer</span>
+                        </button>
                     </form>
                 </div>
             </div>

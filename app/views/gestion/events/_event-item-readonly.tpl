@@ -9,7 +9,6 @@ Variables attendues :
         <small class="text-muted">{{ $event->getPiscine() ? $event->getPiscine()->getLabel() : 'Lieu non défini' }}</small>
     </div>
     <div>
-        <button class="btn btn-sm btn-info" data-event-id="{{ $event->getId() }}" title="Voir les détails"><i class="bi bi-eye"></i></button>
-        <button class="btn btn-sm btn-danger" data-event-id="{{ $event->getId() }}" title="Supprimer"><i class="bi bi-trash"></i></button>
+        <button class="btn btn-sm btn-info" data-event-id="{{ $event->getId() }}" title="Voir les détails"><i class="bi bi-eye"></i>&nbsp;Voir</button>
     </div>
 </div>

@@ -19,9 +19,8 @@
                     <input type="text" name="subject" class="form-control" required maxlength="255" placeholder="Nouveau sujet">
                 </td>
                 <td colspan="2">
-                    <button type="submit" class="btn btn-success btn-sm w-100">
-                        <i class="bi bi-plus-circle"></i>
-                        <span class="d-none d-md-inline">Ajouter</span>
+                    <button type="submit" class="btn btn-success btn-sm w-100 btn-gestion">
+                        <i class="bi bi-plus-circle"></i><span class="btn-label">Ajouter</span>
                     </button>
                 </td>
             </form>
@@ -31,22 +30,21 @@
         <tr>
             <td>{{ htmlspecialchars($template->getCode()) }}</td>
             <td>{{ htmlspecialchars($template->getSubject()) }}</td>
-            <td class="d-flex gap-2 align-items-stretch">
-                <button type="button"
-                        class="btn btn-secondary btn-sm flex-fill text-nowrap"
-                        data-bs-toggle="modal"
-                        data-bs-target="#editModal-{{ $template->getId() }}">
-                    <i class="bi bi-pencil-square"></i>
-                    <span class="d-none d-md-inline">Modifier</span>
-                </button>
-
-                <form method="POST" action="/gestion/mails_templates/delete" class="m-0 flex-fill">
-                    <input type="hidden" name="id" value="{{ $template->getId() }}">
-                    <button type="submit" class="btn btn-danger btn-sm w-100 text-nowrap">
-                        <i class="bi bi-trash"></i>
-                        <span class="d-none d-md-inline">Supprimer</span>
+            <td>
+                <div class="d-flex align-items-stretch gap-2">
+                    <button type="button"
+                            class="btn btn-secondary btn-sm flex-fill btn-gestion"
+                            data-bs-toggle="modal"
+                            data-bs-target="#editModal-{{ $template->getId() }}">
+                        <i class="bi bi-pencil-square"></i><span class="btn-label">Modifier</span>
                     </button>
-                </form>
+                    <form method="POST" action="/gestion/mails_templates/delete" class="m-0 flex-fill">
+                        <input type="hidden" name="id" value="{{ $template->getId() }}">
+                        <button type="submit" class="btn btn-danger btn-sm w-100 btn-gestion">
+                            <i class="bi bi-trash"></i><span class="btn-label">Supprimer</span>
+                        </button>
+                    </form>
+                </div>
             </td>
         </tr>
 
@@ -77,8 +75,12 @@
                             </div>
                         </div>
                         <div class="modal-footer flex-column flex-sm-row">
-                            <button type="button" class="btn btn-warning w-100 w-sm-auto mb-2 mb-sm-0" data-bs-dismiss="modal">Annuler</button>
-                            <button type="submit" class="btn btn-primary w-100 w-sm-auto">Enregistrer</button>
+                            <button type="button" class="btn btn-warning w-100 w-sm-auto mb-2 mb-sm-0" data-bs-dismiss="modal">
+                                <i class="bi bi-x-circle"></i>&nbsp;Annuler
+                            </button>
+                            <button type="submit" class="btn btn-secondary w-100 w-sm-auto">
+                                <i class="bi bi-save"></i>&nbsp;Enregistrer
+                            </button>
                         </div>
                     </form>
                 </div>

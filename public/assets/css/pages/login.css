@@ -1,0 +1,13 @@
+.login-container {
+    max-width: 420px; /* Sets a max width for the form container */
+    margin: 50px auto; /* Centers the container on the page */
+    padding: 2rem; /* Adds internal spacing */
+    border: 1px solid #ddd;
+    border-radius: 8px; /* Softer corners */
+    background-color: #fff;
+}
+
+.login-container h2 {
+    text-align: center;
+    margin-bottom: 1.5rem; /* Space below the title */
+}

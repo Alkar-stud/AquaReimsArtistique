@@ -36,13 +36,15 @@
                         data-access_code="{{ $tarif_loop['item']->getAccessCode() ?? '' }}"
                         data-is_active="{{ $tarif_loop['item']->isActive() ? '1' : '0' }}"
                         onclick="openTarifModal('edit', this.dataset)">
-                    Éditer
+                    <i class="bi bi-pencil-square"></i>&nbsp;Éditer
                 </button>
             </li>
             {% endforeach %}
         </ul>
         {% endif %}
-        <button type="button" class="btn btn-success btn-sm w-100" onclick="openTarifModal('add')">Ajouter</button>
+        <button type="button" class="btn btn-success btn-sm w-100" onclick="openTarifModal('add')">
+            <i class="bi bi-plus-circle"></i>&nbsp;Ajouter
+        </button>
     </div>
     <div id="modal-tarif" class="modal" tabindex="-1">
         <div class="modal-dialog modal-lg">
@@ -109,10 +111,16 @@
                         </div>
                     </div>
                     <div class="modal-footer justify-content-between">
-                        <button type="button" id="modal-tarif-delete-btn" class="btn btn-danger">Supprimer</button>
+                        <button type="button" id="modal-tarif-delete-btn" class="btn btn-danger">
+                            <i class="bi bi-trash"></i>&nbsp;Supprimer
+                        </button>
                         <div>
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
-                            <button type="submit" class="btn btn-primary">Enregistrer</button>
+                            <button type="button" class="btn btn-warning" data-bs-dismiss="modal">
+                                <i class="bi bi-x-circle"></i>&nbsp;Annuler
+                            </button>
+                            <button type="submit" class="btn btn-secondary">
+                                <i class="bi bi-save"></i>&nbsp;Enregistrer
+                            </button>
                         </div>
                     </div>
                 </form>
@@ -145,7 +153,11 @@
                     <td class="text-center"><input type="checkbox" name="requires_proof"></td>
                     <td><input type="text" name="access_code" class="form-control"></td>
                     <td class="text-center"><input type="checkbox" name="is_active" checked></td>
-                    <td><button type="submit" class="btn btn-success btn-sm">Ajouter</button></td>
+                    <td>
+                        <button type="submit" class="btn btn-success btn-sm">
+                            <i class="bi bi-plus-circle"></i>&nbsp;Ajouter
+                        </button>
+                    </td>
                 </form>
             </tr>
             {% if !empty($data) %}
@@ -167,13 +179,19 @@
                 <td class="text-center"><input type="checkbox" name="requires_proof" {{ $tarif_loop['item']->getRequiresProof() ? 'checked' : '' }} form="form-update-{{ $tarif_loop['item']->getId() }}"></td>
                 <td><input type="text" name="access_code" class="form-control" value="{{ $tarif_loop['item']->getAccessCode() ?? '' }}" form="form-update-{{ $tarif_loop['item']->getId() }}"></td>
                 <td class="text-center"><input type="checkbox" name="is_active" {{ $tarif_loop['item']->isActive() ? 'checked' : '' }} form="form-update-{{ $tarif_loop['item']->getId() }}"></td>
-                <td class="d-flex gap-2">
-                    <button type="submit" class="btn btn-secondary btn-sm" form="form-update-{{ $tarif_loop['item']->getId() }}">Enregistrer</button>
-                    <form action="/gestion/tarifs/delete" method="POST" onsubmit="return confirm('Supprimer ce tarif ?');" class="d-inline">
-                        <input type="hidden" name="onglet" value="{{ $onglet }}">
-                        <input type="hidden" name="tarif_id" value="{{ $tarif_loop['item']->getId() }}">
-                        <button type="submit" class="btn btn-danger btn-sm">Supprimer</button>
-                    </form>
+                <td>
+                    <div class="d-flex align-items-center gap-2">
+                        <button type="submit" class="btn btn-secondary btn-sm" form="form-update-{{ $tarif_loop['item']->getId() }}">
+                            <i class="bi bi-save"></i>&nbsp;Enregistrer
+                        </button>
+                        <form action="/gestion/tarifs/delete" method="POST" onsubmit="return confirm('Supprimer ce tarif ?');" class="d-inline">
+                            <input type="hidden" name="onglet" value="{{ $onglet }}">
+                            <input type="hidden" name="tarif_id" value="{{ $tarif_loop['item']->getId() }}">
+                            <button type="submit" class="btn btn-danger btn-sm">
+                                <i class="bi bi-trash"></i>&nbsp;Supprimer
+                            </button>
+                        </form>
+                    </div>
                 </td>
             </tr>
             {% endforeach %}

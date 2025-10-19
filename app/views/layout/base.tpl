@@ -12,8 +12,7 @@
     <link rel="icon" href="/assets/images/favicon.ico" type="image/x-icon" />
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-LN+7fdVzj6u52u30Kp6M/trliBMCMKTyK833zpbD+pXdCLuTusPj697FH4R/5mcr" crossorigin="anonymous">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css">
-    <link rel="stylesheet" href="/assets/css/style.css">
-    <link rel="stylesheet" href="/assets/css/generic.css">
+    <link rel="stylesheet" href="/assets/css/app.css">
     {% if $is_gestion_page %}<link rel="stylesheet" href="/assets/css/admin.css">{% endif %}
     {% if $load_ckeditor %}
     <link rel="stylesheet" href="/assets/css/ckeditor.css">
@@ -56,7 +55,7 @@
 
 {% if $_ENV['APP_DEBUG'] == "true" %}
 <!-- Outils de débogage -->
-<link rel="stylesheet" href="/assets/css/debug-bar.css">
+<link rel="stylesheet" href="/assets/css/components/debug-bar.css">
 <div id="debug-container">
     <div id="debug-toggle" title="Afficher/Masquer le bandeau de débogage">
         <i class="bi bi-bug-fill"></i>
@@ -79,7 +78,7 @@
         {% endif %}
     </div>
 </div>
-<script src="/assets/js/debug-bar.js" defer></script>
+<script src="/assets/js/components/debug-bar.js" defer></script>
 {% endif %}
 
 </body>

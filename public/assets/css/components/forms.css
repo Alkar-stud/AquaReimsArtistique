@@ -1,0 +1,48 @@
+/* Form group styling */
+.form-group {
+    margin-bottom: 1.25rem; /* Consistent spacing between form groups */
+}
+
+.form-group label {
+    display: block; /* Ensures label is on its own line */
+    margin-bottom: 0.5rem; /* Space between label and input */
+    font-weight: 500;
+}
+
+.form-group input {
+    width: 100%;
+    padding: 0.75rem;
+    box-sizing: border-box;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+/* Add space above the submit button */
+form > .btn {
+    margin-top: 1rem;
+}
+
+/* Error message styling */
+.error-message {
+    color: #e74c3c;
+    text-align: center;
+    margin-bottom: 1rem;
+}
+
+/* Supprime le margin-top global qui casse l’alignement dans les actions en flex */
+form > .btn {
+    margin-top: 0;
+}
+
+/* Ne met un espace au-dessus du bouton que si celui-ci suit un bloc de champ */
+form .form-group + .btn,
+form .mb-2 + .btn,
+form .mb-3 + .btn {
+    margin-top: 1rem;
+}
+
+/* Sécurise les cas d’actions en flex et pieds de modales */
+.d-flex form > .btn,
+.modal-footer form > .btn {
+    margin-top: 0;
+}

@@ -1,4 +1,4 @@
-<div class="container">
+<div class="login-container">
     <h2 class="mb-4">Réinitialiser votre mot de passe</h2>
     <p>Veuillez choisir un nouveau mot de passe. Il doit respecter les règles suivantes :</p>
     {% if $password_rules %}

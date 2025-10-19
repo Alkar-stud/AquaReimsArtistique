@@ -49,7 +49,11 @@
                                     {% endforeach %}
                                 </select>
                             </td>
-                            <td><button type="button" class="btn btn-success w-100" id="desktop-add-btn"><i class="bi bi-plus-circle"></i> Continuer l'ajout...</button></td>
+                            <td>
+                                <button type="button" class="btn btn-success w-100" id="desktop-add-btn">
+                                    <i class="bi bi-plus-circle"></i>&nbsp;Continuer l'ajout...
+                                </button>
+                            </td>
                         </tr>
                         <!-- Boucle pour les événements à venir (desktop) -->
                         {% foreach $eventsUpcoming as $event %}
@@ -62,7 +66,7 @@
             <!-- Bouton d'ajout pour mobile -->
             <div class="d-md-none my-3">
                 <button type="button" class="btn btn-success w-100" data-bs-toggle="modal" data-bs-target="#eventModal">
-                    <i class="bi bi-plus-circle"></i> Ajouter un événement
+                    <i class="bi bi-plus-circle"></i>&nbsp;Ajouter un événement
                 </button>
             </div>
         </div>
@@ -186,14 +190,23 @@
                                     <!-- Les périodes ajoutées dynamiquement apparaîtront ici -->
                                 </div>
                                 <button type="button" class="btn btn-outline-primary mt-2" id="add-inscription-btn">
-                                    <i class="bi bi-plus-circle"></i> Ajouter une période
+                                    <i class="bi bi-plus-circle"></i>&nbsp;Ajouter une période
                                 </button>
                             </div>
                         </div>
                     </div>
                     <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
-                        <button type="submit" class="btn btn-primary" id="save-event-btn">Enregistrer</button>
+                        <div>
+                            <button type="button" class="btn btn-danger btn-sm d-none" id="event-delete-btn">
+                                <i class="bi bi-trash"></i>&nbsp;Supprimer
+                            </button>
+                            <button type="button" class="btn btn-warning" data-bs-dismiss="modal">
+                                <i class="bi bi-x-circle"></i>&nbsp;Annuler
+                            </button>
+                            <button type="submit" class="btn btn-secondary">
+                                <i class="bi bi-save"></i>&nbsp;Enregistrer
+                            </button>
+                        </div>
                     </div>
                 </form>
             </div>

@@ -31,7 +31,9 @@
                     <input type="text" id="filter-user" name="user" class="form-control" value="{{ $filters['user'] ?? '' }}" placeholder="123 ou anonymous">
                 </div>
                 <div class="col-md-2">
-                    <button type="submit" class="btn btn-primary w-100">Filtrer</button>
+                    <button type="submit" class="btn btn-primary w-100 btn-gestion">
+                        <i class="bi bi-funnel"></i><span class="btn-label">Filtrer</span>
+                    </button>
                 </div>
             </form>
         </div>

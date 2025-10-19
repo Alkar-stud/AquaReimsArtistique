@@ -8,6 +8,6 @@
             <label for="email">Adresse email</label>
             <input type="email" id="email" name="email" required>
         </div>
-        <button type="submit" class="btn btn-primary w-100">Envoyer le lien</button>
+        <button type="submit" class="btn btn-secondary w-100">Envoyer le lien</button>
     </form>
 </div>

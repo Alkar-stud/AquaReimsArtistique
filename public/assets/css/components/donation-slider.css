@@ -1,0 +1,6 @@
+@media (min-width: 768px) {
+    /* Limite la largeur du slider de don sur les écrans larges dans la page modifData */
+    .donation-slider-container {
+        max-width: 25%;
+    }
+}

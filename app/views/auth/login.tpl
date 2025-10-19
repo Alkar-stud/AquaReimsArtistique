@@ -11,7 +11,7 @@
             <label for="password">Mot de passe</label>
             <input type="password" id="password" name="password" autocomplete="current-password" required>
         </div>
-        <button type="submit" class="btn btn-primary w-100">Se connecter</button>
+        <button type="submit" class="btn btn-secondary w-100">Se connecter</button>
     </form>
     <div class="text-center mt-3">
         <a href="/forgot-password" class="link-secondary">Mot de passe oublié ?</a>

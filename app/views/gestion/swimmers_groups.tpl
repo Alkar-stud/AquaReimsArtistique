@@ -10,7 +10,9 @@
     <!-- Mobile -->
     <div class="d-md-none mb-4">
     <br>
-        <button type="button" class="btn btn-success btn-sm w-100" onclick="document.getElementById('modal-ajout-groupe').style.display='block'">Ajouter un groupe</button>
+        <button type="button" class="btn btn-success btn-sm w-100" onclick="document.getElementById('modal-ajout-groupe').style.display='block'">
+            <i class="bi bi-plus-circle"></i>&nbsp;Ajouter un groupe
+        </button>
         {% if !empty($data) %}
         <ul class="list-group mb-3">
             {% foreach $data as $groupe %}
@@ -50,7 +52,9 @@
                     </div>
                     <div class="d-flex justify-content-end gap-2">
                         <button type="button" class="btn btn-secondary" onclick="document.getElementById('modal-ajout-groupe').style.display='none'">Annuler</button>
-                        <button type="submit" class="btn btn-success">Ajouter</button>
+                        <button type="submit" class="btn btn-success">
+                            <i class="bi bi-plus-circle"></i>&nbsp;Ajouter
+                        </button>
                     </div>
                 </form>
             </div>
@@ -81,7 +85,9 @@
                 <td><input type="number" name="order" class="form-control" required form="form-add"></td>
                 <td></td>
                 <td class="text-center"><input type="checkbox" name="is_active" checked form="form-add"></td>
-                <td><button type="submit" class="btn btn-success btn-sm" form="form-add">Ajouter</button></td>
+                <td><button type="submit" class="btn btn-success btn-sm" form="form-add">
+                        <i class="bi bi-plus-circle"></i>&nbsp;Ajouter
+                    </button></td>
             </tr>
             {% if !empty($data) %}
             {% foreach $data as $groupe %}
@@ -101,12 +107,16 @@
                     <input type="checkbox" name="is_active" {{ $groupe->getIsActive() ? 'checked' : '' }} form="form-update-{{ $groupe->getId() }}">
                 </td>
                 <td>
-                    <button type="submit" class="btn btn-secondary btn-sm" form="form-update-{{ $groupe->getId() }}">Enregistrer</button>
+                    <button type="submit" class="btn btn-secondary btn-sm" form="form-update-{{ $groupe->getId() }}">
+                        <i class="bi bi-save"></i>&nbsp;Enregistrer
+                    </button>
                 </form>
                 <form method="POST" action="/gestion/swimmers-groups/delete" onsubmit="return confirm('Supprimer ce groupe ?');" class="d-inline">
                     <input type="hidden" name="form_anchor" value="config-row-{{ $groupe->getId() }}">
                     <input type="hidden" name="group_id" value="{{ $groupe->getId() }}">
-                    <button type="submit" class="btn btn-danger btn-sm">Supprimer</button>
+                    <button type="submit" class="btn btn-danger btn-sm">
+                        <i class="bi bi-trash"></i>&nbsp;Supprimer
+                    </button>
                 </form>
                 </td>
             </tr>

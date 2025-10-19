@@ -4,7 +4,9 @@
     <!-- Affichage mobile -->
     <div class="d-md-none mb-4">
         <button type="button" class="btn btn-success btn-sm w-100"
-                onclick="document.getElementById('modal-ajout-config').style.display='block'">Ajouter</button>
+                onclick="document.getElementById('modal-ajout-config').style.display='block'">
+            <i class="bi bi-plus-circle"></i>&nbsp;Ajouter
+        </button>
         {% if !empty($data) %}
         <ul class="list-group mb-3">
             {% foreach $data as $config %}
@@ -39,14 +41,18 @@
                                value="{{ $config->getConfigType() ?? '' }}">
                     </div>
                     <div class="d-flex justify-content-end gap-2">
-                        <button type="submit" class="btn btn-secondary btn-sm w-100">Enregistrer</button>
+                        <button type="submit" class="btn btn-secondary btn-sm w-100">
+                            <i class="bi bi-save"></i>&nbsp;Enregistrer
+                        </button>
                     </div>
                 </form>
                 <div class="d-flex flex-column gap-2 mt-2">
                     <form method="POST" action="/gestion/configs/delete" onsubmit="return confirm('Supprimer cette configuration ?');">
                         <input type="hidden" name="form_anchor" value="config-card-{{ $config->getId() }}">
                         <input type="hidden" name="config_id" value="{{ $config->getId() }}">
-                        <button type="submit" class="btn btn-danger btn-sm w-100">Supprimer</button>
+                        <button type="submit" class="btn btn-danger btn-sm w-100">
+                            <i class="bi bi-trash"></i>&nbsp;Supprimer
+                        </button>
                     </form>
                 </div>
             </li>
@@ -104,7 +110,9 @@
                     <div class="d-flex justify-content-end gap-2">
                         <button type="button" class="btn btn-secondary"
                                 onclick="document.getElementById('modal-ajout-config').style.display='none'">Annuler</button>
-                        <button type="submit" class="btn btn-success">Ajouter</button>
+                        <button type="submit" class="btn btn-success">
+                            <i class="bi bi-plus-circle"></i>&nbsp;Ajouter
+                        </button>
                     </div>
                 </form>
             </div>
@@ -147,7 +155,9 @@
                             <input type="text" name="config_type" id="config_type_input_add_desktop" class="form-control" placeholder="Type personnalisé">
                         </div>
                     </td>
-                    <td><button type="submit" class="btn btn-success btn-sm">Ajouter</button></td>
+                    <td><button type="submit" class="btn btn-success btn-sm">
+                            <i class="bi bi-plus-circle"></i>&nbsp;Ajouter
+                        </button></td>
                 </form>
             </tr>
             {% if !empty($data) %}
@@ -182,12 +192,16 @@
                         </div>
                     </td>
                     <td>
-                        <button type="submit" class="btn btn-secondary btn-sm">Enregistrer</button>
+                        <button type="submit" class="btn btn-secondary btn-sm">
+                            <i class="bi bi-save"></i>&nbsp;Enregistrer
+                        </button>
                 </form>
                 <form method="POST" action="/gestion/configs/delete" onsubmit="return confirm('Supprimer cette configuration ?');" class="d-inline">
                     <input type="hidden" name="form_anchor" value="config-row-{{ $config->getId() }}">
                     <input type="hidden" name="config_id" value="{{ $config->getId() }}">
-                    <button type="submit" class="btn btn-danger btn-sm">Supprimer</button>
+                    <button type="submit" class="btn btn-danger btn-sm">
+                        <i class="bi bi-trash"></i>&nbsp;Supprimer
+                    </button>
                 </form>
                     </td>
             </tr>

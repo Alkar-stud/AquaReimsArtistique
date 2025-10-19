@@ -1,0 +1,34 @@
+/* Default (mobile-first) styles */
+
+main#main-page {
+    flex: 1 0 auto;
+    padding-top: 200px; /* distance entre le haut du main et le bas du menu */
+}
+
+footer {
+    flex-shrink: 0; /* Empêche le footer de rétrécir */
+    position: sticky;
+    bottom: 0;
+    z-index: 100;
+    background-color: var(--ara-color-darkblue); /* Assurez-vous que le fond est opaque */
+}
+
+/* Tablet and larger screens */
+@media (min-width: 769px) {
+    main#main-page {
+        margin-top: 10px;
+    }
+}
+
+/* This rule disables the sticky footer layout on smaller screens */
+@media (max-width: 1024px) {
+    body {
+        display: block !important;
+        min-height: auto !important;
+        height: auto !important;
+    }
+
+    footer {
+        position: static;
+    }
+}

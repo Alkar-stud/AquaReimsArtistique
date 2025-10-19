@@ -1,4 +1,4 @@
-@import "ckeditor.css";
+@import "components/ckeditor.css";
 /*
  * Pour des tableaux transposés
  */
@@ -37,8 +37,6 @@
         white-space: normal;
     }
 }
-
-
 
 
 /*
@@ -115,3 +113,16 @@
         font-size: 0.8rem;     /* Réduit la taille de la police */
     }
 }
+
+.btn-gestion {
+  display: inline-flex;
+  align-items: center;
+  gap: .4rem;
+  white-space: nowrap;
+}
+.btn-gestion .btn-label { display: none; }
+@media (min-width: 768px) {
+      .btn-gestion .btn-label { display: inline; }
+}
+.btn-gestion .bi { line-height: 1; }
+.btn-sm.btn-gestion .bi { font-size: .95em; }

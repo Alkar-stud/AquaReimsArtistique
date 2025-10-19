@@ -3,8 +3,6 @@
     {% if $_SESSION['user']['role']['level'] > 0 %}
     <!-- Formulaire de modification des informations -->
     <form action="/account/update" method="POST" class="mb-5">
-        <!-- Token CSRF -->
-        <input type="hidden" name="csrf_token" value="{{ $csrf_token ?? '' }}">
         <div class="mb-3">
             <label for="displayname" class="form-label">Nom affiché</label>
             <input type="text" class="form-control" id="displayname" name="displayname"
@@ -15,13 +13,11 @@
             <input type="email" class="form-control" id="email" name="email"
                    value="{{ $_SESSION['user']['email'] ?? '' }}" required>
         </div>
-        <button type="submit" class="btn btn-primary w-100">Mettre à jour mes informations</button>
+        <button type="submit" class="btn btn-secondary w-100">Mettre à jour mes informations</button>
     </form>
     {% endif %}
     <!-- Formulaire de changement de mot de passe -->
     <form action="/account/password" method="POST">
-        <!-- Token CSRF -->
-        <input type="hidden" name="csrf_token" value="{{ $csrf_token ?? '' }}">
         <input type="text" name="username" value="{{ $_SESSION['user']['username'] ?? '' }}" autocomplete="username" hidden>
         <h4 class="mb-3">Changer mon mot de passe</h4>
         <div class="mb-3">
@@ -38,6 +34,7 @@
         </div>
         <button type="submit" class="btn btn-secondary w-100" disabled>Changer mon mot de passe</button>
     </form>
+    <br>
 </div>
 
 <script src="/assets/js/account.js" defer></script>

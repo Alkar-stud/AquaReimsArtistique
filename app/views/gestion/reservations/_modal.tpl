@@ -119,16 +119,23 @@
             <div class="modal-footer justify-content-between">
                 <div>
                     {% if str_contains($userPermissions, 'D') %}
-                    <button type="button" id="modal-reservation-delete-btn" class="btn btn-danger">Supprimer</button>
+                    <button type="button" id="modal-reservation-delete-btn" class="btn btn-danger">
+                        <i class="bi bi-trash"></i>&nbsp;Supprimer
+                    </button>
                     {% endif %}
                     {% if str_contains($userPermissions, 'U') %}
-                    <button type="button" id="modal-reservation-cancel-btn" class="btn btn-warning">Annuler</button>
+                    <button type="button" id="modal-reservation-cancel-btn" class="btn btn-warning" data-bs-dismiss="modal">
+                        <i class="bi bi-x-circle"></i>&nbsp;Annuler
+                    </button>
                     {% endif %}
                 </div>
                 <div>
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
                     {% if str_contains($userPermissions, 'U') %}
-                    <button type="submit" class="btn btn-primary">Enregistrer</button>
+                    <button type="submit" class="btn btn-secondary">
+                        <i class="bi bi-save"></i>&nbsp;Enregistrer
+                    </button>
+                    {% else %}
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
                     {% endif %}
                 </div>
             </div>

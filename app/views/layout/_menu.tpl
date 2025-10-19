@@ -43,7 +43,7 @@
                     <a class="nav-link {{ $uri == '/gestion/swimmers-groups' ? 'active-link' : '' }}" href="/gestion/swimmers-groups">Nageuses</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link {{ $uri == '/gestion/mail_templates' ? 'active-link' : '' }}" href="/gestion/mails_templates">Mails</a>
+                    <a class="nav-link {{ $uri == '/gestion/mails_templates' ? 'active-link' : '' }}" href="/gestion/mails_templates">Mails</a>
                 </li>
                 {% endif %}
                 {% if isset($_SESSION['user']['role']) and $_SESSION['user']['role']['level'] <= 1 and $is_gestion_page %}

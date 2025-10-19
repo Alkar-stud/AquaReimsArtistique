@@ -3,7 +3,9 @@
 
     <!-- Vue Mobile -->
     <div class="d-md-none mb-4">
-        <button type="button" class="btn btn-success btn-sm w-100" data-bs-toggle="modal" data-bs-target="#modal-ajout-piscine">Ajouter une piscine</button>
+        <button type="button" class="btn btn-success btn-sm w-100" data-bs-toggle="modal" data-bs-target="#modal-ajout-piscine">
+            <i class="bi bi-plus-circle"></i>&nbsp;Ajouter une piscine
+        </button>
         {% if !empty($data) %}
         <ul class="list-group mt-3">
             {% foreach $data_loop as $piscine_loop %}
@@ -13,7 +15,9 @@
                     <small class="text-muted d-block">Capacité: {{ $piscine_loop['item']->getMaxPlaces() }}</small>
                 </div>
                 <div>
-                    <button type="button" class="btn btn-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#modal-edit-piscine-{{ $piscine_loop['item']->getId() }}">Éditer</button>
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#modal-edit-piscine-{{ $piscine_loop['item']->getId() }}">
+                        <i class="bi bi-pencil-square"></i>&nbsp;Éditer
+                    </button>
                 </div>
             </li>
             {% endforeach %}
@@ -32,7 +36,7 @@
                 <form action="/gestion/piscines/add" method="POST">
                     <div class="modal-body">
                         <div class="mb-3">
-                            <label for="add-label" class="form-label">Nom</label>
+                            <label for="add-label" class="form-label">Nom de la piscine</label>
                             <input type="text" name="label" id="add-label" class="form-control" required>
                         </div>
                         <div class="mb-3">
@@ -52,8 +56,12 @@
                         </div>
                     </div>
                     <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
-                        <button type="submit" class="btn btn-success">Ajouter</button>
+                        <button type="button" class="btn btn-warning" data-bs-dismiss="modal">
+                            <i class="bi bi-x-circle"></i>&nbsp;Annuler
+                        </button>
+                        <button type="submit" class="btn btn-success">
+                            <i class="bi bi-plus-circle"></i>&nbsp;Ajouter
+                        </button>
                     </div>
                 </form>
             </div>
@@ -101,11 +109,17 @@
                     <div class="modal-footer justify-content-between">
                         <form action="/gestion/piscines/delete" method="POST" onsubmit="return confirm('Supprimer cette piscine ?');">
                             <input type="hidden" name="piscine_id" value="{{ $piscine_loop['item']->getId() }}">
-                            <button type="submit" class="btn btn-danger">Supprimer</button>
+                            <button type="submit" class="btn btn-danger">
+                                <i class="bi bi-trash"></i>&nbsp;Supprimer
+                            </button>
                         </form>
                         <div>
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
-                            <button type="submit" class="btn btn-primary">Enregistrer</button>
+                            <button type="button" class="btn btn-warning" data-bs-dismiss="modal">
+                                <i class="bi bi-x-circle"></i>&nbsp;Annuler
+                            </button>
+                            <button type="submit" class="btn btn-secondary">
+                                <i class="bi bi-save"></i>&nbsp;Enregistrer
+                            </button>
                         </div>
                     </div>
                 </form>
@@ -120,7 +134,7 @@
         <table class="table align-middle">
             <thead>
             <tr>
-                <th>Nom</th>
+                <th>Nom de la piscine</th>
                 <th>Adresse</th>
                 <th>Capacité</th>
                 <th style="width: 220px;">Places numérotées</th>
@@ -131,7 +145,7 @@
             <!-- Ligne formulaire d’ajout -->
             <tr>
                 <form action="/gestion/piscines/add" method="POST" id="form-add-piscine" class="d-contents"></form>
-                    <input type="text" name="label" class="form-control" required form="form-add-piscine"></td>
+                <td><input type="text" name="label" class="form-control" form="form-add-piscine" required></td>
                 <td><input type="text" name="address" class="form-control" form="form-add-piscine"></td>
                 <td><input type="number" name="capacity" class="form-control" min="0" form="form-add-piscine"></td>
                 <td>
@@ -140,7 +154,11 @@
                         <option value="oui">Oui</option>
                     </select>
                 </td>
-                <td><button type="submit" class="btn btn-success btn-sm" form="form-add-piscine">Ajouter</button></td>
+                <td>
+                    <button type="submit" class="btn btn-success btn-sm" form="form-add-piscine">
+                        <i class="bi bi-plus-circle"></i>&nbsp;Ajouter
+                    </button>
+                </td>
             </tr>
             {% if !empty($data) %}
             {% foreach $data_loop as $piscine_loop %}
@@ -161,12 +179,16 @@
                     <div class="mt-1"><a href="#" onclick="alert('A venir');">Gestion des gradins</a></div>
                     {% endif %}
                 </td>
-                <td class="d-flex gap-2">
-                    <button type="submit" class="btn btn-secondary btn-sm" form="form-update-piscine-{{ $piscine_loop['item']->getId() }}">Enregistrer</button>
-                    <form action="/gestion/piscines/delete" method="POST" onsubmit="return confirm('Supprimer cette piscine ?');">
-                        <input type="hidden" name="piscine_id" value="{{ $piscine_loop['item']->getId() }}">
-                        <button type="submit" class="btn btn-danger btn-sm">Supprimer</button>
-                    </form>
+                <td>
+                    <div class="d-flex align-items-center gap-2">
+                        <button type="submit" class="btn btn-secondary btn-sm" form="form-update-piscine-{{ $piscine_loop['item']->getId() }}">
+                            <i class="bi bi-save me-1"></i>&nbsp;Enregistrer
+                        </button>
+                        <form action="/gestion/piscines/delete" method="POST" onsubmit="return confirm('Supprimer cette piscine ?');">
+                            <input type="hidden" name="piscine_id" value="{{ $piscine_loop['item']->getId() }}">
+                            <button type="submit" class="btn btn-danger btn-sm"><i class="bi bi-trash"></i>&nbsp;Supprimer</button>
+                        </form>
+                    </div>
                 </td>
             </tr>
             {% endforeach %}

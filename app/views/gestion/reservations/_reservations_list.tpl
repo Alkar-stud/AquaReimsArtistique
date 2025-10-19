@@ -103,7 +103,7 @@
                 </td>
                 <td>
                     <button type="button" class="btn btn-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#reservationDetailModal" data-reservation-id="{{ $reservation->getId() }}" data-context="upcoming">
-                        Détails
+                        <i class="bi bi-eye"></i>&nbsp;Détails
                     </button>
                 </td>
             </tr>
@@ -138,7 +138,7 @@
                 {% endif %}
             </p>
             <button type="button" class="btn btn-secondary w-100" data-bs-toggle="modal" data-bs-target="#reservationDetailModal" data-reservation-id="{{ $reservation->getId() }}" data-context="upcoming">
-                Consulter / Modifier
+                <i class="bi bi-eye"></i>&nbsp;Détails
             </button>
         </div>
     </div>

@@ -50,7 +50,7 @@
         }
     }
 </script>
-<script type="module" src="/assets/js/ckeditor.js"></script>
+<script type="module" src="/assets/js/components/ckeditor.js"></script>
 {% endif %}
 
 {% if $_ENV['APP_DEBUG'] == "true" %}

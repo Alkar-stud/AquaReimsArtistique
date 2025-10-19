@@ -29,6 +29,7 @@
 
 <div class="d-flex flex-column flex-lg-row justify-content-lg-between align-items-lg-center mb-2">
     <div class="btn-group w-100 mb-2 mb-lg-0" role="group" aria-label="Filtres supplémentaires">
+
         {% php %}
         // On prépare les paramètres de base pour les liens
         $baseParams = http_build_query(['tab' => $tab, 's' => $selectedSessionId, 'per_page' => $itemsPerPage]);
@@ -76,6 +77,7 @@
                 <th>Nageuse</th>
                 <th>Nombre de places</th>
                 <th>Paiement</th>
+                <th>Vérifié</th>
                 <th>Actions</th>
             </tr>
             </thead>
@@ -100,6 +102,14 @@
                     {% else %}
                     <span class="badge bg-warning">À compléter</span>
                     {% endif %}
+                </td>
+                <td>
+                    <div class="form-check form-switch">
+                        <input class="form-check-input status-toggle" type="checkbox" role="switch"
+                               data-id="{{ $reservation->getId() }}"
+                               id="status-switch-{{ $reservation->getId() }}"
+                               {{ $reservation->isChecked() ? 'checked' : '' }}>
+                    </div>
                 </td>
                 <td>
                     <button type="button" class="btn btn-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#reservationDetailModal" data-reservation-id="{{ $reservation->getId() }}" data-context="upcoming">

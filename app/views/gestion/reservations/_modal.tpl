@@ -116,29 +116,40 @@
                 </div>
             </div>
 
-            <div class="modal-footer justify-content-between">
-                <div>
-                    {% if str_contains($userPermissions, 'D') %}
-                    <button type="button" id="modal-reservation-delete-btn" class="btn btn-danger">
-                        <i class="bi bi-trash"></i>&nbsp;Supprimer
-                    </button>
-                    {% endif %}
-                    {% if str_contains($userPermissions, 'U') %}
-                    <button type="button" id="modal-reservation-cancel-btn" class="btn btn-warning" data-bs-dismiss="modal">
-                        <i class="bi bi-x-circle"></i>&nbsp;Annuler
-                    </button>
-                    {% endif %}
-                </div>
-                <div>
-                    {% if str_contains($userPermissions, 'U') %}
-                    <button type="submit" class="btn btn-secondary">
-                        <i class="bi bi-save"></i>&nbsp;Enregistrer
-                    </button>
-                    {% else %}
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
-                    {% endif %}
+            <div class="modal-footer">
+                <div class="row g-2 w-100 align-items-md-center">
+                    <div class="col-12 col-md-auto">
+                        <div class="d-grid gap-2 d-sm-flex">
+                            {% if str_contains($userPermissions, 'D') %}
+                            <button type="button" id="modal-reservation-delete-btn" class="btn btn-danger">
+                                <i class="bi bi-trash"></i>&nbsp;Supprimer la réservation
+                            </button>
+                            {% endif %}
+                            {% if str_contains($userPermissions, 'U') %}
+                            <button type="button" id="modal-reservation-cancel-btn" class="btn btn-warning" data-bs-dismiss="modal">
+                                <i class="bi bi-x-circle"></i>&nbsp;Annuler la réservation
+                            </button>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="col-12 col-md-auto ms-md-auto">
+                        <div class="d-grid gap-2 d-sm-flex justify-content-md-end">
+                            {% if str_contains($userPermissions, 'U') %}
+                            <button type="submit" class="btn btn-secondary">
+                                <i class="bi bi-save"></i>&nbsp;Enregistrer
+                            </button>
+                            <button type="submit" class="btn btn-info">
+                                <i class="bi bi-check"></i>&nbsp;Enregistrer et marquer comme vérifié
+                            </button>
+                            {% endif %}
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 </div>
+
+<script src="/assets/js/gestion/reservation_modal.js" defer></script>

@@ -156,7 +156,7 @@
             {% if !empty($swimmers) %}
             {% foreach $swimmers as $swimmer %}
             <tr>
-                <form action="/gestion/swimmers/update" method="POST"></form>
+                <form action="/gestion/swimmers/update" method="POST">
                     <input type="hidden" name="form_anchor" value="config-row-{{ $swimmer->getId() }}">
                     <input type="hidden" name="swimmer_id" value="{{ $swimmer->getId() }}">
                     <input type="hidden" name="context" value="desktop">
@@ -178,6 +178,7 @@
                             <button type="submit" class="btn btn-secondary btn-sm">
                                 <i class="bi bi-save"></i>&nbsp;Enregistrer
                             </button>
+                </form>
                             <form method="POST" action="/gestion/swimmers/delete" onsubmit="return confirm('Supprimer ce nageur ?');" class="d-inline">
                                 <input type="hidden" name="swimmer_id" value="{{ $swimmer->getId() }}">
                                 <button type="submit" class="btn btn-danger btn-sm">

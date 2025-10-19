@@ -52,7 +52,7 @@
             <label for="specialCode" class="form-label">Vous avez un code ?</label>
             <div class="input-group">
                 <input type="text" class="form-control" id="specialCode" placeholder="Saisissez votre code" style="max-width: 250px;">
-                <button type="button" class="btn btn-outline-primary" id="validateCodeBtn">Valider le code</button>
+                <button type="button" class="btn btn-primary" id="validateCodeBtn">Valider le code</button>
             </div>
             <div id="specialCodeFeedback" class="form-text text-danger"></div>
         </div>

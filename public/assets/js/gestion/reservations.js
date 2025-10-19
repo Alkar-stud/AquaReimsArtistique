@@ -1,4 +1,9 @@
 document.addEventListener('DOMContentLoaded', () => {
+    // Utiliser le ScrollManager global
+    // Restaure la position au chargement
+    ScrollManager.restore();
+
+
     // On sélectionne la liste déroulante, peu importe l'onglet actif
     // en se basant sur le début de son ID "event-selector-".
     const eventSelector = document.querySelector('[id^="event-selector-"]');
@@ -212,6 +217,18 @@ document.addEventListener('DOMContentLoaded', () => {
                     complementsSection.style.display = 'none';
                 }
 
+                const saveToggleBtn = document.getElementById('modal-save-and-toggle-checked-btn');
+                if (saveToggleBtn) {
+                    // Si la réservation est déjà vérifiée, on propose de la marquer comme non vérifiée, sinon comme vérifiée
+                    const nextLabel = reservation.isChecked
+                        ? '<i class="bi bi-x"></i>&nbsp;Enregistrer et marquer comme non vérifié'
+                        : '<i class="bi bi-check"></i>&nbsp;Enregistrer et marquer comme vérifié';
+
+                    saveToggleBtn.innerHTML = nextLabel;
+
+                    saveToggleBtn.dataset.targetChecked = reservation.isChecked ? '0' : '1';
+                }
+
             } catch (error) {
                 // Correction de l'affichage de l'erreur : utilisation des backticks (`)
                 modalBody.innerHTML = `<div class="alert alert-danger"><strong>Erreur de communication avec le serveur :</strong><pre>${error.message}</pre></div>`;
@@ -223,12 +240,39 @@ document.addEventListener('DOMContentLoaded', () => {
         if (e.target && e.target.id === 'toggle-payment-details') {
             e.preventDefault();
             const link = e.target;
-            const container = document.getElementById('modal-payment-details-container');
+            const containerDetail = document.getElementById('modal-payment-details-container');
 
-            const isHidden = container.style.display === 'none';
-            container.style.display = isHidden ? 'block' : 'none';
+            const isHidden = containerDetail.style.display === 'none';
+            containerDetail.style.display = isHidden ? 'block' : 'none';
             link.textContent = isHidden ? 'Masquer le détail des paiements' : 'Voir le détail des paiements';
         }
+    });
+
+    //Gestion du clic sur le toogle pour que la réservation soit en statut vérifié
+    document.querySelectorAll('.status-toggle').forEach(toggle => {
+        toggle.addEventListener('change', function () {
+            const el = this;
+            const itemId = Number(this.dataset.id);
+            const newStatus = Boolean(this.checked);
+            el.disabled = true;
+
+            window.apiPost('/gestion/reservation/toggle-status', { id: itemId, status: newStatus }, {
+                headers: { 'X-CSRF-Context': '/gestion/accueil' }
+            })
+                .then(data => {
+                    // Si le serveur renvoie un nouveau token dans le body, on met la meta à jour
+                    if (data && data.csrfToken) {
+                        const meta = document.querySelector('meta[name="csrf-token"]');
+                        if (meta) meta.content = String(data.csrfToken);
+                    }
+                    window.location.reload();
+                })
+                .catch(error => {
+                    console.error('Erreur:', error);
+                    el.disabled = false;
+                    alert('Une erreur de communication est survenue. Veuillez réessayer.');
+                });
+        });
     });
 
 });

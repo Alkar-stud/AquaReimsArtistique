@@ -139,7 +139,8 @@
                             <button type="submit" class="btn btn-secondary">
                                 <i class="bi bi-save"></i>&nbsp;Enregistrer
                             </button>
-                            <button type="submit" class="btn btn-info">
+                            <!-- Le libellé peut être changé via JS -->
+                            <button type="submit" class="btn btn-info" id="modal-save-and-toggle-checked-btn">
                                 <i class="bi bi-check"></i>&nbsp;Enregistrer et marquer comme vérifié
                             </button>
                             {% endif %}

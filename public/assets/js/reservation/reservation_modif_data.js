@@ -4,37 +4,9 @@ document.addEventListener('DOMContentLoaded', async function () {
         return; // Ne rien faire si le conteneur principal n'est pas trouvé
     }
 
-    // Variable pour stocker la position de défilement actuelle
-    let currentScrollPosition = 0;
-
-    // Gestionnaire de défilement
-    const scrollManager = {
-        // Obtenir la position actuelle de manière fiable
-        getPosition: function () {
-            return currentScrollPosition;
-        },
-        // Sauvegarder la position
-        savePosition: function () {
-            const pos = this.getPosition();
-            localStorage.setItem('scrollpos', pos);
-        },
-        // Restaurer la position
-        restorePosition: function () {
-            const pos = localStorage.getItem('scrollpos');
-            if (pos) {
-                window.scrollTo(0, parseInt(pos, 10));
-                localStorage.removeItem('scrollpos');
-            }
-        }
-    };
-
-    // Suivre en temps réel la position de défilement
-    window.addEventListener('scroll', function () {
-        currentScrollPosition = window.scrollY || document.documentElement.scrollTop || document.body.scrollTop || 0;
-    });
-
-    // Restaurer la position au chargement initial
-    scrollManager.restorePosition();
+    // Utiliser le ScrollManager global
+    // Restaure la position au chargement
+    ScrollManager.restore();
 
 
     // Récupération des éléments du DOM
@@ -295,7 +267,7 @@ document.addEventListener('DOMContentLoaded', async function () {
                     if (result.success) {
                         // Si le backend demande un rechargement, on le fait.
                         if (result.reload) {
-                            scrollManager.savePosition(); // Sauvegarde de la position avant de recharger
+                            ScrollManager.save(); // Sauvegarde de la position avant de recharger
                             window.location.reload();
                         } else {
                             // Alternative sans recharger
@@ -372,7 +344,7 @@ document.addEventListener('DOMContentLoaded', async function () {
     // --- Fonction générique de mise à jour ---
     function updateField(feedbackSpan, data, successCallback = null) {
         // Sauvegarde de la position de défilement avant l'action
-        scrollManager.savePosition();
+        ScrollManager.save();
 
         if (feedbackSpan) {
             showFeedback(feedbackSpan, 'loading');
@@ -390,7 +362,7 @@ document.addEventListener('DOMContentLoaded', async function () {
                     // Si le backend demande un rechargement.
                     if (result.reload) {
                         //Sauvegarde de la position
-                        scrollManager.savePosition();
+                        ScrollManager.save();
                         window.location.reload();
                     }
                 } else {

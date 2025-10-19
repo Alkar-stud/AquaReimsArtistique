@@ -332,12 +332,21 @@ class ReservationRepository extends AbstractRepository
      * @param string|null $value
      * @return bool
      */
-    public function updateSingleField(int $id, string $field, ?string $value): bool
+    public function updateSingleField(int $id, string $field, mixed $value): bool
     {
-        $allowed = ['name', 'firstname', 'email', 'phone', 'total_amount', 'total_amount_paid', 'is_canceled'];
+        $allowed = ['name', 'firstname', 'email', 'phone', 'total_amount', 'total_amount_paid', 'is_canceled', 'is_checked'];
         if (!in_array($field, $allowed, true)) return false;
 
-        if ($field === 'phone' && $value === '') $value = null;
+        // Normalisation des types selon le champ
+        if (in_array($field, ['is_canceled', 'is_checked'], true)) {
+            $value = $value ? 1 : 0; // garantit 0/1
+        } elseif (in_array($field, ['total_amount', 'total_amount_paid'], true)) {
+            $value = (int)$value;
+        } elseif ($field === 'phone') {
+            $value = ($value === '' ? null : (string)$value);
+        } else {
+            $value = (string)$value;
+        }
 
         $sql = "UPDATE $this->tableName SET `$field` = :value, updated_at = NOW() WHERE id = :id";
         return $this->execute($sql, ['id' => $id, 'value' => $value]);

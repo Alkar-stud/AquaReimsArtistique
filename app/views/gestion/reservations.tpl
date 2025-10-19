@@ -1,4 +1,4 @@
-<div class="container-fluid">
+<div class="container-fluid" id="reservation-data-container">
     <h2>Gestion des réservations</h2>
 
     <ul class="nav nav-tabs mb-3" id="reservationTabs">
@@ -21,4 +21,5 @@
 
 </div>
 
+<script src="/assets/js/components/scroll_manager.js" defer></script>
 <script src="/assets/js/gestion/reservations.js" defer></script>

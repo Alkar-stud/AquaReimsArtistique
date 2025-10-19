@@ -2,12 +2,12 @@
 
 namespace app\Controllers\Gestion;
 
-use app\Core\Paginator;
 use app\Attributes\Route;
 use app\Controllers\AbstractController;
 use app\Repository\Reservation\ReservationRepository;
 use app\Services\Event\EventQueryService;
 use app\Services\Pagination\PaginationService;
+use Exception;
 
 class ReservationsController extends AbstractController
 {
@@ -76,8 +76,6 @@ class ReservationsController extends AbstractController
         ], "Gestion des réservations");
     }
 
-
-
     #[Route('/gestion/reservations/details/{id}', name: 'app_gestion_reservation_details', methods: ['GET'])]
     public function getReservationDetails(int $id): void
     {
@@ -96,6 +94,30 @@ class ReservationsController extends AbstractController
         }
 
         $this->json($reservation->toArray());
+    }
+
+    #[Route('/gestion/reservation/toggle-status', name: 'app_gestion_reservation_toggle_status', methods: ['POST'])]
+    public function toggleStatus(): void
+    {
+        // On s'attend à recevoir du JSON
+        $data = json_decode(file_get_contents('php://input'), true);
+
+        if (!isset($data['id'], $data['status'])) {
+            $this->json(['success' => false, 'message' => 'Données invalides.']);
+            return;
+        }
+
+        try {
+            $this->reservationRepository->updateSingleField((int)$data['id'], 'is_checked', (bool)$data['status']);
+            $this->flashMessageService->setFlashMessage('success', "Le statut a été mis à jour avec succès.");
+            // On génère et renvoie un nouveau token pour maintenir la session sécurisée
+            $newCsrfToken = $this->csrfService->getToken($this->getCsrfContext());
+
+            parent::json(['success' => true, 'csrfToken' => $newCsrfToken]);
+        } catch (Exception $e) {
+            error_log("Erreur lors de la mise à jour du statut : " . $e->getMessage());
+            $this->json(['success' => false, 'message' => 'Erreur serveur.'], 500);
+        }
     }
 
 }

@@ -327,4 +327,5 @@ $checkoutIntentId = $_GET['checkoutIntentId'] ?? null;
 </div>
 
 <script src="/assets/js/reservation/reservation_common.js" defer></script>
+<script src="/assets/js/components/scroll_manager.js" defer></script>
 <script src="/assets/js/reservation/reservation_modif_data.js" defer></script>

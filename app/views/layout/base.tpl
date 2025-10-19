@@ -15,7 +15,6 @@
     <link rel="stylesheet" href="/assets/css/app.css">
     {% if $is_gestion_page %}<link rel="stylesheet" href="/assets/css/admin.css">{% endif %}
     {% if $load_ckeditor %}
-    <link rel="stylesheet" href="/assets/css/ckeditor.css">
     <link rel="stylesheet" href="/assets/ckeditor5/ckeditor5.css">
     {% endif %}
 

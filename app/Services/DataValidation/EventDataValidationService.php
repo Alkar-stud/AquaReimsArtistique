@@ -84,7 +84,7 @@ class EventDataValidationService
                     ->setEventStartAt($startAt->format('Y-m-d H:i:s'))
                     ->setOpeningDoorsAt($openingAt->format('Y-m-d H:i:s'));
 
-                $this->validatedSessions[] = $session;
+                $this->validatedSessions[$index] = $session;
             }
 
             // --- Validation des périodes d'inscription ---

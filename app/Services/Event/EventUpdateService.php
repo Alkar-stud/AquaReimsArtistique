@@ -8,7 +8,6 @@ use app\Repository\Event\EventRepository;
 use app\Repository\Event\EventSessionRepository;
 use app\Repository\Event\EventTarifRepository;
 use app\Repository\Reservation\ReservationRepository;
-use app\Services\Event\EventResult;
 use app\Services\DataValidation\EventDataValidationService;
 use Exception;
 use Throwable;
@@ -17,7 +16,6 @@ class EventUpdateService
 {
     private EventRepository $eventRepository;
     private EventInscriptionDateRepository $eventInscriptionDateRepository;
-    private EventPresentationsRepository $eventPresentationsRepository;
     private EventSessionRepository $eventSessionRepository;
     private EventTarifRepository $eventTarifRepository;
     private EventDataValidationService $eventDataValidationService;
@@ -26,7 +24,6 @@ class EventUpdateService
     public function __construct(
         EventRepository $eventRepository,
         EventInscriptionDateRepository $eventInscriptionDateRepository,
-        EventPresentationsRepository $eventPresentationsRepository,
         EventSessionRepository $eventSessionRepository,
         EventTarifRepository $eventTarifRepository,
         EventDataValidationService $eventDataValidationService,
@@ -34,7 +31,6 @@ class EventUpdateService
     ) {
         $this->eventRepository = $eventRepository;
         $this->eventInscriptionDateRepository = $eventInscriptionDateRepository;
-        $this->eventPresentationsRepository = $eventPresentationsRepository;
         $this->eventSessionRepository = $eventSessionRepository;
         $this->eventTarifRepository = $eventTarifRepository;
         $this->eventDataValidationService = $eventDataValidationService;
@@ -46,7 +42,6 @@ class EventUpdateService
      */
     public function updateEvent($data): EventResult
     {
-
         //On récupère l'event
         $eventId = (int)($data['event_id'] ?? 0);
         $event = $this->eventRepository->findById($eventId, true, true, true, true, true);
@@ -92,9 +87,10 @@ class EventUpdateService
             $submittedSessionIds = [];
 
             // Parcourir les séances soumises pour AJOUTER ou METTRE À JOUR
-            foreach ($sessions as $submittedSession) {
+            foreach ($sessions as $index => $submittedSession) {
                 $submittedSession->setEventId($event->getId());
-                $sessionId = (int)($_POST['sessions'][array_search($submittedSession, $sessions, true)]['id'] ?? 0);
+                //$sessionId = (int)($_POST['sessions'][array_search($submittedSession, $sessions, true)]['id'] ?? 0);
+                $sessionId = (int)($_POST['sessions'][$index]['id'] ?? 0);
 
                 if ($sessionId > 0 && in_array($sessionId, $existingSessionIds, true)) {
                     // C'est une MISE À JOUR
@@ -111,7 +107,7 @@ class EventUpdateService
             // Parcourir les séances existantes pour trouver celles à SUPPRIMER
             $sessionsToDeleteIds = array_diff($existingSessionIds, $submittedSessionIds);
             foreach ($sessionsToDeleteIds as $sessionIdToDelete) {
-                // VÉRIFICATION CRUCIALE
+                // Vérification s'il y a des réservations existantes à cette session
                 if ($this->reservationRepository->hasReservationsForSession($sessionIdToDelete)) {
                     // On ne peut pas supprimer, on stocke le nom pour le message d'avertissement
                     $undeletableSessionNames[] = $existingSessionsMap[$sessionIdToDelete]->getSessionName();

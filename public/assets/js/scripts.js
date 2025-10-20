@@ -26,15 +26,31 @@ function updateCsrfToken(token) {
  * @returns {string}
  */
 function normalizeUserMessage(status, fallback = null) {
-    if (fallback && typeof fallback === 'string') return fallback;
+    if (fallback && typeof fallback === 'string') {
+        return fallback;
+    }
 
-    if (status === 401) return 'Authentification requise.';
-    if (status === 403) return 'Accès refusé.';
-    if (status === 404) return 'Ressource introuvable.';
-    if (status === 413) return 'Fichier trop volumineux.';
-    if (status === 419 || status === 440) return 'Sécurité: votre session ou token a expiré. Rechargez la page.';
-    if (status === 429) return 'Trop de requêtes. Veuillez réessayer plus tard.';
-    if (status >= 500) return 'Une erreur interne est survenue. Merci de réessayer.';
+    if (status === 401) {
+        return 'Authentification requise.';
+    }
+    if (status === 403) {
+        return 'Accès refusé.';
+    }
+    if (status === 404) {
+        return 'Ressource introuvable.';
+    }
+    if (status === 413) {
+        return 'Fichier trop volumineux.';
+    }
+    if (status === 419 || status === 440) {
+        return 'Sécurité: votre session ou token a expiré. Rechargez la page.';
+    }
+    if (status === 429) {
+        return 'Trop de requêtes. Veuillez réessayer plus tard.';
+    }
+    if (status >= 500) {
+        return 'Une erreur interne est survenue. Merci de réessayer.';
+    }
 
     return 'Une erreur est survenue. Merci de réessayer.';
 }
@@ -127,45 +143,30 @@ function showFlash(type, message, containerId = 'ajax_flash_container') {
 }
 
 /**
- * Point unique pour POST + gestion CSRF + parsing JSON + log non-JSON
- * @param {string} url
- * @param {object|FormData} body
- * @param {object} opts
- * @returns {Promise<any>}
+ * Client API centralisé. Gère la communication, le traitement des réponses JSON,
+ * la gestion des erreurs et la mise à jour du token CSRF.
+ * @param {string} url L'URL de l'endpoint.
+ * @param {object} options L'objet d'options pour `fetch()` (method, headers, body, etc.).
+ * @returns {Promise<any>} Une promesse résolue avec les données JSON ou rejetée avec une erreur structurée.
  */
-async function apiPost(url, body, opts = {}) {
-    const isFormData = (typeof FormData !== 'undefined') && (body instanceof FormData);
-    // Récupérer le jeton CSRF
-    let csrfToken = getCsrfToken();
+async function apiClient(url, options = {}) {
+    // Fusionne les en-têtes par défaut avec ceux fournis, en donnant la priorité à ces derniers.
+    const headers = {
+        'Accept': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest',
+        ...options.headers,
+    };
 
-    const headers = Object.assign(
-        {
-            'Accept': 'application/json',
-            'X-Requested-With': 'XMLHttpRequest',
-            'X-CSRF-Context' : '/reservation', // Explicite pour les réservations
-            'X-CSRF-Token' : csrfToken
-        },
-        opts.headers || {}
-    );
-
-    // Ne pas fixer Content-Type pour FormData (le navigateur gère le boundary)
-    const shouldJsonEncode = !isFormData && body !== undefined && body !== null && typeof body === 'object';
-    if (shouldJsonEncode && !headers['Content-Type']) {
-        headers['Content-Type'] = 'application/json';
-    }
-
-    const fetchBody = shouldJsonEncode ? JSON.stringify(body) : body;
-
-    return fetch(url, {
-        method: 'POST',
+    const fetchOptions = {
+        ...options,
         headers,
-        body: fetchBody,
         credentials: 'same-origin',
         referrerPolicy: 'same-origin',
-        redirect: 'follow'
-    })
+    };
+
+    return fetch(url, fetchOptions)
         .then(async (response) => {
-            // Récupère le nouveau token côté réponse et le met à jour
+            // Met à jour le token CSRF à partir de la réponse, s'il est présent.
             const csrfHeader = response.headers.get('X-CSRF-Token');
             if (csrfHeader) updateCsrfToken(csrfHeader);
 
@@ -174,8 +175,8 @@ async function apiPost(url, body, opts = {}) {
             const isJson = contentType.includes('application/json');
 
             if (!isJson) {
-                console.error(`[apiPost] Réponse non-JSON (statut ${response.status}) - ${response.url}`);
-                console.error('[apiPost] Corps:', raw);
+                console.error(`[apiClient] Réponse non-JSON (statut ${response.status}) - ${response.url}`);
+                console.error('[apiClient] Corps:', raw);
                 const err = new Error(`Réponse non-JSON (statut ${response.status})`);
                 err.status = response.status;
                 err.body = raw;
@@ -188,7 +189,7 @@ async function apiPost(url, body, opts = {}) {
             try {
                 data = raw ? JSON.parse(raw) : null;
             } catch {
-                console.error('[apiPost] Échec du parsing JSON. Corps brut:');
+                console.error('[apiClient] Échec du parsing JSON. Corps brut:', raw);
                 console.error(raw);
                 const err = new Error('Réponse JSON invalide');
                 err.status = response.status;
@@ -199,27 +200,77 @@ async function apiPost(url, body, opts = {}) {
             }
 
             if (!response.ok) {
-                if (response.status === 419) {
-                    console.warn('Jeton CSRF expiré, actualisation du jeton...');
-                    return Promise.reject({ userMessage: 'Session expirée, veuillez réessayer.' });
-                }
-                const msg = data && (data.error || data.message) || `HTTP ${response.status}`;
+                const msg = data?.error || data?.message || `HTTP ${response.status}`;
                 const err = new Error(msg);
                 err.status = response.status;
                 err.data = data;
                 err.url = response.url;
-                err.userMessage = normalizeUserMessage(response.status, data && (data.userMessage || data.error || data.message));
-                console.error(`[apiPost] HTTP ${response.status} - ${response.url}`);
-                console.error('[apiPost] Corps:', raw);
+                err.userMessage = normalizeUserMessage(response.status, data?.userMessage || data?.error || data?.message);
+                console.error(`[apiClient] HTTP ${response.status} - ${response.url}`);
+                console.error('[apiClient] Corps:', raw);
                 return Promise.reject(err);
             }
 
             return data;
         })
         .catch((error) => {
-            // Gérer les erreurs réseau (ex : fetch échoue) et les rejets manuels
-            console.error('[apiPost] Erreur attrapée:', error);
+            // Gérer les erreurs réseau (ex: fetch échoue) et les rejets manuels
+            console.error('[apiClient] Erreur attrapée:', error);
             // Renvoyer une promesse rejetée pour que le .catch() du code appelant fonctionne
             return Promise.reject(error);
         });
+}
+
+/**
+ * Raccourci pour les requêtes POST. Prépare le body et les en-têtes CSRF.
+ * @param {string} url
+ * @param {object|FormData} body
+ * @param {object} opts
+ * @returns {Promise<any>}
+ */
+async function apiPost(url, body, opts = {}) {
+    // Récupérer le jeton CSRF
+    const csrfToken = getCsrfToken();
+    const isFormData = (typeof FormData !== 'undefined') && (body instanceof FormData);
+
+    const headers = {
+        'X-CSRF-Context': '/reservation', // Contexte par défaut, peut être surchargé
+        'X-CSRF-Token': csrfToken,
+        ...opts.headers,
+    };
+
+    // Ne pas fixer Content-Type pour FormData (le navigateur gère le boundary)
+    const shouldJsonEncode = !isFormData && body !== undefined && body !== null && typeof body === 'object';
+    if (shouldJsonEncode) {
+        headers['Content-Type'] = 'application/json';
+    }
+
+    const fetchBody = shouldJsonEncode ? JSON.stringify(body) : body;
+
+    return apiClient(url, {
+        method: 'POST',
+        headers,
+        body: fetchBody,
+
+        });
+}
+
+
+/**
+ * Raccourci pour les requêtes GET. Construit l'URL avec les paramètres.
+ * @param {string} url
+ * @param {object} params
+ * @param {object} opts
+ * @returns {Promise<any>}
+ */
+async function apiGet(url, params = {}, opts = {}) {
+    const finalUrl = new URL(url, window.location.origin);
+    if (params) {
+        Object.keys(params).forEach(key => finalUrl.searchParams.append(key, params[key]));
+    }
+
+    return apiClient(finalUrl.toString(), {
+        method: 'GET',
+        headers: opts.headers || {},
+    });
 }

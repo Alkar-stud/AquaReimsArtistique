@@ -136,7 +136,7 @@
                     <div class="col-12 col-md-auto ms-md-auto">
                         <div class="d-grid gap-2 d-sm-flex justify-content-md-end">
                             {% if str_contains($userPermissions, 'U') %}
-                            <button type="submit" class="btn btn-secondary">
+                            <button type="submit" id="modal-save-btn" class="btn btn-secondary">
                                 <i class="bi bi-save"></i>&nbsp;Enregistrer
                             </button>
                             <!-- Le libellé peut être changé via JS -->
@@ -144,7 +144,7 @@
                                 <i class="bi bi-check"></i>&nbsp;Enregistrer et marquer comme vérifié
                             </button>
                             {% endif %}
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+                            <button type="button" id="modal-save-btn" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
                         </div>
                     </div>
                 </div>

@@ -46,6 +46,7 @@ class PaymentRecordService
 
         if ($context === 'new_reservation') { $typePayment = 'new'; }
         else if ($context == 'balance_payment') { $typePayment = 'add'; }
+        else if ($context == 'refund') { $typePayment = 'ref'; }
         else { $typePayment = 'other'; }
 
         $payment = new ReservationPayment();
@@ -89,7 +90,37 @@ class PaymentRecordService
             throw new \RuntimeException('Échec insertion payment.');
         }
 
-
         return $payment;
     }
+
+    /**
+     * @param int $paymentId
+     * @param object $orderData
+     * @return ReservationPayment|null
+     */
+    public function createRefundPaymentRecord(int $paymentId, object $orderData): ?ReservationPayment
+    {
+        $payment = $this->paymentRepository->findByPaymentId($paymentId);
+        if (!$payment) {
+            return null;
+        }
+
+        $refundOperations = new ReservationPayment();
+        $refundOperations->setReservation($payment->getReservation())
+            ->setType('ref')
+            ->setCheckoutId($payment->getCheckoutId())
+            ->setOrderId($orderData->order->id)
+            ->setPaymentId($payment->getPaymentId())
+            ->setAmountPaid((int)$orderData->amount)
+            ->setStatusPayment($orderData->refundOperations[0]->status);
+
+        $id = $this->paymentRepository->insert($refundOperations);
+        if ($id <= 0) {
+            throw new \RuntimeException('Échec insertion payment.');
+        }
+
+        return $refundOperations;
+    }
+
+
 }

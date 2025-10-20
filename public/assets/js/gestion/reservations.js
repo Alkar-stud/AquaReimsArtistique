@@ -13,7 +13,7 @@ document.addEventListener('DOMContentLoaded', () => {
         eventSelector.addEventListener('change', (event) => {
             const selectedSessionId = event.target.value;
 
-            // Si une session est sélectionnée (et pas l'option vide)
+            // Si une session est sélectionnée (et pas l'option vide).
             if (selectedSessionId) {
                 // On recharge la page en ajoutant l'ID de la session dans l'URL.
                 const currentUrl = new URL(window.location.href);
@@ -110,7 +110,14 @@ document.addEventListener('DOMContentLoaded', () => {
                     reservation.payments.forEach(payment => {
                         const paymentDateTime = payment.createdAt ? new Date(payment.createdAt).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'N/A';
                         const paymentAmount = (payment.amountPaid / 100).toFixed(2).replace('.', ',');
-                        const paymentStatus = payment.status === 'succeeded' ? '<span class="badge bg-success">Réussi</span>' : `<span class="badge bg-warning">${payment.status}</span>`;
+                        let paymentStatus = '';
+                        if (payment.status === 'Authorized' || payment.status === 'Processed') {
+                            paymentStatus = '<span class="badge bg-success payment-status-badge">Réussi</span>';
+                        } else if (payment.status === 'Refunded') {
+                            paymentStatus = '<span class="badge bg-danger payment-status-badge">Remboursé</span>';
+                        } else {
+                            paymentStatus = `<span class="badge bg-warning payment-status-badge">${payment.status}</span>`;
+                        }
 
                         let donationText = '';
                         if (payment.partOfDonation && payment.partOfDonation > 0) {
@@ -118,13 +125,34 @@ document.addEventListener('DOMContentLoaded', () => {
                             donationText = ` <small class="text-info">(dont don ${donationAmount} €)</small>`;
                         }
 
+                        let refundBtnHtml = '';
+                        if ((payment.status === 'Authorized' || payment.status === 'Processed') && payment.type !== 'ref') {
+                            refundBtnHtml = `
+                                  <button class="btn btn-warning refund-btn" data-payment-id="${payment.paymentId}">
+                                     Remboursement
+                                 </button>`;
+                        }
+
+                        let refreshBtnHtml = '';
+                        // On n'affiche le bouton de rafraîchissement que si le paiement n'est pas déjà remboursé
+                        if (payment.status !== 'Refunded' && payment.type !== 'ref') {
+                            refreshBtnHtml = `<button class="btn refresh-btn" data-payment-id="${payment.paymentId}">
+                                    <i class="bi bi-arrow-clockwise btn-success"></i>
+                                 </button>`;
+                        }
+
                         paymentDetailsHtml += `
                              <li class="list-group-item d-flex justify-content-between align-items-center">
                                  <div>
                                      <strong>${payment.type.toUpperCase()}</strong> - ${paymentAmount} €${donationText}
-                                     <small class="text-muted d-block">Le ${paymentDateTime}</small>
+                                     <small class="text-muted d-block">${payment.paymentId} - Le ${paymentDateTime}</small>
                                  </div>
+
+                                 <div>
+                                 ${refreshBtnHtml}
                                  ${paymentStatus}
+                                 ${refundBtnHtml}
+                                 </div>
                              </li>
                          `;
                     });
@@ -220,17 +248,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 const saveToggleBtn = document.getElementById('modal-save-and-toggle-checked-btn');
                 if (saveToggleBtn) {
                     // Si la réservation est déjà vérifiée, on propose de la marquer comme non vérifiée, sinon comme vérifiée
-                    const nextLabel = reservation.isChecked
+                    saveToggleBtn.innerHTML = reservation.isChecked
                         ? '<i class="bi bi-x"></i>&nbsp;Enregistrer et marquer comme non vérifié'
                         : '<i class="bi bi-check"></i>&nbsp;Enregistrer et marquer comme vérifié';
-
-                    saveToggleBtn.innerHTML = nextLabel;
 
                     saveToggleBtn.dataset.targetChecked = reservation.isChecked ? '0' : '1';
                 }
 
             } catch (error) {
-                // Correction de l'affichage de l'erreur : utilisation des backticks (`)
                 modalBody.innerHTML = `<div class="alert alert-danger"><strong>Erreur de communication avec le serveur :</strong><pre>${error.message}</pre></div>`;
             }
         });
@@ -245,6 +270,136 @@ document.addEventListener('DOMContentLoaded', () => {
             const isHidden = containerDetail.style.display === 'none';
             containerDetail.style.display = isHidden ? 'block' : 'none';
             link.textContent = isHidden ? 'Masquer le détail des paiements' : 'Voir le détail des paiements';
+        }
+    });
+
+    //Gestion du clic sur Refresh
+    document.addEventListener('click', function(e) {
+        const refreshButton = e.target.closest('.refresh-btn');
+        if (refreshButton) {
+            e.preventDefault();
+            const paymentId = refreshButton.dataset.paymentId;
+            console.log('Clic sur refresh pour le paiement ID :', paymentId);
+
+            // Exemple d'utilisation de apiGet
+            apiGet('/reservation/checkPaymentState', { id: paymentId })
+                .then(data => {
+                    const newStatus = data.state;
+                    const newTotalAmountPaid = data.totalAmountPaid;
+
+                    // --- Mise à jour des montants globaux de la réservation ---
+                    if (newTotalAmountPaid !== undefined) {
+                        const amountPaidElement = document.getElementById('modal-amount-paid');
+                        const amountDueElement = document.getElementById('modal-amount-due');
+                        const totalCostElement = document.getElementById('modal-total-cost');
+
+                        if (amountPaidElement && amountDueElement && totalCostElement) {
+                            // On récupère le coût total (qui ne change pas) pour recalculer le reste à payer.
+                            // On convertit la chaîne "123,45" en nombre.
+                            const totalCostInCents = parseFloat(totalCostElement.textContent.replace(',', '.')) * 100;
+
+                            // On met à jour le montant payé
+                            amountPaidElement.textContent = (newTotalAmountPaid / 100).toFixed(2).replace('.', ',');
+                            // On met à jour le reste à payer
+                            amountDueElement.textContent = ((totalCostInCents - newTotalAmountPaid) / 100).toFixed(2).replace('.', ',');
+                        }
+                    }
+
+                    // On trouve la ligne (<li>) correspondant au paiement pour cibler nos modifications
+                    const listItem = refreshButton.closest('.list-group-item');
+                    if (!listItem) return;
+
+                    const statusBadge = listItem.querySelector('.payment-status-badge');
+
+                    // On masque le bouton de rafraîchissement si le nouveau statut est "Refunded"
+                    if (newStatus === 'Refunded') {
+                        refreshButton.style.display = 'none';
+                    }
+
+                    const refundButton = listItem.querySelector('.refund-btn');
+
+                    if (statusBadge) {
+                        statusBadge.textContent = newStatus;
+                        // On retire toutes les classes de couleur pour en mettre une nouvelle
+                        statusBadge.classList.remove('bg-success', 'bg-warning', 'bg-danger', 'bg-info');
+
+                        if (newStatus === 'Refunded') {
+                            statusBadge.textContent = 'Remboursé';
+                            statusBadge.classList.add('bg-danger');
+                            // Si le paiement est remboursé, on supprime le bouton de remboursement
+                            if (refundButton) {
+                                refundButton.remove();
+                            }
+                        } else if ((newStatus === 'Authorized' || newStatus === 'Processed')) {
+                            statusBadge.textContent = 'Réussi';
+                            statusBadge.classList.add('bg-success');
+                            // Si le statut est autorisé et que le bouton n'existe pas, on le recrée
+                            if (!refundButton) {
+                                const newRefundButton = document.createElement('button');
+                                newRefundButton.className = 'btn btn-warning refund-btn';
+                                newRefundButton.dataset.paymentId = paymentId;
+                                newRefundButton.textContent = 'Remboursement';
+                                // On l'insère après le badge de statut
+                                statusBadge.parentNode.insertBefore(newRefundButton, statusBadge.nextSibling);
+                            }
+                        } else {
+                            // Pour tout autre statut (Pending, etc.)
+                            statusBadge.classList.add('bg-info');
+                        }
+                    }
+                })
+                .catch(err => {
+                    console.error('Erreur lors du refresh :', err);
+                    alert(err.userMessage || 'Une erreur est survenue.');
+                });
+        }
+    });
+
+    //Gestion du clic sur Remboursement
+    document.addEventListener('click', function(e) {
+        const refundButton = e.target.closest('.refund-btn');
+        if (refundButton) {
+            e.preventDefault();
+            const paymentId = refundButton.dataset.paymentId;
+            console.log('Clic sur remboursement pour le paiement ID :', paymentId);
+        alert('L\'éventuel don n\'est pas remboursé');
+
+
+
+        }
+    });
+
+    // Gestion du clic sur les boutons d'action du footer de la modale
+    document.addEventListener('click', function(e) {
+        const closeButton = e.target.closest('#modal-close-btn'); // Le bouton "Fermer" du footer
+        const deleteButton = e.target.closest('#modal-reservation-delete-btn');
+        const cancelButton = e.target.closest('#modal-reservation-cancel-btn');
+        const saveButton = e.target.closest('#modal-save-btn');
+        const saveAndToggleButton = e.target.closest('#modal-save-and-toggle-checked-btn');
+        const actionButton = saveButton || saveAndToggleButton || closeButton || deleteButton || cancelButton;
+
+        if (actionButton) {
+            e.preventDefault();
+            // On s'assure que la position est bien sauvegardée avant l'action
+            ScrollManager.save();
+
+            const reservationId = document.getElementById('modal_reservation_id').value;
+            const isCheckedTarget = actionButton.dataset.targetChecked || null; // '1', '0', ou null
+console.log('ok');
+            // Ici, logique d'appel API pour sauvegarder les données
+            // Pour le bouton "Fermer", il n'y a pas d'action, on recharge directement.
+            // Pour les autres, on attend la réussite de l'action.
+            if (saveButton || saveAndToggleButton) {
+                console.log(`Sauvegarde pour la réservation ${reservationId}. Cible isChecked : ${isCheckedTarget}`);
+                // Simuler un appel API qui réussit
+                Promise.resolve({ success: true })
+                    .then(() => {
+                        window.location.reload();
+                    });
+            } else {
+                // Si c'est juste le bouton "Fermer", on recharge sans attendre.
+                window.location.reload();
+            }
         }
     });
 
@@ -263,7 +418,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     // Si le serveur renvoie un nouveau token dans le body, on met la meta à jour
                     if (data && data.csrfToken) {
                         const meta = document.querySelector('meta[name="csrf-token"]');
-                        if (meta) meta.content = String(data.csrfToken);
+                        if (meta) {
+                            meta.content = String(data.csrfToken);
+                        }
                     }
                     window.location.reload();
                 })

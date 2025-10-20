@@ -89,8 +89,33 @@ class ReservationCheckPaymentController extends AbstractController
         }
     }
 
-    //Si au bout d'un certain temps le callback n'a rien donné, on va chercher directement chez HelloAsso avec le checkoutIntentId
-    //Si tout bon, le JS renvoi où il faut
+    #[Route('/reservation/checkPaymentState', name: 'app_reservation_check_payment_state', methods: ['POST'])]
+    public function checkPaymentState(): void
+    {
+        $paymentId = $_GET['id'] ?? 0;
+        if (!$paymentId) {
+            $this->json(['success' => false, 'error' => 'paymentId manquant']);
+        }
+
+        $result = $this->paymentWebhookService->handlePaymentState($paymentId);
+
+        $this->json(['success' => true, 'state' => $result['state'], 'totalAmountPaid' => $result['reservation']->getTotalAmountPaid()]);
+    }
+
+
+    #[Route('/reservation/checkPaymentRefund', name: 'app_reservation_check_payment_refund', methods: ['POST'])]
+    public function checkPaymentRefund(): void
+    {
+        $paymentId = $_GET['id'] ?? 0;
+        if (!$paymentId) {
+            $this->json(['success' => false, 'error' => 'paymentId manquant']);
+        }
+
+        //$this->paymentWebhookService->handlePaymentRefund($paymentId);
+
+
+        $this->json(['success' => true]);
+    }
 
 
     /**

@@ -56,6 +56,9 @@ class ReservationPayment extends AbstractModel
             'amountPaid' => $this->getAmountPaid(),
             'partOfDonation' => $this->getPartOfDonation(),
             'status' => $this->getStatusPayment(),
+            'checkoutId' => $this->getCheckoutId(),
+            'orderId' => $this->getOrderId(),
+            'paymentId' => $this->getPaymentId(),
             'createdAt' => $this->getCreatedAt()?->format(DateTimeInterface::ATOM),
         ];
     }

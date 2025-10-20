@@ -37,12 +37,35 @@
         <a href="?{{ $baseParams }}&cancel={{ $isCancel ? 0 : 1 }}{{ !is_null($isChecked) ? '&check=' . (int)$isChecked : '' }}"
            class="btn btn-sm {{ $isCancel ? 'btn-danger' : 'btn-outline-danger' }}">
             <i class="bi bi-x-circle-fill"></i>
-            <span class="d-none d-sm-inline ms-1">{{ $isCancel ? 'Masquer' : 'Annulées' }}</span>
+            <span class="d-none d-sm-inline ms-1">{{ $isCancel ? 'Masquer annulées' : 'Afficher annulées' }}</span>
         </a>
-        <a href="?{{ $baseParams }}&check={{ $isChecked ? 0 : 1 }}{{ !is_null($isCancel) ? '&cancel=' . (int)$isCancel : '' }}"
-           class="btn btn-sm {{ $isChecked ? 'btn-info' : 'btn-outline-info' }}">
+        {% php %}
+        // Logique pour le bouton de filtre 'vérifié'
+        $checkAndCancelParams = $baseParams . (!is_null($isCancel) ? '&cancel=' . (int)$isCancel : '');
+
+        if (is_null($isChecked)) { // État par défaut : tout est affiché
+        $checkLink = '?' . $checkAndCancelParams . '&check=0'; // Le premier clic masque les vérifiées
+        $checkClass = 'btn-outline-info';
+        $checkText = 'Masquer vérifiées';
+        } elseif ($isChecked === false) { // Non-vérifiées sont affichées
+        $checkLink = '?' . $checkAndCancelParams . '&check=1'; // Le clic suivant affiche les vérifiées
+        $checkClass = 'btn-info';
+        $checkText = 'Afficher vérifiées';
+        } else { // Vérifiées sont affichées ($isChecked === true)
+        $checkLink = '?' . $checkAndCancelParams . '&check=0'; // Le clic suivant affiche les non-vérifiées
+        $checkClass = 'btn-info';
+        $checkText = 'Afficher non-vérifiées';
+        }
+        {% endphp %}
+        {% if !is_null($isChecked) %}
+        <a href="?{{ $checkAndCancelParams }}" class="btn btn-sm btn-outline-secondary">
+            <i class="bi bi-eye-slash-fill"></i>
+            <span class="d-none d-sm-inline ms-1">Afficher tout</span>
+        </a>
+        {% endif %}
+        <a href="{{ $checkLink }}" class="btn btn-sm {{ $checkClass }}">
             <i class="bi bi-check-circle-fill"></i>
-            <span class="d-none d-sm-inline ms-1">{{ $isChecked ? 'Masquer' : 'Vérifiées' }}</span>
+            <span class="d-none d-sm-inline ms-1">{{ $checkText }}</span>
         </a>
         <a href="?tab=extract&s={{ $selectedSessionId }}"
            class="btn btn-sm btn-outline-secondary">

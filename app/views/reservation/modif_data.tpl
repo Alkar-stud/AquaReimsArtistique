@@ -235,11 +235,15 @@ $checkoutIntentId = $_GET['checkoutIntentId'] ?? null;
                 <!-- Toujours visible: Don -->
                 <div class="mb-3">
                     <label for="donation-slider" class="form-label fs-6 fw-normal">
-                        Faire un don à l'association : <strong id="donation-amount-display">0,00 €</strong>
+                        Faire un don à l'association :
+                    </label>
+                    <div class="d-inline-block align-middle">
+                        <input type="number" id="donation-amount-input" min="0" step="0.1" value="0" class="form-control form-control-sm" style="width: 90px; display: inline-block;"> €
                         <button type="button" id="round-up-donation-btn" class="btn btn-outline-secondary btn-sm d-none ms-2" title="Arrondir à l'euro supérieur" style="font-size: 0.7rem; padding: 0.1rem 0.3rem;">
                             Arrondir
                         </button>
-                    </label>
+                    </div>
+
                     <div class="donation-slider-container ms-auto">
                         <input
                                 type="range"

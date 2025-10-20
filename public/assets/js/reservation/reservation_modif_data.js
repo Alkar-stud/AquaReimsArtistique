@@ -11,7 +11,7 @@ document.addEventListener('DOMContentLoaded', async function () {
 
     // Récupération des éléments du DOM
     const donationSlider = document.getElementById('donation-slider');
-    const donationAmountDisplay = document.getElementById('donation-amount-display');
+    const donationAmountInput = document.getElementById('donation-amount-input');
     const totalToPayWithDonationEl = document.getElementById('total-to-pay-with-donation');
     const totalWithDonationContainer = document.getElementById('total-with-donation');
     const amountDueEl = document.getElementById('amount-due');
@@ -35,16 +35,16 @@ document.addEventListener('DOMContentLoaded', async function () {
     function updateDonation() {
         if (!donationSlider) return;
 
-        const donationEuros = parseFloat(donationSlider.value) || 0;
+        // La source de vérité est l'input, pour permettre des dons supérieurs au max du slider.
+        const donationEuros = parseFloat(donationAmountInput.value) || 0;
         const donationCents = Math.round(donationEuros * 100);
 
         // Le total à payer est le montant dû de base + le don. Ne peut pas être négatif.
         const totalToPayCents = Math.max(0, baseDueCents + donationCents);
         const totalToPayEuros = totalToPayCents / 100;
 
-        // Mettre à jour l'affichage du montant du don
-        if (donationAmountDisplay) {
-            donationAmountDisplay.textContent = formatEuro(donationEuros);
+        if (donationAmountInput && document.activeElement !== donationAmountInput) {
+            donationAmountInput.value = donationEuros.toFixed(2);
         }
 
         // Gérer l'affichage du "Total à régler (avec don)"
@@ -85,10 +85,20 @@ document.addEventListener('DOMContentLoaded', async function () {
                 paySection.classList.add('d-none');
             }
         }
-        // Gérer le bouton "Arrondir"
+    }
+
+    /**
+     * Met à jour la visibilité du bouton "Arrondir".
+     * Cette fonction est séparée pour n'être appelée que sur certains événements (change, click).
+     */
+    function updateRoundUpButtonVisibility() {
         if (roundUpBtn) {
+            const donationEuros = parseFloat(donationAmountInput.value) || 0;
+            const donationCents = Math.round(donationEuros * 100);
+            const totalToPayCents = Math.max(0, baseDueCents + donationCents);
             const centsPart = totalToPayCents % 100;
-            if (centsPart > 0) {
+            const maxSliderEuros = parseFloat(donationSlider.max);
+            if (centsPart > 0 && donationEuros < maxSliderEuros) {
                 roundUpBtn.classList.remove('d-none');
             } else {
                 roundUpBtn.classList.add('d-none');
@@ -97,28 +107,56 @@ document.addEventListener('DOMContentLoaded', async function () {
     }
 
     // S'assurer que tous les éléments nécessaires existent avant d'ajouter l'écouteur
-    if (donationSlider && donationAmountDisplay && amountDueEl) {
-        // Mettre à jour l'affichage une première fois au chargement
+    if (donationSlider && donationAmountInput && amountDueEl) {
+        // Mettre à jour l'affichage une première fois au chargement pour initialiser les valeurs
         updateDonation();
+        updateRoundUpButtonVisibility(); // Vérifier une fois au chargement
         // Ajouter l'écouteur pour le bouton "Arrondir"
         if (roundUpBtn) {
             roundUpBtn.addEventListener('click', function () {
-                const currentDonationCents = Math.round(parseFloat(donationSlider.value) * 100);
+                const currentDonationCents = Math.round(parseFloat(donationAmountInput.value) * 100);
                 const currentTotalCents = baseDueCents + currentDonationCents;
                 const centsPart = currentTotalCents % 100;
 
                 if (centsPart > 0) {
                     const donationToAddCents = 100 - centsPart;
                     const newDonationEuros = (currentDonationCents + donationToAddCents) / 100;
-                    donationSlider.value = newDonationEuros;
+                    donationAmountInput.value = newDonationEuros.toFixed(2);
+                    donationSlider.value = newDonationEuros; // Mettre à jour le slider aussi pour la cohérence visuelle
                     // Déclencher manuellement la mise à jour de l'interface
                     updateDonation();
+                    updateRoundUpButtonVisibility(); // Mettre à jour la visibilité du bouton après avoir arrondi
                 }
             });
         }
 
         // Ajouter l'écouteur pour les changements sur le slider
-        donationSlider.addEventListener('input', updateDonation);
+        donationSlider.addEventListener('input', function() {
+            // Le slider met à jour l'input, qui est la source de vérité.
+            if (donationAmountInput) {
+                donationAmountInput.value = parseFloat(this.value).toFixed(2);
+            }
+            updateDonation();
+        });
+
+        // Mettre à jour le bouton "Arrondir" uniquement à la fin du mouvement du slider
+        donationSlider.addEventListener('change', updateRoundUpButtonVisibility);
+
+        // Ajouter l'écouteur pour les changements sur l'input du don
+        donationAmountInput.addEventListener('input', function() {
+            let donationEuros = parseFloat(this.value) || 0;
+            if (donationEuros < 0) {
+                donationEuros = 0;
+                this.value = '0.00';
+            }
+            // Mettre à jour la position du slider. S'il dépasse le max, le slider se bloquera visuellement
+            // à son max, mais la valeur de l'input (et donc du calcul) restera celle saisie.
+            donationSlider.value = donationEuros;
+            updateDonation();
+        });
+
+        // Mettre à jour le bouton "Arrondir" quand on quitte le champ input
+        donationAmountInput.addEventListener('change', updateRoundUpButtonVisibility);
     }
 
     // --- Gestion des infos du contact principal ---
@@ -387,11 +425,11 @@ document.addEventListener('DOMContentLoaded', async function () {
         const payBalanceImg = payBalanceBtn.querySelector('img');
 
         const amountDueEl = document.getElementById('amount-due');
-        const donationSlider = document.getElementById('donation-slider');
+        const donationAmountInput = document.getElementById('donation-amount-input');
 
         // Convertir le texte "12,34 €" en nombre de centimes
         const amountDueInCents = Math.round(parseFloat(amountDueEl.textContent.replace(',', '.').replace('€', '').trim()) * 100);
-        const donationInCents = Math.round(parseFloat(donationSlider.value) * 100);
+        const donationInCents = Math.round(parseFloat(donationAmountInput.value) * 100);
 
         if (amountDueInCents <= 0) {
             showFlash('danger', 'Le montant à payer est nul ou invalide.');

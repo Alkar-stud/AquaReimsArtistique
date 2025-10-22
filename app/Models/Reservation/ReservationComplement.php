@@ -61,10 +61,15 @@ class ReservationComplement extends AbstractModel
      */
     public function toArray(): array
     {
+        $tarifObject = $this->getTarifObject();
+
         return [
             'id' => $this->getId(),
             'tarifId' => $this->getTarif(),
-            'tarifName' => $this->getTarifObject()?->getName(),
+            'tarifName' => $tarifObject?->getName(),
+            'tarifDescription' => $tarifObject?->getDescription(),
+            'tarifPrice' => $tarifObject?->getPrice(),
+            'maxForThisPrice' => $tarifObject->getMaxTickets(),
             'quantity' => $this->getQty(),
         ];
     }

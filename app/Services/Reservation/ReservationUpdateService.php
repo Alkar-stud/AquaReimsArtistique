@@ -167,17 +167,21 @@ readonly class ReservationUpdateService
      * Pour ajouter un complément à une réservation
      * @param int $reservationId
      * @param int $tarifId
-     * @return bool True si l'ajout ou la mise à jour a réussi.
+     * @return array True si l'ajout ou la mise à jour a réussi.
      */
-    public function addComplement(int $reservationId, int $tarifId): bool
+    public function addComplement(int $reservationId, int $tarifId): array
     {
         // On vérifie si un complément avec ce tarif existe déjà pour cette réservation
         $existing = $this->reservationComplementRepository->findByReservationAndTarif($reservationId, $tarifId);
 
-
         // Si oui, on incrémente simplement sa quantité en réutilisant la méthode existante
         if ($existing) {
-            return $this->updateComplementQuantity($reservationId, $existing->getId(), 'plus');
+            $success = $this->updateComplementQuantity($reservationId, $existing->getId(), 'plus');
+            if ($success) {
+                return ['success' => true, 'id' => $existing->getId()];
+            } else {
+                return ['success' => false, 'id' => 0];
+            }
         }
 
         // Sinon, on en crée un nouveau
@@ -190,10 +194,10 @@ readonly class ReservationUpdateService
 
         if ($newId > 0) {
             $this->recalculateAndSaveTotal($reservationId);
-            return true;
+            return ['success' => true, 'id' => $newId];
         }
 
-        return false;
+        return ['success' => false, 'id' => 0];
     }
 
 

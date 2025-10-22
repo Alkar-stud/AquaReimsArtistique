@@ -335,6 +335,7 @@ class ReservationRepository extends AbstractRepository
     public function updateSingleField(int $id, string $field, mixed $value): bool
     {
         $allowed = ['name', 'firstname', 'email', 'phone', 'total_amount', 'total_amount_paid', 'is_canceled', 'is_checked'];
+
         if (!in_array($field, $allowed, true)) return false;
 
         // Normalisation des types selon le champ
@@ -349,6 +350,7 @@ class ReservationRepository extends AbstractRepository
         }
 
         $sql = "UPDATE $this->tableName SET `$field` = :value, updated_at = NOW() WHERE id = :id";
+
         return $this->execute($sql, ['id' => $id, 'value' => $value]);
     }
 

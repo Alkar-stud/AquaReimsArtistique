@@ -152,7 +152,9 @@ class ReservationModifDataController extends AbstractController
                         'reload' => $success // Demander un rechargement si succès
                     ];
                 } elseif ($tarifId) { // Ajout d'un nouveau complément
-                    $success = $this->reservationUpdateService->addComplement($reservation->getId(), (int)$tarifId);
+                    $return = $this->reservationUpdateService->addComplement($reservation->getId(), (int)$tarifId);
+                    $success = $return['success'];
+                    $fieldId = $return['id'];
                     $return = [
                         'success' => $success,
                         'message' => $success ? 'Complément ajouté avec succès.' : "Erreur lors de l'ajout du complément.",
@@ -164,6 +166,9 @@ class ReservationModifDataController extends AbstractController
             } catch (InvalidArgumentException $e) {
                 $return = ['success' => false, 'message' => $e->getMessage()];
             }
+            //On met la commande à 'non vérifiée'
+            $this->reservationRepository->updateSingleField($reservation->getId(), 'is_checked', false);
+
         } elseif ($typeField == 'cancel') {
             $success = $this->reservationUpdateService->cancelReservation($reservation);
             $return = [

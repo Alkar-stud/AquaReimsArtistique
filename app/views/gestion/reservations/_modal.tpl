@@ -1,4 +1,11 @@
-<div class="modal fade" id="reservationDetailModal" tabindex="-1" aria-labelledby="reservationDetailModalLabel" aria-hidden="true" data-is-readonly="{{ $isReadOnly ? 'true' : 'false' }}">
+<div class="modal fade"
+     id="reservationDetailModal"
+     tabindex="-1"
+     aria-labelledby="reservationDetailModalLabel"
+     aria-hidden="true"
+     data-is-readonly="{{ $isReadOnly ? 'true' : 'false' }}"
+     data-can-update="{{ str_contains($userPermissions, 'U') ? 'true' : 'false' }}">
+>
     <div class="modal-dialog modal-xl modal-dialog-scrollable">
         <div class="modal-content">
             <div class="modal-header">
@@ -8,7 +15,8 @@
             <div class="modal-body">
                 <div class="text-center">
                     <form id="reservationDetailForm">
-                        <input type="hidden" id="modal_reservation_id" name="reservation_id" value="">
+                            <input type="hidden" id="modal_reservation_id" name="reservation_id" value="">
+                        <input type="hidden" id="modal_reservation_token" name="reservation_token" value="">
                         <h4>Acheteur</h4>
                         <div class="row mb-2">
                             <div class="col-md-6 d-flex align-items-center">
@@ -114,6 +122,26 @@
 
                     </form>
                 </div>
+                {% if str_contains($userPermissions, 'D') %}
+                <div class="d-flex flex-column flex-row gap-3">
+                    <div>
+                        Réinit token : <span id="modal-reset-token" class="fw-bold"></span> <i class="bi bi-arrow-clockwise btn-success" alt="Réinit token" title="Réinit token"></i>
+                    </div>
+
+                    <div class="ms-md-auto w-100 w-md-auto">
+                        <div class="input-group">
+                            <span class="input-group-text">Token expire à</span>
+                            <input type="datetime-local"
+                                   id="modal-modification-token-expire-at"
+                                   class="form-control"
+                                   data-field="tokenExpireAt"
+                                   value="" {{ $isReadOnly ? 'disabled' : '' }}
+                                   aria-label="Token expire à">
+                            <span class="input-group-text feedback-span"></span>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
             </div>
 
             <div class="modal-footer">
@@ -136,15 +164,11 @@
                     <div class="col-12 col-md-auto ms-md-auto">
                         <div class="d-grid gap-2 d-sm-flex justify-content-md-end">
                             {% if str_contains($userPermissions, 'U') %}
-                            <button type="submit" id="modal-save-btn" class="btn btn-secondary">
-                                <i class="bi bi-save"></i>&nbsp;Enregistrer
-                            </button>
-                            <!-- Le libellé peut être changé via JS -->
                             <button type="submit" class="btn btn-info" id="modal-save-and-toggle-checked-btn">
                                 <i class="bi bi-check"></i>&nbsp;Enregistrer et marquer comme vérifié
                             </button>
                             {% endif %}
-                            <button type="button" id="modal-save-btn" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+                            <button type="button" id="modal-close-btn" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
                         </div>
                     </div>
                 </div>

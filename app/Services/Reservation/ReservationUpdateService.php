@@ -33,6 +33,84 @@ readonly class ReservationUpdateService
     }
 
     /**
+     * Pour gérer les mises à jour des différents éléments d'une réservation
+     *
+     * @param Reservation $reservation
+     * @param string $typeField
+     * @param int|null $fieldId
+     * @param int|null $tarifId
+     * @param string|null $field
+     * @param mixed $value
+     * @param string|null $action
+     * @return array
+     */
+    public function handleUpdateReservationFields(Reservation $reservation, string $typeField, ?int $fieldId, ?int $tarifId, ?string $field, mixed $value, ?string $action): array
+    {
+        if ($typeField == 'contact') {
+            try {
+                $success = $this->updateContactField($reservation, $field, $value);
+                $return = [
+                    'success' => $success,
+                    'message' => $success ? 'Mise à jour réussie.' : 'La mise à jour a échoué.'
+                ];
+            } catch (InvalidArgumentException $e) {
+                $return = ['success' => false, 'message' => $e->getMessage()];
+            }
+        } elseif ($typeField == 'detail') {
+            try {
+                $success = $this->updateDetailField((int)$fieldId, $field, $value);
+                $return = [
+                    'success' => $success,
+                    'message' => $success ? 'Mise à jour réussie.' : 'La mise à jour a échoué.'
+                ];
+            } catch (InvalidArgumentException $e) {
+                $return = ['success' => false, 'message' => $e->getMessage()];
+            }
+        } elseif ($typeField == 'complement') {
+            try {
+                if ($fieldId) { // Mise à jour d'un complément existant
+                    $success = $this->updateComplementQuantity($reservation->getId(), (int)$fieldId, $action);
+                    $return = [
+                        'success' => $success,
+                        'message' => $success ? 'Mise à jour réussie.' : 'La mise à jour a échoué.',
+                        'reload' => $success // Demander un rechargement si succès
+                    ];
+                } elseif ($tarifId) { // Ajout d'un nouveau complément
+                    $return = $this->addComplement($reservation->getId(), (int)$tarifId);
+                    $success = $return['success'];
+                    $fieldId = $return['id'];
+                    $return = [
+                        'success' => $success,
+                        'message' => $success ? 'Complément ajouté avec succès.' : "Erreur lors de l'ajout du complément.",
+                        'reload' => $success
+                    ];
+                } else {
+                    $return = ['success' => false, 'message' => 'Action sur complément non valide.'];
+                }
+            } catch (InvalidArgumentException $e) {
+                $return = ['success' => false, 'message' => $e->getMessage()];
+            }
+            //On met la commande à 'non vérifiée'
+            $this->reservationRepository->updateSingleField($reservation->getId(), 'is_checked', false);
+
+        } elseif ($typeField == 'cancel') {
+            $success = $this->cancelReservation($reservation);
+            $return = [
+                'success' => $success,
+                'message' => $success ? 'Commande annulée.' : 'Erreur lors de l\'annulation.',
+                'reload' => $success
+            ];
+        } else {
+            $return = ['success' => false, 'message' => 'La mise à jour a échoué.'];
+        }
+
+        return $return;
+    }
+
+
+
+
+    /**
      * Met à jour un champ de contact d'une réservation en utilisant le DTO pour la validation et la normalisation.
      *
      * @param Reservation $reservation L'objet réservation à mettre à jour.

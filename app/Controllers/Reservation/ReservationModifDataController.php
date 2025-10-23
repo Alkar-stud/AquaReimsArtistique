@@ -122,63 +122,8 @@ class ReservationModifDataController extends AbstractController
         //On vérifie si le token existe bien et peut être modifiable
         $reservation = $this->getTokenToVerifyItAndGetReservation($reservationToken);
 
-        if ($typeField == 'contact') {
-            try {
-                $success = $this->reservationUpdateService->updateContactField($reservation, $field, $value);
-                $return = [
-                    'success' => $success,
-                    'message' => $success ? 'Mise à jour réussie.' : 'La mise à jour a échoué.'
-                ];
-            } catch (InvalidArgumentException $e) {
-                $return = ['success' => false, 'message' => $e->getMessage()];
-            }
-        } elseif ($typeField == 'detail') {
-            try {
-                $success = $this->reservationUpdateService->updateDetailField((int)$fieldId, $field, $value);
-                $return = [
-                    'success' => $success,
-                    'message' => $success ? 'Mise à jour réussie.' : 'La mise à jour a échoué.'
-                ];
-            } catch (InvalidArgumentException $e) {
-                $return = ['success' => false, 'message' => $e->getMessage()];
-            }
-        } elseif ($typeField == 'complement') {
-            try {
-                if ($fieldId) { // Mise à jour d'un complément existant
-                    $success = $this->reservationUpdateService->updateComplementQuantity($reservation->getId(), (int)$fieldId, $action);
-                    $return = [
-                        'success' => $success,
-                        'message' => $success ? 'Mise à jour réussie.' : 'La mise à jour a échoué.',
-                        'reload' => $success // Demander un rechargement si succès
-                    ];
-                } elseif ($tarifId) { // Ajout d'un nouveau complément
-                    $return = $this->reservationUpdateService->addComplement($reservation->getId(), (int)$tarifId);
-                    $success = $return['success'];
-                    $fieldId = $return['id'];
-                    $return = [
-                        'success' => $success,
-                        'message' => $success ? 'Complément ajouté avec succès.' : "Erreur lors de l'ajout du complément.",
-                        'reload' => $success
-                    ];
-                } else {
-                    $return = ['success' => false, 'message' => 'Action sur complément non valide.'];
-                }
-            } catch (InvalidArgumentException $e) {
-                $return = ['success' => false, 'message' => $e->getMessage()];
-            }
-            //On met la commande à 'non vérifiée'
-            $this->reservationRepository->updateSingleField($reservation->getId(), 'is_checked', false);
-
-        } elseif ($typeField == 'cancel') {
-            $success = $this->reservationUpdateService->cancelReservation($reservation);
-            $return = [
-                'success' => $success,
-                'message' => $success ? 'Commande annulée.' : 'Erreur lors de l\'annulation.',
-                'reload' => $success
-            ];
-        } else {
-            $return = ['success' => false, 'message' => 'La mise à jour a échoué.'];
-        }
+        //On fait la mise à jour
+        $return = $this->reservationUpdateService->handleUpdateReservationFields($reservation, $typeField, $fieldId, $tarifId, $field, $value, $action);
 
         $this->json($return);
     }

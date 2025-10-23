@@ -1,8 +1,11 @@
 document.addEventListener('DOMContentLoaded', () => {
-    // Utiliser le ScrollManager global
+    const container = document.getElementById('reservation-data-container');
+    if (!container) {
+        return; // Ne rien faire si le conteneur principal n'est pas trouvé
+    }
+
     // Restaure la position au chargement
     ScrollManager.restore();
-
 
     // On sélectionne la liste déroulante, peu importe l'onglet actif
     // en se basant sur le début de son ID "event-selector-".
@@ -39,6 +42,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const reservationDetailModal = document.getElementById('reservationDetailModal');
     if (reservationDetailModal) {
         reservationDetailModal.addEventListener('show.bs.modal', async (event) => {
+            const canUpdate = reservationDetailModal.dataset.canUpdate === 'true';
+
             const button = event.relatedTarget; // Le bouton qui a déclenché la modale
             const reservationId = button.getAttribute('data-reservation-id');
 
@@ -71,16 +76,33 @@ document.addEventListener('DOMContentLoaded', () => {
                     console.error("Erreur de parsing JSON. Réponse brute du serveur :", responseText);
                     throw new Error("La réponse du serveur n'est pas un JSON valide.");
                 }
-
+console.log('reservation : ', reservation);
                 // On restaure le contenu HTML original
                 modalBody.innerHTML = originalModalBodyHtml;
 
                 // Reconstruire le contenu de la modale avec les données
                 document.getElementById('modal_reservation_id').value = reservation.id;
+                document.getElementById('modal_reservation_token').value = reservation.token;
                 document.getElementById('modal_contact_name').value = reservation.name;
                 document.getElementById('modal_contact_firstname').value = reservation.firstName;
                 document.getElementById('modal_contact_email').value = reservation.email;
                 document.getElementById('modal_contact_phone').value = reservation.phone || '';
+
+                const reservationTokenToDisplay = document.getElementById('modal-reset-token');
+                if (reservationTokenToDisplay) {
+                    reservationTokenToDisplay.innerText = reservation.token;
+                }
+                const tokenExpireAtEl = document.getElementById('modal-modification-token-expire-at');
+                if (tokenExpireAtEl) {
+                    const toDatetimeLocal = (raw) => {
+                        if (!raw) return '';
+                        const d = new Date(raw);
+                        if (isNaN(d.getTime())) return '';
+                        const pad = n => String(n).padStart(2, '0');
+                        return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+                    };
+                    tokenExpireAtEl.value = toDatetimeLocal(reservation.tokenExpireAt);
+                }
 
                 // --- Remplissage des informations de paiement ---
                 const totalAmount = reservation.totalAmount || 0;
@@ -106,10 +128,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (reservation.payments && reservation.payments.length > 0) {
                     togglePaymentDetailsLink.style.display = 'block'; // On affiche le lien s'il y a des paiements
 
+                    // Génération des boutons d'action des paiements (refresh / refund) avec permissions
                     let paymentDetailsHtml = '<ul class="list-group list-group-flush text-start">';
                     reservation.payments.forEach(payment => {
                         const paymentDateTime = payment.createdAt ? new Date(payment.createdAt).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'N/A';
                         const paymentAmount = (payment.amountPaid / 100).toFixed(2).replace('.', ',');
+
                         let paymentStatus = '';
                         if (payment.status === 'Authorized' || payment.status === 'Processed') {
                             paymentStatus = '<span class="badge bg-success payment-status-badge">Réussi</span>';
@@ -126,7 +150,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         }
 
                         let refundBtnHtml = '';
-                        if ((payment.status === 'Authorized' || payment.status === 'Processed') && payment.type !== 'ref') {
+                        if (canUpdate && (payment.status === 'Authorized' || payment.status === 'Processed') && payment.type !== 'ref') {
                             refundBtnHtml = `
                                   <button class="btn btn-warning refund-btn" data-payment-id="${payment.paymentId}">
                                      Remboursement
@@ -135,9 +159,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
                         let refreshBtnHtml = '';
                         // On n'affiche le bouton de rafraîchissement que si le paiement n'est pas déjà remboursé
-                        if (payment.status !== 'Refunded' && payment.type !== 'ref') {
+                        if (canUpdate && payment.status !== 'Refunded' && payment.type !== 'ref') {
                             refreshBtnHtml = `<button class="btn refresh-btn" data-payment-id="${payment.paymentId}">
-                                    <i class="bi bi-arrow-clockwise btn-success"></i>
+                                    <i class="bi bi-arrow-clockwise"></i>
                                  </button>`;
                         }
 
@@ -230,16 +254,167 @@ document.addEventListener('DOMContentLoaded', () => {
                 const complementsList = document.getElementById('modal-complements-list');
                 complementsList.innerHTML = '';
 
-
+console.log(reservation.complements);
                 if (reservation.complements && reservation.complements.length > 0) {
                     complementsSection.style.display = 'block';
+                    complementsList.innerHTML = ''; // réinitialise
+
+                    // petit utilitaire pour échapper du HTML injecté
+                    const esc = (s) => String(s === null || s === undefined ? '' : s)
+                        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+                        .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+
                     reservation.complements.forEach(complement => {
+                        const tarifId = complement.tarifId;
+                        const complementId =  complement.id;
+                        const qty = parseInt(complement.quantity || 0, 10);
+                        const priceCents = parseInt(complement.tarifPrice ?? complement.price ?? 0, 10);
+                        const priceText = (priceCents / 100).toFixed(2).replace('.', ',') + ' €';
+                        const groupTotalText = ((qty * priceCents) / 100).toFixed(2).replace('.', ',') + ' €';
+
+                        // maxForThisPrice peut être null ou un integer
+                        const maxForThisPrice = (complement.maxForThisPrice === null || complement.maxForThisPrice === undefined) ? null : parseInt(complement.maxForThisPrice, 10);
+                        const showPlus = !(maxForThisPrice !== null && qty >= maxForThisPrice);
+
                         complementsList.innerHTML += `
-                             <div class="list-group-item d-flex justify-content-between align-items-center">
-                                 ${complement.tarifName}
-                                 <span class="badge bg-primary rounded-pill">Qté: ${complement.quantity}</span>
-                             </div>
-                         `;
+            <div class="list-group-item d-flex justify-content-between align-items-center" 
+                    data-complement-wrapper-id="${tarifId}"
+                    data-complement-row-id="${complementId}">
+                <div>
+                    <strong>${esc(complement.tarifName)}</strong>
+                    ${complement.tarifDescription ? `<div class="text-muted small">${esc(complement.tarifDescription)}</div>` : ''}
+                </div>
+
+                <div class="text-end" style="min-width:260px;">
+                    <div class="d-flex align-items-center justify-content-end" style="gap:0.5rem;">
+                        <!-- Prix unitaire placé avant l'input -->
+                        <div class="text-muted small me-2" style="min-width:90px; text-align:right;">${priceText} x </div>
+
+                        <div class="input-group input-group-sm" style="max-width:160px;">
+                            <button class="btn btn-outline-secondary btn-sm complement-qty-btn" type="button" data-action="minus" data-complement-id="${tarifId}">-</button>
+                            <input type="text" class="form-control text-center" id="qty-complement-${tarifId}" value="${qty}" readonly data-max-for-price="${maxForThisPrice !== null ? maxForThisPrice : ''}">
+                            ${ showPlus ? `<button class="btn btn-outline-secondary btn-sm complement-qty-btn" type="button" data-action="plus" data-complement-id="${tarifId}">+</button>` : `&nbsp;(max ${maxForThisPrice})` }
+                        </div>
+                    </div>
+
+                    <div class="mt-1">
+                        <strong class="complement-total" data-complement-id="${tarifId}">${groupTotalText}</strong>
+                    </div>
+                </div>
+            </div>
+        `;
+                    });
+
+                    // Ajoute les écouteurs pour +/- (simple)
+                    complementsList.querySelectorAll('.complement-qty-btn').forEach(btn => {
+                        btn.addEventListener('click', (e) => {
+                            e.preventDefault();
+                            const action = btn.dataset.action;
+                            const tarifId = btn.dataset.complementId;
+                            // Récupération de data-complement-row-id sur le wrapper
+                            const wrapper = btn.closest('[data-complement-row-id]');
+                            const complementRowId = wrapper ? wrapper.dataset.complementRowId : null;
+                            const qtyInput = document.getElementById(`qty-complement-${tarifId}`);
+                            if (!qtyInput) return;
+
+                            const oldQty = parseInt(qtyInput.value, 10) || 0;
+                            const maxAttr = qtyInput.dataset.maxForPrice;
+                            const maxForThisPrice = (maxAttr && maxAttr !== '') ? parseInt(maxAttr, 10) : null;
+
+                            // sécurité côté client : si on est au max, bloquer l'ajout
+                            if (action === 'plus' && maxForThisPrice !== null && oldQty >= maxForThisPrice) {
+                                return;
+                            }
+
+                            // confirmation pour les actions (reprise de la logique existante)
+                            if (action === 'minus') {
+                                let confirmationMessage;
+                                if (oldQty <= 1) {
+                                    confirmationMessage = "Souhaitez-vous vraiment supprimer cet élément ? Le trop perçu ne sera pas remboursé.";
+                                } else {
+                                    confirmationMessage = "Souhaitez-vous vraiment retirer 1 ticket de cet élément ?";
+                                }
+                                if (!confirm(confirmationMessage)) return;
+                            } else {
+                                if (!confirm("Confirmez-vous l'ajout de cet article ? Le montant total sera mis à jour.")) return;
+                            }
+
+                            // Désactiver temporairement les boutons pour éviter double-clic
+                            btn.disabled = true;
+                            const reservationToken = document.getElementById('modal_reservation_token').value;
+console.log('action : ', action);
+                            // Appel API de mise à jour (adapter l'URL si nécessaire côté serveur)
+                            apiPost('/modifData/update', {
+                                typeField: 'complement',
+                                token: reservationToken,
+                                reservationId: reservation.id,
+                                id: complementRowId,
+                                action: action
+                            })
+                                .then(result => {
+                                    if (result && result.success) {
+                                        const newQty = (typeof result.newQuantity !== 'undefined')
+                                            ? parseInt(result.newQuantity, 10)
+                                            : (action === 'plus' ? oldQty + 1 : Math.max(0, oldQty - 1));
+
+                                        qtyInput.value = newQty;
+
+                                        // Scope dans la modale
+                                        const modal = document.getElementById('reservationDetailModal');
+
+                                        // Mettre à jour le total du groupe si fourni, sinon calcul local depuis le DOM
+                                        const totalEl = modal.querySelector(`.complement-total[data-complement-id="${tarifId}"]`);
+                                        if (typeof result.groupTotalCents !== 'undefined') {
+                                            const euros = (result.groupTotalCents / 100).toFixed(2).replace('.', ',') + ' €';
+                                            if (totalEl) totalEl.textContent = euros;
+                                        } else {
+                                            const item = qtyInput.closest('.list-group-item');
+                                            let unitPrice = 0;
+                                            if (item) {
+                                                // Ex: "12,34 € x" -> on récupère "12,34"
+                                                const priceNode = item.querySelector('.text-muted.small');
+                                                const priceMatch = priceNode ? priceNode.textContent.match(/([\d,]+)\s*€/) : null;
+                                                unitPrice = priceMatch ? parseFloat(priceMatch[1].replace(',', '.')) : 0;
+                                            }
+                                            const total = (newQty * unitPrice).toFixed(2).replace('.', ',') + ' €';
+                                            if (totalEl) totalEl.textContent = total;
+                                        }
+
+                                        // Gestion de l'affichage du bouton + selon maxForThisPrice
+                                        const complementsListEl = modal.querySelector('#modal-complements-list');
+                                        const plusBtn = complementsListEl
+                                            ? complementsListEl.querySelector(`button[data-action="plus"][data-complement-id="${tarifId}"]`)
+                                            : null;
+
+                                        if (maxForThisPrice !== null && plusBtn) {
+                                            plusBtn.style.display = (newQty >= maxForThisPrice) ? 'none' : '';
+                                        }
+
+                                        // Mettre à jour les totaux globaux si fournis
+                                        if (result.totals) {
+                                            if (typeof result.totals.totalAmount !== 'undefined') {
+                                                const el = modal.querySelector('#modal-total-cost');
+                                                if (el) el.textContent = (result.totals.totalAmount / 100).toFixed(2).replace('.', ',');
+                                            }
+                                            if (typeof result.totals.totalPaid !== 'undefined') {
+                                                const el = modal.querySelector('#modal-amount-paid');
+                                                if (el) el.textContent = (result.totals.totalPaid / 100).toFixed(2).replace('.', ',');
+                                            }
+                                            if (typeof result.totals.amountDue !== 'undefined') {
+                                                const el = modal.querySelector('#modal-amount-due');
+                                                if (el) el.textContent = (result.totals.amountDue / 100).toFixed(2).replace('.', ',');
+                                            }
+                                        }
+                                    }
+                                })
+                                .catch(err => {
+                                    console.error('Erreur update complément :', err);
+                                    alert(err.userMessage || err.message || 'Erreur réseau.');
+                                })
+                                .finally(() => {
+                                    btn.disabled = false;
+                                });
+                        });
                     });
                 } else {
                     complementsSection.style.display = 'none';
@@ -279,7 +454,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (refreshButton) {
             e.preventDefault();
             const paymentId = refreshButton.dataset.paymentId;
-            console.log('Clic sur refresh pour le paiement ID :', paymentId);
 
             // Exemple d'utilisation de apiGet
             apiGet('/reservation/checkPaymentState', { id: paymentId })
@@ -374,27 +548,27 @@ document.addEventListener('DOMContentLoaded', () => {
         const closeButton = e.target.closest('#modal-close-btn'); // Le bouton "Fermer" du footer
         const deleteButton = e.target.closest('#modal-reservation-delete-btn');
         const cancelButton = e.target.closest('#modal-reservation-cancel-btn');
-        const saveButton = e.target.closest('#modal-save-btn');
         const saveAndToggleButton = e.target.closest('#modal-save-and-toggle-checked-btn');
-        const actionButton = saveButton || saveAndToggleButton || closeButton || deleteButton || cancelButton;
+        const actionButton = saveAndToggleButton || closeButton || deleteButton || cancelButton;
 
         if (actionButton) {
             e.preventDefault();
+
             // On s'assure que la position est bien sauvegardée avant l'action
             ScrollManager.save();
 
             const reservationId = document.getElementById('modal_reservation_id').value;
             const isCheckedTarget = actionButton.dataset.targetChecked || null; // '1', '0', ou null
-console.log('ok');
+
             // Ici, logique d'appel API pour sauvegarder les données
             // Pour le bouton "Fermer", il n'y a pas d'action, on recharge directement.
             // Pour les autres, on attend la réussite de l'action.
-            if (saveButton || saveAndToggleButton) {
+            if (saveAndToggleButton) {
                 console.log(`Sauvegarde pour la réservation ${reservationId}. Cible isChecked : ${isCheckedTarget}`);
                 // Simuler un appel API qui réussit
                 Promise.resolve({ success: true })
                     .then(() => {
-                        window.location.reload();
+                        //window.location.reload();
                     });
             } else {
                 // Si c'est juste le bouton "Fermer", on recharge sans attendre.

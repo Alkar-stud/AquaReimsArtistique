@@ -2,19 +2,19 @@
     <h2 class="mb-4">Confirmation de votre réservation</h2>
 
     <ul class="list-group mb-3">
-        <li class="list-group-item"><strong>Événement :</strong> {{ htmlspecialchars($event->getName() ?? '') }}</li>
+        <li class="list-group-item"><strong>Événement :</strong> {{ $event->getName() ?? '' }}</li>
         {% if ($eventSession) %}
-        <li class="list-group-item"><strong>Séance :</strong> {{ htmlspecialchars($eventSession->getEventStartAt()->format('d/m/Y H:i')) }}</li>
+        <li class="list-group-item"><strong>Séance :</strong> {{ $eventSession->getEventStartAt()->format('d/m/Y H:i') }}</li>
         {% endif %}
         {% if ($swimmer) %}
-        <li class="list-group-item"><strong>Nageuse/nageur :</strong> {{ htmlspecialchars($swimmer->getName() ?? '') }}</li>
+        <li class="list-group-item"><strong>Nageuse/nageur :</strong> {{ $swimmer->getName() ?? '' }}</li>
         {% endif %}
         <?php if (!empty($reservation['booker'])): ?>
         <li class="list-group-item"><strong>Réservant :</strong>
-            {{ htmlspecialchars($reservation['booker']['name'] ?? '') }}
-            {{ htmlspecialchars($reservation['booker']['firstname'] ?? '') }}
-            ({{ htmlspecialchars($reservation['booker']['email'] ?? '') }})
-            {{ htmlspecialchars($reservation['booker']['phone'] ?? '') }}
+            {{ $reservation['booker']['name'] ?? '' }}
+            {{ $reservation['booker']['firstname'] ?? '' }}
+            ({{ $reservation['booker']['email'] ?? '' }})
+            {{ $reservation['booker']['phone'] ?? '' }}
         </li>
         {% endif %}
         <li class="list-group-item"><strong>Nombre de places réservées :</strong> {{ count($reservation['reservation_detail']) ?? 0 }}</li>
@@ -28,18 +28,18 @@
         {% foreach $details as $tarif_id => $group %}
         <li class="list-group-item d-flex justify-content-between align-items-start">
             <div class="me-3">
-                <strong>{{ htmlspecialchars($group['tarif_name'] ?? '') }}</strong>
+                <strong>{{ $group['tarif_name'] ?? '' }}</strong>
                 {% if !empty($group['description']) %}
-                <small class="text-muted">— {{ htmlspecialchars($group['description']) }}</small>
+                <small class="text-muted">— {{ $group['description'] }}</small>
                 {% endif %}
                 <div class="mt-1">
                     {% foreach $group['participants'] as $i => $p %}
-                    {{ htmlspecialchars(($p['firstname'] ?? '') . ' ' . ($p['name'] ?? '')) }}
+                    {{ ($p['firstname'] ?? '') . ' ' . ($p['name'] ?? '') }}
                     {% if !empty($p['place_id']) %}
-                    <em>(place {{ htmlspecialchars($p['place_id']) }})</em>
+                    <em>(place {{ $p['place_id'] }})</em>
                     {% endif %}
                     {% if !empty($p['tarif_access_code']) %}
-                    <em>(code {{ htmlspecialchars($p['tarif_access_code']) }})</em>
+                    <em>(code {{ $p['tarif_access_code'] }})</em>
                     {% endif %}
                     {% if $i < ($group['count'] - 1) %}<br>{% endif %}
                     {% endforeach %}
@@ -66,15 +66,15 @@
         {% foreach $complements as $tarif_id => $group %}
         <li class="list-group-item d-flex justify-content-between align-items-start">
             <div class="me-3">
-                <strong>{{ htmlspecialchars($group['tarif_name'] ?? '') }}</strong>
+                <strong>{{ $group['tarif_name'] ?? '' }}</strong>
                 {% if !empty($group['description']) %}
-                <small class="text-muted">— {{ htmlspecialchars($group['description']) }}</small>
+                <small class="text-muted">— {{ $group['description'] }}</small>
                 {% endif %}
                 <div class="mt-1">
                     Qté : {{ $group['qty'] }}
                 </div>
                 {% if (!empty($group['codes'])) %}
-                <div class="text-muted small">(code {{ htmlspecialchars(implode(', ', $group['codes'])) }})</div>
+                <div class="text-muted small">(code {{ implode(', ', $group['codes']) }})</div>
                 {% endif %}
             </div>
             <div class="ms-auto text-end">

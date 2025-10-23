@@ -158,7 +158,7 @@ $checkoutIntentId = $_GET['checkoutIntentId'] ?? null;
         <!-- Compléments -->
         <h5>Compléments</h5>
         {% if !empty($reservationView['complements']) %}
-        <ul class="list-group mb-3">
+        <ul class="list-group mb-3" id="complements-container">
             {% foreach $reservationView['complements'] as $tarif_id => $complementGroup %}
             <li class="list-group-item d-flex justify-content-between align-items-start">
                 <div class="me-3">
@@ -210,7 +210,7 @@ $checkoutIntentId = $_GET['checkoutIntentId'] ?? null;
                          <small class="text-muted">({{ number_format(($tarif->getPrice() ?? 0) / 100, 2, ',', ' ') }} €)</small>
                      </span>
                     <button class="btn btn-success btn-sm add-complement-btn" type="button" data-tarif-id="{{ $tarif->getId() }}">
-                        <i class="bi bi-plus-circle"></i> Ajouter
+                        <i class="bi bi-plus-circle"></i>&nbsp;Ajouter
                     </button>
                 </div>
             </div>

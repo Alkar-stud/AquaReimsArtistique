@@ -26,15 +26,12 @@
         };
         const p = App.Api.post('/modifData/update', data, { headers });
         const res = await withFeedback(p, feedbackSpan);
-
-        // Si un nouveau token CSRF est renvoyé
-        if (res && res.csrfToken && App.CSRF) App.CSRF.update(res.csrfToken);
-
+        console.log('res : ', res);
         if (typeof successCallback === 'function') {
             try { successCallback(res); } catch (_) { /* noop */ }
         }
-        // Si le backend demande un rechargement, on le fait.
-        if (res && res.reload) {
+        // Pour les appels via updateField (utilisé par modifData), on recharge toujours la page en cas de succès.
+        if (res && res.success) {
             if (global.ScrollManager) global.ScrollManager.save();
             window.location.reload();
         }

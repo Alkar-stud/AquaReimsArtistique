@@ -44,8 +44,10 @@
             '/assets/js/components/validators.js',
             '/assets/js/components/format.js',
             '/assets/js/app/reservations_api.js',
-            '/assets/js/components/reservations/contact_modal_component.js',
-            '/assets/js/components/reservations/participants_modal_component.js',
+            '/assets/js/components/reservations/contact_component.js',
+            '/assets/js/components/reservations/participants_component.js',
+            '/assets/js/components/reservations/complements_component.js',
+
         ];
 
         // Option: ajoutez ici des scripts de page pour garantir que tout attend App.ready

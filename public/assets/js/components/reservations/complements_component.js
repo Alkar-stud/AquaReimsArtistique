@@ -11,7 +11,6 @@
     let _reservationId = null;
 
     // --- Fonctions privées ---
-
     function _cacheDOMElements(containerEl) {
         _containerEl = containerEl;
         _listEl = _containerEl.querySelector('#modal-complements-list') || _containerEl.querySelector('.list-group.mb-3');

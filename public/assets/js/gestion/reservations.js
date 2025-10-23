@@ -160,7 +160,13 @@ console.log('reservation : ', reservation);
 
                 document.getElementById('modal-total-cost').textContent = (totalAmount / 100).toFixed(2).replace('.', ',');
                 document.getElementById('modal-amount-paid').textContent = (amountPaid / 100).toFixed(2).replace('.', ',');
-                document.getElementById('modal-amount-due').textContent = (amountDue / 100).toFixed(2).replace('.', ',');
+                const amountDueEl = document.getElementById('modal-amount-due');
+                if (amountDueEl) {
+                    amountDueEl.textContent = (amountDue / 100).toFixed(2).replace('.', ',');
+                    // On change la couleur en fonction du solde
+                    amountDueEl.classList.toggle('text-danger', amountDue > 0);
+                    amountDueEl.classList.toggle('text-info', amountDue <= 0);
+                }
                 document.getElementById('modal-don-amount').textContent = (totalDonation / 100).toFixed(2).replace('.', ',');
 
                 // --- Remplissage du détail des paiements ---

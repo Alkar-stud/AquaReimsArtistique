@@ -113,10 +113,19 @@
             const amountDueEl = modal.querySelector('#modal-amount-due');
             const markAsPaidDiv = modal.querySelector('#div-modal-mark-as-paid');
 
-            if (totalCostEl) totalCostEl.textContent = global.formatEuroCents(result.totals.totalAmount);
-            if (amountPaidEl) amountPaidEl.textContent = global.formatEuroCents(result.totals.totalPaid);
-            if (amountDueEl) amountDueEl.textContent = global.formatEuroCents(result.totals.amountDue);
+            // Fonction locale pour formater les nombres sans le symbole euro
+            const formatNumber = (cents) => (cents / 100).toFixed(2).replace('.', ',');
 
+            if (totalCostEl) totalCostEl.textContent = formatNumber(result.totals.totalAmount);
+            if (amountPaidEl) amountPaidEl.textContent = formatNumber(result.totals.totalPaid);
+            if (amountDueEl) {
+                const amountDue = result.totals.amountDue;
+                amountDueEl.textContent = formatNumber(amountDue);
+                // On change la couleur en fonction du solde
+                amountDueEl.classList.toggle('text-danger', amountDue > 0);
+                amountDueEl.classList.toggle('text-info', amountDue < 0);
+                amountDueEl.classList.toggle('text-success', amountDue === 0);
+            }
             if (markAsPaidDiv) {
                 markAsPaidDiv.classList.toggle('d-none', result.totals.amountDue <= 0);
             }

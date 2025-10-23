@@ -93,6 +93,10 @@
                                     <strong>Dons</strong><br>
                                     <span id="modal-don-amount" class="text-info">0,00</span> €
                                 </div>
+                                <div id="div-modal-mark-as-paid" class="d-none">
+                                    <strong>Marquer comme payé</strong><br>
+                                    <span id="modal-mark-as-paid" style="cursor: pointer;" title="Marquer la réservation comme entièrement payée"><i class="bi bi-check fs-4"></i></span>
+                                </div>
                             </div>
                             <div class="text-end mt-1">
                                 <a href="#" id="toggle-payment-details" class="small" style="display: none;">Voir le détail des paiements</a>

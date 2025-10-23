@@ -36,7 +36,7 @@ class ReservationsController extends AbstractController
 
         $tab = $_GET['tab'] ?? null;
         $sessionId = (int)($_GET['s'] ?? 0);
-        $isCancel = isset($_GET['cancel']) && (bool)$_GET['cancel'];
+        $isCancel = isset($_GET['cancel']) && $_GET['cancel'];
         $isChecked = isset($_GET['check']) ? (bool)$_GET['check'] : null;
         $paginationConfig = $this->paginationService->createFromRequest($_GET);
 

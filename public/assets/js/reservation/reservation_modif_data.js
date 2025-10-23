@@ -1,4 +1,4 @@
-document.addEventListener('DOMContentLoaded', async function () {
+App.ready.then(async () => {
     const container = document.getElementById('reservation-data-container');
     if (!container) {
         return; // Ne rien faire si le conteneur principal n'est pas trouvé
@@ -33,7 +33,9 @@ document.addEventListener('DOMContentLoaded', async function () {
      * Met à jour l'interface utilisateur en fonction de la valeur du don.
      */
     function updateDonation() {
-        if (!donationSlider) return;
+        if (!donationSlider) {
+            return;
+        }
 
         // La source de vérité est l'input, pour permettre des dons supérieurs au max du slider.
         const donationEuros = parseFloat(donationAmountInput.value) || 0;
@@ -62,13 +64,23 @@ document.addEventListener('DOMContentLoaded', async function () {
             // Cas où la réservation est soldée ou en crédit
             if (totalToPayCents > 0) {
                 // Un don a été fait, créant un montant à payer
-                if (creditMsg) creditMsg.classList.add('d-none');
-                if (dueLine) dueLine.classList.remove('d-none');
-                if (amountDueEl) amountDueEl.textContent = formatEuro(totalToPayEuros);
+                if (creditMsg) {
+                    creditMsg.classList.add('d-none');
+                }
+                if (dueLine) {
+                    dueLine.classList.remove('d-none');
+                }
+                if (amountDueEl) {
+                    amountDueEl.textContent = formatEuro(totalToPayEuros);
+                }
             } else {
                 // Pas de don ou don insuffisant pour créer un dû
-                if (creditMsg) creditMsg.classList.remove('d-none');
-                if (dueLine) dueLine.classList.add('d-none');
+                if (creditMsg) {
+                    creditMsg.classList.remove('d-none');
+                }
+                if (dueLine) {
+                    dueLine.classList.add('d-none');
+                }
             }
         } else {
             // Cas où il y a un reste à payer initial
@@ -159,61 +171,17 @@ document.addEventListener('DOMContentLoaded', async function () {
         donationAmountInput.addEventListener('change', updateRoundUpButtonVisibility);
     }
 
-    // --- Gestion des infos du contact principal ---
-    const editableContacts = document.querySelectorAll('.editable-contact');
-    editableContacts.forEach(input => {
-        input.addEventListener('blur', function () {
-            const feedbackSpan = this.parentElement.querySelector('.feedback-span');
-            const field = this.dataset.field;
-            const value = this.value;
-
-            // Validation de l'email
-            if (field === 'email' && !validateEmail(value)) {
-                showFeedback(feedbackSpan, 'error', 'Adresse e-mail invalide.');
-                return;
-            }
-
-            // Validation du téléphone (s'il n'est pas vide)
-            if (field === 'phone' && value.trim() !== '' && !validateTel(value)) {
-                showFeedback(feedbackSpan, 'error', 'Format de téléphone invalide.');
-                return;
-            }
-
-            const data = {
-                typeField: 'contact',
-                token: reservationToken, //token de la réservation
-                field: field,
-                value: value
-            };
-
-            if (feedbackSpan) {
-                updateField(feedbackSpan, data);
-            }
-        });
-    });
+    // --- Gestion des infos du contact principal via le composant ---
+    const contactFieldsContainer = document.getElementById('contact-fields-container');
+    if (contactFieldsContainer) {
+        App.Components.Contact.init(contactFieldsContainer);
+    }
 
     // --- Gestion des participants ---
-    const editableDetails = document.querySelectorAll('.editable-detail');
-    if (editableDetails.length > 0) {
-        editableDetails.forEach(input => {
-            input.addEventListener('blur', function () {
-                const feedbackSpan = this.parentElement.querySelector('.feedback-span');
-                const field = this.dataset.field;
-                const value = this.value;
-
-                const data = {
-                    typeField: 'detail',
-                    token: reservationToken,
-                    id: this.dataset.detailId,
-                    field: field,
-                    value: value
-                };
-
-                if (feedbackSpan) {
-                    updateField(feedbackSpan, data);
-                }
-            });
-        });
+    // La logique est maintenant gérée par le composant Participants.
+    const participantsContainer = document.getElementById('participants-container');
+    if (participantsContainer) {
+        App.Components.Participants.init(participantsContainer);
     }
 
     // --- Gestion des quantités de compléments ---
@@ -368,59 +336,11 @@ document.addEventListener('DOMContentLoaded', async function () {
         }
     }
 
-    // --- Fonction pour afficher les feedbacks ---
-    function showFeedback(feedbackSpan, status, message = '') {
-        if (!feedbackSpan) return;
-
-        feedbackSpan.textContent = status === 'success' ? '✓' : status === 'error' ? '✗' : '...';
-        feedbackSpan.className = 'input-group-text feedback-span';
-        feedbackSpan.classList.add(status === 'success' ? 'text-success' :
-            status === 'error' ? 'text-danger' : 'text-muted');
-        feedbackSpan.title = message;
-    }
-
-    // --- Fonction générique de mise à jour ---
-    function updateField(feedbackSpan, data, successCallback = null) {
-        // Sauvegarde de la position de défilement avant l'action
-        ScrollManager.save();
-
-        if (feedbackSpan) {
-            showFeedback(feedbackSpan, 'loading');
-        }
-
-        apiPost('/modifData/update', data)
-            .then((result) => {
-                if (result.success) {
-                    if (feedbackSpan) {
-                        showFeedback(feedbackSpan, 'success');
-                    }
-                    if (successCallback) {
-                        successCallback(result);
-                    }
-                    // Si le backend demande un rechargement.
-                    if (result.reload) {
-                        //Sauvegarde de la position
-                        ScrollManager.save();
-                        window.location.reload();
-                    }
-                } else {
-                    showFlash('danger', result.message);
-                    if (feedbackSpan) {
-                        showFeedback(feedbackSpan, 'error', result.message || 'Une erreur est survenue');
-                    }
-                }
-            })
-            .catch((err) => {
-                showFlash('danger', err.userMessage || err.message);
-            });
-
-    }
 
     async function handlePayBalance(event) {
         event.preventDefault(); // Empêche le lien de naviguer vers "#"
 
         const payBalanceBtn = document.getElementById('pay-balance-btn');
-        const container = document.getElementById('reservation-data-container');
         const reservationToken = container.dataset.token;
         const payBalanceImg = payBalanceBtn.querySelector('img');
 
@@ -438,7 +358,9 @@ document.addEventListener('DOMContentLoaded', async function () {
 
         // Désactiver le lien et montrer un état de chargement
         payBalanceBtn.style.pointerEvents = 'none';
-        if (payBalanceImg) payBalanceImg.style.opacity = '0.5';
+        if (payBalanceImg) {
+            payBalanceImg.style.opacity = '0.5';
+        }
 
         const spinner = document.createElement('span');
         spinner.className = 'spinner-border spinner-border-sm ms-2';
@@ -472,7 +394,9 @@ document.addEventListener('DOMContentLoaded', async function () {
             .finally(() => {
                 // Ce bloc s'exécute toujours, sauf en cas de redirection.
                 payBalanceBtn.style.pointerEvents = 'auto';
-                if (payBalanceImg) payBalanceImg.style.opacity = '1';
+                if (payBalanceImg) {
+                    payBalanceImg.style.opacity = '1';
+                }
                 spinner.remove();
                 window.scrollTo(0, 0);
             });
@@ -507,9 +431,15 @@ document.addEventListener('DOMContentLoaded', async function () {
                     const msg = document.getElementById('payment-check-message');
                     const successMsg = document.getElementById('payment-check-success');
 
-                    if(spinner) spinner.style.display = 'none';
-                    if(msg) msg.style.display = 'none';
-                    if(successMsg) successMsg.style.display = 'block';
+                    if(spinner) {
+                        spinner.style.display = 'none';
+                    }
+                    if(msg) {
+                        msg.style.display = 'none';
+                    }
+                    if(successMsg) {
+                        successMsg.style.display = 'block';
+                    }
 
                     // Recharger la page de modification pour voir le solde mis à jour.
                     setTimeout(() => {
@@ -539,7 +469,9 @@ document.addEventListener('DOMContentLoaded', async function () {
      */
     async function forceCheckPayment(data) {
         const msg = document.getElementById('payment-check-message');
-        if (msg) msg.textContent = "La confirmation automatique prend du temps. Nous lançons une vérification manuelle...";
+        if (msg) {
+            msg.textContent = "La confirmation automatique prend du temps. Nous lançons une vérification manuelle...";
+        }
 
         apiPost('/reservation/checkPayment', data)
             .then(result => {
@@ -579,8 +511,12 @@ document.addEventListener('DOMContentLoaded', async function () {
         const msg = document.getElementById('payment-check-message');
         const errorContainer = document.getElementById('payment-check-error');
 
-        if(spinner) spinner.style.display = 'none';
-        if(msg) msg.style.display = 'none';
+        if(spinner) {
+            spinner.style.display = 'none';
+        }
+        if(msg) {
+            msg.style.display = 'none';
+        }
         if(errorContainer) {
             errorContainer.innerHTML = message + `<br><small>ID de transaction pour référence : ${checkoutIntentId}</small>`;
             errorContainer.style.display = 'block';

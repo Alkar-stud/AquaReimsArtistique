@@ -56,6 +56,27 @@ document.addEventListener('DOMContentLoaded', () => {
             const originalModalBodyHtml = modalBody.innerHTML;
             modalBody.innerHTML = '<div class="text-center"><div class="spinner-border" role="status"><span class="visually-hidden">Loading...</span></div></div>';
 
+            // On prépare la fonction de gestion du clic sur "Marquer comme payé"
+            // On la définit ici pour avoir accès à la variable `reservation` qui sera chargée plus bas.
+            const handleMarkAsPaidClick = async () => {
+                if (!confirm("Êtes-vous sûr de vouloir marquer cette réservation comme entièrement payée ?")) {
+                    return;
+                }
+                try {
+                    const response = await apiPost('/gestion/reservations/mark-as-paid', {
+                        reservationId: reservation.id
+                    });
+                    if (response.success) {
+                        alert('La réservation a été marquée comme payée.');
+                        // On recharge la page pour voir les changements
+                        window.location.reload();
+                    }
+                } catch (error) {
+                    alert(error.userMessage || 'Une erreur est survenue.');
+                }
+            };
+
+
             try {
                 const response = await fetch(`/gestion/reservations/details/${reservationId}`);
 
@@ -80,13 +101,14 @@ console.log('reservation : ', reservation);
                 // On restaure le contenu HTML original
                 modalBody.innerHTML = originalModalBodyHtml;
 
-                // Reconstruire le contenu de la modale avec les données
+                // Construire le contenu de la modale avec les données
+                // --- Initialisation du composant Contact ---
+                // On lui passe le formulaire qui contient les champs de contact
+                const contactForm = reservationDetailModal.querySelector('#reservationDetailForm');
+                if (contactForm) App.Components.Contact.init(contactForm);
+
                 document.getElementById('modal_reservation_id').value = reservation.id;
                 document.getElementById('modal_reservation_token').value = reservation.token;
-                document.getElementById('modal_contact_name').value = reservation.name;
-                document.getElementById('modal_contact_firstname').value = reservation.firstName;
-                document.getElementById('modal_contact_email').value = reservation.email;
-                document.getElementById('modal_contact_phone').value = reservation.phone || '';
 
                 const reservationTokenToDisplay = document.getElementById('modal-reset-token');
                 if (reservationTokenToDisplay) {
@@ -104,10 +126,32 @@ console.log('reservation : ', reservation);
                     tokenExpireAtEl.value = toDatetimeLocal(reservation.tokenExpireAt);
                 }
 
+                // --- Mise à jour de l'UI via les composants ---
+                App.Components.Contact.updateUI(reservation);
+                const participantsSection = reservationDetailModal.querySelector('#modal-participants-section');
+                if (participantsSection) App.Components.Participants.init(participantsSection, isReadOnly);
+
                 // --- Remplissage des informations de paiement ---
                 const totalAmount = reservation.totalAmount || 0;
                 const amountPaid = reservation.totalAmountPaid || 0;
                 const amountDue = totalAmount - amountPaid;
+
+                const markAsPaidDiv = document.getElementById('div-modal-mark-as-paid');
+                //Si amountDue est > 0, on affiche la coche pour noter comme payé
+                if (amountDue > 0) {
+                    if (markAsPaidDiv) {
+                        if (amountDue > 0) {
+                            markAsPaidDiv.classList.remove('d-none');
+                        } else {
+                            markAsPaidDiv.classList.add('d-none');
+                        }
+                        // On attache l'écouteur de clic seulement si la div est visible.
+                        if (amountDue > 0 && !markAsPaidDiv.dataset.listenerAttached) {
+                            markAsPaidDiv.addEventListener('click', handleMarkAsPaidClick);
+                            markAsPaidDiv.dataset.listenerAttached = 'true';
+                        }
+                    }
+                }
 
                 // Calcul du total des dons
                 const totalDonation = reservation.payments.reduce((acc, payment) => {
@@ -184,77 +228,14 @@ console.log('reservation : ', reservation);
                     paymentDetailsContainer.innerHTML = paymentDetailsHtml;
                 }
 
-
-                // --- Remplissage des participants ---
-                const participantsList = document.getElementById('modal-participants-list');
-                participantsList.innerHTML = ''; // On vide la liste
-
-                // On groupe les participants par tarif
-                const participantsByTarif = reservation.details.reduce((acc, detail) => {
-                    if (!acc[detail.tarifId]) {
-                        acc[detail.tarifId] = {
-                            tarifName: detail.tarifName,
-                            tarifDescription: detail.tarifDescription || '',
-                            tarifPrice: detail.tarifPrice || 0,
-                            participants: []
-                        };
-                    }
-                    acc[detail.tarifId].participants.push(detail);
-                    return acc;
-                }, {});
-
-                for (const tarifId in participantsByTarif) {
-                    const group = participantsByTarif[tarifId];
-                    const groupTotal = group.participants.length * group.tarifPrice;
-
-                    let participantsHtml = '';
-                    group.participants.forEach(p => {
-                        const fullPlaceName = p.fullPlaceName || p.placeNumber || 'N/A';
-
-                        participantsHtml += `
-                             <div class="row g-2 mb-2">
-                                 <div class="col-md-6">
-                                     <div class="input-group input-group-sm">
-                                         <span class="input-group-text">Nom</span>
-                                         <input type="text" class="form-control" value="${p.name || ''}" ${isReadOnly ? 'readonly' : ''} data-detail-id="${p.id}" data-field="name">
-                                      </div>
-                                 </div>
-                                 <div class="col-md-6">
-                                     <div class="input-group input-group-sm">
-                                         <span class="input-group-text">Prénom</span>
-                                         <input type="text" class="form-control" value="${p.firstname || ''}" ${isReadOnly ? 'readonly' : ''} data-detail-id="${p.id}" data-field="firstname">
-                                      </div>
-                                 </div>
-                                 <div class="col-12">
-                                     <small class="text-muted">Place : ${fullPlaceName}</small>
-                                 </div>
-                             </div>
-                         `;
-                    });
-
-                    participantsList.innerHTML += `
-                         <div class="list-group-item d-flex justify-content-between align-items-start">
-                             <div class="me-auto">
-                                 <strong>${group.participants.length} × ${group.tarifName}</strong>
-                                 ${group.tarifDescription ? `<div class="text-muted small">${group.tarifDescription}</div>` : ''}
-                             </div>
-                             <div class="text-end">
-                                 <strong>${(groupTotal / 100).toFixed(2).replace('.', ',')} €</strong>
-                                 <div class="text-muted small">${group.participants.length} × ${(group.tarifPrice / 100).toFixed(2).replace('.', ',')} €</div>
-                             </div>
-                         </div>
-                         <div class="list-group-item">
-                             <div class="mt-2">${participantsHtml}</div>
-                         </div>
-                     `;
-                }
+                // --- Remplissage des participants via le composant ---
+                App.Components.Participants.updateUI(reservation);
 
                 // --- Remplissage des compléments (s'il y en a) ---
                 const complementsSection = document.getElementById('modal-complements-section');
                 const complementsList = document.getElementById('modal-complements-list');
                 complementsList.innerHTML = '';
 
-console.log(reservation.complements);
                 if (reservation.complements && reservation.complements.length > 0) {
                     complementsSection.style.display = 'block';
                     complementsList.innerHTML = ''; // réinitialise
@@ -305,7 +286,10 @@ console.log(reservation.complements);
         `;
                     });
 
-                    // Ajoute les écouteurs pour +/- (simple)
+
+                    const reservationToken = document.getElementById('modal_reservation_token').value;
+
+                    // Ajoute les écouteurs pour +/-
                     complementsList.querySelectorAll('.complement-qty-btn').forEach(btn => {
                         btn.addEventListener('click', (e) => {
                             e.preventDefault();
@@ -341,8 +325,6 @@ console.log(reservation.complements);
 
                             // Désactiver temporairement les boutons pour éviter double-clic
                             btn.disabled = true;
-                            const reservationToken = document.getElementById('modal_reservation_token').value;
-console.log('action : ', action);
                             // Appel API de mise à jour (adapter l'URL si nécessaire côté serveur)
                             apiPost('/modifData/update', {
                                 typeField: 'complement',
@@ -371,7 +353,7 @@ console.log('action : ', action);
                                             const item = qtyInput.closest('.list-group-item');
                                             let unitPrice = 0;
                                             if (item) {
-                                                // Ex: "12,34 € x" -> on récupère "12,34"
+                                                // Ex: "12,34 € x" -> on récupère "12,34".
                                                 const priceNode = item.querySelector('.text-muted.small');
                                                 const priceMatch = priceNode ? priceNode.textContent.match(/([\d,]+)\s*€/) : null;
                                                 unitPrice = priceMatch ? parseFloat(priceMatch[1].replace(',', '.')) : 0;
@@ -403,7 +385,13 @@ console.log('action : ', action);
                                             if (typeof result.totals.amountDue !== 'undefined') {
                                                 const el = modal.querySelector('#modal-amount-due');
                                                 if (el) el.textContent = (result.totals.amountDue / 100).toFixed(2).replace('.', ',');
+                                                if (result.totals.amountDue > 0) {
+                                                    markAsPaidDiv.classList.remove('d-none');
+                                                } else {
+                                                    markAsPaidDiv.classList.add('d-none');
+                                                }
                                             }
+
                                         }
                                     }
                                 })
@@ -434,6 +422,15 @@ console.log('action : ', action);
                 modalBody.innerHTML = `<div class="alert alert-danger"><strong>Erreur de communication avec le serveur :</strong><pre>${error.message}</pre></div>`;
             }
         });
+
+        // Nettoyage des écouteurs d'événements à la fermeture de la modale pour éviter les fuites de mémoire
+        reservationDetailModal.addEventListener('hidden.bs.modal', () => {
+            const markAsPaidDiv = document.getElementById('div-modal-mark-as-paid');
+            if (markAsPaidDiv) {
+                delete markAsPaidDiv.dataset.listenerAttached;
+            }
+        });
+
     }
     // Gestion du clic sur le lien pour afficher/masquer les détails de paiement
     document.addEventListener('click', function(e) {
@@ -485,7 +482,7 @@ console.log('action : ', action);
 
                     const statusBadge = listItem.querySelector('.payment-status-badge');
 
-                    // On masque le bouton de rafraîchissement si le nouveau statut est "Refunded"
+                    // On masque le bouton de rafraîchissement si le nouveau statut est "Refunded".
                     if (newStatus === 'Refunded') {
                         refreshButton.style.display = 'none';
                     }
@@ -539,7 +536,6 @@ console.log('action : ', action);
         alert('L\'éventuel don n\'est pas remboursé');
 
 
-
         }
     });
 
@@ -589,13 +585,6 @@ console.log('action : ', action);
                 headers: { 'X-CSRF-Context': '/gestion/accueil' }
             })
                 .then(data => {
-                    // Si le serveur renvoie un nouveau token dans le body, on met la meta à jour
-                    if (data && data.csrfToken) {
-                        const meta = document.querySelector('meta[name="csrf-token"]');
-                        if (meta) {
-                            meta.content = String(data.csrfToken);
-                        }
-                    }
                     window.location.reload();
                 })
                 .catch(error => {

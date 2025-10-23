@@ -101,7 +101,7 @@ $checkoutIntentId = $_GET['checkoutIntentId'] ?? null;
 
         <!-- Détail des participants -->
         <h5>Détail des participants :</h5>
-        <ul class="list-group mb-3">
+        <ul class="list-group mb-3" id="participants-container">
             {% foreach $reservationView['details'] as $tarif_id => $group %}
             <li class="list-group-item d-flex justify-content-between align-items-start">
                 <div class="me-3">

@@ -69,21 +69,9 @@ readonly class ReservationUpdateService
         } elseif ($typeField == 'complement') {
             try {
                 if ($fieldId) { // Mise à jour d'un complément existant
-                    $success = $this->updateComplementQuantity($reservation->getId(), (int)$fieldId, $action);
-                    $return = [
-                        'success' => $success,
-                        'message' => $success ? 'Mise à jour réussie.' : 'La mise à jour a échoué.',
-                        'reload' => $success // Demander un rechargement si succès
-                    ];
+                    $return = $this->updateComplementQuantity($reservation->getId(), $fieldId, $action);
                 } elseif ($tarifId) { // Ajout d'un nouveau complément
                     $return = $this->addComplement($reservation->getId(), (int)$tarifId);
-                    $success = $return['success'];
-                    $fieldId = $return['id'];
-                    $return = [
-                        'success' => $success,
-                        'message' => $success ? 'Complément ajouté avec succès.' : "Erreur lors de l'ajout du complément.",
-                        'reload' => $success
-                    ];
                 } else {
                     $return = ['success' => false, 'message' => 'Action sur complément non valide.'];
                 }
@@ -210,10 +198,9 @@ readonly class ReservationUpdateService
      * @param int $reservationId
      * @param int $complementId
      * @param string $action
-     * @return bool True si la mise à jour a réussi.
-     * @throws InvalidArgumentException Si le complément n'est pas trouvé.
+     * @return array
      */
-    public function updateComplementQuantity(int $reservationId, int $complementId, string $action): bool
+    public function updateComplementQuantity(int $reservationId, int $complementId, string $action): array
     {
         $complement = $this->reservationComplementRepository->findById($complementId);
         if (!$complement) {
@@ -230,15 +217,39 @@ readonly class ReservationUpdateService
 
         if ($qty <= 0) {
             $success = $this->reservationComplementRepository->delete($complement->getId());
+            $message = $success ? 'Complément supprimé avec succès.' : 'Échec de la suppression du complément.';
         } else {
             $success = $this->reservationComplementRepository->update($complement);
+            $message = $success ? 'Quantité du complément mise à jour.' : 'Échec de la mise à jour de la quantité du complément.';
         }
 
         if ($success) {
             $this->recalculateAndSaveTotal($reservationId);
+
+            // Récupérer la réservation mise à jour pour obtenir les nouveaux totaux
+            $updatedReservation = $this->reservationRepository->findById($reservationId, false, false, false, true);
+            if (!$updatedReservation) {
+                return ['success' => false, 'message' => 'Réservation introuvable après mise à jour des totaux.'];
+            }
+
+            // Récupérer le tarif pour calculer le total du groupe de compléments
+            $tarif = $this->tarifRepository->findById($complement->getTarif());
+            $groupTotalCents = $tarif ? $this->priceCalculator->computeComplementTotal($qty, $tarif->getPrice()) : 0;
+
+            return [
+                'success' => true,
+                'message' => $message,
+                'newQuantity' => $qty,
+                'groupTotalCents' => $groupTotalCents,
+                'totals' => [
+                    'totalAmount' => $updatedReservation->getTotalAmount(),
+                    'totalPaid' => $updatedReservation->getTotalAmountPaid(),
+                    'amountDue' => $updatedReservation->getTotalAmount() - $updatedReservation->getTotalAmountPaid(),
+                ]
+            ];
         }
 
-        return $success;
+        return ['success' => false, 'message' => $message];
     }
 
     /**
@@ -254,12 +265,8 @@ readonly class ReservationUpdateService
 
         // Si oui, on incrémente simplement sa quantité en réutilisant la méthode existante
         if ($existing) {
-            $success = $this->updateComplementQuantity($reservationId, $existing->getId(), 'plus');
-            if ($success) {
-                return ['success' => true, 'id' => $existing->getId()];
-            } else {
-                return ['success' => false, 'id' => 0];
-            }
+            // updateComplementQuantity renvoie le tableau complet
+            return $this->updateComplementQuantity($reservationId, $existing->getId(), 'plus');
         }
 
         // Sinon, on en crée un nouveau
@@ -272,10 +279,32 @@ readonly class ReservationUpdateService
 
         if ($newId > 0) {
             $this->recalculateAndSaveTotal($reservationId);
-            return ['success' => true, 'id' => $newId];
+
+            // Récupérer la réservation mise à jour pour obtenir les nouveaux totaux
+            $updatedReservation = $this->reservationRepository->findById($reservationId, false, false, false, true);
+            if (!$updatedReservation) {
+                return ['success' => false, 'message' => 'Réservation introuvable après ajout de complément.'];
+            }
+
+            // Récupérer le tarif pour calculer le total du groupe de compléments (quantité 1 pour un nouvel ajout)
+            $tarif = $this->tarifRepository->findById($tarifId);
+            $groupTotalCents = $tarif ? $this->priceCalculator->computeComplementTotal(1, $tarif->getPrice()) : 0;
+
+            return [
+                'success' => true,
+                'message' => 'Complément ajouté avec succès.',
+                'id' => $newId, // L'ID du nouveau complément créé
+                'newQuantity' => 1,
+                'groupTotalCents' => $groupTotalCents,
+                'totals' => [
+                    'totalAmount' => $updatedReservation->getTotalAmount(),
+                    'totalPaid' => $updatedReservation->getTotalAmountPaid(),
+                    'amountDue' => $updatedReservation->getTotalAmount() - $updatedReservation->getTotalAmountPaid(),
+                ]
+            ];
         }
 
-        return ['success' => false, 'id' => 0];
+        return ['success' => false, 'id' => 0, 'message' => 'L\'ajout du complément a échoué.'];
     }
 
 

@@ -34,7 +34,7 @@ class TarifDataValidationService
      */
     public function checkData(array $data, ?int $excludeId = null): ?string
     {
-        // Conserver le code brut pour la vérification (évite htmlspecialchars dans la comparaison DB)
+        // Conserver le code brut pour la vérification
         $rawAccessCode = isset($data['access_code']) ? trim((string)$data['access_code']) : '';
 
         // Normalisation

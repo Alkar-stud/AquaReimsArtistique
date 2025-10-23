@@ -108,7 +108,7 @@
             {% foreach $reservations as $reservation %}
             <tr class="{{ $reservation->isChecked() ? 'table-light' : '' }}">
                 <td>ARA-{{ str_pad($reservation->getId(), 5, '0', STR_PAD_LEFT) }}</td>
-                <td>{{ $reservation->getFirstName() }} {{ $reservation->getName() }}</td>
+                <td>{{ $reservation->getName() }} {{ $reservation->getFirstName() }}</td>
                 <td>
                     {% if $reservation->getSwimmer() %}
                     {{ $reservation->getSwimmer()->getName() }}
@@ -152,7 +152,7 @@
     <div class="card mb-3">
         <div class="card mb-3 {{ $reservation->isChecked() ? 'bg-light' : '' }}">
             <h5 class="card-title">Réservation ARA-{{ str_pad($reservation->getId(), 5, '0', STR_PAD_LEFT) }}</h5>
-            <p class="card-text mb-1"><strong>Acheteur :</strong> {{ $reservation->getFirstName() }} {{ $reservation->getName() }}</p>
+            <p class="card-text mb-1"><strong>Acheteur :</strong> {{ $reservation->getName() }} {{ $reservation->getFirstName() }}</p>
             <p class="card-text mb-1"><strong>Nageuse :</strong>
                 {% if $reservation->getSwimmer() %}
                 {{ $reservation->getSwimmer()->getName() }}

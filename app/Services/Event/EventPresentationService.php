@@ -22,10 +22,14 @@ class EventPresentationService
                 if (empty(trim($html))) {
                     continue;
                 }
+                // On indique à libxml de gérer les erreurs en interne pour éviter les warnings sur les balises HTML5
+                $previousLibXmlErrors = libxml_use_internal_errors(true);
 
                 $doc = new DOMDocument();
                 // On charge le HTML en supprimant les erreurs de parsing et sans ajouter de balises <html> ou <body>
-                @$doc->loadHTML('<?xml encoding="utf-8" ?>' . $html, LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD);
+                $doc->loadHTML('<?xml encoding="utf-8" ?>' . $html, LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD);
+
+                libxml_use_internal_errors($previousLibXmlErrors);
 
                 // On supprime le style en ligne 'width' ajouté par CKEditor sur les figures pour permettre le responsive
                 $figures = $doc->getElementsByTagName('figure');
@@ -67,8 +71,5 @@ class EventPresentationService
         return $contents;
 
     }
-
-
-
 
 }

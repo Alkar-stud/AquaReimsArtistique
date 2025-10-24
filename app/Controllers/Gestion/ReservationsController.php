@@ -138,8 +138,6 @@ class ReservationsController extends AbstractController
 
     }
 
-
-
     #[Route('/gestion/reservation/toggle-status', name: 'app_gestion_reservation_toggle_status', methods: ['POST'])]
     public function toggleStatus(): void
     {

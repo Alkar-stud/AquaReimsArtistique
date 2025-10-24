@@ -2,6 +2,8 @@
 import { initContactForm } from '../reservations/contactForm.js';
 import { initParticipantsForm, updateParticipantsUI } from '../reservations/participantsForm.js';
 import { initComplementsForm, updateComplementsUI } from '../reservations/complementsForm.js';
+import ScrollManager from '../components/scrollManager.js';
+import { toggleReservationStatus } from './statusToggle.js';
 
 /**
  * Gère l'événement d'ouverture de la modale.
@@ -45,6 +47,10 @@ async function onModalOpen(event) {
             reservationIdentifier: reservation.id,
             identifierType: 'reservationId'
         });
+        // Remplir les champs cachés
+        modal.querySelector('#modal_reservation_id').value = reservation.id || '';
+        modal.querySelector('#modal_reservation_token').value = reservation.token || '';
+
         // Remplir les champs de l'acheteur
         modal.querySelector('#modal_contact_name').value = reservation.name || '';
         modal.querySelector('#modal_contact_firstname').value = reservation.firstName || '';
@@ -125,6 +131,20 @@ async function onModalOpen(event) {
             // Ici, il faudra ajouter la logique de clic pour ce bouton si nécessaire
         }
 
+        /*---------------------------------
+
+        Boutons du Footer
+
+         ---------------------------------*/
+        const saveToggleBtn = modal.querySelector('#modal-save-and-toggle-checked-btn');
+        if (saveToggleBtn) {
+            // Si la réservation est déjà vérifiée, on propose de la marquer comme non vérifiée
+            saveToggleBtn.innerHTML = reservation.isChecked
+                ? '<i class="bi bi-x-circle"></i>&nbsp;Enregistrer et marquer comme non vérifié'
+                : '<i class="bi bi-check-circle"></i>&nbsp;Enregistrer et marquer comme vérifié';
+
+            saveToggleBtn.dataset.targetChecked = reservation.isChecked ? '0' : '1';
+        }
 
     } catch (error) {
         modalBody.innerHTML = `<div class="alert alert-danger m-3">Erreur lors du chargement des détails : ${error.message}</div>`;
@@ -139,5 +159,27 @@ export function initReservationModal() {
     if (modal) {
         // On attache l'écouteur qui se déclenchera à chaque ouverture
         modal.addEventListener('show.bs.modal', onModalOpen);
+
+        // On gère le clic sur le bouton "Fermer" du footer
+        const closeButton = modal.querySelector('#modal-close-btn');
+        if (closeButton) {
+            closeButton.addEventListener('click', () => {
+                ScrollManager.save(); // Sauvegarde de la position du scroll
+                window.location.reload(); // Rechargement de la page
+            });
+        }
+
+        // On gère le clic sur le bouton "Enregistrer et marquer..."
+        const saveToggleButton = modal.querySelector('#modal-save-and-toggle-checked-btn');
+        if (saveToggleButton) {
+            saveToggleButton.addEventListener('click', (event) => {
+                const button = event.currentTarget;
+                const reservationId = modal.querySelector('#modal_reservation_id').value;
+                const newStatus = button.dataset.targetChecked === '1';
+
+                // On appelle la fonction partagée depuis statusToggle.js
+                toggleReservationStatus(Number(reservationId), newStatus, button);
+            });
+        }
     }
 }

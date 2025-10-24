@@ -23,12 +23,16 @@ export async function toggleReservationStatus(reservationId, newStatus, elementT
             window.location.reload(); // Recharger la page
         } else {
             alert(response.message || 'Échec de la mise à jour du statut.');
-            if (elementToDisable) elementToDisable.disabled = false;
+            if (elementToDisable) {
+                elementToDisable.disabled = false;
+            }
         }
     } catch (error) {
         console.error('Erreur lors du changement de statut:', error);
         alert(error.userMessage || 'Une erreur de communication est survenue.');
-        if (elementToDisable) elementToDisable.disabled = false;
+        if (elementToDisable) {
+            elementToDisable.disabled = false;
+        }
     }
 }
 

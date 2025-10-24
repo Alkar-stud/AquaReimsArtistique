@@ -6,6 +6,7 @@ import { initReservationList } from './gestion/reservationList.js';
 import { initComplementsForm } from './reservations/complementsForm.js';
 import { initSpecialCodeForm } from './reservations/specialCodeForm.js';
 import { initPaymentManager } from './reservations/paymentManager.js';
+import { initCancelButtons } from './reservations/cancelReservation.js';
 import { initStatusToggles } from './gestion/statusToggle.js';
 
 
@@ -47,6 +48,15 @@ document.addEventListener('DOMContentLoaded', () => {
     if (reservationDataContainer) {
         initSpecialCodeForm({
             reservationToken: reservationDataContainer.dataset.token
+        });
+    }
+
+    // Pour la page de modification : gestion du bouton d'annulation
+    if (reservationDataContainer) {
+        initCancelButtons('.cancel-button', {
+            apiUrl: '/modifData/update',
+            reservationIdentifier: reservationDataContainer.dataset.token,
+            identifierType: 'token'
         });
     }
 

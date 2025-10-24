@@ -4,6 +4,7 @@ import { initParticipantsForm, updateParticipantsUI } from '../reservations/part
 import { initComplementsForm, updateComplementsUI } from '../reservations/complementsForm.js';
 import ScrollManager from '../components/scrollManager.js';
 import { toggleReservationStatus } from './statusToggle.js';
+import { toggleCancelStatus } from '../reservations/cancelReservation.js';
 
 /**
  * Gère l'événement d'ouverture de la modale.
@@ -146,6 +147,18 @@ async function onModalOpen(event) {
             saveToggleBtn.dataset.targetChecked = reservation.isChecked ? '0' : '1';
         }
 
+        const cancelBtn = modal.querySelector('#modal-reservation-cancel-btn');
+        if (cancelBtn) {
+            // Si la réservation est déjà annulée, on propose de la réactiver
+            cancelBtn.innerHTML = reservation.isCanceled
+                ? '<i class="bi bi-arrow-counterclockwise"></i>&nbsp;Réactiver la réservation'
+                : '<i class="bi bi-x-circle"></i>&nbsp;Annuler la réservation';
+
+            cancelBtn.classList.toggle('btn-warning', !reservation.isCanceled);
+            cancelBtn.classList.toggle('btn-success', reservation.isCanceled);
+            cancelBtn.dataset.targetCanceled = reservation.isCanceled ? '0' : '1';
+        }
+
     } catch (error) {
         modalBody.innerHTML = `<div class="alert alert-danger m-3">Erreur lors du chargement des détails : ${error.message}</div>`;
     }
@@ -179,6 +192,24 @@ export function initReservationModal() {
 
                 // On appelle la fonction partagée depuis statusToggle.js
                 toggleReservationStatus(Number(reservationId), newStatus, button);
+            });
+        }
+
+        // On gère le clic sur le bouton "Annuler/Réactiver"
+        const cancelToggleButton = modal.querySelector('#modal-reservation-cancel-btn');
+        if (cancelToggleButton) {
+            cancelToggleButton.addEventListener('click', (event) => {
+                const button = event.currentTarget;
+                const reservationId = modal.querySelector('#modal_reservation_id').value;
+                const newStatus = button.dataset.targetCanceled === '1';
+
+                toggleCancelStatus({
+                    apiUrl: '/gestion/reservations/update',
+                    reservationIdentifier: Number(reservationId),
+                    identifierType: 'reservationId',
+                    newStatus: newStatus,
+                    button: button
+                });
             });
         }
     }

@@ -84,10 +84,10 @@ readonly class ReservationUpdateService
             $this->reservationRepository->updateSingleField($reservation->getId(), 'is_checked', false);
 
         } elseif ($typeField == 'cancel') {
-            $success = $this->cancelReservation($reservation);
+            $success = $this->cancelReservation($reservation, (bool)$value);
             $return = [
                 'success' => $success,
-                'message' => $success ? 'Commande annulée.' : 'Erreur lors de l\'annulation.',
+                'message' => $success ? 'Statut d\'annulation mis à jour.' : 'Erreur lors de la mise à jour.',
                 'reload' => $success
             ];
         } else {
@@ -319,7 +319,7 @@ readonly class ReservationUpdateService
      * @param Reservation $reservation
      * @return bool|null
      */
-    public function cancelReservation(Reservation $reservation): bool|string
+    public function cancelReservation(Reservation $reservation, bool $isCanceled): bool|string
     {
         $pdo = Database::getInstance();
 
@@ -328,25 +328,33 @@ readonly class ReservationUpdateService
                 $pdo->beginTransaction();
             }
 
-            //On tague la commande comme annulée
-            if (!$this->reservationRepository->updateSingleField($reservation->getId(), 'is_canceled', true)) {
+            // Met à jour le statut d'annulation
+            if (!$this->reservationRepository->updateSingleField($reservation->getId(), 'is_canceled', $isCanceled)) {
                 throw new \RuntimeException('Échec de la mise à jour du statut d\'annulation de la réservation.');
             }
+            if ($isCanceled) {
+                //On supprime les éventuelles places numérotées de la commande
+                if (!$this->reservationDetailRepository->updateSingleField($reservation->getId(), 'place_number', null)) {
+                    throw new \RuntimeException('Erreur lors de la suppression des places numérotées.');
+                }
 
-            //On supprime les éventuelles places numérotées de la commande
-            if (!$this->reservationDetailRepository->updateSingleField($reservation->getId(), 'place_number', null)) {
-                throw new \RuntimeException('Erreur lors de la suppression des places numérotées.');
+                $templateEmail = 'cancel_order';
+                // Envoyer l'email de confirmation d'annulation
+                if (!$this->mailPrepareService->sendCancelReservationConfirmationEmail($reservation, $templateEmail)) {
+                    throw new \RuntimeException('Échec de l\'envoi de l\'email d\'annulation.');
+                }
+            } else {
+                $templateEmail = 'uncancel_order';
+                // Envoyer l'email de confirmation de réactivation
+                if (!$this->mailPrepareService->sendCancelReservationConfirmationEmail($reservation, $templateEmail)) {
+                    throw new \RuntimeException('Échec de l\'envoi de l\'email d\'annulation.');
+                }
             }
 
-            // Envoyer l'email de confirmation d'annulation
-            if (!$this->mailPrepareService->sendCancelReservationConfirmationEmail($reservation)) {
-                throw new \RuntimeException('Échec de l\'envoi de l\'email d\'annulation.');
-            }
-
-            // Enregistrer l'envoi de l'email
-            if (!$this->mailService->recordMailSent($reservation, 'cancel_order')) {
-                throw new \RuntimeException('Échec de l\'enregistrement de l\'envoi de l\'email d\'annulation.');
-            }
+                // Enregistrer l'envoi de l'email
+                if (!$this->mailService->recordMailSent($reservation, $templateEmail)) {
+                    throw new \RuntimeException('Échec de l\'enregistrement de l\'envoi de l\'email d\'annulation.');
+                }
 
             // Commit si tout est OK
             $pdo->commit();

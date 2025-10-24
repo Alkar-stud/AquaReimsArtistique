@@ -177,12 +177,13 @@ readonly class MailPrepareService
      * Pour envoyer un email de confirmation d'annulation de réservation.
      *
      * @param Reservation $reservation
+     * @param string $templateEmail
      * @return bool
      */
-    public function sendCancelReservationConfirmationEmail(Reservation $reservation): bool
+    public function sendCancelReservationConfirmationEmail(Reservation $reservation, string $templateEmail): bool
     {
 
-        $tpl = $this->templateService->render('cancel_order', [
+        $tpl = $this->templateService->render($templateEmail, [
             'IDreservation' => str_pad($reservation->getId(), 5, '0', STR_PAD_LEFT),
             'SIGNATURE' => SIGNATURE,
             'email_club' => defined('EMAIL_CLUB') ? EMAIL_CLUB : '',

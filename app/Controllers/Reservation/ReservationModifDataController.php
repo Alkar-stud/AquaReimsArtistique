@@ -5,7 +5,6 @@ namespace app\Controllers\Reservation;
 
 use app\Attributes\Route;
 use app\Controllers\AbstractController;
-use app\DTO\HelloAssoCartDTO;
 use app\Models\Reservation\Reservation;
 use app\Repository\Reservation\ReservationRepository;
 use app\Repository\Tarif\TarifRepository;
@@ -15,7 +14,6 @@ use app\Services\Reservation\ReservationUpdateService;
 use app\Services\Tarif\TarifService;
 use DateTime;
 use Exception;
-use InvalidArgumentException;
 
 class ReservationModifDataController extends AbstractController
 {
@@ -104,26 +102,25 @@ class ReservationModifDataController extends AbstractController
 
     }
 
-    #[Route('/modifData/update', name: 'app_reservation_update', methods: ['POST'])]
+    #[Route('/modifData/update', name: 'app_reservation_modif_date_update', methods: ['POST'])]
     public function update(): void
     {
-        $return = ['success' => false, 'message' => 'pas d\'erreur !'];
-
         //On récupère toutes les données susceptibles d'être envoyées
-        $data = json_decode(file_get_contents('php://input'), true);
-        $typeField = $data['typeField'];
-        $fieldId = $data['id'] ?? null;
-        $tarifId = $data['tarifId'] ?? null;
-        $reservationToken = $data['token'] ?? null;
-        $field = $data['field'] ?? null;
-        $value = $data['value'] ?? null;
-        $action = $data['action'] ?? null;
+        $data = json_decode(file_get_contents('php://input'), true) ?? [];
 
         //On vérifie si le token existe bien et peut être modifiable
-        $reservation = $this->getTokenToVerifyItAndGetReservation($reservationToken);
+        $reservation = $this->getTokenToVerifyItAndGetReservation($data['token']);
 
         //On fait la mise à jour
-        $return = $this->reservationUpdateService->handleUpdateReservationFields($reservation, $typeField, $fieldId, $tarifId, $field, $value, $action);
+        $return = $this->reservationUpdateService->handleUpdateReservationFields(
+            $reservation,
+            $data['typeField'] ?? '',
+            $data['id'] ?? null,
+            $data['tarifId'] ?? null,
+            $data['field'] ?? null,
+            $data['value'] ?? null,
+            $data['action'] ?? null
+        );
 
         $this->json($return);
     }

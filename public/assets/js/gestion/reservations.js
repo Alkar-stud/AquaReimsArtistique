@@ -1,44 +1,4 @@
 document.addEventListener('DOMContentLoaded', () => {
-    const container = document.getElementById('reservation-data-container');
-    if (!container) {
-        return; // Ne rien faire si le conteneur principal n'est pas trouvé
-    }
-
-    // Restaure la position au chargement
-    ScrollManager.restore();
-
-    // On sélectionne la liste déroulante, peu importe l'onglet actif
-    // en se basant sur le début de son ID "event-selector-".
-    const eventSelector = document.querySelector('[id^="event-selector-"]');
-
-    // S'il n'y a pas d'événements, le sélecteur n'existe pas.
-    if (eventSelector) {
-        eventSelector.addEventListener('change', (event) => {
-            const selectedSessionId = event.target.value;
-
-            // Si une session est sélectionnée (et pas l'option vide).
-            if (selectedSessionId) {
-                // On recharge la page en ajoutant l'ID de la session dans l'URL.
-                const currentUrl = new URL(window.location.href);
-                currentUrl.searchParams.set('s', selectedSessionId);
-                window.location.href = currentUrl.toString();
-            }
-        });
-    }
-
-    //Gérer le changement de page
-    const itemsPerPageSelector = document.getElementById('items-per-page-selector');
-    if (itemsPerPageSelector) {
-        itemsPerPageSelector.addEventListener('change', function() {
-            const perPage = this.value;
-            const currentUrl = new URL(window.location.href);
-            currentUrl.searchParams.set('per_page', perPage);
-            // On retourne à la première page pour éviter les incohérences
-            currentUrl.searchParams.set('page', '1');
-            window.location.href = currentUrl.toString();
-        });
-    }
-
     const reservationDetailModal = document.getElementById('reservationDetailModal');
     if (reservationDetailModal) {
         reservationDetailModal.addEventListener('show.bs.modal', async (event) => {
@@ -97,7 +57,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     console.error("Erreur de parsing JSON. Réponse brute du serveur :", responseText);
                     throw new Error("La réponse du serveur n'est pas un JSON valide.");
                 }
-console.log('reservation : ', reservation);
+                console.log('reservation : ', reservation);
                 // On restaure le contenu HTML original
                 modalBody.innerHTML = originalModalBodyHtml;
 
@@ -377,7 +337,7 @@ console.log('reservation : ', reservation);
             e.preventDefault();
             const paymentId = refundButton.dataset.paymentId;
             console.log('Clic sur remboursement pour le paiement ID :', paymentId);
-        alert('L\'éventuel don n\'est pas remboursé');
+            alert('L\'éventuel don n\'est pas remboursé');
 
 
         }

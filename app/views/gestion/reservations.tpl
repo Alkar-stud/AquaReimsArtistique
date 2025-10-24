@@ -20,8 +20,3 @@
     {% endif %}
 
 </div>
-
-<script src="/assets/js/components/ui.js" defer></script>
-<script src="/assets/js/app/reservations_api.js" defer></script>
-<script src="/assets/js/components/scroll_manager.js" defer></script>
-<script src="/assets/js/gestion/reservations.js" defer></script>

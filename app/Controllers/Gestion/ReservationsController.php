@@ -7,6 +7,7 @@ use app\Controllers\AbstractController;
 use app\Repository\Reservation\ReservationRepository;
 use app\Services\Event\EventQueryService;
 use app\Services\Pagination\PaginationService;
+use app\Services\Reservation\ReservationUpdateService;
 use Exception;
 
 class ReservationsController extends AbstractController
@@ -14,17 +15,20 @@ class ReservationsController extends AbstractController
     private EventQueryService $eventQueryService;
     private ReservationRepository $reservationRepository;
     private PaginationService $paginationService;
+    private ReservationUpdateService $reservationUpdateService;
 
     function __construct(
         EventQueryService $eventQueryService,
         ReservationRepository $reservationRepository,
-        PaginationService $paginationService
+        PaginationService $paginationService,
+        ReservationUpdateService $reservationUpdateService,
     )
     {
         parent::__construct(false);
         $this->eventQueryService = $eventQueryService;
         $this->reservationRepository = $reservationRepository;
         $this->paginationService = $paginationService;
+        $this->reservationUpdateService = $reservationUpdateService;
     }
 
     #[Route('/gestion/reservations', name: 'app_gestion_reservations')]
@@ -95,6 +99,46 @@ class ReservationsController extends AbstractController
 
         $this->json($reservation->toArray());
     }
+
+    #[Route('/gestion/reservations/update', name: 'app_gestion_reservations_update', methods: ['POST'])]
+    public function update(): void
+    {
+        // Vérifier les permissions de l'utilisateur connecté
+        $userPermissions = $this->whatCanDoCurrentUser();
+        if (!str_contains($userPermissions, 'U')) {
+            $this->json(['success' => false, 'message' => 'Accès refusé. Vous n\'avez pas les droits de modification.'], 403);
+            return;
+        }
+
+        // Le contrôleur est responsable de lire la requête
+        $data = json_decode(file_get_contents('php://input'), true) ?? [];
+
+        // Il valide l'autorisation (via l'ID de réservation)
+        $reservationId = $data['reservationId'] ?? null;
+        if (!$reservationId) {
+            $this->json(['success' => false, 'message' => 'ID de réservation manquant.']);
+        }
+        $reservation = $this->reservationRepository->findById((int)$reservationId, false, false, false, true);
+        if (!$reservation) {
+            $this->json(['success' => false, 'message' => 'Réservation non trouvée.']);
+        }
+
+        // 4. Il délègue l'action métier au service avec des paramètres clairs
+        $return = $this->reservationUpdateService->handleUpdateReservationFields(
+            $reservation,
+            $data['typeField'] ?? '',
+            $data['id'] ?? null,
+            $data['tarifId'] ?? null,
+            $data['field'] ?? null,
+            $data['value'] ?? null,
+            $data['action'] ?? null
+        );
+
+        $this->json($return);
+
+    }
+
+
 
     #[Route('/gestion/reservation/toggle-status', name: 'app_gestion_reservation_toggle_status', methods: ['POST'])]
     public function toggleStatus(): void

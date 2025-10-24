@@ -74,9 +74,10 @@ $checkoutIntentId = $_GET['checkoutIntentId'] ?? null;
                                 <div class="input-group input-group-sm">
                                     <span class="input-group-text">Email</span>
                                     <input type="email"
+                                           id="contact_email"
                                            class="form-control editable-contact"
                                            data-field="email"
-                                           value="{{ method_exists($reservation,'getEmail') ? $reservation->getEmail() : '' }}"
+                                           value="{{ isset($reservation) && method_exists($reservation,'getEmail') ? $reservation->getEmail() : '' }}"
                                            aria-label="Email">
                                     <span class="input-group-text feedback-span"></span>
                                 </div>
@@ -156,75 +157,77 @@ $checkoutIntentId = $_GET['checkoutIntentId'] ?? null;
         </ul>
 
         <!-- Compléments -->
-        <h5>Compléments</h5>
-        {% if !empty($reservationView['complements']) %}
-        <ul class="list-group mb-3" id="complements-container">
-            {% foreach $reservationView['complements'] as $tarif_id => $complementGroup %}
-            <li class="list-group-item d-flex justify-content-between align-items-start">
-                <div class="me-3">
-                    <strong>{{ $complementGroup['tarif']->getName() ?? '' }}</strong>
-                    {% if !empty($complementGroup['tarif']->getDescription()) %}
-                    <small class="text-muted">— {{ $complementGroup['tarif']->getDescription() }}</small>
-                    {% endif %}
-                    <div class="mt-1">Qté : {{ $complementGroup['qty'] }}</div>
-                    {% if isset($complementGroup['codes']) && !empty($complementGroup['codes']) %}
-                    <div class="text-muted small">(code {{ implode(', ', $complementGroup['codes']) }})</div>
-                    {% endif %}
-                </div>
-
-                <div class="ms-auto text-end">
-                    <div class="input-group input-group-sm" style="max-width: 100px;">
-                        <button class="btn btn-outline-secondary btn-sm complement-qty-btn" type="button" data-action="minus" data-complement-id="{{ $complementGroup['id'] }}">-</button>
-                        <input type="text" class="form-control text-center" id="qty-complement-{{ $complementGroup['id'] }}" value="{{ $complementGroup['qty'] }}" readonly>
-
-                        {% if (is_null($complementGroup['tarif']->getMaxTickets()) || $complementGroup['qty'] < $complementGroup['tarif']->getMaxTickets()) %}
-                        <button class="btn btn-outline-secondary btn-sm complement-qty-btn" type="button" data-action="plus" data-complement-id="{{ $complementGroup['id'] }}">+</button>
+        <div id="complements-section">
+            <h5>Compléments</h5>
+            {% if !empty($reservationView['complements']) %}
+            <ul class="list-group mb-3" id="complements-container">
+                {% foreach $reservationView['complements'] as $tarif_id => $complementGroup %}
+                <li class="list-group-item d-flex justify-content-between align-items-start" data-complement-row-id="{{ $complementGroup['id'] }}">
+                    <div class="me-3">
+                        <strong>{{ $complementGroup['tarif']->getName() ?? '' }}</strong>
+                        {% if !empty($complementGroup['tarif']->getDescription()) %}
+                        <small class="text-muted">— {{ $complementGroup['tarif']->getDescription() }}</small>
+                        {% endif %}
+                        <div class="mt-1">Qté : {{ $complementGroup['qty'] }}</div>
+                        {% if isset($complementGroup['codes']) && !empty($complementGroup['codes']) %}
+                        <div class="text-muted small">(code {{ implode(', ', $complementGroup['codes']) }})</div>
                         {% endif %}
                     </div>
 
-                    <strong>{{ number_format(($complementGroup['total'] ?? 0) / 100, 2, ',', ' ') }} €</strong>
-                    <div class="text-muted small">
-                        {{ $complementGroup['qty'] ?? 0 }}
-                        × {{ number_format((($complementGroup['price'] ?? null) ?? ($complementGroup['tarif']->getPrice() ?? 0)) / 100, 2, ',', ' ') }} €
-                    </div>
-                </div>
-            </li>
-            {% endforeach %}
-            <li class="list-group-item d-flex justify-content-between align-items-center bg-light">
-                <span><strong>Sous-total compléments</strong></span>
-                <strong>{{ number_format(($reservationView['totals']['complements_subtotal'] ?? 0) / 100, 2, ',', ' ') }} €</strong>
-            </li>
-        </ul>
-        {% endif %}
+                    <div class="ms-auto text-end">
+                        <div class="input-group input-group-sm" style="max-width: 100px;">
+                            <button class="btn btn-outline-secondary btn-sm complement-qty-btn" type="button" data-action="minus" data-complement-id="{{ $complementGroup['id'] }}">-</button>
+                            <input type="text" class="form-control text-center" id="qty-complement-{{ $complementGroup['id'] }}" value="{{ $complementGroup['qty'] }}" readonly>
 
-        <!-- Ajouter des articles si disponibles -->
-        {% if isset($availableComplements) && !empty($availableComplements) %}
-        <h5 class="mt-4">Ajouter des compléments</h5>
-        <div class="list-group mb-3">
-            {% foreach $availableComplements as $tarif %}
-            {% if !$tarif->getAccessCode() %}
-            <div class="list-group-item">
-                <div class="d-flex justify-content-between align-items-center">
+                            {% if (is_null($complementGroup['tarif']->getMaxTickets()) || $complementGroup['qty'] < $complementGroup['tarif']->getMaxTickets()) %}
+                            <button class="btn btn-outline-secondary btn-sm complement-qty-btn" type="button" data-action="plus" data-complement-id="{{ $complementGroup['id'] }}">+</button>
+                            {% endif %}
+                        </div>
+
+                        <strong>{{ number_format(($complementGroup['total'] ?? 0) / 100, 2, ',', ' ') }} €</strong>
+                        <div class="text-muted small">
+                            {{ $complementGroup['qty'] ?? 0 }}
+                            × {{ number_format((($complementGroup['price'] ?? null) ?? ($complementGroup['tarif']->getPrice() ?? 0)) / 100, 2, ',', ' ') }} €
+                        </div>
+                    </div>
+                </li>
+                {% endforeach %}
+                <li class="list-group-item d-flex justify-content-between align-items-center bg-light">
+                    <span><strong>Sous-total compléments</strong></span>
+                    <strong>{{ number_format(($reservationView['totals']['complements_subtotal'] ?? 0) / 100, 2, ',', ' ') }} €</strong>
+                </li>
+            </ul>
+            {% endif %}
+
+            <!-- Ajouter des articles si disponibles -->
+            {% if isset($availableComplements) && !empty($availableComplements) %}
+            <h5 class="mt-4">Ajouter des compléments</h5>
+            <div class="list-group mb-3">
+                {% foreach $availableComplements as $tarif %}
+                {% if !$tarif->getAccessCode() %}
+                <div class="list-group-item">
+                    <div class="d-flex justify-content-between align-items-center">
                      <span class="fw-bold">
                          {{ $tarif->getName() ?? '' }}
                          <small class="text-muted">({{ number_format(($tarif->getPrice() ?? 0) / 100, 2, ',', ' ') }} €)</small>
                      </span>
-                    <button class="btn btn-success btn-sm add-complement-btn" type="button" data-tarif-id="{{ $tarif->getId() }}">
-                        <i class="bi bi-plus-circle"></i>&nbsp;Ajouter
-                    </button>
+                        <button class="btn btn-success btn-sm add-complement-btn" type="button" data-tarif-id="{{ $tarif->getId() }}">
+                            <i class="bi bi-plus-circle"></i>&nbsp;Ajouter
+                        </button>
+                    </div>
                 </div>
-            </div>
-            {% endif %}
-            {% endforeach %}
-            <div class="mb-3">
-                <label for="specialCode" class="form-label">Vous avez un code ?</label>
-                <div class="input-group">
-                    <input type="text" class="form-control" id="specialCode" placeholder="Saisissez votre code" style="max-width: 250px;">
-                    <button type="button" class="btn btn-outline-primary" id="validateCodeBtn">Valider le code</button>
+                {% endif %}
+                {% endforeach %}
+                <div class="mb-3">
+                    <label for="specialCode" class="form-label">Vous avez un code ?</label>
+                    <div class="input-group">
+                        <input type="text" class="form-control" id="specialCode" placeholder="Saisissez votre code" style="max-width: 250px;">
+                        <button type="button" class="btn btn-outline-primary" id="validateCodeBtn">Valider le code</button>
+                    </div>
+                    <div id="specialCodeFeedback" class="form-text text-danger"></div>
                 </div>
-                <div id="specialCodeFeedback" class="form-text text-danger"></div>
+                <div id="specialTarifContainer"></div>
             </div>
-            <div id="specialTarifContainer"></div>
         </div>
         {% endif %}
 
@@ -326,9 +329,5 @@ $checkoutIntentId = $_GET['checkoutIntentId'] ?? null;
         </div>
         <br>
     </fieldset>
-{% endif %}
+    {% endif %}
 </div>
-
-<script src="/assets/js/reservation/reservation_common.js" defer></script>
-<script src="/assets/js/components/scroll_manager.js" defer></script>
-<script src="/assets/js/reservation/reservation_modif_data.js" defer></script>

@@ -5,7 +5,7 @@
      aria-hidden="true"
      data-is-readonly="{{ $isReadOnly ? 'true' : 'false' }}"
      data-can-update="{{ str_contains($userPermissions, 'U') ? 'true' : 'false' }}">
->
+    >
     <div class="modal-dialog modal-xl modal-dialog-scrollable">
         <div class="modal-content">
             <div class="modal-header">
@@ -15,59 +15,61 @@
             <div class="modal-body">
                 <div class="text-center">
                     <form id="reservationDetailForm">
+                        <div id="contact-fields-container">
                             <input type="hidden" id="modal_reservation_id" name="reservation_id" value="">
-                        <input type="hidden" id="modal_reservation_token" name="reservation_token" value="">
-                        <h4>Acheteur</h4>
-                        <div class="row mb-2">
-                            <div class="col-md-6 d-flex align-items-center">
-                                <div class="input-group">
-                                    <span class="input-group-text">Nom</span>
-                                    <input type="text"
-                                           id="modal_contact_name"
-                                           class="form-control editable-contact"
-                                           data-field="name"
-                                           value="" {{ $isReadOnly ? 'disabled' : '' }}
-                                           aria-label="Nom">
-                                    <span class="input-group-text feedback-span"></span>
+                            <input type="hidden" id="modal_reservation_token" name="reservation_token" value="">
+                            <h4>Réservant</h4>
+                            <div class="row mb-2">
+                                <div class="col-md-6 d-flex align-items-center">
+                                    <div class="input-group">
+                                        <span class="input-group-text">Nom</span>
+                                        <input type="text"
+                                               id="modal_contact_name"
+                                               class="form-control editable-contact"
+                                               data-field="name"
+                                               value="" {{ $isReadOnly ? 'disabled' : '' }}
+                                               aria-label="Nom">
+                                        <span class="input-group-text feedback-span"></span>
+                                    </div>
+                                </div>
+                                <div class="col-md-6 d-flex align-items-center">
+                                    <div class="input-group">
+                                        <span class="input-group-text">Prénom</span>
+                                        <input type="text"
+                                               id="modal_contact_firstname"
+                                               class="form-control editable-contact"
+                                               data-field="firstname"
+                                               value="" {{ $isReadOnly ? 'disabled' : '' }}
+                                               aria-label="Prénom">
+                                        <span class="input-group-text feedback-span"></span>
+                                    </div>
                                 </div>
                             </div>
-                            <div class="col-md-6 d-flex align-items-center">
-                                <div class="input-group">
-                                    <span class="input-group-text">Prénom</span>
-                                    <input type="text"
-                                           id="modal_contact_firstname"
-                                           class="form-control editable-contact"
-                                           data-field="firstname"
-                                           value="" {{ $isReadOnly ? 'disabled' : '' }}
-                                           aria-label="Prénom">
-                                    <span class="input-group-text feedback-span"></span>
+                            <div class="row">
+                                <div class="col-md-6 d-flex align-items-center">
+                                    <div class="input-group">
+                                        <span class="input-group-text">Email</span>
+                                        <input type="email"
+                                               id="modal_contact_email"
+                                               class="form-control editable-contact"
+                                               data-field="email"
+                                               value="{{ isset($reservation) && method_exists($reservation,'getEmail') ? $reservation->getEmail() : '' }}"
+                                               aria-label="Email">
+                                        <span class="input-group-text feedback-span"></span>
+                                    </div>
                                 </div>
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="col-md-6 d-flex align-items-center">
-                                <div class="input-group">
-                                    <span class="input-group-text">Email</span>
-                                    <input type="text"
-                                           id="modal_contact_email"
-                                           class="form-control editable-contact"
-                                           data-field="email"
-                                           value="" {{ $isReadOnly ? 'disabled' : '' }}
-                                           aria-label="Email">
-                                    <span class="input-group-text feedback-span"></span>
-                                </div>
-                            </div>
-                            <div class="col-md-6 d-flex align-items-center">
-                                <div class="input-group">
-                                    <span class="input-group-text">Téléphone</span>
-                                    <input type="tel"
-                                           id="modal_contact_phone"
-                                           class="form-control editable-contact"
-                                           data-field="phone"
-                                           value="" {{ $isReadOnly ? 'disabled' : '' }}
-                                           aria-label="Téléphone"
-                                           placeholder="Facultatif">
-                                    <span class="input-group-text feedback-span"></span>
+                                <div class="col-md-6 d-flex align-items-center">
+                                    <div class="input-group">
+                                        <span class="input-group-text">Téléphone</span>
+                                        <input type="tel"
+                                               id="modal_contact_phone"
+                                               class="form-control editable-contact"
+                                               data-field="phone"
+                                               value="" {{ $isReadOnly ? 'disabled' : '' }}
+                                               aria-label="Téléphone"
+                                               placeholder="Facultatif">
+                                        <span class="input-group-text feedback-span"></span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -111,7 +113,7 @@
                         <!-- Section pour les participants -->
                         <div id="modal-participants-section">
                             <h4>Participants</h4>
-                            <div id="modal-participants-list" class="list-group text-start">
+                            <div id="participants-container" class="list-group text-start">
                                 <!-- Le contenu sera injecté ici par JavaScript -->
                             </div>
                         </div>
@@ -119,7 +121,7 @@
                         <!-- Section pour les compléments -->
                         <div id="modal-complements-section" class="mt-4" style="display: none;">
                             <h4>Compléments</h4>
-                            <div id="modal-complements-list" class="list-group text-start">
+                            <div id="complements-container" class="list-group text-start">
                                 <!-- Le contenu sera injecté ici par JavaScript -->
                             </div>
                         </div>
@@ -180,5 +182,3 @@
         </div>
     </div>
 </div>
-
-<script src="/assets/js/gestion/reservation_modal.js" defer></script>

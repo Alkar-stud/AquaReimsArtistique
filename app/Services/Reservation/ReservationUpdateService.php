@@ -51,7 +51,8 @@ readonly class ReservationUpdateService
                 $success = $this->updateContactField($reservation, $field, $value);
                 $return = [
                     'success' => $success,
-                    'message' => $success ? 'Mise à jour réussie.' : 'La mise à jour a échoué.'
+                    'message' => $success ? 'Mise à jour réussie.' : 'La mise à jour a échoué.',
+                    'reload' => false
                 ];
             } catch (InvalidArgumentException $e) {
                 $return = ['success' => false, 'message' => $e->getMessage()];
@@ -61,7 +62,8 @@ readonly class ReservationUpdateService
                 $success = $this->updateDetailField((int)$fieldId, $field, $value);
                 $return = [
                     'success' => $success,
-                    'message' => $success ? 'Mise à jour réussie.' : 'La mise à jour a échoué.'
+                    'message' => $success ? 'Mise à jour réussie.' : 'La mise à jour a échoué.',
+                    'reload' => false
                 ];
             } catch (InvalidArgumentException $e) {
                 $return = ['success' => false, 'message' => $e->getMessage()];
@@ -71,9 +73,9 @@ readonly class ReservationUpdateService
                 if ($fieldId) { // Mise à jour d'un complément existant
                     $return = $this->updateComplementQuantity($reservation->getId(), $fieldId, $action);
                 } elseif ($tarifId) { // Ajout d'un nouveau complément
-                    $return = $this->addComplement($reservation->getId(), (int)$tarifId);
+                    $return = $this->addComplement($reservation->getId(), $tarifId);
                 } else {
-                    $return = ['success' => false, 'message' => 'Action sur complément non valide.'];
+                    $return = ['success' => false, 'message' => 'Action sur complément non valide.','reload' => false];
                 }
             } catch (InvalidArgumentException $e) {
                 $return = ['success' => false, 'message' => $e->getMessage()];
@@ -241,6 +243,8 @@ readonly class ReservationUpdateService
                 'message' => $message,
                 'newQuantity' => $qty,
                 'groupTotalCents' => $groupTotalCents,
+                // On force le rechargement si le complément est supprimé, pour qu'il réapparaisse dans la liste d'ajout.
+                'reload' => ($qty <= 0),
                 'totals' => [
                     'totalAmount' => $updatedReservation->getTotalAmount(),
                     'totalPaid' => $updatedReservation->getTotalAmountPaid(),
@@ -296,6 +300,7 @@ readonly class ReservationUpdateService
                 'id' => $newId, // L'ID du nouveau complément créé
                 'newQuantity' => 1,
                 'groupTotalCents' => $groupTotalCents,
+                'reload' => true, // On force le rechargement pour afficher la nouvelle ligne
                 'totals' => [
                     'totalAmount' => $updatedReservation->getTotalAmount(),
                     'totalPaid' => $updatedReservation->getTotalAmountPaid(),

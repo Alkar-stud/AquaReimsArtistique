@@ -300,6 +300,4 @@ class ReservationQueryService
 
     }
 
-
-
 }

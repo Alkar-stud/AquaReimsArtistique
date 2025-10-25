@@ -7,8 +7,10 @@ use app\Controllers\AbstractController;
 use app\Repository\Reservation\ReservationRepository;
 use app\Services\Event\EventQueryService;
 use app\Services\Pagination\PaginationService;
+use app\Services\Reservation\ReservationDeletionService;
 use app\Services\Reservation\ReservationUpdateService;
 use Exception;
+use Throwable;
 
 class ReservationsController extends AbstractController
 {
@@ -16,12 +18,14 @@ class ReservationsController extends AbstractController
     private ReservationRepository $reservationRepository;
     private PaginationService $paginationService;
     private ReservationUpdateService $reservationUpdateService;
+    private ReservationDeletionService $reservationDeletionService;
 
     function __construct(
         EventQueryService $eventQueryService,
         ReservationRepository $reservationRepository,
         PaginationService $paginationService,
         ReservationUpdateService $reservationUpdateService,
+        ReservationDeletionService $reservationDeletionService,
     )
     {
         parent::__construct(false);
@@ -29,6 +33,7 @@ class ReservationsController extends AbstractController
         $this->reservationRepository = $reservationRepository;
         $this->paginationService = $paginationService;
         $this->reservationUpdateService = $reservationUpdateService;
+        $this->reservationDeletionService = $reservationDeletionService;
     }
 
     #[Route('/gestion/reservations', name: 'app_gestion_reservations')]
@@ -110,10 +115,8 @@ class ReservationsController extends AbstractController
             return;
         }
 
-        // Le contrôleur est responsable de lire la requête
         $data = json_decode(file_get_contents('php://input'), true) ?? [];
 
-        // Il valide l'autorisation (via l'ID de réservation)
         $reservationId = $data['reservationId'] ?? null;
         if (!$reservationId) {
             $this->json(['success' => false, 'message' => 'ID de réservation manquant.']);
@@ -123,7 +126,6 @@ class ReservationsController extends AbstractController
             $this->json(['success' => false, 'message' => 'Réservation non trouvée.']);
         }
 
-        // 4. Il délègue l'action métier au service avec des paramètres clairs
         $return = $this->reservationUpdateService->handleUpdateReservationFields(
             $reservation,
             $data['typeField'] ?? '',
@@ -135,13 +137,11 @@ class ReservationsController extends AbstractController
         );
 
         $this->json($return);
-
     }
 
-    #[Route('/gestion/reservation/toggle-status', name: 'app_gestion_reservation_toggle_status', methods: ['POST'])]
+    #[Route('/gestion/reservations/toggle-status', name: 'app_gestion_reservations_toggle_status', methods: ['POST'])]
     public function toggleStatus(): void
     {
-        // On s'attend à recevoir du JSON
         $data = json_decode(file_get_contents('php://input'), true);
 
         if (!isset($data['id'], $data['status'])) {
@@ -161,5 +161,38 @@ class ReservationsController extends AbstractController
             $this->json(['success' => false, 'message' => 'Erreur serveur.'], 500);
         }
     }
+
+
+    #[Route('/gestion/reservations/delete/{id}', name: 'app_gestion_reservations_delete', methods: ['DELETE'])]
+    public function delete(int $id): void
+    {        // Vérifier les permissions de l'utilisateur connecté
+        $userPermissions = $this->whatCanDoCurrentUser();
+        if (!str_contains($userPermissions, 'D')) {
+            $this->json(['success' => false, 'message' => 'Accès refusé. Vous n\'avez pas les droits de suppression.'], 403);
+        }
+
+        $reservation = $this->reservationRepository->findById($id);
+        if (!$reservation) {
+            $this->json(['success' => false, 'message' => 'Réservation non trouvée.'], 404);
+            return;
+        }
+        try {
+            $this->reservationDeletionService->deleteReservation($id);
+            $this->flashMessageService->setFlashMessage('success', "La réservation a été supprimée avec succès.");
+
+            $this->json(['success' => true]);
+        } catch (Exception $e) {
+            // Log de l'erreur pour le débogage
+            error_log("Erreur lors de la suppression de la réservation ID $id : " . $e->getMessage());
+            // Message d'erreur générique pour l'utilisateur
+            $this->json(['success' => false, 'message' => 'Une erreur serveur est survenue lors de la suppression de la réservation.'], 500);
+        } catch (Throwable $e) {
+            $this->json(['success' => false, 'message' => 'Une erreur serveur est survenue lors de la suppression de la réservation.'], 500);
+        }
+
+
+    }
+
+
 
 }

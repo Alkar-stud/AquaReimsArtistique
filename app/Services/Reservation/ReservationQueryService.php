@@ -156,7 +156,7 @@ class ReservationQueryService
 
 
     /**
-     * Pour vérifier si la réservation peut être modifiée par le visiteur (annulation ou date expirée).
+     * Pour vérifier si la réservation peut être modifiée par le visiteur (annulation ou token expiré).
      *
      * @param Reservation $reservation
      * @return bool
@@ -167,15 +167,7 @@ class ReservationQueryService
         if ($reservation->isCanceled()) {
             $return = false;
         }
-        $eventInscriptionDates = $reservation->getEventObject()->getInscriptionDates();
-        //on prend la date la plus éloignée de fin d'inscription
-        $dateEndInscription = null;
-        foreach ($eventInscriptionDates as $inscriptionDate) {
-            if ($inscriptionDate->getCloseRegistrationAt() > $dateEndInscription) {
-                $dateEndInscription = $inscriptionDate->getCloseRegistrationAt();
-            }
-        }
-        if ($dateEndInscription <= new DateTime()) {
+        if ($reservation->getTokenExpireAt() <= new DateTime()) {
             $return = false;
         }
 

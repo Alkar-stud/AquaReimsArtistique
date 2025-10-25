@@ -13,7 +13,7 @@ export async function toggleReservationStatus(reservationId, newStatus, elementT
     }
 
     try {
-        const response = await apiPost('/gestion/reservation/toggle-status', {
+        const response = await apiPost('/gestion/reservations/toggle-status', {
             id: reservationId,
             status: newStatus
         });

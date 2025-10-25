@@ -131,7 +131,7 @@
                 {% if str_contains($userPermissions, 'D') %}
                 <div class="d-flex flex-column flex-row gap-3">
                     <div>
-                        Réinit token : <span id="modal-reset-token" class="fw-bold"></span> <i class="bi bi-arrow-clockwise btn-success" alt="Réinit token" title="Réinit token"></i>
+                        Réinit token : <span id="modal-reset-token" class="fw-bold"></span> <i class="bi bi-arrow-clockwise btn-success" title="Réinit token"></i>
                     </div>
 
                     <div class="ms-md-auto w-100 w-md-auto">

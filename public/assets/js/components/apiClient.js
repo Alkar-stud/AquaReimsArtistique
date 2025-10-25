@@ -66,3 +66,7 @@ export function apiGet(endpoint, params = {}) {
 export function apiPost(endpoint, body, customConfig = {}) {
     return client(endpoint, { ...customConfig, body });
 }
+
+export function apiDelete(endpoint, customConfig = {}) {
+    return client(endpoint, { ...customConfig, method: 'DELETE' });
+}

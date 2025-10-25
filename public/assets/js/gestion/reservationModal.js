@@ -3,6 +3,7 @@ import { initContactForm } from '../reservations/contactForm.js';
 import { initParticipantsForm, updateParticipantsUI } from '../reservations/participantsForm.js';
 import { initComplementsForm, updateComplementsUI } from '../reservations/complementsForm.js';
 import ScrollManager from '../components/scrollManager.js';
+import { apiDelete } from '../components/apiClient.js';
 import { toggleReservationStatus } from './statusToggle.js';
 import { toggleCancelStatus } from '../reservations/cancelReservation.js';
 
@@ -212,5 +213,30 @@ export function initReservationModal() {
                 });
             });
         }
+
+        // On gère le clic sur le bouton "Annuler/Réactiver"
+        const deleteToggleButton = modal.querySelector('#modal-reservation-delete-btn');
+        if (deleteToggleButton) {
+            deleteToggleButton.addEventListener('click', async (event) => {
+                const button = event.currentTarget;
+                const reservationId = modal.querySelector('#modal_reservation_id').value;
+
+                if (confirm('Êtes-vous sûr de vouloir supprimer définitivement cette réservation ? Cette action est irréversible.')) {
+                    button.disabled = true;
+                    button.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Suppression...';
+
+                    try {
+                        await apiDelete(`/gestion/reservations/delete/${reservationId}`);
+                        ScrollManager.save(); // Sauvegarde de la position du scroll pour la retrouver après rechargement
+                        window.location.reload(); // Rechargement de la page pour refléter la suppression
+                    } catch (error) {
+                        alert(`Erreur lors de la suppression : ${error.userMessage || error.message}`);
+                        button.disabled = false;
+                        button.innerHTML = '<i class="bi bi-trash"></i>&nbsp;Supprimer la réservation';
+                    }
+                }
+            });
+        }
+
     }
 }

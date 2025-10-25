@@ -48,7 +48,7 @@ class ReservationModifDataController extends AbstractController
      * @throws Exception
      */
     #[Route('/modifData', name: 'app_reservation_modif_data')]
-    public function modifData(): void
+    public function index(): void
     {
         // On récupère et valide le token depuis l'URL
         $token = $_GET['token'] ?? null;
@@ -64,7 +64,7 @@ class ReservationModifDataController extends AbstractController
             throw new Exception('404');
         }
 
-        //On vérifie si c'est encore modifiable (annulation ou date de fin d'inscription dépassée)
+        //On vérifie si c'est encore modifiable (annulation ou date de fin d'inscription dépassée).
         $canBeModified = $this->reservationQueryService->checkIfReservationCanBeModified($reservation);
 
         if (!$canBeModified) {

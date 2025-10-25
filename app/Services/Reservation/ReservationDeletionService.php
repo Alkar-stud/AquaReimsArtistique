@@ -8,6 +8,7 @@ use app\Repository\Reservation\ReservationDetailRepository;
 use app\Repository\Reservation\ReservationMailSentRepository;
 use app\Repository\Reservation\ReservationPaymentRepository;
 use app\Repository\Reservation\ReservationRepository;
+use Throwable;
 
 class ReservationDeletionService
 {
@@ -17,30 +18,45 @@ class ReservationDeletionService
     private ReservationPaymentRepository $reservationPaymentRepository;
     private ReservationMailSentRepository $reservationMailSentRepository;
 
-    public function __construct()
+    public function __construct(
+        ReservationRepository $reservationRepository,
+        ReservationDetailRepository $reservationDetailRepository,
+        ReservationComplementRepository $reservationComplementRepository,
+        ReservationPaymentRepository $reservationPaymentRepository,
+        ReservationMailSentRepository $reservationMailSentRepository,
+    )
     {
-        $this->reservationRepository = new ReservationRepository();
-        $this->reservationDetailRepository = new ReservationDetailRepository();
-        $this->reservationComplementRepository = new ReservationComplementRepository();
-        $this->reservationPaymentRepository = new ReservationPaymentRepository();
-        $this->reservationMailSentRepository = new ReservationMailSentRepository();
+        $this->reservationRepository = $reservationRepository;
+        $this->reservationDetailRepository = $reservationDetailRepository;
+        $this->reservationComplementRepository = $reservationComplementRepository;
+        $this->reservationPaymentRepository = $reservationPaymentRepository;
+        $this->reservationMailSentRepository = $reservationMailSentRepository;
     }
 
     /**
      * Pour supprimer une réservation et ses détails.
      * @param int $reservationId
      * @return void
+     * @throws Throwable En cas d'échec de la suppression.
      */
     public function deleteReservation(int $reservationId): void
     {
-        //On supprime d'abord les "enfants".
-        $this->reservationPaymentRepository->deleteByReservation($reservationId);
-        $this->reservationComplementRepository->deleteByReservation($reservationId);
-        $this->reservationDetailRepository->deleteByReservation($reservationId);
-        $this->reservationMailSentRepository->deleteByReservation($reservationId);
+        $this->reservationRepository->beginTransaction();
+        try {
+            // On supprime d'abord les "enfants".
+            $this->reservationPaymentRepository->deleteByReservation($reservationId);
+            $this->reservationComplementRepository->deleteByReservation($reservationId);
+            $this->reservationDetailRepository->deleteByReservation($reservationId);
+            $this->reservationMailSentRepository->deleteByReservation($reservationId);
 
-        //Puis, on supprime la réservation elle-même
-        $this->reservationRepository->delete($reservationId);
+            // Puis, on supprime la réservation elle-même
+            $this->reservationRepository->delete($reservationId);
+
+            $this->reservationRepository->commit();
+        } catch (Throwable $e) {
+            $this->reservationRepository->rollBack();
+            throw $e;
+        }
 
     }
 

@@ -6,7 +6,7 @@ function getCsrfToken() {
 }
 
 async function client(endpoint, { body, ...customConfig } = {}) {
-    const headers = { 'Content-Type': 'application/json' };
+    const headers = {}; // On initialise les headers vides
     const config = {
         method: body ? 'POST' : 'GET',
         ...customConfig,
@@ -19,9 +19,15 @@ async function client(endpoint, { body, ...customConfig } = {}) {
     };
 
     if (body) {
-        config.body = JSON.stringify(body);
+        if (body instanceof FormData) {
+            // Si c'est un FormData, on laisse le navigateur définir le Content-Type
+            config.body = body;
+        } else {
+            headers['Content-Type'] = 'application/json';
+            config.body = JSON.stringify(body);
+        }
     }
-
+console.log('Envoyé : ', config);
     const response = await fetch(endpoint, config);
 
     // On lit la réponse brute une seule fois

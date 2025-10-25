@@ -16,7 +16,10 @@
     </div>
     {% endif %}
 
-    <form id="reservationPlacesForm">
+    <form id="reservationPlacesForm"
+          data-limitation="{{ $limitation ?? 'null' }}"
+          data-deja-reservees="{{ $placesDejaReservees ?? 0 }}"
+          data-special-tarif-session="{{ htmlspecialchars_decode(json_encode($specialTarifSession ?? null)) }}">
         <input type="hidden" id="event_id" name="event_id" value="{{ $event_id }}">
         {% if !empty($allTarifsWithSeatForThisEvent) %}
         <div id="tarifsContainer">
@@ -71,14 +74,8 @@
 
 </div>
 
-<script>
-    window.limitationPerSwimmer = {{! json_encode($swimmerLimit['limit']) !}};           // null si pas de limite
-    window.placesDejaReservees  = {{! json_encode($swimmerLimit['currentReservations'] ?? 0) !}}; // nombre déjà réservé
-    window.specialTarifSession  = {{! json_encode($specialTarifSession ?? null) !}}; // préremplissage code spécial
-</script>
+<script type="module" src="/assets/js/reservations/etape3.js" defer></script>
 
-<script src="/assets/js/reservation/reservation_common.js" defer></script>
-<script src="/assets/js/reservation/reservation_etape3.js" defer></script>
 Ici pour la suite, on a déjà enregistré ça :
 {% php %}
 echo '<pre>';

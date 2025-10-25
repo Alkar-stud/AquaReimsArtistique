@@ -23,3 +23,13 @@ export function buttonLoading(btn, on) {
         }
     }
 }
+
+/**
+ * Formate un montant en centimes en chaîne de caractères Euro.
+ * @param {number} cents - Le montant en centimes.
+ * @returns {string} Le montant formaté (ex: "12,34 €").
+ */
+export function formatEuro(cents) {
+    const v = (parseInt(cents, 10) || 0) / 100;
+    return v.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
+}

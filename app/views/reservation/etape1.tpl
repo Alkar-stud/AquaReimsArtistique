@@ -26,7 +26,7 @@
         {% endphp %}
 
         <div class="col-md-6 mb-4">
-            <div class="card">
+            <div class="card event-card" data-event-id="{{ $event->getId() }}">
                 <div class="card-header bg-primary text-white">
                     <h5 class="card-title">{{ $event->getName() }}</h5>
                 </div>
@@ -36,7 +36,7 @@
                     {% if $event->getLimitationPerSwimmer() !== null %}
                     <p>
                         <strong>Je choisis la nageuse que je viens surtout voir (mais aussi les autres ^^) :</strong>
-                        <select id="swimmer_group_{{ $event->getId() }}" class="form-select d-inline w-auto ms-2" onchange="updateSwimmer(this.value, {{ $event->getId() }})">
+                        <select id="swimmer_group_{{ $event->getId() }}" data-event-id="{{ $event->getId() }}" class="form-select d-inline w-auto ms-2">
                             <option value="">Sélectionner un groupe</option>
                             {% foreach ($groupes ?? []) as $groupe %}
                             <option value="{{ $groupe->getId() }}">
@@ -92,15 +92,16 @@
                         <div class="mb-2">
                             <label for="access_code_input_{{ $event->getId() }}"><strong>Code d'accès requis :</strong></label>
                             <input type="text" id="access_code_input_{{ $event->getId() }}" class="form-control d-inline w-auto ms-2" />
-                            <button class="btn btn-primary ms-2" onclick="validerCodeAcces({{ $event->getId() }})">Valider le code</button>
+                            <button type="button" class="btn btn-primary ms-2" id="validate_code_btn_{{ $event->getId() }}">Valider le code</button>
+                            <br>
                             <span id="access_code_status_{{ $event->getId() }}" class="ms-2"></span>
                         </div>
                         {% else %}
-                            {% if (isset($periodesCloses[$event->getId()])) %}
-                                Les inscriptions sont closes depuis le {{ $periodesCloses[$event->getId()]->getCloseRegistrationAt()->format('d/m/Y H:i') }}.
-                            {% else %}
-                                Les inscriptions ne sont pas ouvertes pour cet événement.
-                            {% endif %}
+                        {% if (isset($periodesCloses[$event->getId()])) %}
+                        Les inscriptions sont closes depuis le {{ $periodesCloses[$event->getId()]->getCloseRegistrationAt()->format('d/m/Y H:i') }}.
+                        {% else %}
+                        Les inscriptions ne sont pas ouvertes pour cet événement.
+                        {% endif %}
                         {% endif %}
 
                         {% if $nextPublic %}
@@ -113,7 +114,6 @@
                     <button
                             class="btn btn-success mt-3"
                             id="btn_reserver_{{ $event->getId() }}"
-                            onclick="validerFormulaireReservation({{ $event->getId() }})"
                             {{ $buttonDisabled }}
                     >
                         Réserver
@@ -128,8 +128,7 @@
     {% endif %}
 </div>
 
-<script>
-    window.swimmerPerGroup = {{! json_encode($swimmerPerGroup ?? []) !}};
-</script>
-<script src="/assets/js/reservation/reservation_common.js" defer></script>
-<script src="/assets/js/reservation/reservation_etape1.js" defer></script>
+<!-- On passe les données des nageuses via un data-attribute -->
+<div id="swimmer-data" data-swimmers="{{ htmlspecialchars_decode(json_encode($swimmerPerGroup ?? [])) }}" hidden></div>
+
+<script type="module" src="/assets/js/reservations/etape1.js"></script>

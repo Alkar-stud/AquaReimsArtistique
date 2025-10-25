@@ -78,6 +78,7 @@
                         <!-- section pour le paiement -->
                         <div id="modal-payment-section">
                             <h4>Paiements</h4>
+                            à faire: afficher la liste des différentes informations de paiement (dont bouton refresh et remboursement)
                             <div id="modal-payment-list" class="d-flex justify-content-around text-center p-2 bg-light rounded">
                                 <div>
                                     <strong>Coût total</strong><br>

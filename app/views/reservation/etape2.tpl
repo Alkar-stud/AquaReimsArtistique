@@ -46,5 +46,5 @@ echo '</pre>';
 <script>
     window.swimmerPerGroup = {{! json_encode($swimmerPerGroup ?? []) !}};
 </script>
-<script src="/assets/js/reservation/reservation_common.js" defer></script>
-<script src="/assets/js/reservation/reservation_etape2.js" defer></script>
+
+<script type="module" src="/assets/js/reservations/etape2.js" defer></script>

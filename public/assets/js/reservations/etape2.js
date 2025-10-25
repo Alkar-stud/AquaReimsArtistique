@@ -1,127 +1,59 @@
+'use strict';
+
+import { apiPost } from '../components/apiClient.js';
+import { showFlashMessage } from '../components/ui.js';
+import {
+    validateNameAndFirstname,
+    validateEmailField,
+    validatePhoneField
+} from '../components/formContactValidator.js';
+
 document.addEventListener('DOMContentLoaded', () => {
     const form = document.getElementById('reservationInfosForm');
-    const name = document.getElementById('name');
-    const firstname = document.getElementById('firstname');
-    const email = document.getElementById('email');
-    const phone = document.getElementById('phone');
-    const eventId = document.getElementById('event_id').value;
-    if (!form || !name || !firstname) return;
+    if (!form) return;
 
-    const ensureInvalidFeedback = (input) => {
-        // Cherche un .invalid-feedback voisin dédié à cet input, sinon le crée
-        let fb = input.parentElement.querySelector(`.invalid-feedback[data-for="${input.id}"]`);
-        if (!fb) {
-            fb = document.createElement('div');
-            fb.className = 'invalid-feedback';
-            fb.dataset.for = input.id;
-            input.parentElement.appendChild(fb);
-        }
-        return fb;
-    };
+    const nameInput = document.getElementById('name');
+    const firstnameInput = document.getElementById('firstname');
+    const emailInput = document.getElementById('email');
+    const phoneInput = document.getElementById('phone');
+    const eventIdInput = document.getElementById('event_id');
 
-    const normalize = (s) => {
-        if (!s) return '';
-        return s
-            .trim()
-            .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // retire les accents
-            .replace(/[^a-zA-Z]/g, '')                       // retire espaces, tirets, etc.
-            .toLocaleLowerCase('fr-FR');
-    };
-
-    const setState = (input, ok, message = '') => {
-        const fb = ensureInvalidFeedback(input);
-        if (ok) {
-            input.classList.remove('is-invalid');
-            fb.textContent = '';
-            if (input.value.trim()) input.classList.add('is-valid'); else input.classList.remove('is-valid');
-        } else {
-            input.classList.remove('is-valid');
-            input.classList.add('is-invalid');
-            fb.textContent = message;
-        }
-    };
-
-    const checkNames = () => {
-        const n = normalize(name.value);
-        const p = normalize(firstname.value);
-
-        // Ne déclenche l’erreur que si les deux champs ont une valeur
-        if (n && p && n === p) {
-            const msg = 'Le nom et le prénom ne doivent pas être identiques.';
-            setState(name, false, msg);
-            setState(firstname, false, msg);
-            return false;
-        }
-
-        // OK : réinitialise l’état des deux champs (avec is-valid si non vide)
-        setState(name, true);
-        setState(firstname, true);
-        return true;
-    };
+    if (!nameInput || !firstnameInput || !emailInput || !phoneInput || !eventIdInput) {
+        console.error("Un ou plusieurs champs du formulaire de l'étape 2 sont manquants.");
+        return;
+    }
 
     ['input', 'blur'].forEach(evt => {
-        name.addEventListener(evt, checkNames);
-        firstname.addEventListener(evt, checkNames);
-        email.addEventListener(evt, validateEmailField);
-        phone.addEventListener(evt, validatePhoneField);
+        nameInput.addEventListener(evt, () => validateNameAndFirstname(nameInput, firstnameInput));
+        firstnameInput.addEventListener(evt, () => validateNameAndFirstname(nameInput, firstnameInput));
+        emailInput.addEventListener(evt, () => validateEmailField(emailInput));
+        phoneInput.addEventListener(evt, () => validatePhoneField(phoneInput));
     });
-
-    form.addEventListener('submit', (e) => {
-        const ok = validateEmailField();
-        if (!ok) {
-            e.preventDefault();
-            e.stopPropagation();
-        }
-    });
-
-    function validateEmailField() {
-        const value = email.value.trim();
-        const ok = validateEmail(value);
-        email.classList.toggle('is-invalid', !ok);
-        if (!ok) {
-            const msg = 'Adresse mail invalide.'
-            setState(email, false, msg);
-        } else {
-            setState(email, true, '');
-        }
-        return ok;
-    }
-
-    function validatePhoneField() {
-        const value = phone.value.trim();
-        if (!value) {
-            phone.classList.remove('is-invalid');
-            return true;
-        }
-        const ok = validateTel(value);
-        phone.classList.toggle('is-invalid', !ok);
-        if (!ok) {
-            const msg = 'Numéro de téléphone invalide (format attendu : 0X XX XX XX XX ou +33XXXXXXXXX).'
-            setState(phone, false, msg);
-        } else {
-            setState(phone, true, '');
-        }
-        return ok;
-    }
 
     form.addEventListener('submit', (e) => {
         e.preventDefault();
-        if (!checkNames() && !validateEmailField) {
+
+        // Exécute toutes les validations
+        const isNameValid = validateNameAndFirstname(nameInput, firstnameInput);
+        const isEmailValid = validateEmailField(emailInput);
+        const isPhoneValid = validatePhoneField(phoneInput);
+
+        // La validation HTML5 s'occupe des champs requis
+        if (!isNameValid || !isEmailValid || !isPhoneValid || !form.checkValidity()) {
             e.stopPropagation();
-            (form.querySelector('.is-invalid') || name).focus();
+            (form.querySelector('.is-invalid') || nameInput).focus();
+            showFlashMessage('danger', 'Veuillez corriger les erreurs dans le formulaire.');
         } else {
-            // Appelle step2Valid avec les valeurs des champs
             step2Valid(
-                name.value.trim(),
-                firstname.value.trim(),
-                email.value.trim(),
-                phone.value.trim(),
-                eventId
+                nameInput.value.trim(),
+                firstnameInput.value.trim(),
+                emailInput.value.trim(),
+                phoneInput.value.trim(),
+                eventIdInput.value
             );
         }
     });
 });
-
 
 function step2Valid(name, firstname, email, phone, eventId) {
     const alertDiv = document.getElementById('reservationAlert');
@@ -165,7 +97,7 @@ function step2Valid(name, firstname, email, phone, eventId) {
 
         })
         .catch((err) => {
-            showFlash('danger', err.userMessage || err.message);
+            showFlashMessage('danger', err.userMessage || err.message);
         });
 
 }
@@ -197,7 +129,7 @@ function submitEtape2(name, firstname, email, phone, eventId) {
                     errorHtml += '<li>Une erreur inattendue est survenue.</li>';
                 }
                 errorHtml += '</ul>';
-                showFlash('danger', errorHtml);
+                showFlashMessage('danger', errorHtml);
             }
         })
         .catch((err) => {
@@ -209,10 +141,10 @@ function submitEtape2(name, firstname, email, phone, eventId) {
                     errorHtml += `<li>${safeMessage}</li>`;
                 }
                 errorHtml += '</ul>';
-                showFlash('danger', errorHtml);
+                showFlashMessage('danger', errorHtml);
             } else {
                 // Sinon, on utilise le message d'erreur générique fourni par apiPost
-                showFlash('danger', err.userMessage || err.message);
+                showFlashMessage('danger', err.userMessage || err.message);
             }
         });
 }

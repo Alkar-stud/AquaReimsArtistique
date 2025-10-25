@@ -37,4 +37,4 @@
     <br>
 </div>
 
-<script src="/assets/js/account.js" defer></script>
+<script type="module" src="/assets/js/auth/account.js" defer></script>

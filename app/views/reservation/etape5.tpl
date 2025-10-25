@@ -14,8 +14,8 @@
     </form>
 </div>
 
-<script src="/assets/js/reservation/reservation_common.js" defer></script>
-<script src="/assets/js/reservation/reservation_etape5.js" defer></script>
+<script src="/assets/js/reservations/etape5.js" defer></script>
+
 Ici pour la suite, on a déjà enregistré ça :
 {% php %}
 echo '<pre>';

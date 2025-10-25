@@ -1,12 +1,12 @@
 <div class="container-fluid">
     <h2 class="mb-4">Informations des participants</h2>
 
-    <form id="reservationPlacesForm">
+    <form id="reservationPlacesForm" enctype="multipart/form-data">
         <input type="hidden" id="event_id" name="event_id" value="{{ $reservation['event_id'] }}">
         {% php %} $i = 0; {% endphp %}
         {% foreach $reservation['reservation_detail'] as $detail %}
         {% php %} $i++; {% endphp %}
-        <div class="mb-3">
+        <div class="mb-3 participant-row">
             <input type="hidden" name="tarif_ids[]" value="{{ $detail['tarif_id'] }}">
             <label>
                 <strong>Participant {{ $i }} pour le tarif</strong>
@@ -46,8 +46,8 @@
 
 </div>
 
-<script src="/assets/js/reservation/reservation_common.js" defer></script>
-<script src="/assets/js/reservation/reservation_etape4.js" defer></script>
+<script type="module" src="/assets/js/reservations/etape4.js" defer></script>
+
 Ici pour la suite, on a déjà enregistré ça :
 {% php %}
 echo '<pre>';

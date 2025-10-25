@@ -177,7 +177,7 @@ class ReservationModifDataController extends AbstractController
             $this->json(['success' => false, 'message' => 'Le montant à payer doit être positif.']);
         }
 
-        // Préparer le panier (DTO) en utilisant la nouvelle méthode du PaymentService
+        // Préparer le panier (DTO) en utilisant la méthode du PaymentService
         $cartDTO = $this->paymentService->prepareCheckOutDataForBalance($reservation, $amountToPay, $containsDonation);
 
         // Créer l'intention de paiement en utilisant la méthode existante du PaymentService

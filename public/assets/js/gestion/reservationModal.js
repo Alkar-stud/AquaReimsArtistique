@@ -196,7 +196,7 @@ export function initReservationModal() {
             });
         }
 
-        // On gère le clic sur le bouton "Annuler/Réactiver"
+        // On gère le clic sur le bouton "Annuler/Réactiver".
         const cancelToggleButton = modal.querySelector('#modal-reservation-cancel-btn');
         if (cancelToggleButton) {
             cancelToggleButton.addEventListener('click', (event) => {
@@ -214,7 +214,7 @@ export function initReservationModal() {
             });
         }
 
-        // On gère le clic sur le bouton "Annuler/Réactiver"
+        // On gère le clic sur le bouton "Annuler/Réactiver".
         const deleteToggleButton = modal.querySelector('#modal-reservation-delete-btn');
         if (deleteToggleButton) {
             deleteToggleButton.addEventListener('click', async (event) => {

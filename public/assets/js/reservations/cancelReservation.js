@@ -3,7 +3,7 @@ import ScrollManager from '../components/scrollManager.js';
 
 /**
  * Gère la logique d'annulation d'une réservation.
- * @param {object} options - Les options de configuration.
+ * @param {{apiUrl: string, reservationIdentifier: number, identifierType: string, newStatus: boolean, button: EventTarget}} options - Les options de configuration.
  * @param {string} options.apiUrl - L'URL de l'API à appeler.
  * @param {string|number} options.reservationIdentifier - Le token ou l'ID de la réservation.
  * @param {string} options.identifierType - 'token' ou 'reservationId'.

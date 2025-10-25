@@ -310,9 +310,9 @@ $checkoutIntentId = $_GET['checkoutIntentId'] ?? null;
 
                 <!-- Section paiement: toujours rendue, masquée par défaut -->
                 <div id="pay-balance-section" class="mt-3 d-none">
-                    <a id="pay-balance-btn" href="#" title="Payer le solde avec HelloAsso">
+                    <button type="button" id="pay-balance-btn" class="btn p-0 border-0" title="Payer le solde avec HelloAsso">
                         <img src="/assets/images/payer-avec-helloasso.svg" alt="Payer le solde avec HelloAsso" style="height: 50px;">
-                    </a>
+                    </button>
                     {% if (isset($_ENV['APP_ENV']) and in_array($_ENV['APP_ENV'], ['local', 'dev'])) %}
                     <div class="alert alert-info mt-4">
                         <p class="mb-0"><b>Environnement de test :</b> voici la carte bancaire à utiliser : <b>4242424242424242</b>. Validité <b>date supérieure au mois en cours</b>, code : <b>3 chiffres au choix</b>.</p>
@@ -331,3 +331,5 @@ $checkoutIntentId = $_GET['checkoutIntentId'] ?? null;
     </fieldset>
     {% endif %}
 </div>
+
+<script type="module" src="/assets/js/reservations/modifData.js"></script>

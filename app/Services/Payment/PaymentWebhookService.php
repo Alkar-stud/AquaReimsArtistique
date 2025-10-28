@@ -3,6 +3,7 @@
 namespace app\Services\Payment;
 
 use app\Models\Reservation\Reservation;
+use app\Models\Reservation\ReservationPayment;
 use app\Repository\Reservation\ReservationPaymentRepository;
 use app\Repository\Reservation\ReservationRepository;
 use app\Services\Reservation\ReservationProcessAndPersistService;
@@ -129,6 +130,43 @@ class PaymentWebhookService
         //On met à jour la réservation avec le nouveau montant
         $reservation->setTotalAmountPaid($reservation->getTotalAmountPaid() - $refundOperations->getAmountPaid());
         $this->reservationRepository->update($reservation);
+    }
+
+    /**
+     * Pour gérer le remboursement d'un paiement manuel
+     *
+     * @param ReservationPayment $payment
+     * @return array
+     */
+    public function processRefundManuelPayment(ReservationPayment $payment): array
+    {
+        //On récupère la réservation
+        $reservation = $this->reservationRepository->findById($payment->getReservation());
+
+        //On génère le remboursement dans les paiements.
+        $refundOperations = new ReservationPayment();
+        $refundOperations->setReservation($payment->getReservation())
+            ->setType('ref')
+            ->setCheckoutId($payment->getCheckoutId())
+            ->setOrderId($payment->getOrderId())
+            ->setPaymentId($payment->getPaymentId())
+            ->setAmountPaid($payment->getAmountPaid())
+            ->setStatusPayment('Processed');
+        //On l'insert
+        $id = $this->reservationPaymentRepository->insert($refundOperations);
+        if ($id <= 0) {
+            throw new \RuntimeException('Échec insertion payment.');
+        }
+        //On met à jour la ligne du paiement concernée
+        $payment->setStatusPayment('Refunded');
+
+        $this->reservationPaymentRepository->update($payment);
+
+        //On met à jour la réservation avec le nouveau montant
+        $reservation->setTotalAmountPaid($reservation->getTotalAmountPaid() - $refundOperations->getAmountPaid());
+        $this->reservationRepository->update($reservation);
+
+        return ['reservation' => $reservation->toArray()];
     }
 
 }

@@ -138,9 +138,40 @@ async function refreshModalContent(modal, reservationId) {
         const markAsPaidDiv = modal.querySelector('#div-modal-mark-as-paid');
         if (markAsPaidDiv) {
             markAsPaidDiv.classList.toggle('d-none', amountDue <= 0);
-            // TODO : Ajouter la logique de clic pour ce bouton
         }
 
+        // On gère le clic sur le bouton "Marquer comme payé".
+        const markAsPaidButton = modal.querySelector('#modal-mark-as-paid');
+        if (markAsPaidButton) {
+            markAsPaidButton.addEventListener('click', async (event) => {
+                const button = event.currentTarget;
+                const reservationId = modal.querySelector('#modal_reservation_id').value;
+                const originalIcon = button.innerHTML;
+
+                if (confirm("Êtes-vous sûr de vouloir marquer cette réservation comme entièrement payée ?")) {
+                    // Désactiver le bouton et afficher un spinner
+                    button.style.pointerEvents = 'none'; // Désactive les clics sur le span
+                    button.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+
+                    try {
+                        const result = await apiPost('/gestion/reservations/paid', { reservationId });
+
+                        if (result.success) {
+                            // Si succès, on rafraîchit la modale avec les nouvelles données.
+                            await refreshModalContent(modal, reservationId);
+                        } else {
+                            // Si l'API retourne une erreur contrôlée
+                            throw new Error(result.message || 'Une erreur est survenue.');
+                        }
+                    } catch (error) {
+                        alert(`Erreur : ${error.message}`);
+                        // Restaurer l'icône et réactiver le bouton en cas d'erreur
+                        button.style.pointerEvents = 'auto';
+                        button.innerHTML = originalIcon;
+                    }
+                }
+            });
+        }
 
         // --- Section Détails des Paiements ---
         const paymentsDetailsContainer = modal.querySelector('#modal-payment-details-container');
@@ -152,15 +183,18 @@ async function refreshModalContent(modal, reservationId) {
 
             reservation.payments.forEach(payment => {
                 let refundActionHtml = '';
-                const refreshButtonHtml = `
+                let refreshButtonHtml = '';
+                if (payment.type !== 'man') {
+                    refreshButtonHtml = `
                     <button class="btn btn-sm btn-outline-secondary refresh-payment-btn"
                             data-payment-id="${payment.id}"
                             title="Rafraîchir le statut">
                         <i class="bi bi-arrow-clockwise"></i>
                     </button>
                 `;
+                }
 
-                // On détermine l'action de remboursement à afficher (bouton ou badge)
+                // On détermine l'action de remboursement à afficher (bouton ou badge).
                 if (payment.status === 'Refunded') {
                     refundActionHtml = '<span class="badge bg-info me-1">Remboursé</span>';
                 } else if (payment.type !== 'ref') { // On ne peut pas rembourser une écriture de remboursement
@@ -181,7 +215,7 @@ async function refreshModalContent(modal, reservationId) {
                     const donationAmount = (payment.partOfDonation / 100).toFixed(2).replace('.', ',');
                     donationHtml = `<span class="text-muted small"> (dont don de ${donationAmount} €)</span>`;
                 }
-                
+
                 const paymentItem = document.createElement('li');
                 paymentItem.className = 'list-group-item d-flex justify-content-between align-items-center p-1';
                 paymentItem.innerHTML = `
@@ -211,11 +245,11 @@ async function refreshModalContent(modal, reservationId) {
                     : 'Voir le détail des paiements';
             });
 
-            // Attacher les écouteurs pour les nouveaux boutons
+            // Attacher les écouteurs pour les boutons Rembourser
             paymentsDetailsContainer.querySelectorAll('.refund-btn').forEach(btn => {
                 btn.addEventListener('click', async (e) => {
-                    const paymentId = e.currentTarget.dataset.paymentId;
-                    const payment = reservation.payments.find(p => p.id == paymentId);
+                    const paymentId = parseInt(e.currentTarget.dataset.paymentId, 10); // Convertir en nombre
+                    const payment = reservation.payments.find(p => p.id === paymentId);
 
                     if (!payment) {
                         alert('Erreur : impossible de trouver les détails du paiement.');
@@ -293,6 +327,52 @@ async function refreshModalContent(modal, reservationId) {
             // pour obtenir "2025-11-27T12:00".
             tokenExpireInput.value = reservation.tokenExpireAt.slice(0, 16);
         }
+
+
+        // On gère la mise à jour de la date d'expiration du token au "blur"
+        const tokenExpireField = modal.querySelector('#modal-modification-token-expire-at');
+        if (tokenExpireField) {
+            tokenExpireField.addEventListener('blur', async (event) => {
+                const input = event.currentTarget;
+                const feedbackSpan = input.nextElementSibling;
+                feedbackSpan.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+
+                try {
+                    const reservationId = modal.querySelector('#modal_reservation_id').value;
+                    const result = await apiPost('/gestion/reservations/reinit-token', {
+                        reservationId: reservationId,
+                        new_expire_at: input.value
+                    });
+
+                    if (result.success) {
+                        feedbackSpan.innerHTML = '<i class="bi bi-check-lg text-success"></i>';
+                    } else {
+                        throw new Error(result.message || 'Erreur inconnue');
+                    }
+                } catch (error) {
+                    feedbackSpan.innerHTML = `<i class="bi bi-x-lg text-danger" title="${error.message}"></i>`;
+                }
+            });
+        }
+
+        // On gère le clic sur le bouton de réinitialisation du token
+        const resetTokenButton = modal.querySelector('#modal-reset-token');
+        if (resetTokenButton) {
+            resetTokenButton.addEventListener('click', async () => {
+                const reservationId = modal.querySelector('#modal_reservation_id').value;
+                const sendEmail = modal.querySelector('#modal-resend-token-email').checked;
+
+                if (confirm('Êtes-vous sûr de vouloir générer un nouveau token ? L\'ancien lien de modification ne sera plus valide.')) {
+                    try {
+                        await apiPost('/gestion/reservations/reinit-token', { reservationId, token: true, sendEmail });
+                        await refreshModalContent(modal, reservationId); // Rafraîchir pour voir le nouveau token
+                    } catch (error) {
+                        alert(`Erreur: ${error.userMessage || error.message}`);
+                    }
+                }
+            });
+        }
+
 
         /*---------------------------------
 

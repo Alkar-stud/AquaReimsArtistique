@@ -78,7 +78,6 @@
                         <!-- section pour le paiement -->
                         <div id="modal-payment-section">
                             <h4>Paiements</h4>
-                            à faire: afficher la liste des différentes informations de paiement (dont bouton refresh et remboursement)
                             <div id="modal-payment-list" class="d-flex justify-content-around text-center p-2 bg-light rounded">
                                 <div>
                                     <strong>Coût total</strong><br>
@@ -131,8 +130,14 @@
                     {% if str_contains($userPermissions, 'D') %}
                     <br>
                     <div id="token-container">
-                        <div>
-                            Réinit token : <span id="modal-reset-token" class="fw-bold"></span> <i class="bi bi-arrow-clockwise" title="Réinit token"></i>
+                        <div class="d-flex align-items-center justify-content-center mb-2">
+                            <span class="me-2">Réinit. token :</span>
+                            <div class="form-check">
+                                <label class="form-check-label small" for="modal-resend-token-email">avec un envoi d'email ?</label>
+                                <input class="form-check-input" type="checkbox" value="" id="modal-resend-token-email">
+                            </div>
+                            &nbsp;
+                            <i id="modal-reset-token" class="bi bi-arrow-clockwise me-2" style="cursor: pointer;" title="Générer un nouveau token de modification"></i>
                         </div>
                         <div class="ms-md-auto w-100 w-md-auto">
                             <div class="input-group">

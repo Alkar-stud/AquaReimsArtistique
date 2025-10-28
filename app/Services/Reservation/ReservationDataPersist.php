@@ -17,6 +17,7 @@ use app\Repository\Reservation\ReservationPaymentRepository;
 use app\Repository\Reservation\ReservationPlaceTempRepository;
 use app\Repository\Reservation\ReservationRepository;
 use app\Services\Log\Logger;
+use app\Services\Mails\MailPrepareService;
 use app\Services\Mails\MailService;
 use app\Services\Payment\PaymentRecordService;
 use app\Services\Security\TokenGenerateService;
@@ -39,6 +40,7 @@ readonly class ReservationDataPersist
     private ReservationPlaceTempRepository $reservationPlaceTempRepository;
     private UploadService $uploadService;
     private MailService $mailService;
+    private MailPrepareService $mailPrepareService;
 
     public function __construct(
         ReservationSessionService $reservationSessionService,
@@ -54,6 +56,7 @@ readonly class ReservationDataPersist
         ReservationTempWriter $reservationTempWriter,
         UploadService $uploadService,
         MailService $mailService,
+        MailPrepareService $mailPrepareService,
     ) {
         $this->reservationSessionService = $reservationSessionService;
         $this->tokenGenerateService = $tokenGenerateService;
@@ -67,6 +70,7 @@ readonly class ReservationDataPersist
         $this->reservationPlaceTempRepository = $reservationPlaceTempRepository;
         $this->uploadService = $uploadService;
         $this->mailService = $mailService;
+        $this->mailPrepareService = $mailPrepareService;
     }
 
     /**
@@ -163,7 +167,12 @@ readonly class ReservationDataPersist
                 $reservation->setPayments($this->reservationPaymentRepository->findByReservation($newReservationId));
             }
 
-            // Envoyer l'email de confirmation et enregistrer l'envoi
+            // Envoyer l'email de confirmation
+            if (!$this->mailPrepareService->sendReservationConfirmationEmail($reservation)) {
+                throw new RuntimeException('Échec de l\'envoi de l\'email de confirmation.');
+            }
+
+            // Enregistrer l'envoi de l'email
             $this->mailService->recordMailSent($reservation, 'paiement_confirme');
 
             // Nettoyer les données temporaires

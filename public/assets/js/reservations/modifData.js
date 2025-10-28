@@ -31,6 +31,7 @@ document.addEventListener('DOMContentLoaded', () => {
             messageSelector: '#payment-check-message',
             errorSelector: '#payment-check-error',
             successSelector: '#payment-check-success',
+            successRedirectUrl: '/modifData', // URL de redirection pour une modification
             pollIntervalMs: 5000, // Vérification toutes les 5 secondes
             initialPollAttempts: 5, // 5 tentatives locales (25s)
             maxPollAttempts: 3 // 3 tentatives forcées (15s de plus)

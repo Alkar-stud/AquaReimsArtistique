@@ -12,6 +12,7 @@ import { showFlashMessage } from '../components/ui.js';
  * @param {string} config.errorSelector - Selector for the error display area.
  * @param {string} config.successSelector - Selector for the success display area.
  * @param {number} config.pollIntervalMs - Interval for polling in milliseconds.
+ * @param {string} config.successRedirectUrl - URL de base pour la redirection en cas de succès (ex: '/reservation/merci').
  * @param {number} config.initialPollAttempts - Nombre de tentatives de vérification locale.
  * @param {number} config.maxPollAttempts - Maximum number of polling attempts.
  */
@@ -51,8 +52,8 @@ export function initPaymentCheckHandler(config) {
         try {
             // On appelle la route qui force la vérification auprès de HelloAsso
             const result = await apiPost('/reservation/checkPaymentState', { checkoutIntentId });
-            if (result.success && result.state === 'Processed') {
-                handleSuccess();
+            if (result.success && result.state === 'Processed' && result.token) {
+                handleSuccess(result.token);
             } else {
                 // Si même la vérification forcée ne donne rien, on attend et on réessaie
                 setTimeout(forceCheckPaymentStatus, config.pollIntervalMs);
@@ -78,9 +79,8 @@ export function initPaymentCheckHandler(config) {
 
         try {
             const result = await apiPost('/reservation/checkPayment', { checkoutIntentId });
-
             if (result.success) {
-                handleSuccess();
+                handleSuccess(result.token);
             } else if (result.status === 'pending') {
                 setTimeout(checkPaymentStatus, config.pollIntervalMs);
             } else {
@@ -91,7 +91,7 @@ export function initPaymentCheckHandler(config) {
         }
     };
 
-    function handleSuccess() {
+    function handleSuccess(reservationToken) {
         if (successEl) successEl.style.display = 'block';
         if (spinner) spinner.style.display = 'none';
         if (messageEl) messageEl.style.display = 'none';
@@ -99,7 +99,7 @@ export function initPaymentCheckHandler(config) {
 
         if (reservationToken) {
             setTimeout(() => {
-                window.location.href = `/modifData?token=${reservationToken}`;
+                window.location.href = `${config.successRedirectUrl}?token=${reservationToken}`;
             }, 2000); // Redirection après 2 secondes
         } else {
             console.error("Token de réservation manquant pour la redirection.");

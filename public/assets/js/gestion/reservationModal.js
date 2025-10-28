@@ -3,24 +3,32 @@ import { initContactForm } from '../reservations/contactForm.js';
 import { initParticipantsForm, updateParticipantsUI } from '../reservations/participantsForm.js';
 import { initComplementsForm, updateComplementsUI } from '../reservations/complementsForm.js';
 import ScrollManager from '../components/scrollManager.js';
-import { apiDelete } from '../components/apiClient.js';
+import { apiDelete, apiPost } from '../components/apiClient.js';
 import { toggleReservationStatus } from './statusToggle.js';
 import { toggleCancelStatus } from '../reservations/cancelReservation.js';
 
-/**
- * Gère l'événement d'ouverture de la modale.
- * @param {Event} event - L'événement 'show.bs.modal'
- */
-async function onModalOpen(event) {
-    // Le bouton "Détail" qui a déclenché l'ouverture
-    const button = event.relatedTarget;
-    const reservationId = button.getAttribute('data-reservation-id');
+// Dictionnaire des explications pour les statuts de paiement HelloAsso
+const paymentStatusExplanations = {
+    'Pending' : 'Paiement à venir (échéances)',
+    'Authorized': 'Paiement accepté',
+    'Refused': 'Paiement refusé (surement par la banque de l\'utilisateur)',
+    'Unknown': 'Paiement dont le statut n\'est pas résolu car incertitude sur celui-ci',
+    'Registered': 'Paiements/dons hors ligne (espèces, chèques,..)',
+    'Refunded': 'Paiement remboursé',
+    'Refunding': 'Paiement en cours de remboursement',
+    'Contested': 'L\'utilisateur a contesté le paiement auprès de sa banque',
+    'CashedOut': "Somme reversée à l'association",
+    'WaitingForCashOutConfirmation': "En attente de la confirmation du versement (état transitoire)",
+    'TransferInProgress': "Le paiement est en cours de transfert sur le compte HelloAsso de l'association.",
+    'Transfered': "Somme transférée sur le compte HelloAsso de l'association",
+    'MoneyIn': "Les fonds sont sur le wallet contributeur",
+    'Processed': 'Effectué'
+};
 
-    // On récupère l'état de lecture seule depuis l'attribut de la modale
-    const isReadOnly = event.target.dataset.isReadonly === 'true';
 
-    const modal = event.target; // La modale elle-même
+async function refreshModalContent(modal, reservationId) {
     const modalBody = modal.querySelector('.modal-body');
+    const isReadOnly = modal.dataset.isReadonly === 'true';
 
     // Sauvegarder le HTML original pour le restaurer plus tard
     const originalModalBodyHtml = modalBody.innerHTML;
@@ -108,7 +116,7 @@ async function onModalOpen(event) {
         const amountDue = totalAmount - amountPaid;
 
         // Calcul du total des dons
-        const totalDonation = (reservation.payments || []).reduce((acc, payment) => {
+        const totalDonation = (reservation.payments || []).reduce((acc, payment) => { // Correction de la variable
             return acc + (payment.partOfDonation || 0);
         }, 0);
 
@@ -130,8 +138,122 @@ async function onModalOpen(event) {
         const markAsPaidDiv = modal.querySelector('#div-modal-mark-as-paid');
         if (markAsPaidDiv) {
             markAsPaidDiv.classList.toggle('d-none', amountDue <= 0);
-            // Ici, il faudra ajouter la logique de clic pour ce bouton si nécessaire
+            // TODO : Ajouter la logique de clic pour ce bouton
         }
+
+
+        // --- Section Détails des Paiements ---
+        const paymentsDetailsContainer = modal.querySelector('#modal-payment-details-container');
+        const toggleDetailsLink = modal.querySelector('#toggle-payment-details');
+
+        if (paymentsDetailsContainer && toggleDetailsLink && reservation.payments && reservation.payments.length > 0) {
+            toggleDetailsLink.style.display = 'inline';
+            paymentsDetailsContainer.innerHTML = ''; // Vider le conteneur
+
+            reservation.payments.forEach(payment => {
+                let refundActionHtml = '';
+                const refreshButtonHtml = `
+                    <button class="btn btn-sm btn-outline-secondary refresh-payment-btn"
+                            data-payment-id="${payment.id}"
+                            title="Rafraîchir le statut">
+                        <i class="bi bi-arrow-clockwise"></i>
+                    </button>
+                `;
+
+                // On détermine l'action de remboursement à afficher (bouton ou badge)
+                if (payment.status === 'Refunded') {
+                    refundActionHtml = '<span class="badge bg-info me-1">Remboursé</span>';
+                } else if (payment.type !== 'ref') { // On ne peut pas rembourser une écriture de remboursement
+                    const isRefundable = payment.status === 'Authorized' || payment.status === 'Processed';
+                    refundActionHtml = `
+                        <button class="btn btn-sm btn-outline-warning refund-btn me-1"
+                                data-payment-id="${payment.id}"
+                                title="Rembourser ce paiement via HelloAsso"
+                                ${!isRefundable ? 'disabled' : ''}>
+                            <i class="bi bi-currency-euro"></i> Rembourser
+                        </button>
+                    `;
+                }
+
+                const paymentItem = document.createElement('li');
+                paymentItem.className = 'list-group-item d-flex justify-content-between align-items-center p-1';
+                paymentItem.innerHTML = `
+                     <div class="small">
+                         <span class="badge bg-secondary me-1">${payment.type || 'N/A'}</span> 
+                         ${new Date(payment.createdAt).toLocaleDateString('fr-FR')} -
+                         <strong>${(payment.amountPaid / 100).toFixed(2).replace('.', ',')} €</strong>
+                         <span class="ms-2 fst-italic text-muted">
+                            (${payment.status || 'Inconnu'})
+                            <i class="bi bi-question-circle-fill ms-1 text-primary"
+                               data-bs-toggle="tooltip"
+                               data-bs-placement="top"
+                               title="${paymentStatusExplanations[payment.status] || 'Statut non documenté.'}"></i>
+                         </span>
+                     </div>
+                     <div>${refundActionHtml}${refreshButtonHtml}</div>
+                 `;
+                paymentsDetailsContainer.appendChild(paymentItem);
+            });
+
+            toggleDetailsLink.addEventListener('click', (e) => {
+                e.preventDefault();
+                const isHidden = paymentsDetailsContainer.style.display === 'none';
+                paymentsDetailsContainer.style.display = isHidden ? 'block' : 'none';
+                e.target.textContent = isHidden
+                    ? 'Afficher le détail'
+                    : 'Voir le détail des paiements';
+            });
+
+            // Attacher les écouteurs pour les nouveaux boutons
+            paymentsDetailsContainer.querySelectorAll('.refund-btn').forEach(btn => {
+                btn.addEventListener('click', async (e) => {
+                    const paymentId = e.currentTarget.dataset.paymentId;
+                    if (confirm(`Êtes-vous sûr de vouloir initier le remboursement pour le paiement #${paymentId} ?`)) {
+                        e.currentTarget.disabled = true;
+                        e.currentTarget.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+                        try {
+                            await apiPost('/gestion/reservations/refund', { paymentId });
+                            alert('La demande de remboursement a été envoyée.');
+                            await refreshModalContent(modal, reservationId); // On rafraîchit la modale
+                        } catch (error) {
+                            alert(`Erreur: ${error.userMessage || error.message}`);
+                            e.currentTarget.disabled = false;
+                            e.currentTarget.innerHTML = '<i class="bi bi-currency-euro"></i> Rembourser';
+                        }
+                    }
+                });
+            });
+
+            paymentsDetailsContainer.querySelectorAll('.refresh-payment-btn').forEach(btn => {
+                btn.addEventListener('click', async (e) => {
+                    const button = e.currentTarget;
+                    const paymentId = button.dataset.paymentId;
+                    const originalIcon = button.innerHTML;
+
+                    button.disabled = true;
+                    button.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+
+                    try {
+                        // Le contrôleur doit renvoyer {success: true} si le statut a été mis à jour.
+                        await apiPost('/gestion/reservations/refresh-payment', { paymentId });
+                        // On rafraîchit toute la modale pour afficher le nouveau statut.
+                        await refreshModalContent(modal, reservationId);
+                    } catch (error) {
+                        alert(`Erreur lors du rafraîchissement : ${error.userMessage || error.message}`);
+                        button.disabled = false;
+                        button.innerHTML = originalIcon;
+                    }
+                });
+            });
+
+            // Initialiser les nouvelles infobulles Bootstrap
+            const tooltipTriggerList = [].slice.call(paymentsDetailsContainer.querySelectorAll('[data-bs-toggle="tooltip"]'));
+            tooltipTriggerList.map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl));
+
+        } else if (toggleDetailsLink) {
+            toggleDetailsLink.style.display = 'none';
+        }
+
 
         /*---------------------------------
 
@@ -163,6 +285,19 @@ async function onModalOpen(event) {
     } catch (error) {
         modalBody.innerHTML = `<div class="alert alert-danger m-3">Erreur lors du chargement des détails : ${error.message}</div>`;
     }
+}
+
+/**
+ * Gère l'événement d'ouverture initial de la modale.
+ * @param {Event} event - L'événement 'show.bs.modal'
+ */
+async function onModalOpen(event) {
+    // Le bouton "Détail" qui a déclenché l'ouverture
+    const button = event.relatedTarget;
+    const reservationId = button.getAttribute('data-reservation-id');
+    const modal = event.target;
+
+    await refreshModalContent(modal, reservationId);
 }
 
 /**

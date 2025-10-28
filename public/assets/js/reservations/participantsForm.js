@@ -83,7 +83,7 @@ function updateUI(containerEl, reservationData, isReadOnly = false) {
 
     const esc = (s) => String(s === null || s === undefined ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 
-    // On groupe les participants par tarif (logique reprise de reservations.js).
+    // On groupe les participants par tarif.
     const participantsByTarif = (reservationData.details || []).reduce((acc, detail) => {
         const tarifId = detail.tarifId || detail.tarif; // Gère les deux formats de données
         if (!acc[tarifId]) {

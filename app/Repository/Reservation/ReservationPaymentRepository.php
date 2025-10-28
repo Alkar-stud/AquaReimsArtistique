@@ -93,12 +93,21 @@ class ReservationPaymentRepository extends AbstractRepository
     /**
      * Trouve un paiement par son id de paiement
      * @param int $paymentId
+     * @param string|null $type
      * @return ReservationPayment|null
      */
-    public function findByPaymentId(int $paymentId): ?ReservationPayment
+    public function findByPaymentId(int $paymentId, ?string $type=null): ?ReservationPayment
     {
-        $sql = "SELECT * FROM $this->tableName WHERE payment_id = :payment_id LIMIT 1";
-        $result = $this->query($sql, ['payment_id' => $paymentId]);
+        $sql = "SELECT * FROM $this->tableName WHERE payment_id = :payment_id";
+        $params = ['payment_id' => $paymentId];
+
+        if ($type !== null) {
+            $sql .= " AND type = :type";
+            $params['type'] = $type;
+        }
+
+        $sql .= " LIMIT 1";
+        $result = $this->query($sql, $params);
 
         if (empty($result)) {
             return null;

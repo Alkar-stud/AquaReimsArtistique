@@ -98,6 +98,9 @@ class ReservationCheckPaymentController extends AbstractController
         }
 
         $result = $this->paymentWebhookService->handlePaymentState($paymentId);
+        if (!$result['success']) {
+            $this->json($result);
+        }
 
         $this->json(['success' => true, 'state' => $result['state'], 'totalAmountPaid' => $result['reservation']->getTotalAmountPaid()]);
     }

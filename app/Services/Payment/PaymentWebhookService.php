@@ -2,6 +2,7 @@
 
 namespace app\Services\Payment;
 
+use app\Models\Reservation\Reservation;
 use app\Repository\Reservation\ReservationPaymentRepository;
 use app\Repository\Reservation\ReservationRepository;
 use app\Services\Reservation\ReservationProcessAndPersistService;
@@ -93,28 +94,41 @@ class PaymentWebhookService
         //On récupère la réservation
         $reservation = $this->reservationRepository->findById($payment->getReservation());
 
-        if ($state == 'Refunded') {
-            //On insère le remboursement dans les paiements
-            $refundOperations = $this->paymentRecordService->createRefundPaymentRecord($paymentId, $result);
-
-            //On met à jour la réservation avec le nouveau montant
-            $reservation->setTotalAmountPaid($reservation->getTotalAmountPaid() - $refundOperations->getAmountPaid());
-            $this->reservationRepository->update($reservation);
+        if ($state == 'Refunded' && $payment->getType() !='ref') {
+            $this->processRefund($reservation, $paymentId, $result);
         }
         //Et on retourne le résultat au front
-        return ['payer' => $payer, 'state' => $state, 'refundOperations' => $refundOperations, 'reservation' => $reservation];
+        return ['success' => true, 'payer' => $payer, 'state' => $state, 'refundOperations' => $refundOperations, 'reservation' => $reservation];
     }
 
     /**
      * Pour gérer le remboursement d'un paiement
      *
+     * @param Reservation $reservation
      * @param int $paymentId
-     * @return array
+     * @param object $result
+     * @return void
      */
-    public function handlePaymentRefund(int $paymentId): array
+    private function processRefund(Reservation $reservation, int $paymentId, object $result): void
     {
+        //On vérifie si le remboursement n'est pas déjà présent (même paymentID avec type = ref)
+        $checkIfRefundExist = $this->reservationPaymentRepository->findByPaymentId($paymentId, 'ref');
+        if ($checkIfRefundExist) {
+            //Et on retourne si le remboursement existe déjà pour ce paiement
+            return;
+        }
 
-        return ['success' => false];
+        //On génère le remboursement dans les paiements.
+        $refundOperations = $this->paymentRecordService->createRefundPaymentRecord($paymentId, $result);
+        //On l'insert
+        $id = $this->reservationPaymentRepository->insert($refundOperations);
+        if ($id <= 0) {
+            throw new \RuntimeException('Échec insertion payment.');
+        }
+
+        //On met à jour la réservation avec le nouveau montant
+        $reservation->setTotalAmountPaid($reservation->getTotalAmountPaid() - $refundOperations->getAmountPaid());
+        $this->reservationRepository->update($reservation);
     }
 
 }

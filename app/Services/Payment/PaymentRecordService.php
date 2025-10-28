@@ -11,16 +11,16 @@ use app\Repository\Reservation\ReservationRepository;
  */
 class PaymentRecordService
 {
-    private ReservationPaymentRepository $paymentRepository;
+    private ReservationPaymentRepository $reservationPaymentRepository;
     private ReservationRepository $reservationRepository;
 
 
     public function __construct(
-        ReservationPaymentRepository $paymentRepository,
+        ReservationPaymentRepository $reservationPaymentRepository,
         ReservationRepository $reservationRepository,
     )
     {
-        $this->paymentRepository = $paymentRepository;
+        $this->reservationPaymentRepository = $reservationPaymentRepository;
         $this->reservationRepository = $reservationRepository;
     }
 
@@ -40,7 +40,7 @@ class PaymentRecordService
         }
 
         // Sécurité : ne pas enregistrer deux fois le même paiement
-        if ($this->paymentRepository->findByCheckoutId($checkoutIdAsInt)) {
+        if ($this->reservationPaymentRepository->findByCheckoutId($checkoutIdAsInt)) {
             return null;
         }
 
@@ -85,7 +85,7 @@ class PaymentRecordService
             //$this->reservationRepository->updateSingleField($reservationId, 'total_amount_paid', $newTotalPaid);
         }
 
-        $id = $this->paymentRepository->insert($payment);
+        $id = $this->reservationPaymentRepository->insert($payment);
         if ($id <= 0) {
             throw new \RuntimeException('Échec insertion payment.');
         }
@@ -100,7 +100,7 @@ class PaymentRecordService
      */
     public function createRefundPaymentRecord(int $paymentId, object $orderData): ?ReservationPayment
     {
-        $payment = $this->paymentRepository->findByPaymentId($paymentId);
+        $payment = $this->reservationPaymentRepository->findByPaymentId($paymentId);
         if (!$payment) {
             return null;
         }
@@ -113,11 +113,6 @@ class PaymentRecordService
             ->setPaymentId($payment->getPaymentId())
             ->setAmountPaid((int)$orderData->amount)
             ->setStatusPayment($orderData->refundOperations[0]->status);
-
-        $id = $this->paymentRepository->insert($refundOperations);
-        if ($id <= 0) {
-            throw new \RuntimeException('Échec insertion payment.');
-        }
 
         return $refundOperations;
     }

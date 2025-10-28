@@ -120,7 +120,7 @@
                         </div>
 
                         <!-- Section pour les compléments -->
-                        <div id="modal-complements-section" class="mt-4" style="display: none;">
+                        <div id="modal-complements-section" style="display: none;">
                             <h4>Compléments</h4>
                             <div id="complements-container" class="list-group text-start">
                                 <!-- Le contenu sera injecté ici par JavaScript -->
@@ -128,27 +128,27 @@
                         </div>
 
                     </form>
-                </div>
-                {% if str_contains($userPermissions, 'D') %}
-                <div class="d-flex flex-column flex-row gap-3">
-                    <div>
-                        Réinit token : <span id="modal-reset-token" class="fw-bold"></span> <i class="bi bi-arrow-clockwise btn-success" title="Réinit token"></i>
-                    </div>
-
-                    <div class="ms-md-auto w-100 w-md-auto">
-                        <div class="input-group">
-                            <span class="input-group-text">Token expire à</span>
-                            <input type="datetime-local"
-                                   id="modal-modification-token-expire-at"
-                                   class="form-control"
-                                   data-field="tokenExpireAt"
-                                   value="" {{ $isReadOnly ? 'disabled' : '' }}
-                                   aria-label="Token expire à">
-                            <span class="input-group-text feedback-span"></span>
+                    {% if str_contains($userPermissions, 'D') %}
+                    <br>
+                    <div id="token-container">
+                        <div>
+                            Réinit token : <span id="modal-reset-token" class="fw-bold"></span> <i class="bi bi-arrow-clockwise" title="Réinit token"></i>
+                        </div>
+                        <div class="ms-md-auto w-100 w-md-auto">
+                            <div class="input-group">
+                                <span class="input-group-text">Token expire à</span>
+                                <input type="datetime-local"
+                                       id="modal-modification-token-expire-at"
+                                       class="form-control"
+                                       data-field="tokenExpireAt"
+                                       value="" {{ $isReadOnly ? 'disabled' : '' }}
+                                       aria-label="Token expire à">
+                                <span class="input-group-text feedback-span"></span>
+                            </div>
                         </div>
                     </div>
+                    {% endif %}
                 </div>
-                {% endif %}
             </div>
 
             <div class="modal-footer">

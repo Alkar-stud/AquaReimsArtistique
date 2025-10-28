@@ -92,7 +92,7 @@ class HelloAssoService
      * @param $checkoutID
      * @return mixed
      */
-    function checkPayment ($accessToken, $checkoutID): mixed
+    function checkPayment($accessToken, $checkoutID): mixed
     {
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_URL, $_ENV['HELLOASSO_API_URL'] . '' . $this->urlApi . $_ENV['HELLOASSO_API_ORGANIZATION_ID'] . $this->urlCheckoutIntents . '/' . $checkoutID);
@@ -106,17 +106,6 @@ class HelloAssoService
 
         // returned json string
         return json_decode($rawResponse);
-    }
-
-    /**
-     * URL pour l'attestation de paiement
-     *
-     * @param
-     * @return string
-     */
-    public function recupPaiementAttestation($orderId): string
-    {
-        return $_ENV['HELLOASSO_API_URL'] . 'associations/' . $_ENV['HELLOASSO_API_ORGANIZATION_ID'] . $this->urlPaymentAttestation . '/' . $orderId;
     }
 
     /**
@@ -139,6 +128,37 @@ class HelloAssoService
         curl_close ($ch);
 
         // returned json string
+        return json_decode($rawResponse);
+    }
+
+    /**
+     * Pour demander le remboursement d'un paiement
+     *
+     * @param int $paymentId
+     * @param string|null $comment
+     * @return bool
+     */
+    public function refundPayment(int $paymentId, ?string $comment = null): mixed
+    {
+        $accessToken = $this->GetToken();
+        if ($comment) {
+            $JsonData = json_encode(['comment' => $comment]);
+        } else {
+            $JsonData = json_encode([]);
+        }
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $_ENV['HELLOASSO_API_URL'] . '' . $this->urlApiPayment . $paymentId . '/refund');
+        curl_setopt($ch, CURLOPT_POST, 1);// set post data to true
+        curl_setopt($ch, CURLOPT_POSTFIELDS,$JsonData);   // post data
+        curl_setopt($ch, CURLOPT_HTTPHEADER, array(
+            "authorization: Bearer " . $accessToken,
+            "content-type:application/json"
+        ));
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        $rawResponse = curl_exec($ch);
+        curl_close ($ch);
+
+        // return json string
         return json_decode($rawResponse);
     }
 

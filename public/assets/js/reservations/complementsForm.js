@@ -184,7 +184,7 @@ function updateUI(containerEl, reservationData, isReadOnly = false) {
                 </div>
                 <div class="text-end" style="min-width:260px;">
                     <div class="d-flex align-items-center justify-content-end" style="gap:0.5rem;">
-                        <div class="text-muted small me-2" style="min-width:90px; text-align:right;">${formatNumber(priceCents)} x </div>
+                        <div class="text-muted small me-2" style="min-width:90px; text-align:right;">${formatNumber(priceCents)} € x </div>
                         <div class="input-group input-group-sm" style="max-width:160px;">
                             <button class="btn btn-outline-secondary btn-sm complement-qty-btn" type="button" data-action="minus" data-complement-id="${c.id}" ${isReadOnly ? 'disabled' : ''}>-</button>
                             <input type="text" class="form-control text-center" id="qty-complement-${c.id}" value="${qty}" readonly>
@@ -192,7 +192,7 @@ function updateUI(containerEl, reservationData, isReadOnly = false) {
                         </div>
                     </div>
                     <div class="mt-1">
-                        <strong class="complement-total" data-complement-id="${c.id}">${formatNumber(qty * priceCents)}</strong>
+                        <strong class="complement-total" data-complement-id="${c.id}">${formatNumber(qty * priceCents)} €</strong>
                     </div>
                 </div>
             </div>`;

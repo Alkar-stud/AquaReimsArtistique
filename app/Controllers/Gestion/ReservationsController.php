@@ -8,6 +8,7 @@ use app\Repository\Reservation\ReservationPaymentRepository;
 use app\Repository\Reservation\ReservationRepository;
 use app\Services\Event\EventQueryService;
 use app\Services\Pagination\PaginationService;
+use app\Services\Payment\HelloAssoService;
 use app\Services\Payment\PaymentWebhookService;
 use app\Services\Reservation\ReservationDeletionService;
 use app\Services\Reservation\ReservationUpdateService;
@@ -23,6 +24,7 @@ class ReservationsController extends AbstractController
     private ReservationDeletionService $reservationDeletionService;
     private PaymentWebhookService $paymentWebhookService;
     private ReservationPaymentRepository $reservationPaymentRepository;
+    private HelloAssoService $helloAssoService;
 
     function __construct(
         EventQueryService $eventQueryService,
@@ -32,6 +34,7 @@ class ReservationsController extends AbstractController
         ReservationDeletionService $reservationDeletionService,
         PaymentWebhookService $paymentWebhookService,
         ReservationPaymentRepository $reservationPaymentRepository,
+        HelloAssoService $helloAssoService,
     )
     {
         parent::__construct(false);
@@ -42,6 +45,7 @@ class ReservationsController extends AbstractController
         $this->reservationDeletionService = $reservationDeletionService;
         $this->paymentWebhookService = $paymentWebhookService;
         $this->reservationPaymentRepository = $reservationPaymentRepository;
+        $this->helloAssoService = $helloAssoService;
     }
 
     #[Route('/gestion/reservations', name: 'app_gestion_reservations')]
@@ -243,14 +247,17 @@ class ReservationsController extends AbstractController
             $this->json(['success' => false, 'message' => 'Données invalides.']);
         }
 
-        //On récupère le checkoutID
+        //On va chercher le paiementID de HelloAsso concerné
+        $payment = $this->reservationPaymentRepository->findById($data['paymentId']);
+        if (!$payment) {
+            $this->json(['success' => false, 'message' => 'Paiement non trouvé.'], 404);
+            return;
+        }
 
+        $this->helloAssoService->refundPayment($payment->getPaymentId(), 'remboursement sur demande)');
+        $result = $this->paymentWebhookService->handlePaymentState($payment->getPaymentId());
 
-        // Logique à implémenter :
-        // 2. Récupérer le paymentId depuis le corps de la requête.
-        // 3. Appeler un service qui communiquera avec l'API HelloAsso pour initier le remboursement.
-        // 4. Mettre à jour le statut du paiement localement.
-        // 5. Renvoyer une réponse JSON { success: true/false, message: '...' }.
+        $this->json(['success' => true, 'result' => $result]);
     }
 
 }

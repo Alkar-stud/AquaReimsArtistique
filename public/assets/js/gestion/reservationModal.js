@@ -166,7 +166,7 @@ async function refreshModalContent(modal, reservationId) {
                 } else if (payment.type !== 'ref') { // On ne peut pas rembourser une écriture de remboursement
                     const isRefundable = payment.status === 'Authorized' || payment.status === 'Processed';
                     refundActionHtml = `
-                        <button class="btn btn-sm btn-outline-warning refund-btn me-1"
+                        <button type="button" class="btn btn-sm btn-outline-warning refund-btn me-1"
                                 data-payment-id="${payment.id}"
                                 title="Rembourser ce paiement via HelloAsso"
                                 ${!isRefundable ? 'disabled' : ''}>
@@ -175,13 +175,20 @@ async function refreshModalContent(modal, reservationId) {
                     `;
                 }
 
+                // Préparer l'affichage du don s'il existe
+                let donationHtml = '';
+                if (payment.partOfDonation && payment.partOfDonation > 0) {
+                    const donationAmount = (payment.partOfDonation / 100).toFixed(2).replace('.', ',');
+                    donationHtml = `<span class="text-muted small"> (dont don de ${donationAmount} €)</span>`;
+                }
+                
                 const paymentItem = document.createElement('li');
                 paymentItem.className = 'list-group-item d-flex justify-content-between align-items-center p-1';
                 paymentItem.innerHTML = `
                      <div class="small">
                          <span class="badge bg-secondary me-1">${payment.type || 'N/A'}</span> 
                          ${new Date(payment.createdAt).toLocaleDateString('fr-FR')} -
-                         <strong>${(payment.amountPaid / 100).toFixed(2).replace('.', ',')} €</strong>
+                         <strong>${(payment.amountPaid / 100).toFixed(2).replace('.', ',')} €</strong>${donationHtml}
                          <span class="ms-2 fst-italic text-muted">
                             (${payment.status || 'Inconnu'})
                             <i class="bi bi-question-circle-fill ms-1 text-primary"
@@ -208,7 +215,27 @@ async function refreshModalContent(modal, reservationId) {
             paymentsDetailsContainer.querySelectorAll('.refund-btn').forEach(btn => {
                 btn.addEventListener('click', async (e) => {
                     const paymentId = e.currentTarget.dataset.paymentId;
-                    if (confirm(`Êtes-vous sûr de vouloir initier le remboursement pour le paiement #${paymentId} ?`)) {
+                    const payment = reservation.payments.find(p => p.id == paymentId);
+
+                    if (!payment) {
+                        alert('Erreur : impossible de trouver les détails du paiement.');
+                        return;
+                    }
+
+                    const totalAmount = payment.amountPaid || 0;
+                    const donationAmount = payment.partOfDonation || 0;
+                    const refundableAmount = totalAmount - donationAmount;
+
+                    const refundableAmountFormatted = (refundableAmount / 100).toFixed(2).replace('.', ',');
+
+                    let confirmationMessage = `Vous êtes sur le point de rembourser ${refundableAmountFormatted} €.\n\n`;
+                    if (donationAmount > 0) {
+                        const donationAmountFormatted = (donationAmount / 100).toFixed(2).replace('.', ',');
+                        confirmationMessage += `Le don de ${donationAmountFormatted} € ne sera pas remboursé.\n`;
+                    }
+                    confirmationMessage += `Confirmez-vous le remboursement ?`;
+
+                    if (confirm(confirmationMessage)) {
                         e.currentTarget.disabled = true;
                         e.currentTarget.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
                         try {
@@ -254,6 +281,18 @@ async function refreshModalContent(modal, reservationId) {
             toggleDetailsLink.style.display = 'none';
         }
 
+        /*---------------------------------
+
+        Section Token
+
+         ---------------------------------*/
+        const tokenExpireInput = modal.querySelector('#modal-modification-token-expire-at');
+        if (tokenExpireInput && reservation.tokenExpireAt) {
+            // L'input datetime-local attend le format 'YYYY-MM-DDTHH:mm'.
+            // On prend les 16 premiers caractères de la date ISO (ex: "2025-11-27T12:00:00+01:00")
+            // pour obtenir "2025-11-27T12:00".
+            tokenExpireInput.value = reservation.tokenExpireAt.slice(0, 16);
+        }
 
         /*---------------------------------
 

@@ -34,12 +34,15 @@
                 {% endif %}
                 <div class="mt-1">
                     {% foreach $group['participants'] as $i => $p %}
-                    {{ ($p['firstname'] ?? '') . ' ' . ($p['name'] ?? '') }}
+                    {{ ($p['name'] ?? '') . ' ' . ($p['firstname'] ?? '') }}
                     {% if !empty($p['place_id']) %}
                     <em>(place {{ $p['place_id'] }})</em>
                     {% endif %}
+                    {% if !empty($p['justificatif_name']) %}
+                    <div class="text-muted small">({{ $p['justificatif_original_name'] }})</div>
+                    {% endif %}
                     {% if !empty($p['tarif_access_code']) %}
-                    <em>(code {{ $p['tarif_access_code'] }})</em>
+                    <div class="text-muted small">(code {{ $p['tarif_access_code'] }})</div>
                     {% endif %}
                     {% if $i < ($group['count'] - 1) %}<br>{% endif %}
                     {% endforeach %}
@@ -109,8 +112,6 @@
         </div>
     </div>
 </div>
-
-<script src="/assets/js/reservation/reservation_common.js" defer></script>
 
 Ici pour la suite, on a déjà enregistré ça :
 {% php %}

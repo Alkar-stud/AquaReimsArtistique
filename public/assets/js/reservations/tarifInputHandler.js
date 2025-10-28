@@ -4,9 +4,9 @@
  * Gère la logique des inputs de tarifs (calcul des totaux, limites, UI).
  * @param {object} config - Configuration pour le gestionnaire.
  * @param {HTMLElement} config.container - Le conteneur parent des inputs de tarifs.
- * @param {HTMLElement} config.alertDiv - L'élément pour afficher les alertes.
- * @param {HTMLElement} config.placesRestantesSpan - L'élément pour afficher les places restantes.
- * @param {number|null} config.limitation - La limite de places par nageuse (null si pas de limite).
+ * @param {HTMLElement|null} config.alertDiv - L'élément pour afficher les alertes.
+ * @param {HTMLElement|null} config.placesRestantesSpan - L'élément pour afficher les places restantes.
+ * @param {number|null} config.limitation - La limite de places par nageuse (null si pas de limite, ou si non applicable).
  * @param {number} config.dejaReservees - Le nombre de places déjà réservées.
  * @param {function} config.hasSpecialSelection - Fonction pour vérifier si un tarif spécial est sélectionné.
  * @param {function} config.updateSubmitState - Fonction pour mettre à jour l'état du bouton de soumission.
@@ -35,7 +35,7 @@ export function initTarifInputHandler(config) {
     }
 
     function refreshRemainingUi(remaining) {
-        if (placesRestantesSpan) {
+        if (placesRestantesSpan && limitation !== null) { // Seulement si une limitation est définie
             placesRestantesSpan.textContent = Math.max(0, remaining);
         }
     }
@@ -50,7 +50,7 @@ export function initTarifInputHandler(config) {
     }
 
     function clampInput(input) {
-        if (limitation === null) return;
+        if (limitation === null) return; // Pas de limitation, pas de clamp
         const placesParTarif = parseInt(input.dataset.nbPlace, 10) || 1;
         const reste = Math.max(0, limitation - dejaReservees - totalDemanded(input));
         const maxPossible = Math.floor(reste / placesParTarif);

@@ -16,6 +16,7 @@ import { formatEuro } from '../components/utils.js'; // Nouveau formatter pour e
  * @param {string} config.eventId - L'ID de l'événement.
  * @param {object|null} config.initialSpecialTarifSession - Les données du tarif spécial pré-remplies.
  * @param {function} config.updateSubmitState - Fonction pour mettre à jour l'état du bouton de soumission.
+ * @param {boolean} config.withSeat - Indique si le tarif spécial est pour des places assises (true pour etape3, false pour etape6).
  */
 export function initSpecialTarifHandler(config) {
     const {
@@ -27,7 +28,8 @@ export function initSpecialTarifHandler(config) {
         eventId,
         initialSpecialTarifSession,
         updateSubmitState
-    } = config;
+        , withSeat
+    } = config; // Ajout de withSeat
 
     let currentSpecialTarifSession = initialSpecialTarifSession;
 
@@ -92,7 +94,7 @@ export function initSpecialTarifHandler(config) {
             specialCodeFeedback.textContent = '';
 
             try {
-                const res = await apiPost('/reservation/validate-special-code', { event_id: eventId, code, with_seat: true });
+                const res = await apiPost('/reservation/validate-special-code', { event_id: eventId, code, with_seat: withSeat });
                 if (!res || !res.success) {
                     throw new Error(res?.error || 'Code invalide.');
                 }

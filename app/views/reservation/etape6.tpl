@@ -4,6 +4,7 @@
     <form id="reservationPlacesForm">
         <input type="hidden" id="event_id" name="event_id" value="{{ $reservation['event_id'] }}">
         {% if !empty($allTarifsWithoutSeatForThisEvent) %}
+        <div id="reservationStep6Alert"></div>
         <div id="tarifsContainer">
             {% foreach $allTarifsWithoutSeatForThisEvent as $tarif %}
             {% if $tarif->getAccessCode() === null %}
@@ -60,8 +61,7 @@
     window.specialTarifSession  = {{! json_encode($specialTarifSession ?? null) !}}; // préremplissage code spécial
 </script>
 
-<script src="/assets/js/reservation/reservation_common.js" defer></script>
-<script src="/assets/js/reservation/reservation_etape6.js" defer></script>
+<script type="module" src="/assets/js/reservations/etape6.js" defer></script>
 Ici pour la suite, on a déjà enregistré ça :
 {% php %}
 echo '<pre>';

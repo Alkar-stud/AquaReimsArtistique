@@ -305,16 +305,19 @@ class ReservationsController extends AbstractController
         //On récupère les données
         $data = $this->getAndCheckPostData(['reservationId']);
 
-        $reservation = $this->reservationRepository->findById($data['reservationId']);
+        $reservation = $this->reservationRepository->findById($data['reservationId'], true, true, true);
         if (!$reservation) {
             $this->json(['success' => false, 'message' => 'Réservation non trouvée']);
         }
 
-        $this->json(['success' => true, 'reservation' => $this->reservationTokenService->updateToken(
+        $newReservation = $this->reservationTokenService->updateToken(
             $reservation,
             isset($data['token']),
-            $data['new_expire_at'] ?? false
-        )]);
+            $data['new_expire_at'] ?? false,
+            isset($data['sendEmail']) ?? false
+        );
+
+        $this->json(['success' => true, 'reservation' => $newReservation->toArray()]);
     }
 
 

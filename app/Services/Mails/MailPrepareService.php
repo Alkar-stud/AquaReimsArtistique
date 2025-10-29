@@ -62,9 +62,10 @@ readonly class MailPrepareService
      * Pour envoyer un email de confirmation de réservation.
      *
      * @param Reservation $reservation
+     * @param string $mailTemplate
      * @return bool
      */
-    public function sendReservationConfirmationEmail(Reservation $reservation): bool
+    public function sendReservationConfirmationEmail(Reservation $reservation, string $mailTemplate = 'paiement_confirme'): bool
     {
         $recapHtml = '';
         $recapText = '';
@@ -141,10 +142,10 @@ readonly class MailPrepareService
         $totalAPayerText = $totalAPayerLabel;
 
         $buildLink = new BuildLink();
-        $tpl = $this->templateService->render('paiement_confirme', [
+        $tpl = $this->templateService->render($mailTemplate, [
             'name' => $reservation->getName(),
             'token' => $reservation->getToken(),
-            'IDreservation' => str_pad($reservation->getId(), 5, '0', STR_PAD_LEFT),
+            'IDreservation' => 'ARA-' . str_pad($reservation->getId(), 5, '0', STR_PAD_LEFT),
             'EventName' => $reservation->getEventObject()->getName(),
             'DateEvent' => $reservation->getEventSessionObject()->getEventStartAt()->format('d/m/Y H:i'),
             'Piscine' => $reservation->getEventObject()->getPiscine()->getLabel() . ' (' . $reservation->getEventObject()->getPiscine()->getAddress() . ' )',

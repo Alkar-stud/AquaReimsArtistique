@@ -27,9 +27,9 @@ async function client(endpoint, { body, ...customConfig } = {}) {
             config.body = JSON.stringify(body);
         }
     }
-console.log('Envoyé : ', config);
+console.log('Envoyé : ', config, 'à : ', endpoint);
     const response = await fetch(endpoint, config);
-
+console.log('Response : ', response);
     // On lit la réponse brute une seule fois
     const responseText = await response.text();
 
@@ -54,7 +54,9 @@ console.log('Envoyé : ', config);
 
     // Si la réponse est OK (2xx), on essaie de la parser en JSON
     try {
-        return JSON.parse(responseText);
+        let responseJson = JSON.parse(responseText);
+console.log('responseJSON : ', responseJson);
+        return responseJson;
     } catch (e) {
         console.error("La réponse du serveur était attendue en JSON, mais le format est invalide.", responseText);
         const error = new Error("Format de réponse invalide du serveur.");

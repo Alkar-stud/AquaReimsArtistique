@@ -9,6 +9,20 @@ Variables attendues :
         <small class="text-muted">{{ $event->getPiscine() ? $event->getPiscine()->getLabel() : 'Lieu non défini' }}</small>
     </div>
     <div>
-        <button class="btn btn-sm btn-info" data-event-id="{{ $event->getId() }}" title="Voir les détails"><i class="bi bi-eye"></i>&nbsp;Voir</button>
+        <button class="btn btn-sm btn-info edit-event-btn"
+                data-event-id="{{ $event->getId() }}"
+                data-event-json="{% php %}
+                $eventData = [
+                'id' => $event->getId(),
+                'name' => $event->getName(),
+                'place' => $event->getPlace(),
+                'limitation_per_swimmer' => $event->getLimitationPerSwimmer(),
+                'tarifs' => array_map(fn($t) => $t->getId(), $event->getTarifs()),
+                'sessions' => array_map(fn($s) => ['id' => $s->getId(), 'session_name' => $s->getSessionName(), 'event_start_at' => $s->getEventStartAt()->format('Y-m-d\TH:i'), 'opening_doors_at' => $s->getOpeningDoorsAt()->format('Y-m-d\TH:i')], $event->getSessions() ?? []),
+                'inscription_dates' => array_map(fn($d) => ['id' => $d->getId(), 'name' => $d->getName(), 'start_registration_at' => $d->getStartRegistrationAt()->format('Y-m-d\TH:i'), 'close_registration_at' => $d->getCloseRegistrationAt()->format('Y-m-d\TH:i'), 'access_code' => $d->getAccessCode()], $event->getInscriptionDates() ?? [])
+                ];
+                echo htmlspecialchars(json_encode($eventData), ENT_QUOTES, 'UTF-8');
+                {% endphp %}"
+                title="Voir les détails"><i class="bi bi-eye"></i>&nbsp;Voir</button>
     </div>
 </div>

@@ -314,7 +314,7 @@ class ReservationsController extends AbstractController
             $reservation,
             isset($data['token']),
             $data['new_expire_at'] ?? false,
-            isset($data['sendEmail']) ?? false
+            $data['sendEmail'] ?? false
         );
 
         $this->json(['success' => true, 'reservation' => $newReservation->toArray()]);

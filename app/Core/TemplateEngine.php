@@ -97,7 +97,11 @@ class TemplateEngine
             '/\{%\s*include\s+[\'"](.+?)[\'"](?:\s+with\s+(.+?))?\s*%}/',
             function ($m) {
                 $file = addslashes($m[1]); // Le chemin du fichier
-                $context = $m[2] ?? '[]'; // Le contexte (ex: "{'event': $event}") ou un tableau vide
+                $context = $m[2] ?? '[]'; // Le contexte (ex: "{'event': $event}")
+
+                // Remplace la syntaxe de type objet JSON/JS par une syntaxe de tableau PHP
+                // {'key': $value} devient ['key' => $value]
+                $context = str_replace(['{', ':', '}'], ['[', '=>', ']'], $context);
 
                 // On fusionne le contexte local ($context) avec les données globales ($__data)
                 // Le contexte local écrase les données globales en cas de conflit de nom.

@@ -69,7 +69,8 @@ class ReservationsController extends AbstractController
         $paginationConfig = $this->paginationService->createFromRequest($_GET);
 
         if ($tab == 'extract') {
-            $events = null;
+            //On envoie tous les galas
+            $events = $this->eventQueryService->getAllEventsWithRelations();
         } elseif ($tab == 'past') {
             //On envoie les galas passés
             $events = $this->eventQueryService->getAllEventsWithRelations(false);
@@ -318,6 +319,22 @@ class ReservationsController extends AbstractController
         );
 
         $this->json(['success' => true, 'reservation' => $newReservation->toArray()]);
+    }
+
+
+
+
+    #[Route('/gestion/reservations/exports/{sessionId}', name: 'app_gestion_reservations_exports', methods: ['GET'])]
+    public function exportsOption(int $sessionId): void
+    {
+        // Vérifier les permissions de l'utilisateur connecté
+        $this->checkUserPermission('R');
+
+        //On récupère la session
+        $eventSession = $this->reservationRepository->findBySession($sessionId, false, null, null, null, true, true);
+
+        // On renvoie true pour le moment
+        $this->json(['success' => true]);
     }
 
 

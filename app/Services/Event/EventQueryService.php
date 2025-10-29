@@ -222,4 +222,62 @@ class EventQueryService
         return ['success' => false, 'error' => 'Code inconnu pour cet événement.'];
     }
 
+     /**
+      * Récupère et restructure les données des événements à venir pour l'affichage du tableau de bord.
+      *
+      * @return array
+      */
+     public function getStructuredUpcomingEventsForDashboard(): array
+     {
+         $flatUpcomingEvents = $this->eventRepository->getUpcomingEventsSessions();
+         if (empty($flatUpcomingEvents)) {
+             return [];
+         }
+
+        $upcomingEvents = [];
+        // On restructure les données plates de la BDD en un tableau hiérarchique
+        foreach ($flatUpcomingEvents as $row) {
+            $eventId = $row['eventId'];
+            $sessionId = $row['sessionId'];
+            $periodId = $row['periodId'];
+
+            // On crée l'événement s'il n'existe pas encore
+            if (!isset($upcomingEvents[$eventId])) {
+                $upcomingEvents[$eventId] = [
+                    'id' => $eventId,
+                    'name' => $row['eventName'],
+                    'sessions' => [], // Sessions groupées par ID pour éviter doublons
+                    'registrationPeriods' => [] // Périodes groupées par ID pour éviter doublons
+                ];
+            }
+
+            // On crée la session si elle n'existe pas encore dans cet événement
+            if (!isset($upcomingEvents[$eventId]['sessions'][$sessionId])) {
+                $upcomingEvents[$eventId]['sessions'][$sessionId] = [
+                    'id' => $sessionId,
+                    'name' => $row['sessionName'],
+                    'date' => $row['sessionDate'],
+                ];
+            }
+
+            // On ajoute la période d'inscription si elle n'a pas déjà été ajoutée pour cet événement
+            if ($periodId !== null && !isset($upcomingEvents[$eventId]['registrationPeriods'][$periodId])) {
+                $upcomingEvents[$eventId]['registrationPeriods'][$periodId] = [
+                    'name' => $row['periodName'],
+                    'start' => $row['periodStart'],
+                    'end' => $row['periodEnd'],
+                ];
+            }
+        }
+
+         // On nettoie les clés (ID) pour que la vue puisse boucler simplement avec foreach
+         foreach ($upcomingEvents as &$event) {
+             $event['sessions'] = array_values($event['sessions']);
+             $event['registrationPeriods'] = array_values($event['registrationPeriods']);
+         }
+
+         return array_values($upcomingEvents);
+    }
+
+
  }

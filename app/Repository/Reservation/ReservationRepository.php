@@ -175,6 +175,49 @@ class ReservationRepository extends AbstractRepository
     }
 
     /**
+     * Retourne un tableau des réservations annulées d'un event
+     *
+     * @param int $eventId
+     * @return array
+     */
+    public function findCanceledByEvent(int $eventId): array
+    {
+        $sql = "SELECT * FROM $this->tableName WHERE event = :event AND is_canceled = 1";
+        $rows = $this->query($sql, ['event' => $eventId]);
+        return array_map([$this, 'hydrate'], $rows);
+    }
+
+    /**
+     * Recherche toutes les réservations par email et évènement,
+     * puis hydrate chaque enregistrement exactement comme `findById`.
+     *
+     * Les options variadiques `$with` doivent suivre le même ordre que celles de `findById`
+     * (par exemple : withEvent, withEventSession, withSwimmer, withDetails, withComplements, withPayments, ...).
+     * @param string $email
+     * @param int $eventId
+     * @param bool ...$with
+     * @return array
+     */
+    public function findByEmailAndEvent(string $email, int $eventId, bool ...$with): array
+    {
+        $sql = "SELECT id FROM $this->tableName WHERE email = :email AND event = :eventId";
+        $rows = $this->query($sql, ['email' => $email, 'eventId' => $eventId]);
+
+        $reservations = [];
+        foreach ($rows as $row) {
+            $id = (int)($row['id'] ?? 0);
+            if ($id <= 0) {
+                continue;
+            }
+            // Délègue à findById pour bénéficier des mêmes options d'hydratation
+            $reservations[] = $this->findById($id, ...$with);
+        }
+
+        // Filtre les éventuels null renvoyés si un id n'existe plus
+        return array_values(array_filter($reservations));
+    }
+
+    /**
      * Compte le nombre total de réservations pour une session donnée.
      *
      * @param int $sessionId
@@ -212,33 +255,59 @@ class ReservationRepository extends AbstractRepository
     }
 
     /**
-     * Recherche toutes les réservations par email et évènement,
-     * puis hydrate chaque enregistrement exactement comme `findById`.
-     *
-     * Les options variadiques `$with` doivent suivre le même ordre que celles de `findById`
-     * (par exemple : withEvent, withEventSession, withSwimmer, withDetails, withComplements, withPayments, ...).
-     * @param string $email
+     * Compte les places réservées par event et nageur (hors tarifs avec code d'accès)
      * @param int $eventId
-     * @param bool ...$with
-     * @return array
+     * @param int $swimmerId
+     * @return int
      */
-    public function findByEmailAndEvent(string $email, int $eventId, bool ...$with): array
+    public function countReservationsForSwimmer(int $eventId, int $swimmerId): int
     {
-        $sql = "SELECT id FROM $this->tableName WHERE email = :email AND event = :eventId";
-        $rows = $this->query($sql, ['email' => $email, 'eventId' => $eventId]);
+        $sql = "SELECT COUNT(*) as count
+            FROM reservation_detail rd
+            INNER JOIN reservation r ON rd.reservation = r.id
+            INNER JOIN tarif t ON rd.tarif = t.id
+            WHERE r.event = :eventId
+              AND r.swimmer_if_limitation = :swimmerId
+              AND r.is_canceled = 0
+              AND t.access_code IS NULL";
+        $row = $this->query($sql, ['eventId' => $eventId, 'swimmerId' => $swimmerId])[0] ?? ['count' => 0];
+        return (int)$row['count'];
+    }
 
-        $reservations = [];
-        foreach ($rows as $row) {
-            $id = (int)($row['id'] ?? 0);
-            if ($id <= 0) {
-                continue;
-            }
-            // Délègue à findById pour bénéficier des mêmes options d'hydratation
-            $reservations[] = $this->findById($id, ...$with);
-        }
+    /**
+     * Récupère les statistiques de réservation (nombre de réservations et nombre de places)
+     * pour toutes les sessions à venir.
+     *
+     * @return array Un tableau d'objets contenant les statistiques pour chaque session.
+     *               Chaque objet a les propriétés : sessionId, sessionName, sessionDate, eventName, reservationCount, nbSeatCount.
+     */
+    public function getUpcomingSessionsStats(): array
+    {
+        $sql = "
+             SELECT
+                 es.id AS sessionId,
+                 es.session_name AS sessionName,
+                 es.event_start_at AS sessionDate,
+                 e.name AS eventName,
+                 -- Compte le nombre de réservations distinctes non annulées
+                 COUNT(DISTINCT r.id) AS reservationCount,
+                 -- Compte le nombre total de places (détails) pour ces réservations
+                 COUNT(rd.id) AS nbSeatCount
+             FROM event_session es
+             JOIN event e ON es.event = e.id
+             -- Jointure GAUCHE sur les réservations pour inclure les sessions sans aucune réservation
+             LEFT JOIN reservation r ON es.id = r.event_session AND r.is_canceled = 0
+             -- Jointure GAUCHE sur les détails pour compter les places
+             LEFT JOIN reservation_detail rd ON r.id = rd.reservation
+             WHERE
+                 es.event_start_at >= NOW()
+             GROUP BY
+                 es.id, es.session_name, es.event_start_at, e.name
+             ORDER BY
+                 es.event_start_at ASC
+         ";
 
-        // Filtre les éventuels null renvoyés si un id n'existe plus
-        return array_values(array_filter($reservations));
+        return $this->query($sql);
     }
 
     /**
@@ -355,23 +424,32 @@ class ReservationRepository extends AbstractRepository
     }
 
     /**
-     * Compte les places réservées par event et nageur (hors tarifs avec code d'accès)
-     * @param int $eventId
-     * @param int $swimmerId
-     * @return int
+     * Vérifie si une session a au moins une réservation active.
+     * C'est mieux que de compter toutes les réservations.
+     * @param int $sessionId
+     * @return bool
      */
-    public function countReservationsForSwimmer(int $eventId, int $swimmerId): int
+    public function hasReservationsForSession(int $sessionId): bool
     {
-        $sql = "SELECT COUNT(*) as count
-            FROM reservation_detail rd
-            INNER JOIN reservation r ON rd.reservation = r.id
-            INNER JOIN tarif t ON rd.tarif = t.id
-            WHERE r.event = :eventId
-              AND r.swimmer_if_limitation = :swimmerId
-              AND r.is_canceled = 0
-              AND t.access_code IS NULL";
-        $row = $this->query($sql, ['eventId' => $eventId, 'swimmerId' => $swimmerId])[0] ?? ['count' => 0];
-        return (int)$row['count'];
+        $sql = "SELECT 1 FROM $this->tableName WHERE event_session = :sessionId AND is_canceled = 0 LIMIT 1";
+        $rows = $this->query($sql, ['sessionId' => $sessionId]);
+
+        // Si la requête retourne au moins une ligne, cela signifie qu'il y a des réservations.
+        return !empty($rows);
+    }
+
+    /**
+     * On fait pareil pour vérifier s'il y a des réservations active pour un event
+     * @param int $eventId
+     * @return bool
+     */
+    public function hasReservations(int $eventId): bool
+    {
+        $sql = "SELECT 1 FROM $this->tableName WHERE event = :event AND is_canceled = 0 LIMIT 1;";
+        $rows = $this->query($sql, ['event' => $eventId]);
+
+        // Si la requête retourne au moins une ligne, cela signifie qu'il y a des réservations.
+        return !empty($rows);
     }
 
     /**
@@ -421,48 +499,6 @@ class ReservationRepository extends AbstractRepository
         }
 
         return $reservations;
-    }
-
-    /**
-     * Vérifie si une session a au moins une réservation active.
-     * C'est mieux que de compter toutes les réservations.
-     * @param int $sessionId
-     * @return bool
-     */
-    public function hasReservationsForSession(int $sessionId): bool
-    {
-        $sql = "SELECT 1 FROM $this->tableName WHERE event_session = :sessionId AND is_canceled = 0 LIMIT 1";
-        $rows = $this->query($sql, ['sessionId' => $sessionId]);
-
-        // Si la requête retourne au moins une ligne, cela signifie qu'il y a des réservations.
-        return !empty($rows);
-    }
-
-    /**
-     * On fait pareil pour vérifier s'il y a des réservations active pour un event
-     * @param int $eventId
-     * @return bool
-     */
-    public function hasReservations(int $eventId): bool
-    {
-        $sql = "SELECT 1 FROM $this->tableName WHERE event = :event AND is_canceled = 0 LIMIT 1;";
-        $rows = $this->query($sql, ['event' => $eventId]);
-
-        // Si la requête retourne au moins une ligne, cela signifie qu'il y a des réservations.
-        return !empty($rows);
-    }
-
-    /**
-     * Retourne un tableau des réservations annulées d'un event
-     *
-     * @param int $eventId
-     * @return array
-     */
-    public function findCanceledByEvent(int $eventId): array
-    {
-        $sql = "SELECT * FROM $this->tableName WHERE event = :event AND is_canceled = 1";
-        $rows = $this->query($sql, ['event' => $eventId]);
-        return array_map([$this, 'hydrate'], $rows);
     }
 
     /**

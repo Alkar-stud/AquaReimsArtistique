@@ -112,6 +112,46 @@ class EventRepository extends AbstractRepository
     }
 
     /**
+     * Récupère les informations pour les event à venir, leurs sessions et périodes d'inscription.
+     * pour toutes les sessions à venir.
+     *
+     * @return array Un tableau d'objets contenant les statistiques pour chaque event.
+     *               Chaque objet a les propriétés : sessionId, sessionName, sessionDate, eventName, periodId, periodName, periodStart, periodEnd.
+     */
+    public function getUpcomingEventsSessions(): array
+    {
+        $sql = "
+            SELECT
+                e.id AS eventId,
+                e.name AS eventName,
+                es.id AS sessionId,
+                es.session_name AS sessionName,
+                es.event_start_at AS sessionDate,
+                eid.id AS periodId,
+                eid.name AS periodName,
+                eid.start_registration_at AS periodStart,
+                eid.close_registration_at AS periodEnd
+            FROM `event`
+                e
+                -- On joint les sessions à leur événement
+            JOIN event_session es ON
+                e.id = es.event
+                -- On joint les périodes d'inscription à leur événement
+            JOIN event_inscription_date eid ON
+                e.id = eid.event
+            WHERE
+                -- On ne sélectionne que les sessions qui n'ont pas encore eu lieu
+                es.event_start_at >= NOW()
+            ORDER BY
+                -- On ordonne pour faciliter le traitement en PHP
+                e.id, es.event_start_at, eid.start_registration_at
+        ";
+
+        return $this->query($sql);
+    }
+
+
+    /**
      * Ajoute un événement
      * @param Event $event
      * @return int

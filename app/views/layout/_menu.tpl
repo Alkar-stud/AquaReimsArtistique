@@ -25,13 +25,13 @@
                     <a class="navbar-brand nav-link" href="/gestion">Gestion</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link {{ str_starts_with($uri, '/gestion/accueil') ? 'active-link' : '' }}" href="/gestion/accueil">Page d'accueil</a>
-                </li>
-                <li class="nav-item">
                     <a class="nav-link {{ str_starts_with($uri, '/gestion/reservations') ? 'active-link' : '' }}" href="/gestion/reservations">Réservations</a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link {{ $uri == '/gestion/piscines' ? 'active-link' : '' }}" href="/gestion/piscines">Piscines</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {{ $uri == '/gestion/swimmers-groups' ? 'active-link' : '' }}" href="/gestion/swimmers-groups">Nageuses</a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link {{ $uri == '/gestion/tarifs' ? 'active-link' : '' }}" href="/gestion/tarifs">Tarifs</a>
@@ -40,7 +40,7 @@
                     <a class="nav-link {{ $uri == '/gestion/events' ? 'active-link' : '' }}" href="/gestion/events">Évènements</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link {{ $uri == '/gestion/swimmers-groups' ? 'active-link' : '' }}" href="/gestion/swimmers-groups">Nageuses</a>
+                    <a class="nav-link {{ str_starts_with($uri, '/gestion/accueil') ? 'active-link' : '' }}" href="/gestion/accueil">Page d'accueil</a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link {{ $uri == '/gestion/mails_templates' ? 'active-link' : '' }}" href="/gestion/mails_templates">Mails</a>

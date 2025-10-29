@@ -130,27 +130,35 @@
                     {% if str_contains($userPermissions, 'D') %}
                     <br>
                     <div id="token-container">
-                        <div class="d-flex align-items-center justify-content-center mb-2">
-                            <span class="me-2">Réinit. token :</span>
-                            <div class="form-check">
-                                <label class="form-check-label small" for="modal-resend-token-email">avec un envoi d'email ?</label>
-                                <input class="form-check-input" type="checkbox" value="" id="modal-resend-token-email">
+                        <div class="row g-3 align-items-center justify-content-center">
+                            <div class="col-auto">
+                                <label for="modal-modification-token-expire-at" class="col-form-label">Expiration du token :</label>
                             </div>
-                            &nbsp;
-                            <i id="modal-reset-token" class="bi bi-arrow-clockwise me-2" style="cursor: pointer;" title="Générer un nouveau token de modification"></i>
-                        </div>
-                        <div class="ms-md-auto w-100 w-md-auto">
-                            <div class="input-group">
-                                <span class="input-group-text">Token expire à</span>
-                                <input type="datetime-local"
-                                       id="modal-modification-token-expire-at"
-                                       class="form-control"
-                                       data-field="tokenExpireAt"
-                                       value="" {{ $isReadOnly ? 'disabled' : '' }}
-                                       aria-label="Token expire à">
-                                <span class="input-group-text feedback-span"></span>
+                            <div class="col-auto">
+                                <div class="input-group">
+                                    <input type="datetime-local"
+                                           id="modal-modification-token-expire-at"
+                                           class="form-control"
+                                           data-field="tokenExpireAt"
+                                           aria-label="Token expire à">
+                                    <span class="input-group-text feedback-span"></span>
+                                </div>
+                            </div>
+                            <div class="col-auto d-flex align-items-center">
+                                <div class="input-group">
+                                    <button class="btn btn-outline-secondary" type="button" id="modal-reset-token" title="Générer un nouveau token de modification">
+                                        <i class="bi bi-arrow-clockwise"></i> Réinit.
+                                    </button>
+                                    <div class="input-group-text">
+                                        <div class="form-check mb-0">
+                                            <input class="form-check-input" type="checkbox" value="" id="modal-resend-token-email" title="Cocher pour envoyer le nouveau lien par email au client">
+                                            <label class="form-check-label small" for="modal-resend-token-email">Envoyer le nouveau lien</label>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
+                        <div id="modal-new-token-display" class="mt-2"></div>
                     </div>
                     {% endif %}
                 </div>

@@ -6,6 +6,7 @@ import ScrollManager from '../components/scrollManager.js';
 import { apiDelete, apiPost } from '../components/apiClient.js';
 import { toggleReservationStatus } from './statusToggle.js';
 import { toggleCancelStatus } from '../reservations/cancelReservation.js';
+import {showFlashMessage} from "../components/ui.js";
 
 // Dictionnaire des explications pour les statuts de paiement HelloAsso
 const paymentStatusExplanations = {
@@ -329,7 +330,7 @@ async function refreshModalContent(modal, reservationId) {
         }
 
 
-        // On gère la mise à jour de la date d'expiration du token au "blur"
+        // On gère la mise à jour de la date d'expiration du token au "blur".
         const tokenExpireField = modal.querySelector('#modal-modification-token-expire-at');
         if (tokenExpireField) {
             tokenExpireField.addEventListener('blur', async (event) => {
@@ -360,12 +361,15 @@ async function refreshModalContent(modal, reservationId) {
         if (resetTokenButton) {
             resetTokenButton.addEventListener('click', async () => {
                 const reservationId = modal.querySelector('#modal_reservation_id').value;
+                //On récupère la valeur (si coché ou non)
                 const sendEmail = modal.querySelector('#modal-resend-token-email').checked;
-
+                //On remet décoché
+                modal.querySelector('#modal-resend-token-email').checked = false;
                 if (confirm('Êtes-vous sûr de vouloir générer un nouveau token ? L\'ancien lien de modification ne sera plus valide.')) {
                     try {
                         await apiPost('/gestion/reservations/reinit-token', { reservationId, token: true, sendEmail });
-                        await refreshModalContent(modal, reservationId); // Rafraîchir pour voir le nouveau token
+                        //Message de retour
+                        showFlashMessage('success', 'Token réinitialisé', 'modal-new-token-display');
                     } catch (error) {
                         alert(`Erreur: ${error.userMessage || error.message}`);
                     }

@@ -1,10 +1,10 @@
 'use strict';
 
 /**
- * Displays a flash message in the specified container.
- * @param {string} type - Type of message (success, error, warning, info).
- * @param {string} message - The message text.
- * @param {string} containerId - The ID of the container element (e.g., 'ajax_flash_container').
+ * Affiche un message dans une div définie
+ * @param {string} type - Type du message (success, error, warning, info).
+ * @param {string} message - Texte du message.
+ * @param {string} containerId - L'ID du conteneur dans lequel afficher le message.
  */
 export function showFlashMessage(type, message, containerId = 'ajax_flash_container') {
     let container = document.getElementById(containerId);
@@ -39,6 +39,13 @@ export function showFlashMessage(type, message, containerId = 'ajax_flash_contai
 
 }
 
+/**
+ * Retour dans un feedback associé à des inputs
+ *
+ * @param feedbackSpan
+ * @param status
+ * @param message
+ */
 export function showFeedback(feedbackSpan, status, message = '') {
     if (!feedbackSpan) {
         return;

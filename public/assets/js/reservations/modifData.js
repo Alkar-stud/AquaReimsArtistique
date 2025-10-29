@@ -10,7 +10,6 @@ import { initPaymentManager } from './paymentManager.js';
 import { initPaymentCheckHandler } from './paymentCheckHandler.js'; // Import du nouveau gestionnaire
 
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('DOMContentLoaded in modifData.js');
     const reservationDataContainer = document.getElementById('reservation-data-container');
 
     // Si ce conteneur n'existe pas, on n'est pas sur la bonne page. On ne fait rien.
@@ -18,10 +17,8 @@ document.addEventListener('DOMContentLoaded', () => {
         console.log('reservationDataContainer not found. Exiting modifData.js');
         return;
     }
-    console.log('reservationDataContainer found.');
 
     const paymentCheckContainer = document.getElementById('payment-check-container');
-    console.log('paymentCheckContainer:', paymentCheckContainer);
 
     if (paymentCheckContainer) {
         console.log('Payment check container found. Initializing payment check handler.');
@@ -38,7 +35,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         return; // Arrête l'initialisation des autres composants pour cette page
     }
-    console.log('Payment check container NOT found. Initializing normal modifData components.');
 
     // Si ce n'est pas une page de vérification de paiement, on procède aux initialisations normales
     const reservationToken = reservationDataContainer.dataset.token;

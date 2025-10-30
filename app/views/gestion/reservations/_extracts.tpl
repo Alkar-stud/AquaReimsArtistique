@@ -24,7 +24,7 @@
     {% foreach $events as $event %}
     {% foreach $event->getSessions() as $session %}
     {% if $session->getId() == $selectedSessionId %}
-    {% include '/gestion/reservations/_export_options.tpl' with {'tarifs': $event->getTarifs()} %}
+    {% include '/gestion/reservations/_export_options.tpl' with {'tarifs': $event->getTarifs(), 'pdfTypes': $pdfTypes} %}
     {% endif %}
     {% endforeach %}
     {% endforeach %}

@@ -105,6 +105,7 @@ class ReservationRepository extends AbstractRepository
      * @param int|null $offset
      * @param bool $withEvent
      * @param bool $withChildren
+     * @param string|null $sortOrder
      * @return Reservation[]
      */
     public function findBySession(
@@ -114,7 +115,8 @@ class ReservationRepository extends AbstractRepository
         ?int $limit = null,
         ?int $offset = null,
         bool $withEvent = false,
-        bool $withChildren = true
+        bool $withChildren = true,
+        ?string $sortOrder = null,
     ): array {
         if ($isCanceled === true) {
             $searchCanceled = ' AND is_canceled = 1';
@@ -131,7 +133,13 @@ class ReservationRepository extends AbstractRepository
         } else {
             $searchChecked = '';
         }
-        $sql = "SELECT * FROM $this->tableName WHERE event_session = :sessionId" . $searchCanceled . $searchChecked . " ORDER BY created_at";
+        $sql = "SELECT * FROM $this->tableName WHERE event_session = :sessionId" . $searchCanceled . $searchChecked;
+        match ($sortOrder) {
+            'IDreservation' => $sql .= " ORDER BY id",
+            'NomReservation' => $sql .= " ORDER BY name, firstname",
+            default => $sql .= " ORDER BY created_at",
+        };
+
         if ($limit !== null && $offset !== null) {
             $sql .= " LIMIT $limit OFFSET $offset";
         }
@@ -304,7 +312,7 @@ class ReservationRepository extends AbstractRepository
              GROUP BY
                  es.id, es.session_name, es.event_start_at, e.name
              ORDER BY
-                 es.event_start_at ASC
+                 es.event_start_at
          ";
 
         return $this->query($sql);

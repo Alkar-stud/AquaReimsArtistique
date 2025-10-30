@@ -19,14 +19,14 @@ function init() {
      * @param {string} sessionId L'ID de la session sélectionnée.
      */
     function initPdfGenerator(sessionId) {
-        const pdfTypeSelector = document.getElementById('pdf-type-selector');
+        const pdfTypeRadios = document.querySelectorAll('input[name="pdf-type-selector"]');
         const pdfSortRadios = document.querySelectorAll('input[name="pdf-sort-selector"]');
         const generatePdfBtn = document.getElementById('generate-pdf-btn');
 
         // --- Logique pour le PDF ---
-        if (pdfTypeSelector && pdfSortRadios.length > 0 && generatePdfBtn) {
+        if (pdfTypeRadios.length > 0 && pdfSortRadios.length > 0 && generatePdfBtn) {
             const updatePdfLink = () => {
-                const pdfType = pdfTypeSelector.value;
+                const pdfType = document.querySelector('input[name="pdf-type-selector"]:checked').value;
                 const sortOrder = document.querySelector('input[name="pdf-sort-selector"]:checked').value;
                 // Construit l'URL exacte demandée pour la génération du PDF
                 const url = new URL('/gestion/reservations/exports', window.location.origin);
@@ -36,7 +36,7 @@ function init() {
                 generatePdfBtn.href = url.toString();
             };
 
-            pdfTypeSelector.addEventListener('change', updatePdfLink);
+            pdfTypeRadios.forEach(radio => radio.addEventListener('change', updatePdfLink));
             pdfSortRadios.forEach(radio => radio.addEventListener('change', updatePdfLink));
             // Mettre à jour le lien une première fois au chargement
             updatePdfLink();

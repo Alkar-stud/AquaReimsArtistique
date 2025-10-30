@@ -280,4 +280,9 @@ class EventQueryService
     }
 
 
+    public function findSessionById($sessionId): ?\app\Models\Event\EventSession
+    {
+        return $this->eventSessionRepository->findById($sessionId, true);
+    }
+
  }

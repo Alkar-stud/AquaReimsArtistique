@@ -113,7 +113,7 @@ class EventRepository extends AbstractRepository
 
     /**
      * Récupère les informations pour les event à venir, leurs sessions et périodes d'inscription.
-     * pour toutes les sessions à venir.
+     * Pour toutes les sessions à venir.
      *
      * @return array Un tableau d'objets contenant les statistiques pour chaque event.
      *               Chaque objet a les propriétés : sessionId, sessionName, sessionDate, eventName, periodId, periodName, periodStart, periodEnd.

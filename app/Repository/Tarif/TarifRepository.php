@@ -124,7 +124,8 @@ class TarifRepository extends AbstractRepository
         $sql = "SELECT t.*, et.event as event_id
                  FROM tarif t
                  INNER JOIN event_tarif et ON et.tarif = t.id
-                 WHERE et.event IN ($placeholders)";
+                 WHERE et.event IN ($placeholders)
+                 ORDER BY t.name";
 
         $rows = $this->query($sql, $eventIds);
         $tarifs = array_map([$this, 'hydrate'], $rows);

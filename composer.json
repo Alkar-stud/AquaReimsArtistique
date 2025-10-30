@@ -2,6 +2,7 @@
     "require": {
         "phpmailer/phpmailer": "^6.10",
         "vlucas/phpdotenv": "^5.6",
+        "fpdf/fpdf": "^1.86",
       "ext-pdo": "*",
         "mongodb/mongodb": "^2.1",
       "ext-mongodb": "*",
@@ -10,7 +11,8 @@
       "ext-dom": "*",
       "ext-libxml": "*",
         "rakibtg/sleekdb": "^2.15",
-      "ext-intl": "*"
+      "ext-intl": "*",
+      "ext-iconv": "*"
     },
     "autoload": {
         "psr-4": {

@@ -13,6 +13,7 @@ use app\Services\Log\Logger;
 use app\Services\Pagination\PaginationService;
 use app\Services\Payment\HelloAssoService;
 use app\Services\Payment\PaymentWebhookService;
+use app\Services\Pdf\PdfGenerationService;
 use app\Services\Reservation\ReservationDeletionService;
 use app\Services\Reservation\ReservationTokenService;
 use app\Services\Reservation\ReservationUpdateService;
@@ -30,6 +31,7 @@ class ReservationsController extends AbstractController
     private ReservationPaymentRepository $reservationPaymentRepository;
     private HelloAssoService $helloAssoService;
     private ReservationTokenService $reservationTokenService;
+    private PdfGenerationService $PdfGenerationService;
 
     function __construct(
         EventQueryService $eventQueryService,
@@ -41,6 +43,7 @@ class ReservationsController extends AbstractController
         ReservationPaymentRepository $reservationPaymentRepository,
         HelloAssoService $helloAssoService,
         ReservationTokenService $reservationTokenService,
+        PdfGenerationService $PdfGenerationService,
     )
     {
         parent::__construct(false);
@@ -53,6 +56,7 @@ class ReservationsController extends AbstractController
         $this->reservationPaymentRepository = $reservationPaymentRepository;
         $this->helloAssoService = $helloAssoService;
         $this->reservationTokenService = $reservationTokenService;
+        $this->PdfGenerationService = $PdfGenerationService;
     }
 
     #[Route('/gestion/reservations', name: 'app_gestion_reservations')]
@@ -100,6 +104,7 @@ class ReservationsController extends AbstractController
             'itemsPerPage' => $paginationConfig->getItemsPerPage(),
             'userPermissions' => $userPermissions,
             'isReadOnly' => $isReadOnly,
+            'pdfTypes' => PdfGenerationService::PDF_TYPES, // On passe la liste des types de PDF à la vue
             'isCancel' => $isCancel,                    //Pour les boutons de filtre
             'isChecked' => $isChecked,                  //Pour les boutons de filtre
         ], "Gestion des réservations");
@@ -385,6 +390,28 @@ class ReservationsController extends AbstractController
 
         return $data;
     }
+
+    #[Route('/gestion/reservations/exports', name: 'app_gestion_reservations_exports', methods: ['GET'])]
+    public function exports(): void
+    {
+        // Récupérer les paramètres depuis $_GET
+        $sessionId = (int)($_GET['s'] ?? 0);
+        $pdfType = $_GET['pdf'] ?? 'ListeParticipants';
+        $sortOrder = $_GET['tri'] ?? 'IDreservation';
+
+        try {
+            // On construit le PDF en fonction de son type.
+            $pdf = $this->PdfGenerationService->generate($pdfType, $sessionId, $sortOrder);
+
+            // On envoie le PDF construit au navigateur.
+            $pdf->Output('I', $this->PdfGenerationService->getFilenameForPdf($pdfType,$sessionId) . '.pdf');
+            exit;
+        } catch (\Exception $e) {
+            http_response_code(404);
+            die("Erreur lors de la génération du PDF : " . $e->getMessage());
+        }
+    }
+
 
 
 }

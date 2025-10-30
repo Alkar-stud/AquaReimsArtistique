@@ -2,28 +2,33 @@
     <!-- Colonne Export PDF -->
     <div class="col-12 col-lg-6 mb-4">
         <div class="card h-100">
-            <div class="card-header">
+            <div class="card-header bg-secondary">
                 <i class="bi bi-file-earmark-pdf-fill me-2"></i>Quel PDF générer ?
             </div>
             <div class="card-body">
                 <div class="mb-3">
-                    <label for="pdf-type-selector" class="form-label">Type de document :</label>
-                    <select id="pdf-type-selector" class="form-select">
-                        <option value="RecapComplet">Récapitulatif complet</option>
-                        <option value="ListeParticipantsCourt">Liste des participants</option>
-                        <option value="RecapEvenement">Récapitulatif de l'évènement</option>
-                        <option value="RecapPlacesA3">Récapitulatif des places (A3)</option>
-                    </select>
+                    <label class="form-label d-block">Type de document :</label>
+                    <!-- Liste des types de PDF -->
+                    {% php %}$__firstKey = array_key_first($pdfTypes);{% endphp %}
+                    {% foreach $pdfTypes as $key => $cfg %}
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="pdf-type-selector"
+                               id="type-{{ $key }}" value="{{ $key }}"
+                               {{ $key === $__firstKey ? 'checked' : '' }}>
+                        <label class="form-check-label" for="type-{{ $key }}">{{ $cfg['label'] }}</label>
+                    </div>
+                    {% endforeach %}
+
                 </div>
                 <div class="mb-3">
                     <label class="form-label d-block">Trier par :</label>
                     <div class="form-check form-check-inline">
-                        <input class="form-check-input" type="radio" name="pdf-sort-selector" id="sort-id" value="IDreservation" checked>
+                        <input class="form-check-input" type="radio" name="pdf-sort-selector" id="sort-id" value="IDreservation">
                         <label class="form-check-label" for="sort-id">ID de réservation</label>
                     </div>
                     <div class="form-check form-check-inline">
-                        <input class="form-check-input" type="radio" name="pdf-sort-selector" id="sort-name" value="NomReservation">
-                        <label class="form-check-label" for="sort-name">Nom de réservation</label>
+                        <input class="form-check-input" type="radio" name="pdf-sort-selector" id="sort-name" value="NomReservation" checked>
+                        <label class="form-check-label" for="sort-name">Nom de la réservation</label>
                     </div>
                 </div>
             </div>
@@ -38,7 +43,7 @@
     <!-- Colonne Export CSV -->
     <div class="col-12 col-lg-6 mb-4">
         <div class="card h-100">
-            <div class="card-header">
+            <div class="card-header bg-secondary">
                 <i class="bi bi-filetype-csv me-2"></i>Quel CSV extraire ?
             </div>
             <div class="card-body">
@@ -71,7 +76,7 @@
                         {% if !empty($tarifs) %}
                         {% foreach $tarifs as $tarif %}
                         <option value="{{ $tarif->getId() }}">
-                            {{ $tarif->getName() }} ({{ $tarif->getPrice() }} €)
+                            {{ $tarif->getName() }}
                         </option>
                         {% endforeach %}
                         {% endif %}
@@ -79,7 +84,7 @@
                 </div>
             </div>
             <div class="card-footer text-end">
-                <button id="generate-csv-btn" class="btn btn-secondary"><i class="bi bi-table me-2"></i>Générer le CSV</button>
+                <button id="generate-csv-btn" class="btn btn-primary"><i class="bi bi-table me-2"></i>Générer le CSV</button>
             </div>
         </div>
     </div>

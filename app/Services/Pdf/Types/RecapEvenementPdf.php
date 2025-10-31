@@ -11,7 +11,7 @@ use RuntimeException;
 final readonly class RecapEvenementPdf implements PdfTypeInterface
 {
     public function __construct(
-        private EventQueryService     $eventQueryService,
+        private EventQueryService $eventQueryService,
     ) {
     }
 
@@ -28,11 +28,6 @@ final readonly class RecapEvenementPdf implements PdfTypeInterface
         $stats = $this->eventQueryService->getTarifStatsForEvent($session->getEventId());
         ksort($stats['sessions']);
 
-/*
-echo '<pre>';
-print_r($stats);
-die;
-*/
         $documentTitle = "Récapitulatif du gala - " . $session->getEventObject()->getName();
         // Instancier BasePdf (le constructeur ajoute la 1ère page et l'en-tête)
         $pdf = new BasePdf(mb_convert_encoding($documentTitle, 'ISO-8859-1', 'UTF-8'), 'P');

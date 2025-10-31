@@ -15,7 +15,7 @@
                 {% foreach $events as $event %}
                 {% foreach $event->getSessions() as $session %}
                 <option value="{{ $session->getId() }}"  {{ $selectedSessionId == $session->getId() ? 'selected' : '' }}>
-                    {{ $event->getName() }} ({{ $session->getEventStartAt()->format('d/m/Y H:i') }})
+                    {{ $event->getName() }} - {{ $session->getSessionName() }} ({{ $session->getEventStartAt()->format('d/m/Y H:i') }})
                 </option>
                 {% endforeach %}
                 {% endforeach %}

@@ -3,7 +3,7 @@
         <div class="col-md-5">
             <label for="search-input" class="form-label">Rechercher une réservation :</label>
             <div class="input-group">
-                <input type="text" id="search-input" class="form-control" placeholder="Nom, email, numéro (sans le ARA-)..." value="{{ $searchQuery }}">
+                <input type="text" id="search-input" class="form-control" placeholder="Nom, email, numéro..." value="{{ $searchQuery }}">
                 <button type="button" class="btn btn-secondary" id="search-button">Chercher</button>
             </div>
         </div>

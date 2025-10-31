@@ -97,7 +97,9 @@
             <tr>
                 <th>ID</th>
                 <th>Acheteur</th>
+                {% if ($event->getLimitationPerSwimmer() !== null) %}
                 <th>Nageuse</th>
+                {% endif %}
                 <th>Nombre de places</th>
                 <th>Paiement</th>
                 <th>Vérifié</th>
@@ -109,13 +111,15 @@
             <tr class="{{ $reservation->isChecked() ? 'table-light' : '' }}">
                 <td>ARA-{{ str_pad($reservation->getId(), 5, '0', STR_PAD_LEFT) }}</td>
                 <td>{{ $reservation->getName() }} {{ $reservation->getFirstName() }}</td>
+                {% if $event->getLimitationPerSwimmer() !== null %}
                 <td>
                     {% if $reservation->getSwimmer() %}
-                    {{ $reservation->getSwimmer()->getName() }}
+                        {{ $reservation->getSwimmer()->getName() }}
                     {% else %}
-                    N/A
+                        N/A
                     {% endif %}
                 </td>
+                {% endif %}
                 <td>{{ count($reservation->getDetails()) }}</td>
                 <td>
                     {% if $reservation->getTotalAmountPaid() >= $reservation->getTotalAmount() %}

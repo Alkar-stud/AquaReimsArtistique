@@ -6,6 +6,7 @@ use app\Models\Reservation\Reservation;
 use app\Repository\AbstractRepository;
 use app\Repository\Event\EventRepository;
 use app\Repository\Event\EventSessionRepository;
+use app\Repository\Swimmer\SwimmerRepository;
 
 class ReservationRepository extends AbstractRepository
 {
@@ -243,7 +244,7 @@ class ReservationRepository extends AbstractRepository
         $offset = ($currentPage - 1) * $itemsPerPage;
 
         // Récupérer les items pour la page courante
-        $items = $this->findBySession($sessionId, $isCanceled, $isChecked, $itemsPerPage, $offset);
+        $items = $this->findBySession($sessionId, $isCanceled, $isChecked, $itemsPerPage, $offset, false, true);
 
         return new Paginator($items, $totalItems, $itemsPerPage, $currentPage);
     }
@@ -616,7 +617,8 @@ class ReservationRepository extends AbstractRepository
         Reservation $r,
         bool $withEvent,
         bool $withEventSession,
-        bool $withEventInscriptionDates = false
+        bool $withEventInscriptionDates = false,
+        bool $swimmer = false
     ): void
     {
         // Sessions
@@ -640,6 +642,13 @@ class ReservationRepository extends AbstractRepository
             if ($event) {
                 $r->setEventObject($event);
             }
+        }
+
+        //Swimmer
+        $swimmerRepo = new SwimmerRepository();
+        $swimmer = $swimmerRepo->findById($r->getSwimmerId());
+        if ($swimmer) {
+            $r->setSwimmer($swimmer);
         }
     }
 }

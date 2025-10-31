@@ -2,6 +2,7 @@
 
 namespace app\Services\Reservation;
 
+use app\Core\Paginator;
 use app\Models\Reservation\Reservation;
 use app\Models\Reservation\ReservationMailSent;
 use app\Repository\Event\EventRepository;
@@ -289,7 +290,25 @@ class ReservationQueryService
             return false;
         }
         return true;
+    }
 
+    /**
+     * Pour chercher dans plusieurs champs à l'aide du searchQuery de gestion/reservations
+     *
+     * @param string $searchQuery
+     * @param int $currentPage
+     * @param int $itemsPerPage
+     * @return Paginator|array
+     */
+    public function searchReservationsWithParam(string $searchQuery, int $currentPage, int $itemsPerPage): Paginator|array
+    {
+        $q = trim($searchQuery);
+        if ($q === '') {
+            return [];
+        }
+
+        // Limiter par défaut pour éviter de gros résultats si non paginé côté appelant
+        return $this->reservationRepository->findBySearchPaginated($q, $currentPage, $itemsPerPage, false, null);
     }
 
 }

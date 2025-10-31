@@ -57,8 +57,8 @@ class EventDeletionService
             if ($this->reservationRepository->hasReservations($eventId)) {
                 throw new Exception("Suppression impossible, car des réservations actives existent pour cet événement.");
             }
-            // Récupération de la liste des réservations annulées à supprimer
-            $canceledReservationsCanBeDeleted = $this->reservationRepository->findCanceledByEvent($eventId);
+            // Récupération de la liste des réservations annulées à supprimer pour cette event
+            $canceledReservationsCanBeDeleted = $this->reservationRepository->findAllByFields(['event' => $eventId, 'is_canceled' => 1], false, false, false, false);
             //On demande la suppression pour toutes et de tout ce qui y est rattaché
             foreach($canceledReservationsCanBeDeleted as $reservation)
             {

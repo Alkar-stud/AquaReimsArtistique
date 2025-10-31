@@ -11,9 +11,17 @@ function init() {
             const selectedSessionId = event.target.value;
 
             if (selectedSessionId) {
+                // On récupère l'URL de base et le paramètre 'tab' s'il existe
                 const currentUrl = new URL(window.location.href);
-                currentUrl.searchParams.set('s', selectedSessionId);
-                window.location.href = currentUrl.toString();
+                const tab = currentUrl.searchParams.get('tab');
+
+                // On construit une nouvelle URL propre avec seulement le paramètre de session
+                let newUrl = `${window.location.pathname}?s=${selectedSessionId}`;
+                // Si un onglet était actif, on le conserve
+                if (tab) {
+                    newUrl += `&tab=${tab}`;
+                }
+                window.location.href = newUrl;
             }
         });
     }

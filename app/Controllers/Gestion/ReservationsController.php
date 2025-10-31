@@ -14,6 +14,7 @@ use app\Services\Pagination\PaginationService;
 use app\Services\Payment\HelloAssoService;
 use app\Services\Payment\PaymentWebhookService;
 use app\Services\Pdf\PdfGenerationService;
+use app\Services\Reservation\ReservationQueryService;
 use app\Services\Reservation\ReservationDeletionService;
 use app\Services\Reservation\ReservationTokenService;
 use app\Services\Reservation\ReservationUpdateService;
@@ -32,6 +33,7 @@ class ReservationsController extends AbstractController
     private HelloAssoService $helloAssoService;
     private ReservationTokenService $reservationTokenService;
     private PdfGenerationService $PdfGenerationService;
+    private ReservationQueryService $reservationQueryService;
 
     function __construct(
         EventQueryService $eventQueryService,
@@ -44,6 +46,7 @@ class ReservationsController extends AbstractController
         HelloAssoService $helloAssoService,
         ReservationTokenService $reservationTokenService,
         PdfGenerationService $PdfGenerationService,
+        ReservationQueryService $reservationQueryService,
     )
     {
         parent::__construct(false);
@@ -57,6 +60,7 @@ class ReservationsController extends AbstractController
         $this->helloAssoService = $helloAssoService;
         $this->reservationTokenService = $reservationTokenService;
         $this->PdfGenerationService = $PdfGenerationService;
+        $this->reservationQueryService = $reservationQueryService;
     }
 
     #[Route('/gestion/reservations', name: 'app_gestion_reservations')]
@@ -70,6 +74,7 @@ class ReservationsController extends AbstractController
         $sessionId = (int)($_GET['s'] ?? 0);
         $isCancel = isset($_GET['cancel']) && $_GET['cancel'];
         $isChecked = isset($_GET['check']) ? (bool)$_GET['check'] : null;
+        $searchQuery = $_GET['q'] ?? '';
         $paginationConfig = $this->paginationService->createFromRequest($_GET);
 
         if ($tab == 'extract') {
@@ -84,6 +89,7 @@ class ReservationsController extends AbstractController
         }
 
         $paginator = null;
+        //Si on a une session, on cherche pour la session
         if ($sessionId > 0) {
             $paginator = $this->reservationRepository->findBySessionPaginated(
                 $sessionId,
@@ -91,6 +97,14 @@ class ReservationsController extends AbstractController
                 $paginationConfig->getItemsPerPage(),
                 $isCancel,
                 $isChecked
+            );
+        }
+        //Si on a une recherche via le champ chercher
+        if (!empty($searchQuery)) {
+            $paginator = $this->reservationQueryService->searchReservationsWithParam(
+                $searchQuery,
+                $paginationConfig->getCurrentPage(),
+                $paginationConfig->getItemsPerPage(),
             );
         }
 
@@ -107,6 +121,7 @@ class ReservationsController extends AbstractController
             'pdfTypes' => PdfGenerationService::PDF_TYPES, // On passe la liste des types de PDF à la vue
             'isCancel' => $isCancel,                    //Pour les boutons de filtre
             'isChecked' => $isChecked,                  //Pour les boutons de filtre
+            'searchQuery' => $searchQuery,              //Pour afficher la recherche en cours
         ], "Gestion des réservations");
     }
 

@@ -115,50 +115,62 @@ class ReservationRepository extends AbstractRepository
     }
 
     /**
-     * Retourne toutes les réservations pour un champ donné.
+     * Recherche générique par plusieurs champs.
+     * - Chaque entrée de $criteria est de la forme ['field' => value|value[]]
+     * - value peut être null (génère IS NULL) ou un tableau (génère IN(...), avec support de null => OR IS NULL)
      *
-     * @param string $field Champ.
-     * @param string|int|array $fieldValue Valeur ou liste de valeurs (génère un IN(...)).
+     * @param array $criteria
      * @param bool $withEvent
      * @param bool $withEventSession
      * @param bool $withEventInscriptionDates
-     * @param bool $withChildren Hydrate détails, compléments, paiements.
-     * @return Reservation[] Liste des réservations trouvées.
+     * @param bool $withChildren
+     * @return Reservation[]
      */
-    public function findAllByField(
-        string $field,
-        string|int|array $fieldValue,
+    public function findAllByFields(
+        array $criteria,
         bool $withEvent = false,
         bool $withEventSession = false,
         bool $withEventInscriptionDates = true,
         bool $withChildren = true
     ): array {
-        // Construction SQL + paramètres
+        $where = [];
         $params = [];
-        if (is_array($fieldValue) && !empty($fieldValue)) {
-            $ph = [];
-            foreach (array_values($fieldValue) as $idx => $val) {
-                $key = "v$idx";
-                $ph[] = ":$key";
-                $params[$key] = $val;
+        $paramIndex = 0;
+
+        foreach ($criteria as $field => $value) {
+            $col = "`$field`";
+
+            // Plus de prise en charge des tableaux => pas de IN
+            if (is_array($value)) {
+                // On ignore ce critère (ou lever une exception selon besoin)
+                continue;
             }
-            $sql = "SELECT * FROM $this->tableName WHERE $field IN (" . implode(',', $ph) . ") ORDER BY created_at DESC";
-        } else {
-            $sql = "SELECT * FROM $this->tableName WHERE $field = :value ORDER BY created_at DESC";
-            $params['value'] = $fieldValue;
+
+            if ($value === null) {
+                $where[] = "$col IS NULL";
+            } else {
+                $key = $field . '_' . $paramIndex++;
+                $where[] = "$col = :$key";
+                $params[$key] = $value;
+            }
         }
 
+        $sql = "SELECT * FROM $this->tableName";
+        if (!empty($where)) {
+            $sql .= ' WHERE ' . implode(' AND ', $where);
+        }
+        $sql .= ' ORDER BY created_at DESC';
+
         $rows = $this->query($sql, $params);
-        if (!$rows) return [];
+        if (!$rows) {
+            return [];
+        }
 
         $reservations = array_map([$this, 'hydrate'], $rows);
-
-        // Hydrate relations optionnelles (Event, Session, Dates) par élément
         foreach ($reservations as $r) {
             $this->hydrateOptionalRelations($r, $withEvent, $withEventSession, $withEventInscriptionDates);
         }
 
-        // Hydrate enfants (détails, compléments, paiements) en masse si demandé
         return $withChildren ? $this->hydrateRelations($reservations) : $reservations;
     }
 
@@ -215,7 +227,7 @@ class ReservationRepository extends AbstractRepository
 
         $list = array_map([$this, 'hydrate'], $rows);
         foreach ($list as $r) {
-            $this->hydrateOptionalRelations($r, $withEvent, true);
+            $this->hydrateOptionalRelations($r, $withEvent, true, false, true);
         }
 
         return $withChildren ? $this->hydrateRelations($list) : $list;
@@ -249,17 +261,115 @@ class ReservationRepository extends AbstractRepository
         return new Paginator($items, $totalItems, $itemsPerPage, $currentPage);
     }
 
-    /**
-     * Retourne un tableau des réservations annulées d'un event
+    /** Helper privé pour construire le WHERE et les paramètres de la recherche texte
      *
-     * @param int $eventId
-     * @return array
+     * @param string $searchQuery
+     * @param bool|null $isCanceled
+     * @param bool|null $isChecked
+     * @param array $params
+     * @return string
      */
-    public function findCanceledByEvent(int $eventId): array
+    private function buildSearchWhere(string $searchQuery, ?bool $isCanceled, ?bool $isChecked, array &$params): string
     {
-        $sql = "SELECT * FROM $this->tableName WHERE event = :event AND is_canceled = 1";
-        $rows = $this->query($sql, ['event' => $eventId]);
-        return array_map([$this, 'hydrate'], $rows);
+        $clauses = [];
+
+        $q = '%' . trim($searchQuery) . '%';
+        $params['q_id'] = $q;
+        $params['q_name'] = $q;
+        $params['q_firstname'] = $q;
+        $params['q_email'] = $q;
+
+        // CAST(id AS CHAR) pour permettre le LIKE sur l'id numérique
+        $clauses[] = '(CAST(id AS CHAR) LIKE :q_id OR name LIKE :q_name OR firstname LIKE :q_firstname OR email LIKE :q_email)';
+
+        if ($isCanceled === true) {
+            $clauses[] = 'is_canceled = 1';
+        } elseif ($isCanceled === false) {
+            $clauses[] = 'is_canceled = 0';
+        }
+
+        if ($isChecked === true) {
+            $clauses[] = 'is_checked = 1';
+        } elseif ($isChecked === false) {
+            $clauses[] = 'is_checked = 0';
+        }
+
+        return implode(' AND ', $clauses);
+    }
+
+    /**
+     * Recherche par texte (LIKE) sur id, name, firstname, email, avec filtres facultatifs.
+     * Retourne une liste (non paginée).
+     */
+    public function findBySearch(
+        string $searchQuery,
+        ?bool $isCanceled = null,
+        ?bool $isChecked = null,
+        ?int $limit = null,
+        ?int $offset = null,
+        bool $withEvent = false,
+        bool $withChildren = true,
+        ?string $sortOrder = null
+    ): array {
+        $params = [];
+        $where = $this->buildSearchWhere($searchQuery, $isCanceled, $isChecked, $params);
+
+        $sql = "SELECT * FROM $this->tableName WHERE $where";
+        match ($sortOrder) {
+            'IDreservation' => $sql .= " ORDER BY id",
+            'NomReservation' => $sql .= " ORDER BY name, firstname",
+            default => $sql .= " ORDER BY created_at DESC",
+        };
+
+        if ($limit !== null && $offset !== null) {
+            $sql .= " LIMIT $limit OFFSET $offset";
+        }
+
+        $rows = $this->query($sql, $params);
+        if (empty($rows)) return [];
+
+        $list = array_map([$this, 'hydrate'], $rows);
+        foreach ($list as $r) {
+            $this->hydrateOptionalRelations($r, $withEvent, true, false, true);
+        }
+
+        return $withChildren ? $this->hydrateRelations($list) : $list;
+    }
+
+    /**
+     * Compte les résultats d’une recherche par texte.
+     */
+    public function countBySearch(string $searchQuery, ?bool $isCanceled = null, ?bool $isChecked = null): int
+    {
+        $params = [];
+        $where = $this->buildSearchWhere($searchQuery, $isCanceled, $isChecked, $params);
+
+        $sql = "SELECT COUNT(id) AS total FROM $this->tableName WHERE $where";
+        $result = $this->query($sql, $params);
+
+        return (int)($result[0]['total'] ?? 0);
+    }
+
+    /**
+     * Version paginée, même style que findBySessionPaginated.
+     */
+    public function findBySearchPaginated(
+        string $searchQuery,
+        int $currentPage,
+        int $itemsPerPage,
+        ?bool $isCanceled = null,
+        ?bool $isChecked = null
+    ): Paginator {
+        $searchQuery = trim($searchQuery);
+        if ($searchQuery === '') {
+            return new Paginator([], 0, $itemsPerPage, $currentPage);
+        }
+
+        $totalItems = $this->countBySearch($searchQuery, $isCanceled, $isChecked);
+        $offset = ($currentPage - 1) * $itemsPerPage;
+        $items = $this->findBySearch($searchQuery, $isCanceled, $isChecked, $itemsPerPage, $offset, false, true);
+
+        return new Paginator($items, $totalItems, $itemsPerPage, $currentPage);
     }
 
     /**
@@ -611,6 +721,7 @@ class ReservationRepository extends AbstractRepository
      * @param bool $withEvent
      * @param bool $withEventSession
      * @param bool $withEventInscriptionDates
+     * @param bool $swimmer
      * @return void
      */
     private function hydrateOptionalRelations(
@@ -645,10 +756,13 @@ class ReservationRepository extends AbstractRepository
         }
 
         //Swimmer
-        $swimmerRepo = new SwimmerRepository();
-        $swimmer = $swimmerRepo->findById($r->getSwimmerId());
-        if ($swimmer) {
-            $r->setSwimmer($swimmer);
+        $swimmerId = $r->getSwimmerId();
+        if ($swimmerId !== null) {
+            $swimmerRepo = new SwimmerRepository();
+            $r->setSwimmer($swimmerRepo->findById((int)$swimmerId));
+        } else {
+            // S'assurer que la relation est explicitement à null si pas de limitation
+            $r->setSwimmer(null);
         }
     }
 }

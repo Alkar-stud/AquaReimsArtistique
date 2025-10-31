@@ -3,6 +3,7 @@ import { initReservationModal } from './gestion/reservationModal.js';
 import { initReservationList } from './gestion/reservationList.js';
 import { initStatusToggles } from './gestion/statusToggle.js';
 import { initReservationExtracts } from './gestion/reservationsExports.js';
+import {initSearchReservation} from "./gestion/reservationSearch.js";
 
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -12,8 +13,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
      ---------------------------------------------------- */
 
-    initReservationModal();
+    initSearchReservation();
     initReservationList();
+
+    initReservationModal();
     initStatusToggles();
     initReservationExtracts();
 

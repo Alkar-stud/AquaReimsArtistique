@@ -8,7 +8,7 @@ use app\Services\Pdf\BasePdf;
 use app\Services\Pdf\PdfTypeInterface;
 use RuntimeException;
 
-readonly class RecapReservationsPdf implements PdfTypeInterface
+final readonly class RecapReservationsPdf implements PdfTypeInterface
 {    public function __construct(
     private EventQueryService     $eventQueryService,
     private ReservationRepository $reservationRepository

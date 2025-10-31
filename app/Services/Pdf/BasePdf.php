@@ -88,12 +88,14 @@ class BasePdf extends Fpdf
 
         $pdf->SetFont('Arial', 'B', 10);
         $pdf->SetFillColor(150, 150, 150);
-        $pdf->SetTextColor(0);
 
         foreach ($headers as $i => $header) {
             $pdf->Cell($widths[$i], 8, $header, 1, 0, 'C', true);
         }
         $pdf->Ln();
+        //On réinitialise les couleurs et taille police
+        $pdf->SetFillColor(255);
+        $pdf->SetFont('Arial', '', 9);
     }
 
     /**

@@ -111,6 +111,7 @@ class EventRepository extends AbstractRepository
         return array_map([$this, 'hydrate'], $rows);
     }
 
+
     /**
      * Récupère les informations pour les event à venir, leurs sessions et périodes d'inscription.
      * Pour toutes les sessions à venir.

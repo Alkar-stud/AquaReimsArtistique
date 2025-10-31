@@ -3,12 +3,15 @@ namespace app\Services\Event;
 
 use app\Models\Event\Event;
 use app\Models\Event\EventInscriptionDate;
+use app\Models\Event\EventSession;
 use app\Models\Piscine\Piscine;
+use app\Models\Reservation\Reservation;
 use app\Models\Tarif\Tarif;
 use app\Repository\Event\EventInscriptionDateRepository;
 use app\Repository\Event\EventRepository;
 use app\Repository\Event\EventSessionRepository;
 use app\Repository\Piscine\PiscineRepository;
+use app\Repository\Reservation\ReservationRepository;
 use app\Repository\Tarif\TarifRepository;
 use DateTime;
 
@@ -19,19 +22,22 @@ class EventQueryService
     private TarifRepository $tarifRepository;
     private EventInscriptionDateRepository $inscriptionDateRepository;
     private EventSessionRepository $eventSessionRepository;
+    private ReservationRepository $reservationRepository;
 
     public function __construct(
         EventRepository $eventRepository,
         PiscineRepository $piscineRepository,
         TarifRepository $tarifRepository,
         EventInscriptionDateRepository $inscriptionDateRepository,
-        EventSessionRepository $eventSessionRepository
+        EventSessionRepository $eventSessionRepository,
+        ReservationRepository $reservationRepository,
     ) {
         $this->eventRepository = $eventRepository;
         $this->piscineRepository = $piscineRepository;
         $this->tarifRepository = $tarifRepository;
         $this->inscriptionDateRepository = $inscriptionDateRepository;
         $this->eventSessionRepository = $eventSessionRepository;
+        $this->reservationRepository = $reservationRepository;
     }
 
     /**
@@ -279,10 +285,153 @@ class EventQueryService
          return array_values($upcomingEvents);
     }
 
-
-    public function findSessionById($sessionId): ?\app\Models\Event\EventSession
+    /**
+     * Pour récupérer une session par son ID.
+     *
+     * @param $sessionId
+     * @return EventSession|null
+     */
+    public function findSessionById($sessionId): ?EventSession
     {
         return $this->eventSessionRepository->findById($sessionId, true);
     }
 
- }
+    /**
+     * Calcule les stats par tarif et par session pour un event.
+     *
+     * @param int $eventId L'ID de l'événement pour lequel calculer les statistiques.
+     * @return array Structure de données avec les statistiques par session et les totaux.
+     */
+    public function getTarifStatsForEvent(int $eventId): array
+    {
+        // On récupère tous les tarifs associés à l'événement.
+        $eventTarifs = $this->tarifRepository->findByEventId($eventId);
+
+        // On récupère toutes les réservations actives pour l'événement, avec tous leurs enfants.
+        $reservations = $this->reservationRepository->findAllActiveByEvent($eventId, true);
+
+        //On construit le tableau des statistiques à partir des réservations et de la liste complète des tarifs.
+        return $this->buildStatsFromReservations($reservations, $eventTarifs);
+    }
+
+    /**
+     * Construit une structure de statistiques à partir d'une liste de réservations.
+     *
+     * @param Reservation[] $reservations La liste des réservations.
+     * @param Tarif[] $eventTarifs Tous les tarifs disponibles pour l'événement.
+     * @return array
+     */
+    private function buildStatsFromReservations(array $reservations, array $eventTarifs): array
+    {
+        // Initialisation de la structure de sortie
+        $stats = [
+            'sessions' => [],
+            'eventTotals' => [
+                'seated' => ['persons' => 0, 'tickets' => 0, 'amount' => 0],
+                'complements' => ['qty' => 0, 'amount' => 0],
+                'grandTotal' => ['amount' => 0],
+            ],
+        ];
+
+        // Structure de base pour une session
+        $sessionTemplate = array(
+            'sessionName' => '',
+            'seated' => array('perTarif' => array(), 'totals' => array('persons' => 0, 'tickets' => 0, 'amount' => 0)),
+            'complements' => array('perTarif' => array(), 'totals' => array('qty' => 0, 'amount' => 0)),
+            'grandTotal' => array('amount' => 0),
+        );
+
+        foreach ($reservations as $reservation) {
+            $sessionId = $reservation->getEventSession();
+            //On récupère la session
+            $session = $this->eventSessionRepository->findById($sessionId);
+
+            // Initialiser la session si elle n'existe pas
+            if (!isset($stats['sessions'][$sessionId])) {
+                $stats['sessions'][$sessionId] = $sessionTemplate;
+                $stats['sessions'][$sessionId]['sessionName'] = $session->getSessionName();
+
+                // On pré rempli la session avec tous les tarifs de l'événement à zéro.
+                foreach ($eventTarifs as $tarif) {
+                    $tarifId = $tarif->getId();
+                    $seatCount = $tarif->getSeatCount();
+
+                    if ($seatCount !== null && $seatCount > 0) { // Tarif avec place
+                        $stats['sessions'][$sessionId]['seated']['perTarif'][$tarifId] = [
+                            'name' => $tarif->getName(),
+                            'persons' => 0,
+                            'tickets' => 0,
+                            'seatCount' => $seatCount,
+                            'price' => $tarif->getPrice(),
+                            'amount' => 0,
+                        ];
+                    } else { // Tarif sans place (complément)
+                        $stats['sessions'][$sessionId]['complements']['perTarif'][$tarifId] = [
+                            'name' => $tarif->getName(),
+                            'qty' => 0,
+                            'price' => $tarif->getPrice(),
+                            'amount' => 0,
+                        ];
+                    }
+                }
+            }
+
+            // Traitement des détails (tarifs avec place)
+            foreach ($reservation->getDetails() as $detail) {
+                $tarif = $detail->getTarifObject();
+                if (!$tarif) continue;
+
+                $tarifId = $tarif->getId();
+                $price = $tarif->getPrice();
+                $seatCount = $tarif->getSeatCount() ?? 1;
+
+                // Mettre à jour les stats pour ce tarif dans cette session (le tarif est déjà initialisé)
+                $stats['sessions'][$sessionId]['seated']['perTarif'][$tarifId]['persons'] += $seatCount;
+                $stats['sessions'][$sessionId]['seated']['perTarif'][$tarifId]['tickets']++;
+                $stats['sessions'][$sessionId]['seated']['perTarif'][$tarifId]['amount'] += $price;
+
+                // Mettre à jour les totaux de la session
+                $stats['sessions'][$sessionId]['seated']['totals']['persons'] += $seatCount;
+                $stats['sessions'][$sessionId]['seated']['totals']['tickets']++;
+                $stats['sessions'][$sessionId]['seated']['totals']['amount'] += $price;
+
+                // Mettre à jour les totaux de l'événement
+                $stats['eventTotals']['seated']['persons'] += $seatCount;
+                $stats['eventTotals']['seated']['tickets']++;
+                $stats['eventTotals']['seated']['amount'] += $price;
+            }
+
+            // Traitement des compléments (tarifs sans place)
+            foreach ($reservation->getComplements() as $complement) {
+                $tarif = $complement->getTarifObject();
+                if (!$tarif) continue;
+
+                $tarifId = $tarif->getId();
+                $price = $tarif->getPrice();
+                $quantity = $complement->getQty();
+
+                // Mettre à jour les stats pour ce tarif dans cette session (le tarif est déjà initialisé)
+                $stats['sessions'][$sessionId]['complements']['perTarif'][$tarifId]['qty'] += $quantity;
+                $stats['sessions'][$sessionId]['complements']['perTarif'][$tarifId]['amount'] += $price * $quantity;
+
+                // Mettre à jour les totaux de la session
+                $stats['sessions'][$sessionId]['complements']['totals']['qty'] += $quantity;
+                $stats['sessions'][$sessionId]['complements']['totals']['amount'] += $price * $quantity;
+
+                // Mettre à jour les totaux de l'événement
+                $stats['eventTotals']['complements']['qty'] += $quantity;
+                $stats['eventTotals']['complements']['amount'] += $price * $quantity;
+            }
+        }
+
+        // Calcul des grands totaux
+        foreach ($stats['sessions'] as &$sessionStats) {
+            $sessionStats['grandTotal']['amount'] = $sessionStats['seated']['totals']['amount'] + $sessionStats['complements']['totals']['amount'];
+        }
+        unset($sessionStats); // Important pour casser la référence
+
+        $stats['eventTotals']['grandTotal']['amount'] = $stats['eventTotals']['seated']['amount'] + $stats['eventTotals']['complements']['amount'];
+
+        return $stats;
+    }
+}

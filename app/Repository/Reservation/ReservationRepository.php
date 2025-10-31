@@ -70,6 +70,23 @@ class ReservationRepository extends AbstractRepository
     }
 
     /**
+     * Retourne toutes les réservations actives pour un événement.
+     *
+     * @param int $eventId L'ID de l'événement.
+     * @param bool $withChildren Si true, hydrate les relations enfants (détails, compléments, paiements).
+     * @return Reservation[]
+     */
+    public function findAllActiveByEvent(int $eventId, bool $withChildren = true): array
+    {
+        $sql = "SELECT * FROM $this->tableName WHERE event = :eventId AND is_canceled = 0 ORDER BY created_at DESC";
+        $rows = $this->query($sql, ['eventId' => $eventId]);
+        if (!$rows) return [];
+
+        $reservations = array_map([$this, 'hydrate'], $rows);
+        return $withChildren ? $this->hydrateRelations($reservations) : $reservations;
+    }
+
+    /**
      * Retourne une réservation par un champ défini
      * @param string $field
      * @param string|int $fieldValue
@@ -95,6 +112,55 @@ class ReservationRepository extends AbstractRepository
         $this->hydrateOptionalRelations($r, $withEvent, $withEventSession, $withEventInscriptionDates);
         return $withChildren ? $this->hydrateRelations([$r])[0] : $r;
     }
+
+    /**
+     * Retourne toutes les réservations pour un champ donné.
+     *
+     * @param string $field Champ.
+     * @param string|int|array $fieldValue Valeur ou liste de valeurs (génère un IN(...)).
+     * @param bool $withEvent
+     * @param bool $withEventSession
+     * @param bool $withEventInscriptionDates
+     * @param bool $withChildren Hydrate détails, compléments, paiements.
+     * @return Reservation[] Liste des réservations trouvées.
+     */
+    public function findAllByField(
+        string $field,
+        string|int|array $fieldValue,
+        bool $withEvent = false,
+        bool $withEventSession = false,
+        bool $withEventInscriptionDates = true,
+        bool $withChildren = true
+    ): array {
+        // Construction SQL + paramètres
+        $params = [];
+        if (is_array($fieldValue) && !empty($fieldValue)) {
+            $ph = [];
+            foreach (array_values($fieldValue) as $idx => $val) {
+                $key = "v$idx";
+                $ph[] = ":$key";
+                $params[$key] = $val;
+            }
+            $sql = "SELECT * FROM $this->tableName WHERE $field IN (" . implode(',', $ph) . ") ORDER BY created_at DESC";
+        } else {
+            $sql = "SELECT * FROM $this->tableName WHERE $field = :value ORDER BY created_at DESC";
+            $params['value'] = $fieldValue;
+        }
+
+        $rows = $this->query($sql, $params);
+        if (!$rows) return [];
+
+        $reservations = array_map([$this, 'hydrate'], $rows);
+
+        // Hydrate relations optionnelles (Event, Session, Dates) par élément
+        foreach ($reservations as $r) {
+            $this->hydrateOptionalRelations($r, $withEvent, $withEventSession, $withEventInscriptionDates);
+        }
+
+        // Hydrate enfants (détails, compléments, paiements) en masse si demandé
+        return $withChildren ? $this->hydrateRelations($reservations) : $reservations;
+    }
+
 
     /**
      * Retourne toutes les réservations actives d'une session

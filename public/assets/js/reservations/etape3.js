@@ -9,9 +9,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const form = document.getElementById('reservationPlacesForm');
     if (!form) return;
 
-    const container = form; // Utiliser le formulaire comme conteneur principal pour la délégation
+    const container = form;
     const alertDiv = document.getElementById('reservationStep3Alert');
     const placesRestantesSpan = document.getElementById('placesRestantes');
+    const dejaReserveesSpan = document.getElementById('dejaReservees');
     const submitButton = document.getElementById('submitButton');
     const eventIdInput = document.getElementById('event_id');
 
@@ -21,24 +22,49 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     const eventId = eventIdInput.value;
 
-    // Récupération des données depuis les data-attributes du formulaire
-    const limitation = form.dataset.limitation ? parseInt(form.dataset.limitation, 10) : null;
-    const dejaReservees = form.dataset.dejaReservees ? parseInt(form.dataset.dejaReservees, 10) : 0;
+    const toIntOr = (v, fb) => {
+        if (v === undefined || v === null) return fb;
+        const s = String(v).trim();
+        if (s === '' || s.toLowerCase() === 'null' || s.toLowerCase() === 'undefined') return fb;
+        const n = parseInt(s, 10);
+        return Number.isFinite(n) ? n : fb;
+    };
+
+    // Utiliser les valeurs de la limite nageuse (alignées avec l'encart)
+    const limitation = toIntOr(form.dataset.limitation, null);
+    const dejaReservees = toIntOr(form.dataset.dejaReservees, 0);
     const initialSpecialTarifSession = form.dataset.specialTarifSession ? JSON.parse(form.dataset.specialTarifSession) : null;
 
-    // --- Fonctions utilitaires locales ---
+    const allTarifsSeats = form.dataset.allTarifsSeats ? JSON.parse(form.dataset.allTarifsSeats) : {};
+
     const getInputs = () => container.querySelectorAll('.place-input');
 
-    // --- Initialisation des gestionnaires ---
-    // Déclaration anticipée pour la dépendance mutuelle
     let specialTarifHandler;
     let tarifInputHandler;
+
+    const seatCountResolver = (input, tarifId) => {
+        const id = tarifId || (input.name.match(/^tarifs\[(\d+)]$/)?.[1] ?? null);
+        if (!id) return parseInt(input.dataset.nbPlace, 10) || 1;
+        const raw = allTarifsSeats[id];
+        const seatCount = typeof raw === 'object' && raw !== null ? raw.seat_count : raw;
+        const n = parseInt(seatCount, 10);
+        return Number.isFinite(n) && n > 0 ? n : (parseInt(input.dataset.nbPlace, 10) || 1);
+    };
 
     function updateSubmitState() {
         if (!submitButton) return;
         const totalDemanded = tarifInputHandler.totalDemanded();
         const hasSpecial = specialTarifHandler ? specialTarifHandler.hasSpecialSelection() : false;
-        submitButton.disabled = !(totalDemanded > 0 || hasSpecial);
+
+        let remaining = Infinity;
+        if (limitation !== null) {
+            remaining = Math.max(0, limitation - dejaReservees - totalDemanded);
+            tarifInputHandler.refreshRemainingUi(remaining);
+            if (dejaReserveesSpan) dejaReserveesSpan.textContent = String(dejaReservees + totalDemanded);
+        }
+
+        const enable = (totalDemanded > 0 || hasSpecial) && (limitation === null || remaining > 0 || hasSpecial);
+        submitButton.disabled = !enable;
     }
 
     tarifInputHandler = initTarifInputHandler({
@@ -47,6 +73,8 @@ document.addEventListener('DOMContentLoaded', () => {
         placesRestantesSpan: placesRestantesSpan,
         limitation: limitation,
         dejaReservees: dejaReservees,
+        seatCountResolver,
+        showFlash: (type, msg) => showFlashMessage(type, msg),
         updateSubmitState: updateSubmitState
     });
 
@@ -61,44 +89,34 @@ document.addEventListener('DOMContentLoaded', () => {
         updateSubmitState: updateSubmitState
     });
 
-    // --- Initialisation UI au chargement ---
     if (limitation !== null) {
         getInputs().forEach(tarifInputHandler.clampInput);
-        const remaining = Math.max(0, limitation - dejaReservees - tarifInputHandler.totalDemanded());
+        const remaining = tarifInputHandler.remainingSeats();
         tarifInputHandler.refreshRemainingUi(remaining);
+        if (dejaReserveesSpan) dejaReserveesSpan.textContent = String(dejaReservees + tarifInputHandler.totalDemanded());
     } else {
         tarifInputHandler.clearAlert();
     }
-    updateSubmitState(); // désactivé par défaut si rien sélectionné
+    updateSubmitState();
 
-    // --- Fonctions de soumission ---
     function buildReservationPayload() {
         const event_id = parseInt(eventId, 10) || 0;
         const tarifs = {};
 
-        // 1) Tarifs "classiques" (tous les inputs .place-input)
         getInputs().forEach(input => {
             const qty = parseInt(input.value, 10) || 0;
             if (qty <= 0) return;
-
-            // Extrait l'id du tarif du nom de l'input (ex: tarifs[123])
             const match = input.name.match(/^tarifs\[(\d+)]$/);
             const tarifId = match ? match[1] : null;
             if (!tarifId) return;
-
             tarifs[tarifId] = (tarifs[tarifId] || 0) + qty;
         });
 
-        // Tarifs spéciaux (ne comptent pas dans les totaux, mais doivent partir au backend)
         let special = null;
         const s = specialTarifHandler.getSpecialTarifSession();
         if (specialTarifHandler.hasSpecialSelection() && s) {
             const sid = String(s.id);
-
-            // On conserve aussi la quantité côté 'tarifs'
             tarifs[sid] = (tarifs[sid] || 0) + 1;
-
-            // Clé calculée: { [sid]: codeOuNull }
             special = { [sid]: s.code || null };
         }
 
@@ -124,7 +142,6 @@ document.addEventListener('DOMContentLoaded', () => {
             });
     }
 
-    // --- Gestion de la soumission du formulaire ---
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
         e.stopPropagation();

@@ -127,7 +127,8 @@ class SwimmerQueryService
         return [
             'currentReservations' => $currentReservations,
             'limitReached' => $currentReservations >= $limit,
-            'limit' => $limit, 'error' => null
+            'limit' => $limit,
+            'error' => null
         ];
     }
 
@@ -135,9 +136,10 @@ class SwimmerQueryService
      * Retourne un tableau contenant les informations suivantes :
      * (bool)limitReached, (?int)limit, (?int)currentReservations: nombre de réservations existantes
      *
+     * @param $session
      * @return array
      */
-    public function getStateOfLimitPerSwimmer(): array
+    public function getStateOfLimitPerSwimmer($session): array
     {
         $eventId   = (int)($session['event_id'] ?? 0);
         $swimmerId = (int)($session['swimmer_id'] ?? 0);

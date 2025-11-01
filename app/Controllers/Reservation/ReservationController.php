@@ -119,7 +119,7 @@ class ReservationController extends AbstractController
         }
 
         //Récupération des limites et l'état de la réservation par nageur
-        $swimmerLimitReached = $this->swimmerQueryService->getStateOfLimitPerSwimmer();
+        $swimmerLimitReached = $this->swimmerQueryService->getStateOfLimitPerSwimmer($session);
 
         // Récupération des tarifs avec place assise de cet event
         $allTarifsWithSeatForThisEvent = $this->eventTarifRepository->findTarifsByEvent($session['event_id']);

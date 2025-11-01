@@ -715,20 +715,17 @@ class ReservationDataValidationService
             ARRAY_FILTER_USE_BOTH
         );
 
-
         // Compléter chaque DTO construit depuis le POST avec l'existant si même tarif_id
         foreach ($dtos as $i => $dtoToComplete) {
 
             $dtos[$i] = $this->mergeDtoWithEffective($dtoToComplete, $effectiveByTarif);
         }
 
-
         $eventIdPayload = (int)($data['event_id'] ?? 0);
         $eventIdSession = (int)($effectiveSession['event_id'] ?? 0);
         if ($eventIdPayload <= 0 || $eventIdPayload !== $eventIdSession) {
             return ['success' => false, 'errors' => ['event_id' => 'Événement incohérent.'], 'data' => []];
         }
-
 
         //Les dtos sont prêts à être persistés,
         // on supprime ['reservation_retail'] ou ['reservation_complement'] pour éviter de garder des items supprimés par le visiteur.

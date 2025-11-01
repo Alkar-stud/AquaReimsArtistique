@@ -2,24 +2,26 @@
     <h2 class="mb-4">Choix des places</h2>
 
     {% if $swimmerLimit['limitReached'] %}
-    <div class="alert alert-danger">
+    <div class="alert alert-danger" id="card-swimmerLimit">
         La limite de places autorisées pour cette nageuse sur l'ensemble des séances de l'événement est atteinte.<br>
         Il n'y a pour le moment plus de places disponibles pour cette nageuse.
     </div>
     {% endif %}
 
     {% if $swimmerLimit['limit'] !== null %}
-    <div class="alert alert-info mb-3">
-        Limite de places par nageuse sur l'événement : <strong>{{ $limitation }}</strong><br>
-        Déjà réservées : <strong>{{ $placesDejaReservees }}</strong><br>
-        Restantes à réserver : <strong id="placesRestantes">{{ $limitation - $placesDejaReservees }}</strong>
+    <div class="alert alert-info mb-3" id="card-swimmerLimit">
+        Limite de places par nageuse sur l'événement : <strong>{{ $swimmerLimit['limit'] }}</strong><br>
+        Déjà réservées : <strong>{{ $swimmerLimit['currentReservations'] }}</strong><br>
+        Restantes à réserver : <strong id="placesRestantes">{{ ($swimmerLimit['limit'] - $swimmerLimit['currentReservations']) }}</strong>
     </div>
     {% endif %}
-
+    <div id="reservationStep3Alert"></div>
+    {% php %}$jsonFlags = JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES;{% endphp %}
     <form id="reservationPlacesForm"
-          data-limitation="{{ $limitation ?? 'null' }}"
-          data-deja-reservees="{{ $placesDejaReservees ?? 0 }}"
-          data-special-tarif-session="{{ htmlspecialchars_decode(json_encode($specialTarifSession ?? null)) }}">
+          data-limitation="{{ $swimmerLimit['limit'] ?? 'null' }}"
+          data-deja-reservees="{{ $swimmerLimit['currentReservations'] ?? 0 }}"
+          data-special-tarif-session="{{ json_encode($specialTarifSession ?? null) }}"
+          data-all-tarifs-seats="{{ json_encode($allTarifsWithSeatForThisEvent, $jsonFlags) }}">
         <input type="hidden" id="event_id" name="event_id" value="{{ $event_id }}">
         {% if !empty($allTarifsWithSeatForThisEvent) %}
         <div id="tarifsContainer">
@@ -70,7 +72,6 @@
             </div>
         </div>
     </form>
-    <div id="reservationStep3Alert"></div>
 
 </div>
 

@@ -5,7 +5,6 @@
      aria-hidden="true"
      data-is-readonly="{{ $isReadOnly ? 'true' : 'false' }}"
      data-can-update="{{ str_contains($userPermissions, 'U') ? 'true' : 'false' }}">
-    >
     <div class="modal-dialog modal-xl modal-dialog-scrollable">
         <div class="modal-content">
             <div class="modal-header">

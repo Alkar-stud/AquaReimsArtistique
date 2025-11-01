@@ -147,10 +147,8 @@ final readonly class RecapReservationsPdf implements PdfTypeInterface
                         $pdf->SetFillColor(225, 225, 225);
                     }
                 }
-                $pdf->SetX($leftMargin + $indent);
-                $pdf->Cell($widths[0] - $indent, $complementLineHeight, '', 1, 0, 'C', true);
-                $pdf->Cell($widths[1] + $indent, $complementLineHeight, mb_convert_encoding("(aucun complément)", 'ISO-8859-1', 'UTF-8'), 1, 0, 'L', true);
-                $pdf->Cell($widths[2] - $indent, $complementLineHeight, '', 1, 0, 'C', true);
+                $pdf->SetX($leftMargin + $widths[0]);
+                $pdf->Cell($widths[1] + $widths[2], $complementLineHeight, mb_convert_encoding("(aucun complément)", 'ISO-8859-1', 'UTF-8'), 1, 0, 'L', true);
                 $pdf->Cell($widths[3], $complementLineHeight, '', 1, 0, 'C', true);
                 $pdf->Ln();
             }

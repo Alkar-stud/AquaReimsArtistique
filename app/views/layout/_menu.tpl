@@ -31,7 +31,7 @@
                     <a class="nav-link {{ $uri == '/gestion/piscines' ? 'active-link' : '' }}" href="/gestion/piscines">Piscines</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link {{ $uri == '/gestion/swimmers-groups' ? 'active-link' : '' }}" href="/gestion/swimmers-groups">Nageuses</a>
+                    <a class="nav-link {{ str_starts_with($uri, '/gestion/swimmers') ? 'active-link' : '' }}" href="/gestion/swimmers-groups">Nageuses</a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link {{ $uri == '/gestion/tarifs' ? 'active-link' : '' }}" href="/gestion/tarifs">Tarifs</a>
@@ -51,17 +51,17 @@
                     <a class="nav-link {{ $uri == '/gestion/users' ? 'active-link' : '' }}" href="/gestion/users">Utilisateurs</a>
                 </li>
                 <li class="nav-item dropdown">
-                    <a class="nav-link dropdown-toggle" href="#" id="configDropdown" role="button" aria-expanded="false">
+                    <a class="nav-link dropdown-toggle {{ $uri == '/gestion/configs' ? 'active-link' : '' }}" href="#" id="configDropdown" role="button" aria-expanded="false">
                         Configuration
                     </a>
                     <ul class="dropdown-menu" aria-labelledby="configDropdown">
-                        <li><a class="dropdown-item {{ $uri == '/gestion/configuration/configs' ? 'active-link' : '' }}" href="/gestion/configs">Configs</a></li>
-                        <li><a class="dropdown-item {{ $uri == '/gestion/configuration/pages' ? 'active-link' : '' }}" href="/gestion/pages">Pages (à venir)</a></li>
-                        <li><a class="dropdown-item {{ $uri == '/gestion/configuration/erreurs' ? 'active-link' : '' }}" href="/gestion/erreurs">Messages d'erreur (à venir)</a></li>
+                        <li><a class="dropdown-item {{ $uri == '/gestion/configs' ? 'active-link' : '' }}" href="/gestion/configs">Configs</a></li>
+                        <li><a class="dropdown-item {{ $uri == '/gestion/pages' ? 'active-link' : '' }}" href="/gestion/pages">Pages (à venir)</a></li>
+                        <li><a class="dropdown-item {{ $uri == '/gestion/erreurs' ? 'active-link' : '' }}" href="/gestion/erreurs">Messages d'erreur (à venir)</a></li>
                     </ul>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link {{ $uri == '/gestion/log' ? 'active-link' : '' }}" href="/gestion/logs">Logs</a>
+                    <a class="nav-link {{ $uri == '/gestion/logs' ? 'active-link' : '' }}" href="/gestion/logs">Logs</a>
                 </li>
                 {% endif %}
                 {% if isset($_SESSION['user']) and !$is_gestion_page %}

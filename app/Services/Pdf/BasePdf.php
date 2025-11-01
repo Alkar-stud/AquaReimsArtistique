@@ -35,7 +35,7 @@ class BasePdf extends Fpdf
     public function Header(): void
     {
         //Logo
-        $this->Image('/var/www/AquaReimsArtistique/public/assets/images/logo-ARA.png',10,10,20,0,'');
+        $this->Image(__DIR__ . '/../../../public/assets/images/logo-ARA.png',10,10,20,0,'');
         //Police Arial gras 15
         $this->SetFont('Arial','B',12);
 

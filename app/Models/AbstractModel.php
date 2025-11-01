@@ -19,10 +19,7 @@ abstract class AbstractModel
         $this->created_at = new DateTime();
         $this->updated_at = null; // S'assure que updated_at est aussi initialisé (même si déjà null par défaut)
     }
-    public function getId(): int
-    {
-        return $this->id;
-    }
+    public function getId(): int { return $this->id; }
     public function getCreatedAt(): DateTimeInterface { return $this->created_at; }
     public function getUpdatedAt(): ?DateTimeInterface { return $this->updated_at; }
 

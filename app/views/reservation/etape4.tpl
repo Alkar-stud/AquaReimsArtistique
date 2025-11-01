@@ -48,9 +48,11 @@
 
 <script type="module" src="/assets/js/reservations/etape4.js" defer></script>
 
+{% if ($_ENV['APP_DEBUG'] == "true") %}
 Ici pour la suite, on a déjà enregistré ça :
 {% php %}
 echo '<pre>';
 print_r($_SESSION['reservation']);
 echo '</pre>';
 {% endphp %}
+{% endif %}

@@ -35,16 +35,18 @@
     <div id="reservationAlert"></div>
 </div>
 
+<script>
+    window.swimmerPerGroup = {{! json_encode($swimmerPerGroup ?? []) !}};
+</script>
 
+<script type="module" src="/assets/js/reservations/etape2.js" defer></script>
+
+
+{% if ($_ENV['APP_DEBUG'] == "true") %}
 Ici pour la suite, on a déjà enregistré ça :
 {% php %}
 echo '<pre>';
 print_r($_SESSION['reservation']);
 echo '</pre>';
 {% endphp %}
-
-<script>
-    window.swimmerPerGroup = {{! json_encode($swimmerPerGroup ?? []) !}};
-</script>
-
-<script type="module" src="/assets/js/reservations/etape2.js" defer></script>
+{% endif %}

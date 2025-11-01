@@ -33,3 +33,38 @@ export function formatEuro(cents) {
     const v = (parseInt(cents, 10) || 0) / 100;
     return v.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
 }
+
+
+export function extractErrorMessages(errorData) {
+    const fallback = 'Une erreur de communication est survenue.';
+    if (!errorData || typeof errorData !== 'object') return fallback;
+
+    const messages = [];
+
+    // Messages simples
+    if (typeof errorData.message === 'string' && errorData.message.trim() !== '') {
+        messages.push(errorData.message.trim());
+    }
+    if (typeof errorData.error === 'string' && errorData.error.trim() !== '') {
+        messages.push(errorData.error.trim());
+    }
+
+    // Regroupe les erreurs multiples.
+    const collect = (val) => {
+        if (!val) return;
+        if (typeof val === 'string') {
+            if (val.trim() !== '') messages.push(val.trim());
+        } else if (Array.isArray(val)) {
+            val.forEach(collect);
+        } else if (typeof val === 'object') {
+            Object.values(val).forEach(collect); // ignore les clés non numériques
+        }
+    };
+
+    collect(errorData.errors);
+
+    if (messages.length === 0) return fallback;
+
+    // Déduplique et joint (à adapter: '\n' ou ' • ')
+    return [...new Set(messages)].join('\n');
+}

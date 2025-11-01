@@ -1,5 +1,7 @@
 'use strict';
 
+import { extractErrorMessages } from './utils.js';
+
 function getCsrfToken() {
     const meta = document.querySelector('meta[name="csrf-token"]');
     return meta ? meta.content : '';
@@ -73,7 +75,9 @@ async function client(endpoint, { body, ...customConfig } = {}) {
             errorData = { message: response.statusText || 'Réponse invalide du serveur.' };
         }
         const error = new Error(errorData.message);
-        error.userMessage = errorData.message || 'Une erreur de communication est survenue.';
+        error.userMessage = extractErrorMessages(errorData);
+        //error.userMessage = errorData.message || errorData.errors || 'Une erreur de communication est survenue.';
+console.warn('responseText : ', responseText);
         error.body = responseText;
         return Promise.reject(error);
     }

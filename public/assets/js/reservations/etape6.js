@@ -13,6 +13,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const alertDiv = document.getElementById('reservationStep6Alert'); // Assurez-vous que cet ID existe dans le tpl
     const submitButton = document.getElementById('submitButton');
     const eventIdInput = document.getElementById('event_id');
+    //On active le bouton par défaut
+    if (submitButton) submitButton.disabled = false;
 
     if (!eventIdInput) {
         console.error("L'ID de l'événement est manquant.");
@@ -62,9 +64,17 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // --- Initialisation UI au chargement ---
-    // Pas de limitation par nageuse pour l'étape 6, donc pas de clampInput initial
-    // On s'assure juste que le bouton est dans le bon état
-    updateSubmitState();
+    // Ne recalculer l'état que s'il y a une pré‑sélection
+    const hasPrefilled =
+        Array.from(getInputs()).some(i => (parseInt(i.value, 10) || 0) > 0) ||
+        (typeof window !== 'undefined' && !!window.specialTarifSession);
+
+    // Si pré‑sélection: appliquer la logique courante, sinon laisser activé par défaut
+    if (hasPrefilled) {
+        updateSubmitState();
+    } else {
+        submitButton && (submitButton.disabled = false);
+    }
 
     // --- Fonctions de soumission ---
     function buildReservationPayload() {

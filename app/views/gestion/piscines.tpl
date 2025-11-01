@@ -181,12 +181,14 @@
                 </td>
                 <td>
                     <div class="d-flex align-items-center gap-2">
-                        <button type="submit" class="btn btn-secondary btn-sm" form="form-update-piscine-{{ $piscine_loop['item']->getId() }}">
-                            <i class="bi bi-save me-1"></i>&nbsp;Enregistrer
+                        <button type="submit" class="btn btn-secondary btn-sm w-100" form="form-update-piscine-{{ $piscine_loop['item']->getId() }}">
+                            <i class="bi bi-save"></i>&nbsp;Enregistrer
                         </button>
-                        <form action="/gestion/piscines/delete" method="POST" onsubmit="return confirm('Supprimer cette piscine ?');">
+                        <form action="/gestion/piscines/delete" method="POST" onsubmit="return confirm('Supprimer cette piscine ?');" class="d-inline">
                             <input type="hidden" name="piscine_id" value="{{ $piscine_loop['item']->getId() }}">
-                            <button type="submit" class="btn btn-danger btn-sm"><i class="bi bi-trash"></i>&nbsp;Supprimer</button>
+                            <button type="submit" class="btn btn-danger btn-sm w-100">
+                                <i class="bi bi-trash"></i>&nbsp;Supprimer
+                            </button>
                         </form>
                     </div>
                 </td>

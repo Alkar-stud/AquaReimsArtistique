@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', $_ENV['APP_NAME'] ?? 'fr') }}">
+<html lang="{{ str_replace('_', '-', $_ENV['APP_LOCALE'] ?? 'fr') }}">
 <head>
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="Description" content="Site de réservation pour les galas du Aqua Reims Artistique" />

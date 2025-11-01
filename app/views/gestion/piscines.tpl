@@ -155,7 +155,7 @@
                     </select>
                 </td>
                 <td>
-                    <button type="submit" class="btn btn-success btn-sm" form="form-add-piscine">
+                    <button type="submit" class="btn btn-success btn-sm w-100" form="form-add-piscine">
                         <i class="bi bi-plus-circle"></i>&nbsp;Ajouter
                     </button>
                 </td>

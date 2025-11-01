@@ -155,7 +155,7 @@
                             <input type="text" name="config_type" id="config_type_input_add_desktop" class="form-control" placeholder="Type personnalisé">
                         </div>
                     </td>
-                    <td><button type="submit" class="btn btn-success btn-sm">
+                    <td><button type="submit" class="btn btn-success btn-sm w-100">
                             <i class="bi bi-plus-circle"></i>&nbsp;Ajouter
                         </button></td>
                 </form>
@@ -187,8 +187,7 @@
                                    id="config_type_input_{{ $config->getId() }}-desktop"
                                    class="form-control"
                                    placeholder="Type personnalisé"
-                                   value="{{ $config->getConfigType() ?? '' }}"
-                                   {{ in_array($config->getConfigType(), ['string','int','float','bool','email','date','datetime','url']) ? 'readonly' : '' }}>
+                                   value="{{ $config->getConfigType() ?? '' }}">
                         </div>
                     </td>
                     <td>

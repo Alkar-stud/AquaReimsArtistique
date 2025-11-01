@@ -147,7 +147,7 @@
                         </select>
                     </td>
                     <td>
-                        <button type="submit" class="btn btn-success btn-sm">
+                        <button type="submit" class="btn btn-success btn-sm w-100">
                             <i class="bi bi-plus-circle"></i>&nbsp;Ajouter
                         </button>
                     </td>

@@ -154,7 +154,7 @@
                     <td><input type="text" name="access_code" class="form-control"></td>
                     <td class="text-center"><input type="checkbox" name="is_active" checked></td>
                     <td>
-                        <button type="submit" class="btn btn-success btn-sm">
+                        <button type="submit" class="btn btn-success btn-sm w-100">
                             <i class="bi bi-plus-circle"></i>&nbsp;Ajouter
                         </button>
                     </td>
@@ -181,13 +181,13 @@
                 <td class="text-center"><input type="checkbox" name="is_active" {{ $tarif_loop['item']->isActive() ? 'checked' : '' }} form="form-update-{{ $tarif_loop['item']->getId() }}"></td>
                 <td>
                     <div class="d-flex align-items-center gap-2">
-                        <button type="submit" class="btn btn-secondary btn-sm" form="form-update-{{ $tarif_loop['item']->getId() }}">
+                        <button type="submit" class="btn btn-secondary btn-sm w-100" form="form-update-{{ $tarif_loop['item']->getId() }}">
                             <i class="bi bi-save"></i>&nbsp;Enregistrer
                         </button>
                         <form action="/gestion/tarifs/delete" method="POST" onsubmit="return confirm('Supprimer ce tarif ?');" class="d-inline">
                             <input type="hidden" name="onglet" value="{{ $onglet }}">
                             <input type="hidden" name="tarif_id" value="{{ $tarif_loop['item']->getId() }}">
-                            <button type="submit" class="btn btn-danger btn-sm">
+                            <button type="submit" class="btn btn-danger btn-sm w-100">
                                 <i class="bi bi-trash"></i>&nbsp;Supprimer
                             </button>
                         </form>

@@ -85,7 +85,7 @@
                     </td>
                     <td>
                         <div class="d-flex align-items-stretch gap-2">
-                            <button type="submit" class="btn btn-secondary btn-sm w-100">
+                            <button type="submit" class="btn btn-secondary btn-sm">
                                 <i class="bi bi-save"></i>&nbsp;Enregistrer
                             </button>
 

@@ -85,7 +85,7 @@
                 <td><input type="number" name="order" class="form-control" required form="form-add"></td>
                 <td></td>
                 <td class="text-center"><input type="checkbox" name="is_active" checked form="form-add"></td>
-                <td><button type="submit" class="btn btn-success btn-sm" form="form-add">
+                <td><button type="submit" class="btn btn-success btn-sm w-100" form="form-add">
                         <i class="bi bi-plus-circle"></i>&nbsp;Ajouter
                     </button></td>
             </tr>

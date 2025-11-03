@@ -95,8 +95,9 @@ class ReservationEntranceController extends AbstractController
         $complement = $data['complement'] ?? null;
         $participant = $data['participant'] ?? null;
         $isPresent = $data['is_present'] ?? null;
+        $isChecked = $data['is_checked'] ?? null;
 
-        if ($complement === null && $participant === null) {
+        if ($complement === null && $participant === null && $isChecked === null) {
             $this->json(['success' => false, 'message' => 'Rien à mettre à jour']);
         }
 
@@ -115,6 +116,10 @@ class ReservationEntranceController extends AbstractController
             $this->json(['success' => true, 'message' => 'Mise à jour effectuée', 'everyOneInReservation' => $everyOneInReservation]);
         }
 
+        if ($isChecked !== null) {
+            $this->reservationRepository->updateSingleField($reservation->getId(), 'is_checked', true);
+            $this->json(['success' => true, 'message' => 'Réservation marquée comme vérifiée']);
+        }
 
         $this->json(['success' => false, 'message' => 'Erreur inconnue']);
     }

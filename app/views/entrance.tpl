@@ -27,6 +27,24 @@
         </div>
     </div>
 
+    {% if !$reservation->isChecked() %}
+    <div class="card mb-3">
+        <div class="card-body p-3 bg-info">
+            <div class="form-check">
+                <input
+                        class="form-check-input"
+                        type="checkbox"
+                        id="checkReservation"
+                        data-action="check-reservation"
+                        data-reservation-id="{{ $reservation->getId() }}">
+                <label class="form-check-label fw-bold" for="checkReservation">
+                    Marquer comme vérifiée - Il faut contrôler les compléments, le nombre de participants et leurs places ainsi que le(s) paiement(s).
+                </label>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
     {% if !empty($reservation->getComplements()) %}
     <div class="card mb-3">
         <div class="card-header d-flex justify-content-between align-items-center p-3">

@@ -6,7 +6,45 @@ document.addEventListener('DOMContentLoaded', () => {
     const reservationId = toggleComplementsBtn.dataset.reservationId;
     const participantItems = document.querySelectorAll('[data-action="toggle-participant"]');
     const everyonePresentBadge = document.getElementById('every-one-is-present');
+    const checkReservationCheckbox = document.querySelector('[data-action="check-reservation"]');
 
+    /*
+     * Section pour vérifier la commande
+     */
+    if (checkReservationCheckbox) {
+        checkReservationCheckbox.addEventListener('change', async () => {
+            if (!checkReservationCheckbox.checked) return;
+
+            // Demander confirmation
+            if (!confirm('Êtes-vous sûr de vouloir marquer cette réservation comme vérifiée ?')) {
+                checkReservationCheckbox.checked = false;
+                return;
+            }
+
+                checkReservationCheckbox.disabled = true;
+
+            try {
+                const result = await apiPost('/entrance/update/' + reservationId, {
+                    is_checked: true
+                });
+
+                if (result.success) {
+                    // Recharger la page
+                    window.location.reload();
+                } else {
+                    throw new Error(result.message || 'Une erreur est survenue.');
+                }
+            } catch (error) {
+                alert(`Erreur : ${error.message}`);
+                checkReservationCheckbox.checked = false;
+                checkReservationCheckbox.disabled = false;
+            }
+        });
+    }
+
+    /*
+     * Section pour valider la remise des compléments
+     */
     if (toggleComplementsBtn) {
         toggleComplementsBtn.addEventListener('click', async () => {
             const isGiven = toggleComplementsBtn.dataset.complementGiven === 'true';
@@ -46,6 +84,9 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    /*
+     * Section pour valider la présence des participants
+     */
     participantItems.forEach(item => {
         item.addEventListener('click', async () => {
             const detailId = item.dataset.detailId;

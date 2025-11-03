@@ -462,7 +462,7 @@ class ReservationRepository extends AbstractRepository
                    OR name LIKE :q_name 
                    OR firstname LIKE :q_firstname)
               AND is_canceled = 0
-            ORDER BY created_at DESC";
+            ORDER BY created_at";
 
         if ($limit !== null) {
             $sql .= " LIMIT $limit";

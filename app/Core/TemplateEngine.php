@@ -6,10 +6,24 @@ use Throwable;
 
 class TemplateEngine
 {
+    /**
+     * @var string
+     */
     private string $baseDir = '';
+    /**
+     * @var array
+     */
     private array $phpBlocks = [];
+    /**
+     * @var array
+     */
     private array $baseDirStack = [];
 
+    /**
+     * @param string $templatePath
+     * @param array $data
+     * @return string
+     */
     public function render(string $templatePath, array $data = []): string
     {
         if (!is_file($templatePath)) {
@@ -47,17 +61,28 @@ class TemplateEngine
         return $out;
     }
 
+    /**
+     * @param string $dir
+     * @return void
+     */
     private function pushBaseDir(string $dir): void
     {
         $this->baseDirStack[] = $this->baseDir;
         $this->baseDir = $dir;
     }
 
+    /**
+     * @return void
+     */
     private function popBaseDir(): void
     {
         $this->baseDir = array_pop($this->baseDirStack) ?? '';
     }
 
+    /**
+     * @param string $template
+     * @return string
+     */
     private function compile(string $template): string
     {
         // Isoler les blocs PHP bruts pour les protéger des autres regex
@@ -82,6 +107,10 @@ class TemplateEngine
         return str_replace(array_keys($this->phpBlocks), array_values($this->phpBlocks), $template);
     }
 
+    /**
+     * @param string $template
+     * @return string
+     */
     private function compileComments(string $template): string
     {
         // Handlebars: {{!-- ... --}}
@@ -89,6 +118,10 @@ class TemplateEngine
         return preg_replace('/\{\{!--.*?--}}/s', '', $template);
     }
 
+    /**
+     * @param string $template
+     * @return string
+     */
     private function compileIncludes(string $template): string
     {
         // {% include 'file.tpl' %}
@@ -113,6 +146,10 @@ class TemplateEngine
         );
     }
 
+    /**
+     * @param string $path
+     * @return string
+     */
     private function resolveInclude(string $path): string
     {
         // Chemin absolu (à partir de la racine des templates)
@@ -123,6 +160,10 @@ class TemplateEngine
         return rtrim($this->baseDir, '/\\') . DIRECTORY_SEPARATOR . $path;
     }
 
+    /**
+     * @param string $template
+     * @return string
+     */
     private function compileControlStructures(string $template): string
     {
         $patterns = [
@@ -138,12 +179,20 @@ class TemplateEngine
         return preg_replace(array_keys($patterns), array_values($patterns), $template);
     }
 
+    /**
+     * @param string $template
+     * @return string
+     */
     private function compileRawEchos(string $template): string
     {
         // {{! ... !}}
         return preg_replace('/\{\{!\s*(.+?)\s*!}}/s', '<?= $1 ?>', $template);
     }
 
+    /**
+     * @param string $template
+     * @return string
+     */
     private function compileEchos(string $template): string
     {
         // Gère les échos avec ou sans filtres (ex: {{ $variable | date('Y-m-d') }})
@@ -175,6 +224,11 @@ class TemplateEngine
         );
     }
 
+    /**
+     * @param string $variable
+     * @param string $filter
+     * @return string
+     */
     private function applyFilter(string $variable, string $filter): string
     {
         // Recherche du nom du filtre et de ses arguments (ex: date('Y-m-d H:i:s'))
@@ -197,6 +251,10 @@ class TemplateEngine
         return $variable;
     }
 
+    /**
+     * @param string $template
+     * @return string
+     */
     private function compilePhpBlocks(string $template): string
     {
         return preg_replace_callback(

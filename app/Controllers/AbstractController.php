@@ -705,4 +705,19 @@ abstract class AbstractController
         exit;
     }
 
+
+    /**
+     * Vérifie et retourne une erreur si l'accès n'est pas suffisant
+     *
+     * @param string $level
+     * @return void
+     */
+    protected function checkUserPermission(string $level = ''): void
+    {
+        $userPermissions = $this->whatCanDoCurrentUser();
+        if (!str_contains($userPermissions, $level)) {
+            $this->json(['success' => false, 'message' => 'Accès refusé. Vous n\'avez pas les droits nécessaires.'], 403);
+        }
+    }
+
 }

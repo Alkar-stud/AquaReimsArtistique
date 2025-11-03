@@ -76,8 +76,7 @@ async function client(endpoint, { body, ...customConfig } = {}) {
         }
         const error = new Error(errorData.message);
         error.userMessage = extractErrorMessages(errorData);
-        //error.userMessage = errorData.message || errorData.errors || 'Une erreur de communication est survenue.';
-console.warn('responseText : ', responseText);
+        error.userMessage = errorData.message || errorData.errors || 'Une erreur de communication est survenue.';
         error.body = responseText;
         return Promise.reject(error);
     }

@@ -13,7 +13,9 @@ final readonly class RecapFinalPdf implements PdfTypeInterface
 {
     public function build(array $data): BasePdf
     {
-        define('EURO_SYMBOL', chr(128));
+        if (!defined('EURO_SYMBOL')) {
+            define('EURO_SYMBOL', chr(128));
+        }
 
         $reservationId = $data['reservationId'];
         $reservationRepository = new ReservationRepository();

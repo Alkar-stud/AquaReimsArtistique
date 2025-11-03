@@ -8,6 +8,7 @@ use app\Models\Reservation\ReservationMailSent;
 use app\Repository\Event\EventRepository;
 use app\Repository\Mail\MailTemplateRepository;
 use app\Repository\Reservation\ReservationComplementRepository;
+use app\Repository\Reservation\ReservationDetailRepository;
 use app\Repository\Reservation\ReservationMailSentRepository;
 use app\Repository\Reservation\ReservationRepository;
 use app\Services\Mails\MailPrepareService;
@@ -20,6 +21,7 @@ class ReservationQueryService
     private MailPrepareService $mailPrepareService;
     private ReservationPriceCalculator $priceCalculator;
     private ReservationComplementRepository $reservationComplementRepository;
+    private ReservationDetailRepository $reservationDetailRepository;
 
     public function __construct(
         ReservationRepository $reservationRepository,
@@ -27,6 +29,7 @@ class ReservationQueryService
         MailPrepareService $mailPrepareService,
         ReservationPriceCalculator $priceCalculator,
         ReservationComplementRepository $reservationComplementRepository,
+        ReservationDetailRepository $reservationDetailRepository,
     )
     {
         $this->reservationRepository = $reservationRepository;
@@ -34,6 +37,7 @@ class ReservationQueryService
         $this->mailPrepareService = $mailPrepareService;
         $this->priceCalculator = $priceCalculator;
         $this->reservationComplementRepository = $reservationComplementRepository;
+        $this->reservationDetailRepository = $reservationDetailRepository;
     }
 
     /**
@@ -309,6 +313,21 @@ class ReservationQueryService
 
         // Limiter par défaut pour éviter de gros résultats si non paginé côté appelant
         return $this->reservationRepository->findBySearchPaginated($q, $currentPage, $itemsPerPage, false, null);
+    }
+
+    /**
+     * Retourne true | false si tous les participants sont cochés
+     *
+     * @param Reservation $reservation
+     * @return bool
+     */
+    public function everyOneInReservationIsHere(Reservation $reservation): bool
+    {
+        $allParticipants = $this->reservationDetailRepository->findByReservation($reservation->getId(), false, false, false);
+        $notEntered = count(array_filter($allParticipants, fn($p) => $p->getEnteredAt() === null));
+
+        if ($notEntered > 0) { return false; }
+        return true;
     }
 
 }

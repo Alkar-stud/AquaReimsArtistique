@@ -1,0 +1,19 @@
+.list-group-item[data-action="toggle-participant"] {
+    transition: background-color 0.2s ease;
+    -webkit-tap-highlight-color: rgba(0,0,0,0.1);
+}
+
+.list-group-item[data-action="toggle-participant"]:active {
+    background-color: rgba(0,0,0,0.05);
+}
+
+.btn[data-action] {
+    -webkit-tap-highlight-color: transparent;
+}
+
+.sticky-reservation-header {
+    position: sticky;
+    top: 190px; /* Correspond au padding-top de main-page */
+    z-index: 100;
+    background-color: white;
+}

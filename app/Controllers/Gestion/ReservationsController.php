@@ -357,22 +357,6 @@ class ReservationsController extends AbstractController
     }
 
     /**
-     * Vérifie et retourne une erreur si l'accès n'est pas suffisant
-     *
-     * @param string $level
-     * @return void
-     */
-    private function checkUserPermission(string $level = ''): void
-    {
-        $userPermissions = $this->whatCanDoCurrentUser();
-        if (!str_contains($userPermissions, $level)) {
-            $this->json(['success' => false, 'message' => 'Accès refusé. Vous n\'avez pas les droits nécessaires.'], 403);
-        }
-
-    }
-
-
-    /**
      * Récupère les données envoyées en POST et vérifie si la/les clés recherchées sont présentes
      *
      * @param array $keyToCheck

@@ -281,8 +281,8 @@ class ReservationRepository extends AbstractRepository
                   GROUP BY event
                 ) eid ON eid.event = r.event
                 WHERE r.is_canceled = 0
-                  AND es.event_start_at > '2025-11-28 01:00:00'
-                  AND eid.close_at <= '2025-11-28 01:00:00'
+                  AND es.event_start_at > '2025-12-06 01:00:00'
+                  AND eid.close_at <= '2025-12-06 01:00:00'
                 ORDER BY r.id
                 LIMIT $limit
     ";
@@ -633,11 +633,11 @@ class ReservationRepository extends AbstractRepository
 
         // Normalisation des types selon le champ
         if (in_array($field, ['is_canceled', 'is_checked'], true)) {
-            $value = $value ? 1 : 0; // garantit 0/1
+            $value = $value ? 1 : 0;
         } elseif (in_array($field, ['total_amount', 'total_amount_paid'], true)) {
             $value = (int)$value;
-        } elseif ($field === 'phone') {
-            $value = ($value === '' ? null : (string)$value);
+        } elseif (in_array($field, ['phone', 'complements_given_at'], true)) {
+            $value = ($value === '' || $value === null) ? null : (string)$value;
         } else {
             $value = (string)$value;
         }

@@ -3,6 +3,7 @@ namespace app\Models\Reservation;
 
 use app\Models\AbstractModel;
 use app\Models\Piscine\PiscineGradinsPlaces;
+use DateTime;
 use DateTimeInterface;
 
 class ReservationDetail extends AbstractModel
@@ -98,7 +99,7 @@ class ReservationDetail extends AbstractModel
     }
 
     public function setEnteredAt(?string $enteredAt): self {
-        $this->entered_at = DateTime($enteredAt);
+        $this->entered_at = $enteredAt ? new DateTime($enteredAt) : null;
         return $this;
     }
 

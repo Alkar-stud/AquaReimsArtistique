@@ -60,7 +60,7 @@ class ReservationMailSent extends AbstractModel
             'id' => $this->getId(),
             'mailTemplateId' => $this->getMailTemplate(),
             'mailTemplateName' => $this->getMailTemplateObject()?->getCode(),
-            'sentAt' => $this->getSentAt()->format(DateTime::ATOM), // ISO 8601
+            'sentAt' => $this->getSentAt()->format(DateTimeInterface::ATOM), // ISO 8601
         ];
     }
 

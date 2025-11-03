@@ -19,6 +19,7 @@ CREATE TABLE IF NOT EXISTS `reservation` (
     `is_canceled` TINYINT(1) NOT NULL DEFAULT '0',
     `is_checked` TINYINT(1) NOT NULL DEFAULT '0',
     `comments` LONGTEXT NULL,
+    `complements_given_at` DATETIME NULL,
     `created_at` DATETIME NOT NULL,
     `updated_at` DATETIME NULL
 );

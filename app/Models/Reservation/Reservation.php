@@ -36,6 +36,7 @@ class Reservation extends AbstractModel
     private bool $is_checked = false;
 
     private ?string $comments = null;
+    private ?DateTimeInterface $complements_given_at = null;
 
     // Relations enfants
     private array $details = [];
@@ -62,6 +63,7 @@ class Reservation extends AbstractModel
     public function isCanceled(): bool { return $this->is_canceled; }
     public function isChecked(): bool { return $this->is_checked; }
     public function getComments(): ?string { return $this->comments; }
+    public function getComplementsGivenAt(): ?DateTimeInterface { return $this->complements_given_at; }
     public function getDetails(): array { return $this->details; }
     public function getComplements(): array { return $this->complements; }
     public function getPayments(): array { return $this->payments; }
@@ -115,6 +117,10 @@ class Reservation extends AbstractModel
     public function setIsChecked(bool $is_checked): self { $this->is_checked = $is_checked; return $this; }
 
     public function setComments(?string $comments): self { $this->comments = ($comments === '' ? null : $comments); return $this; }
+    public function setComplementsGivenAt(?string $complements_given_at): self {
+        $this->complements_given_at = $complements_given_at ? new DateTime($complements_given_at) : null;
+        return $this;
+    }
 
     public function setDetails(array $details): self { $this->details = $details; return $this; }
     public function setComplements(array $complements): self { $this->complements = $complements; return $this; }

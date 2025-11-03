@@ -38,7 +38,7 @@ class SendRecapEmailController extends AbstractController
         $limit = $limit > 0 ? $limit : 100;
 
         try {
-            $result = $this->reservationFinalSummaryService->sendFinalEmail($limit);
+            $result = $this->reservationFinalSummaryService->sendFinalEmail($limit, false);
             $this->json(['success' => true, 'result' => $result]);
         } catch (Exception $e) {
             $this->json(['success' => false, 'message' => $e->getMessage()], 500);

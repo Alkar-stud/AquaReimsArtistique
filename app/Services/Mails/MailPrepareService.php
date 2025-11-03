@@ -3,17 +3,21 @@
 namespace app\Services\Mails;
 
 use app\Models\Reservation\Reservation;
+use app\Services\Reservation\PaymentStatusCalculator;
+use app\Services\Reservation\ReservationSummaryBuilder;
 use app\Utils\BuildLink;
+use app\Utils\QRCode;
 
 readonly class MailPrepareService
 {
     public function __construct(
-        private MailService         $mailService = new MailService(),
-        private MailTemplateService $templateService = new MailTemplateService()
+        private MailService $mailService = new MailService(),
+        private MailTemplateService $templateService = new MailTemplateService(),
+        private ReservationSummaryBuilder $summaryBuilder = new ReservationSummaryBuilder(),
+        private PaymentStatusCalculator $paymentCalculator = new PaymentStatusCalculator()
     ) {}
 
     /**
-     * Envoie un email de réinitialisation de mot de passe.
      * @param string $recipientEmail
      * @param string $username
      * @param string $resetLink
@@ -21,130 +25,110 @@ readonly class MailPrepareService
      */
     public function sendPasswordResetEmail(string $recipientEmail, string $username, string $resetLink): bool
     {
-        $tpl = $this->templateService->render('password_reset', [
-            'username' => $username,
-            'link' => $resetLink,
-        ]);
-        if (!$tpl) return false;
-
-        return $this->mailService->sendMessage(
-            $recipientEmail,
-            $tpl->getSubject(),
-            $tpl->getBodyHtml(),
-            $tpl->getBodyText()
-        );
+        $params = $this->buildPasswordResetParams($username, $resetLink);
+        return $this->sendTemplatedEmail($recipientEmail, 'password_reset', $params);
     }
 
     /**
-     * Envoie un email suite au changement du mot de passe.
      * @param string $recipientEmail
      * @param string $username
      * @return bool
      */
     public function sendPasswordModifiedEmail(string $recipientEmail, string $username): bool
     {
-        $tpl = $this->templateService->render('password_modified', [
-            'username' => $username,
-            'email_club' => defined('EMAIL_CLUB') ? EMAIL_CLUB : '',
-        ]);
-        if (!$tpl) return false;
-
-        return $this->mailService->sendMessage(
-            $recipientEmail,
-            $tpl->getSubject(),
-            $tpl->getBodyHtml(),
-            $tpl->getBodyText()
-        );
+        $params = $this->buildPasswordModifiedParams($username);
+        return $this->sendTemplatedEmail($recipientEmail, 'password_modified', $params);
     }
 
-
     /**
-     * Pour envoyer un email de confirmation de réservation.
-     *
      * @param Reservation $reservation
      * @param string $mailTemplate
      * @return bool
      */
     public function sendReservationConfirmationEmail(Reservation $reservation, string $mailTemplate = 'paiement_confirme'): bool
     {
-        $recapHtml = '';
-        $recapText = '';
-        if (!empty($reservation->getDetails())) {
-            $recapHtml .= '<h4 style="margin-top: 15px; margin-bottom: 5px;">Participants</h4>';
-            $recapText .= 'Participants
-            ';
-            $recapHtml .= '<table cellpadding="5" cellspacing="0" style="width: 100%; border-collapse: collapse;">';
-            foreach ($reservation->getDetails() as $key=>$detail) {
-                $recapHtml .= '<tr>';
-                $recapHtml .= '<td style="border-bottom: 1px solid #ddd;">';
-                $recapHtml .= htmlspecialchars($detail->getFirstName() . ' ' . $detail->getName());
-                $recapText .= htmlspecialchars($detail->getFirstName() . ' ' . $detail->getName());
-                if ($reservation->getDetails()[$key]->getTarifObject()->getName()) {
-                    $recapHtml .= ' (Tarif: <em>' . htmlspecialchars($reservation->getDetails()[$key]->getTarifObject()->getName()) . '</em>)';
-                    $recapText .= ' (Tarif: ' . htmlspecialchars($reservation->getDetails()[$key]->getTarifObject()->getName()) . ')';
-                }
-                if ($detail->getPlaceNumber()) {
-                    $recapHtml .= ' &mdash; Place: <em>' . htmlspecialchars($detail->getPlaceNumber()) . '</em>';
-                    $recapText .= ' - Place: ' . htmlspecialchars($detail->getPlaceNumber());
-                }
-                $recapHtml .= '</td>';
-                $recapHtml .= '<td style="border-bottom: 1px solid #ddd; text-align: right;"><strong>' . number_format($reservation->getDetails()[$key]->getTarifObject()->getPrice() / 100, 2, ',', ' ') . ' €</strong></td>';
-                $recapText .= ' : ' . number_format($reservation->getDetails()[$key]->getTarifObject()->getPrice() / 100, 2, ',', ' ') . ' €
-                ';
-                $recapHtml .= '</tr>';
-            }
-            $recapHtml .= '</table>';
+        $params = $this->buildReservationEmailParams($reservation);
+        $tpl = $this->templateService->render($mailTemplate, $params);
+        if (!$tpl) {
+            return false;
         }
 
-        if (!empty($reservation->getComplements())) {
-            $recapHtml .= '<h4 style="margin-top: 15px; margin-bottom: 5px;">Compléments</h4>';
-            $recapText .= '
-    Compléments
-            ';
-            $recapHtml .= '<table cellpadding="5" cellspacing="0" style="width: 100%; border-collapse: collapse;">';
-            foreach ($reservation->getComplements() as $key=>$complement) {
-                $recapHtml .= '<tr>';
-                $recapHtml .= '<td style="border-bottom: 1px solid #ddd;">';
-                //Nom du complément
-                $recapHtml .= htmlspecialchars($reservation->getComplements()[$key]->getTarifObject()->getName());
-                $recapText .= htmlspecialchars($reservation->getComplements()[$key]->getTarifObject()->getName());
-                //Quantité
-                $recapHtml .= ' (x' . $complement->getQty() . ')';
-                $recapText .= ' (x' . $complement->getQty() . ')';
+        // Attachement inline du QR code d'entrée
+        return $this->mailService->sendMessageWithInlineImage(
+            $reservation->getEmail(),
+            $tpl->getSubject(),
+            $tpl->getBodyHtml(),
+            $tpl->getBodyText(),
+            $params['qrcodeEntrance'], // Données binaires
+            'qrcode_entrance',         // CID
+            'qrcode_entrance.png'      // Nom du fichier
+        );
+        //return $this->sendTemplatedEmail($reservation->getEmail(), $mailTemplate, $params);
+    }
 
-                $recapHtml .= '</td>';
-                $recapHtml .= '<td style="border-bottom: 1px solid #ddd; text-align: right;"><strong>' . number_format($reservation->getComplements()[$key]->getTarifObject()->getPrice() / 100, 2, ',', ' ') . ' €</strong></td>';
-                $recapText .= ' : ' . number_format($reservation->getComplements()[$key]->getTarifObject()->getPrice() / 100, 2, ',', ' ') . ' €
-                ';
-                $recapHtml .= '</tr>';
-            }
-            $recapHtml .= '</table>';
-        }
+    /**
+     * @param Reservation $reservation
+     * @param string $templateEmail
+     * @return bool
+     */
+    public function sendCancelReservationConfirmationEmail(Reservation $reservation, string $templateEmail): bool
+    {
+        $params = $this->buildCancelReservationParams($reservation);
+        return $this->sendTemplatedEmail($reservation->getEmail(), $templateEmail, $params);
+    }
 
-        // Logique pour le total à payer
-        $totalAmount = $reservation->getTotalAmount();
-        $totalAmountPaid = $reservation->getTotalAmountPaid();
+    // Méthodes privées pour construire les paramètres
 
-        if ($totalAmountPaid >= $totalAmount) {
-            $totalAPayerLabel = 'Total payé :';
-            $totalAPayerColor = 'green';
-            $montantAAfficher = $totalAmountPaid;
-        } elseif ($totalAmountPaid > 0) {
-            $totalAPayerLabel = 'Reste à payer :';
-            $totalAPayerColor = 'orange';
-            $montantAAfficher = $totalAmount - $totalAmountPaid;
-        } else {
-            $totalAPayerLabel = 'À payer :';
-            $totalAPayerColor = 'red';
-            $montantAAfficher = $totalAmount;
-        }
-        $totalAPayerHtml = "<strong style=\"color: $totalAPayerColor;\">$totalAPayerLabel</strong>";
-        $totalAPayerText = $totalAPayerLabel;
+    /**
+     * @param string $username
+     * @param string $resetLink
+     * @return string[]
+     */
+    private function buildPasswordResetParams(string $username, string $resetLink): array
+    {
+        return [
+            'username' => $username,
+            'link' => $resetLink,
+        ];
+    }
 
+    /**
+     * @param string $username
+     * @return array
+     */
+    private function buildPasswordModifiedParams(string $username): array
+    {
+        return [
+            'username' => $username,
+            'email_club' => defined('EMAIL_CLUB') ? EMAIL_CLUB : '',
+        ];
+    }
+
+    /**
+     * @param Reservation $reservation
+     * @return array
+     */
+    public function buildReservationEmailParams(Reservation $reservation): array
+    {
+        $recap = $this->summaryBuilder->buildFullRecap($reservation);
+        $payment = $this->paymentCalculator->calculate($reservation);
+        // Générer le QR code
         $buildLink = new BuildLink();
-        $tpl = $this->templateService->render($mailTemplate, [
+        $qrCodeUrlModif = $buildLink->buildResetLink('/modifData', $reservation->getToken());
+        $qrCodeUrlEntrance = $buildLink->buildResetLink('/entrance', $reservation->getToken());
+
+        // Génération du QR code pour modification (fichier temporaire pour PDF)
+        $qrcodeModifPath = QRCode::generate($qrCodeUrlModif, 250, 10);
+
+        // Générer le QR code d'entrée et créer directement la balise HTML
+        $qrcodeEntranceBinary = QRCode::generateBinary($qrCodeUrlEntrance, 250, 10);
+
+        return [
             'name' => $reservation->getFirstName(),
             'token' => $reservation->getToken(),
+            'qrcodeModif' => $qrcodeModifPath,
+            'qrcodeEntrance' => $qrcodeEntranceBinary,
+            'qrcodeEntranceInMail' => '<img src="cid:qrcode_entrance" alt="QR Code d\'entrée" style="max-width: 250px; height: auto; display: block; margin: 20px auto;" />',
             'IDreservation' => 'ARA-' . str_pad($reservation->getId(), 5, '0', STR_PAD_LEFT),
             'EventName' => $reservation->getEventObject()->getName(),
             'DateEvent' => $reservation->getEventSessionObject()->getEventStartAt()->format('d/m/Y \à H\hi'),
@@ -154,52 +138,48 @@ readonly class MailPrepareService
             'ReservationEmail' => $reservation->getEmail(),
             'ReservationPhone' => !empty($reservation->getPhone()) ? $reservation->getPhone() : '-',
             'ReservationNbTotalPlace' => count($reservation->getDetails()),
-            'AffichRecapDetailPlaces' => $recapHtml,
-            'AffichRecapDetailPlacesText' => $recapText,
+            'AffichRecapDetailPlaces' => $recap['html'],
+            'AffichRecapDetailPlacesText' => $recap['text'],
             'UrlModifData' => $buildLink->buildResetLink('/modifData', $reservation->getToken()),
-            'TotalAPayer' => $totalAPayerHtml,
-            'TotalAPayerText' => $totalAPayerText,
-            'ReservationMontantTotal' => number_format($montantAAfficher / 100, 2, ',', ' ') . ' €',
+            'TotalAPayer' => $payment['labelHtml'],
+            'TotalAPayerText' => $payment['label'],
+            'ReservationMontantTotal' => number_format($payment['amount'] / 100, 2, ',', ' ') . ' €',
             'SIGNATURE' => SIGNATURE,
             'email_club' => defined('EMAIL_CLUB') ? EMAIL_CLUB : '',
-        ]);
-        if (!$tpl) return false;
-
-        return $this->mailService->sendMessage(
-            $reservation->getEmail(),
-            $tpl->getSubject(),
-            $tpl->getBodyHtml(),
-            $tpl->getBodyText()
-        );
-
+        ];
     }
 
-
     /**
-     * Pour envoyer un email de confirmation d'annulation de réservation.
-     *
      * @param Reservation $reservation
-     * @param string $templateEmail
-     * @return bool
+     * @return array
      */
-    public function sendCancelReservationConfirmationEmail(Reservation $reservation, string $templateEmail): bool
+    private function buildCancelReservationParams(Reservation $reservation): array
     {
-
-        $tpl = $this->templateService->render($templateEmail, [
+        return [
             'IDreservation' => str_pad($reservation->getId(), 5, '0', STR_PAD_LEFT),
             'SIGNATURE' => SIGNATURE,
             'email_club' => defined('EMAIL_CLUB') ? EMAIL_CLUB : '',
-        ]);
-        if (!$tpl) return false;
+        ];
+    }
+
+    /**
+     * @param string $recipientEmail
+     * @param string $templateCode
+     * @param array $params
+     * @return bool
+     */
+    private function sendTemplatedEmail(string $recipientEmail, string $templateCode, array $params): bool
+    {
+        $tpl = $this->templateService->render($templateCode, $params);
+        if (!$tpl) {
+            return false;
+        }
 
         return $this->mailService->sendMessage(
-            $reservation->getEmail(),
+            $recipientEmail,
             $tpl->getSubject(),
             $tpl->getBodyHtml(),
             $tpl->getBodyText()
         );
-
     }
-
-
 }

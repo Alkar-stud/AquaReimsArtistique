@@ -119,6 +119,8 @@ class ReservationsController extends AbstractController
 
         //On récupère les mailTemplates envoyables manuellement :
         $emailsTemplatesToSendManually = $this->mailService->emailsTemplatesToSendManually();
+        // Filtrer RecapFinal avant de passer au template
+        $pdfTypesFiltered = array_filter(PdfGenerationService::PDF_TYPES, fn($key) => $key !== 'RecapFinal', ARRAY_FILTER_USE_KEY);
 
         $this->render('/gestion/reservations', [
             'events' => $events,
@@ -131,7 +133,7 @@ class ReservationsController extends AbstractController
             'itemsPerPage' => $paginationConfig->getItemsPerPage(),
             'userPermissions' => $userPermissions,
             'isReadOnly' => $isReadOnly,
-            'pdfTypes' => PdfGenerationService::PDF_TYPES, // On passe la liste des types de PDF à la vue
+            'pdfTypes' => $pdfTypesFiltered, // On passe la liste des types de PDF à la vue
             'isCancel' => $isCancel,                    //Pour les boutons de filtre
             'isChecked' => $isChecked,                  //Pour les boutons de filtre
             'searchQuery' => $searchQuery,              //Pour afficher la recherche en cours

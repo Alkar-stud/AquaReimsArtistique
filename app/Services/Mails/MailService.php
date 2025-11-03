@@ -169,4 +169,47 @@ class MailService
         return $this->mailTemplateRepository->findByCodes(['paiement_confirme','summary','paiement_relance_1','paiement_relance_2']);
     }
 
+    public function sendMessageWithInlineImage(
+        string $recipientEmail,
+        string $subject,
+        ?string $htmlBody,
+        ?string $textBody,
+        string $imageData,
+        string $cid,
+        string $filename = 'image.png'
+    ): bool {
+        if ($this->debug || $this->logOnly) {
+            $this->logMessage($recipientEmail, $subject, $htmlBody, $textBody);
+        }
+        if ($this->logOnly) {
+            return true;
+        }
+
+        try {
+            $this->mailer->clearAddresses();
+            $this->mailer->clearAttachments();
+
+            $this->mailer->addAddress($recipientEmail);
+            $this->mailer->isHTML(true);
+            $this->mailer->Subject = $subject;
+            $this->mailer->Body = $htmlBody ?? '';
+            $this->mailer->AltBody = $textBody ?? '';
+
+            // Ajouter l'image inline avec CID
+            $this->mailer->addStringEmbeddedImage(
+                $imageData,
+                $cid,
+                $filename,
+                'base64',
+                'image/png'
+            );
+
+            $this->mailer->send();
+            return true;
+        } catch (Exception $e) {
+            error_log("Mailer Error: {$this->mailer->ErrorInfo} - $e");
+            return false;
+        }
+    }
+
 }

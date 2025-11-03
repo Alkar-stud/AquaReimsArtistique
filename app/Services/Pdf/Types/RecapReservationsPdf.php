@@ -9,11 +9,12 @@ use app\Services\Pdf\PdfTypeInterface;
 use RuntimeException;
 
 final readonly class RecapReservationsPdf implements PdfTypeInterface
-{    public function __construct(
-    private EventQueryService     $eventQueryService,
-    private ReservationRepository $reservationRepository
-) {
-}
+{
+    public function __construct(
+        private EventQueryService     $eventQueryService,
+        private ReservationRepository $reservationRepository
+    ) {
+    }
 
     public function build(array $data): BasePdf
     {

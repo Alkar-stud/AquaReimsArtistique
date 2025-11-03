@@ -6,6 +6,7 @@ use app\Repository\Reservation\ReservationRepository;
 use app\Services\Event\EventQueryService;
 use app\Services\Pdf\Types\ListeParticipantsPdf;
 use app\Services\Pdf\Types\RecapEvenementPdf;
+use app\Services\Pdf\Types\RecapFinalPdf;
 use app\Services\Pdf\Types\RecapPlacesA3Pdf;
 use app\Services\Pdf\Types\RecapReservationsPdf;
 use app\Utils\StringHelper;
@@ -29,6 +30,10 @@ readonly class PdfGenerationService
         'RecapPlacesA3' => [
             'label' => 'Pan récapitulatif des places (A3)',
             'builder' => RecapPlacesA3Pdf::class,
+        ],
+        'RecapFinal' => [
+            'label' => 'Récapitulatif de votre réservation',
+            'builder' => RecapFinalPdf::class,
         ],
     ];
 
@@ -55,6 +60,25 @@ readonly class PdfGenerationService
             'sessionId' => $sessionId,
             'sortOrder' => $sortOrder,
             'title' => $title,
+        ];
+
+        return $builder->build($data);
+    }
+
+    /**
+     * Point d'entrée pour la génération de PDF unitaire
+     *
+     * @param string $pdfType Le type de PDF à générer (ex: 'ListeParticipants').
+     * @param int $reservationId L'ID de la réservation concernée.
+     * @return BasePdf L'objet PDF prêt à être envoyé.
+     */
+    public function generateUnitPdf(string $pdfType, int $reservationId, array $params = []): BasePdf
+    {
+        $builder = $this->getBuilderForType($pdfType, '');
+
+        $data = [
+            'reservationId' => $reservationId,
+            '$params' => $params,
         ];
 
         return $builder->build($data);

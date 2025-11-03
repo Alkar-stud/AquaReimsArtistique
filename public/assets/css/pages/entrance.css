@@ -13,7 +13,13 @@
 
 .sticky-reservation-header {
     position: sticky;
-    top: 190px; /* Correspond au padding-top de main-page */
+    top: 200px; /* Correspond au padding-top de main-page */
     z-index: 100;
     background-color: white;
+}
+
+@media (min-width: 768px) {
+    .sticky-reservation-header {
+        top: 168px; /* Correspond au padding-top de main-page */
+        }
 }

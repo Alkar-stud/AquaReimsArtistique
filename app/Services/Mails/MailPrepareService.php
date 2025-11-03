@@ -45,13 +45,16 @@ readonly class MailPrepareService
      * @param string $mailTemplate
      * @return bool
      */
-    public function sendReservationConfirmationEmail(Reservation $reservation, string $mailTemplate = 'paiement_confirme'): bool
+    public function sendReservationConfirmationEmail(Reservation $reservation, string $mailTemplate = 'paiement_confirme', ?string $pdfPath = null): bool
     {
         $params = $this->buildReservationEmailParams($reservation);
         $tpl = $this->templateService->render($mailTemplate, $params);
         if (!$tpl) {
             return false;
         }
+
+        // Nom du PDF pour la PJ
+        $pdfName = 'Recapitulatif_ARA-' . str_pad($reservation->getId(), 5, '0', STR_PAD_LEFT) . '.pdf';
 
         // Attachement inline du QR code d'entrée
         return $this->mailService->sendMessageWithInlineImage(
@@ -61,7 +64,9 @@ readonly class MailPrepareService
             $tpl->getBodyText(),
             $params['qrcodeEntrance'], // Données binaires
             'qrcode_entrance',         // CID
-            'qrcode_entrance.png'      // Nom du fichier
+            'qrcode_entrance.png',      // Nom du fichier
+            $pdfPath,                  // Chemin du PDF
+            $pdfName                   // Nom du PDF
         );
         //return $this->sendTemplatedEmail($reservation->getEmail(), $mailTemplate, $params);
     }
@@ -128,7 +133,7 @@ readonly class MailPrepareService
             'token' => $reservation->getToken(),
             'qrcodeModif' => $qrcodeModifPath,
             'qrcodeEntrance' => $qrcodeEntranceBinary,
-            'qrcodeEntranceInMail' => '<img src="cid:qrcode_entrance" alt="QR Code d\'entrée" style="max-width: 250px; height: auto; display: block; margin: 20px auto;" />',
+            'qrcodeEntranceInMail' => '<img src="cid:qrcode_entrance" alt="QR Code d\'entrée" style="max-width: 250px; height: auto; display: block; margin: 20px auto;" />Montrez ce QR code pour faciliter votre entrée',
             'IDreservation' => 'ARA-' . str_pad($reservation->getId(), 5, '0', STR_PAD_LEFT),
             'EventName' => $reservation->getEventObject()->getName(),
             'DateEvent' => $reservation->getEventSessionObject()->getEventStartAt()->format('d/m/Y \à H\hi'),

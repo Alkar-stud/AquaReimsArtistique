@@ -169,14 +169,28 @@ class MailService
         return $this->mailTemplateRepository->findByCodes(['paiement_confirme','summary','paiement_relance_1','paiement_relance_2']);
     }
 
+    /**
+     * @param string $recipientEmail
+     * @param string $subject
+     * @param string|null $htmlBody
+     * @param string|null $textBody
+     * @param string|null $imageData
+     * @param string|null $cid
+     * @param string $filename
+     * @param string|null $pdfPath
+     * @param string $pdfName
+     * @return bool
+     */
     public function sendMessageWithInlineImage(
         string $recipientEmail,
         string $subject,
         ?string $htmlBody,
         ?string $textBody,
-        string $imageData,
-        string $cid,
-        string $filename = 'image.png'
+        ?string $imageData = null,
+        ?string $cid = null,
+        string $filename = 'image.png',
+        ?string $pdfPath = null,
+        string $pdfName = 'document.pdf'
     ): bool {
         if ($this->debug || $this->logOnly) {
             $this->logMessage($recipientEmail, $subject, $htmlBody, $textBody);
@@ -195,14 +209,21 @@ class MailService
             $this->mailer->Body = $htmlBody ?? '';
             $this->mailer->AltBody = $textBody ?? '';
 
-            // Ajouter l'image inline avec CID
-            $this->mailer->addStringEmbeddedImage(
-                $imageData,
-                $cid,
-                $filename,
-                'base64',
-                'image/png'
-            );
+            //  On ajoute l'image inline avec CID si fourni
+            if ($imageData && $cid) {
+                $this->mailer->addStringEmbeddedImage(
+                    $imageData,
+                    $cid,
+                    $filename,
+                    'base64',
+                    'image/png'
+                );
+            }
+
+            // On ajoute le PDF en pièce jointe si fourni
+            if ($pdfPath && is_file($pdfPath)) {
+                $this->mailer->addAttachment($pdfPath, $pdfName);
+            }
 
             $this->mailer->send();
             return true;

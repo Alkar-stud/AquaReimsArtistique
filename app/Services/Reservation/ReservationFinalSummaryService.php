@@ -70,18 +70,31 @@ final class ReservationFinalSummaryService
             //On génère le PDF à mettre en PJ et on récupère le binaire pour ensuite l'attacher au mail
             $pdf = $this->pdfGenerationService->generateUnitPdf('RecapFinal', $reservation->getId(), $params);
 
-
+$pdf->Output('I', 'ARA-recapitulatif-de-votre-reservation');
+die;
+            // Créer un fichier temporaire
+            $pdfPath = sys_get_temp_dir() . '/recap_' . $reservation->getId() . '_' . uniqid() . '.pdf';
+            file_put_contents($pdfPath, $pdf->Output('S'));
             try {
-                $ok = $this->mailPrepareService->sendReservationConfirmationEmail($reservation, 'final_summary');
+                $ok = $this->mailPrepareService->sendReservationConfirmationEmail($reservation, 'final_summary',$pdfPath);
                 if ($ok) {
                     // Log d’envoi (comme dans le contrôleur de gestion)
-                    $this->mailService->recordMailSent($reservation, 'final_summary');
+                    $this->mailService->recordMailSent($reservation,'final_summary');
+
+                    // Nettoyer le fichier temporaire du PDF après envoi
+                    if ($pdfPath && is_file($pdfPath)) {
+                        @unlink($pdfPath);
+                    }
                     $sent++;
                 } else {
                     $failed++;
                     $errors[] = ['reservationId' => $reservation->getId(), 'error' => 'send returned false'];
                 }
             } catch (\Throwable $e) {
+                // Nettoyage en cas d'erreur
+                if (isset($pdfPath) && is_file($pdfPath)) {
+                    @unlink($pdfPath);
+                }
                 $failed++;
                 $errors[] = ['reservationId' => $reservation->getId(), 'error' => $e->getMessage()];
             }

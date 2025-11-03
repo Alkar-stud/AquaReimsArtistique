@@ -11,6 +11,7 @@ CREATE TABLE IF NOT EXISTS `reservation_detail` (
     `justificatif_name` VARCHAR(255) NULL,
     `place_number` bigint NULL, -- Doit être NULLABLE pour l’annulation et les réservations sans placement
     FOREIGN KEY (`place_number`) REFERENCES `piscine_gradins_places`(`id`),
+    `entered_at` DATETIME NULL,
     `created_at` DATETIME NOT NULL,
     `updated_at` DATETIME NULL,
 

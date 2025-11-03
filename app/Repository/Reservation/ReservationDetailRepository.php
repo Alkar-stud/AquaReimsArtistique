@@ -259,6 +259,7 @@ class ReservationDetailRepository extends AbstractRepository
             ->setJustificatifName($data['justificatif_name'] ?? null)
             // Par défaut, on stocke l'ID de la place (remplacé par le numéro réel si withPlace=true).
             ->setPlaceNumber(isset($data['place_number']) ? (string)$data['place_number'] : null)
+            ->setEnteredAt($data['entered_at'] ?? null)
             ->setCreatedAt($data['created_at']);
 
         if (!empty($data['updated_at'])) {

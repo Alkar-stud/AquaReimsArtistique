@@ -3,6 +3,7 @@ namespace app\Models\Reservation;
 
 use app\Models\AbstractModel;
 use app\Models\Piscine\PiscineGradinsPlaces;
+use DateTimeInterface;
 
 class ReservationDetail extends AbstractModel
 {
@@ -16,6 +17,7 @@ class ReservationDetail extends AbstractModel
     private ?string $justificatif_name = null;
     private ?string $place_number = null;
     private ?PiscineGradinsPlaces $placeObject = null;
+    private ?DateTimeInterface $entered_at = null;
 
     // --- GETTERS ---
     public function getReservation(): int { return $this->reservation; }
@@ -28,6 +30,8 @@ class ReservationDetail extends AbstractModel
     public function getJustificatifName(): ?string { return $this->justificatif_name; }
     public function getPlaceNumber(): ?string { return $this->place_number; }
     public function getPlaceObject(): ?PiscineGradinsPlaces { return $this->placeObject; }
+    public function getEnteredAt(): ?DateTimeInterface { return $this->entered_at; }
+
 
     // --- SETTERS ---
     public function setReservation(int $reservation): self
@@ -93,6 +97,11 @@ class ReservationDetail extends AbstractModel
         return $this;
     }
 
+    public function setEnteredAt(?string $enteredAt): self {
+        $this->entered_at = DateTime($enteredAt);
+        return $this;
+    }
+
     /**
      * Convertit l'objet en tableau pour la réponse JSON.
      * @return array
@@ -112,6 +121,7 @@ class ReservationDetail extends AbstractModel
             'tarifPrice' => $tarifObject?->getPrice(),
             'placeNumber' => $this->getPlaceNumber(),
             'fullPlaceName' => $placeObject?->getFullPlaceName(),
+            'enteredAt' => $this->getEnteredAt()?->format(DateTimeInterface::ATOM), // ISO 8601
         ];
     }
 

@@ -71,7 +71,7 @@ readonly class MailPrepareService
         $recapText = '';
         if (!empty($reservation->getDetails())) {
             $recapHtml .= '<h4 style="margin-top: 15px; margin-bottom: 5px;">Participants</h4>';
-            $recapText .= 'Participants avec places assises
+            $recapText .= 'Participants
             ';
             $recapHtml .= '<table cellpadding="5" cellspacing="0" style="width: 100%; border-collapse: collapse;">';
             foreach ($reservation->getDetails() as $key=>$detail) {
@@ -143,15 +143,15 @@ readonly class MailPrepareService
 
         $buildLink = new BuildLink();
         $tpl = $this->templateService->render($mailTemplate, [
-            'name' => $reservation->getName(),
+            'name' => $reservation->getFirstName(),
             'token' => $reservation->getToken(),
             'IDreservation' => 'ARA-' . str_pad($reservation->getId(), 5, '0', STR_PAD_LEFT),
             'EventName' => $reservation->getEventObject()->getName(),
             'DateEvent' => $reservation->getEventSessionObject()->getEventStartAt()->format('d/m/Y H:i'),
             'Piscine' => $reservation->getEventObject()->getPiscine()->getLabel() . ' (' . $reservation->getEventObject()->getPiscine()->getAddress() . ' )',
             'ReservationNameFirstname' => $reservation->getName() . ' ' . $reservation->getFirstName(),
-            'Reservationmail' => $reservation->getEmail(),
-            'Reservationtel' => !empty($reservation->getPhone()) ? $reservation->getPhone() : '-',
+            'ReservationEmail' => $reservation->getEmail(),
+            'ReservationPhone' => !empty($reservation->getPhone()) ? $reservation->getPhone() : '-',
             'ReservationNbTotalPlace' => count($reservation->getDetails()),
             'AffichRecapDetailPlaces' => $recapHtml,
             'AffichRecapDetailPlacesText' => $recapText,

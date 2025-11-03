@@ -12,7 +12,6 @@ use app\Services\Event\EventQueryService;
 use app\Services\Log\Logger;
 use app\Services\Mails\MailPrepareService;
 use app\Services\Mails\MailService;
-use app\Services\Mails\MailTemplateService;
 use app\Services\Pagination\PaginationService;
 use app\Services\Payment\HelloAssoService;
 use app\Services\Payment\PaymentWebhookService;

@@ -3,16 +3,25 @@
     <div class="container-fluid">
         <div class="d-flex align-items-center justify-content-start">
             <a class="navbar-brand nav-link" href="/">Accueil</a>
-            <a class="nav-link d-lg-none" href="/reservation">Réservations</a>
+            {% if str_starts_with($uri, '/entrance') %}
+            <a class="nav-link d-lg-none{{ str_starts_with($uri, '/entrance/search') ? ' active-link' : '' }}" href="/entrance/search">Rechercher</a>
+            {% else %}
+            <a class="nav-link d-lg-none{{ $uri == '/reservation' ? ' active-link' : '' }}" href="/reservation">Réservations</a>
+            {% endif %}
         </div>
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
             <span class="navbar-toggler-icon"></span>
         </button>
         <div class="collapse navbar-collapse" id="navbarNav">
             <ul class="navbar-nav">
+                {% if str_starts_with($uri, '/entrance') %}
+                <li class="nav-item">
+                    <a class="nav-link {{ str_starts_with($uri, '/entrance/search') ? ' active-link' : '' }}" href="/entrance/search">Rechercher</a>
+                </li>
+                {% endif %}
                 {% if !$is_gestion_page %}
                 <li class="nav-item">
-                    <a class="nav-link {{ $uri == '/reservation' ? 'active-link' : '' }}" href="/reservation">Réservations</a>
+                    <a class="nav-link{{ $uri == '/reservation' ? ' active-link' : '' }}" href="/reservation">Réservations</a>
                 </li>
                 {% endif %}
                 {% if isset($_SESSION['user']['role']) and $_SESSION['user']['role']['level'] <= 2 and !$is_gestion_page %}

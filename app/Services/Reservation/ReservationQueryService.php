@@ -330,4 +330,25 @@ class ReservationQueryService
         return true;
     }
 
+    /**
+     * Recherche pour l'entrée (nom/prénom ou ID uniquement)
+     *
+     * @param string $searchQuery
+     * @return array ['single' => bool, 'reservations' => Reservation[]]
+     */
+    public function searchForEntrance(string $searchQuery): array
+    {
+        $q = trim($searchQuery);
+        if ($q === '') {
+            return ['single' => false, 'reservations' => []];
+        }
+
+        $reservations = $this->reservationRepository->findByNameOrId($q, 10);
+
+        return [
+            'single' => count($reservations) === 1,
+            'reservations' => $reservations
+        ];
+    }
+
 }

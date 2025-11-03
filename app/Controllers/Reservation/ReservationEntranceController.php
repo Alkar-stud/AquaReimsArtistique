@@ -6,6 +6,7 @@ use app\Attributes\Route;
 use app\Controllers\AbstractController;
 use app\Repository\Reservation\ReservationDetailRepository;
 use app\Repository\Reservation\ReservationRepository;
+use app\Services\Pagination\PaginationService;
 use app\Services\Reservation\ReservationQueryService;
 
 class ReservationEntranceController extends AbstractController
@@ -13,16 +14,19 @@ class ReservationEntranceController extends AbstractController
     private ReservationRepository $reservationRepository;
     private ReservationQueryService $reservationQueryService;
     private ReservationDetailRepository $reservationDetailRepository;
+    private PaginationService $paginationService;
 
     public function __construct(
         ReservationRepository $reservationRepository,
         ReservationQueryService $reservationQueryService,
         ReservationDetailRepository $reservationDetailRepository,
+        PaginationService $paginationService,
     ) {
         parent::__construct(false);
         $this->reservationRepository = $reservationRepository;
         $this->reservationQueryService = $reservationQueryService;
         $this->reservationDetailRepository = $reservationDetailRepository;
+        $this->paginationService = $paginationService;
     }
 
     #[Route('/entrance', name: 'app_entrance', methods: ['GET'])]
@@ -37,16 +41,43 @@ class ReservationEntranceController extends AbstractController
         $reservation = $this->reservationRepository->findByField('token', $reservationToken, true, true, false, true);
         //On compare le nombre de détails avec entered_at == null au nombre de details avec entered_at == not null
         $everyOneInReservation = $this->reservationQueryService->everyOneInReservationIsHere($reservation);
-/*
-echo '<pre>';
-var_dump($everyOneInReservation);
-die;
-*/
+
         $this->render('entrance', [
             'reservation' => $reservation,
             'everyOneIsPresent' => $everyOneInReservation,
         ], 'Réservations');
     }
+
+    #[Route('/entrance/search', name: 'app_entrance_search', methods: ['GET'])]
+    public function search(): void
+    {
+        $searchQuery = $_GET['q'] ?? '';
+
+        if (empty(trim($searchQuery))) {
+            $this->render('/entrance-search', [
+                'searchQuery' => '',
+                'reservations' => [],
+                'single' => false
+            ], "Recherche d'entrée");
+            return;
+        }
+
+        $result = $this->reservationQueryService->searchForEntrance($searchQuery);
+
+        // Si un seul résultat, redirection automatique
+        if ($result['single'] && !empty($result['reservations'])) {
+            $reservation = $result['reservations'][0];
+            header('Location: /entrance?token=' . $reservation->getToken());
+            exit;
+        }
+
+        $this->render('/entrance-search', [
+            'searchQuery' => $searchQuery,
+            'reservations' => $result['reservations'],
+            'single' => $result['single']
+        ], "Recherche d'entrée");
+    }
+
 
     #[Route('/entrance/update/{id}', name: 'app_entrance_update', methods: ['POST'])]
     public function reservationEntranceUpdate(int $id): void

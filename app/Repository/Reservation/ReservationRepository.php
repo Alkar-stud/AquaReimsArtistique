@@ -442,6 +442,44 @@ class ReservationRepository extends AbstractRepository
     }
 
     /**
+     * Recherche par nom/prénom ou numéro de réservation uniquement
+     *
+     * @param string $searchQuery
+     * @param int|null $limit
+     * @return Reservation[]
+     */
+    public function findByNameOrId(string $searchQuery, ?int $limit = null): array
+    {
+        $params = [];
+        $q = '%' . trim($searchQuery) . '%';
+
+        $params['q_id'] = $q;
+        $params['q_name'] = $q;
+        $params['q_firstname'] = $q;
+
+        $sql = "SELECT * FROM $this->tableName 
+            WHERE (CAST(id AS CHAR) LIKE :q_id 
+                   OR name LIKE :q_name 
+                   OR firstname LIKE :q_firstname)
+              AND is_canceled = 0
+            ORDER BY created_at DESC";
+
+        if ($limit !== null) {
+            $sql .= " LIMIT $limit";
+        }
+
+        $rows = $this->query($sql, $params);
+        if (empty($rows)) return [];
+
+        $list = array_map([$this, 'hydrate'], $rows);
+        foreach ($list as $r) {
+            $this->hydrateOptionalRelations($r, false, true, false, false);
+        }
+
+        return $this->hydrateRelations($list);
+    }
+
+    /**
      * Compte le nombre total de réservations pour une session donnée.
      *
      * @param int $sessionId

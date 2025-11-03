@@ -10,7 +10,7 @@
     </p>
     <p>Vous allez être redirigé ou vous pouvez cliquer sur le bouton ci-dessus.</p>
 
-    {% if (isset($_ENV['APP_ENV']) && in_array($_ENV['APP_ENV'], ['local', 'dev'])) %}
+    {% if (isset($_ENV['APP_ENV']) && in_array($_ENV['APP_ENV'], ['local', 'preprod'])) %}
     <div class="alert alert-info mt-4">
         <p class="mb-0"><b>Environnement de test :</b> voici la carte bancaire à utiliser : <b>4242424242424242</b>. Validité <b>date supérieure au mois en cours</b>, code : <b>3 chiffres au choix</b>.</p>
         <p class="mb-0">Il faut cliquer sur le lien, la redirection automatique est désactivée en environnement de test.</p>

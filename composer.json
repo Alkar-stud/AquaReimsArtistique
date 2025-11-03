@@ -12,7 +12,8 @@
       "ext-libxml": "*",
         "rakibtg/sleekdb": "^2.15",
       "ext-intl": "*",
-      "ext-iconv": "*"
+      "ext-iconv": "*",
+        "endroid/qr-code": "^6.0"
     },
     "autoload": {
         "psr-4": {

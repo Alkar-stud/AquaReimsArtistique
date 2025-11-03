@@ -7,6 +7,7 @@ use app\Repository\AbstractRepository;
 use app\Repository\Event\EventRepository;
 use app\Repository\Event\EventSessionRepository;
 use app\Repository\Swimmer\SwimmerRepository;
+use DateTimeInterface;
 
 class ReservationRepository extends AbstractRepository
 {
@@ -259,6 +260,44 @@ class ReservationRepository extends AbstractRepository
         $items = $this->findBySession($sessionId, $isCanceled, $isChecked, $itemsPerPage, $offset, false, true);
 
         return new Paginator($items, $totalItems, $itemsPerPage, $currentPage);
+    }
+
+    /**
+     * Trouver toutes les réservations qui n'ont pas encore reçu le mail donné
+     *
+     * @param int $limit
+     * @param null $templateEmailId
+     * @return array|Reservation[]
+     */
+    public function findForFinalRecap(int $limit = 100, $templateEmailId = null): array
+    {
+        $limit = max(1, $limit);
+        $sql = "SELECT r.* FROM reservation r
+                JOIN event_session es ON es.id = r.event_session
+                JOIN event e ON e.id = r.event
+                LEFT JOIN (
+                  SELECT event, MAX(close_registration_at) AS close_at
+                  FROM event_inscription_date
+                  GROUP BY event
+                ) eid ON eid.event = r.event
+                WHERE r.is_canceled = 0
+                  AND es.event_start_at > '2025-11-28 01:00:00'
+                  AND eid.close_at <= '2025-11-28 01:00:00'
+                ORDER BY r.id
+                LIMIT $limit
+    ";
+
+        $rows = $this->query($sql, []);
+        if (empty($rows)) return [];
+
+        $list = array_map([$this, 'hydrate'], $rows);
+
+        // On hydrate les relations utiles pour l’email (événement, session, enfants…)
+        foreach ($list as $r) {
+            $this->hydrateOptionalRelations($r, true, true, true, true);
+        }
+
+        return $this->hydrateRelations($list);
     }
 
     /** Helper privé pour construire le WHERE et les paramètres de la recherche texte

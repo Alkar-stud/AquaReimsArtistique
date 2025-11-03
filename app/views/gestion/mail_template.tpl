@@ -50,7 +50,7 @@
 
         <!-- Modale d'édition -->
         <div class="modal fade" id="editModal-{{ $template->getId() }}" tabindex="-1" aria-labelledby="editModalLabel-{{ $template->getId() }}" aria-hidden="true">
-            <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-dialog modal-dialog-centered modal-xl">
                 <div class="modal-content">
                     <form method="POST" action="/gestion/mails_templates/edit">
                         <div class="modal-header">

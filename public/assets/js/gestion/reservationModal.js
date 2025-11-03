@@ -6,7 +6,8 @@ import ScrollManager from '../components/scrollManager.js';
 import { apiDelete, apiPost } from '../components/apiClient.js';
 import { toggleReservationStatus } from './statusToggle.js';
 import { toggleCancelStatus } from '../reservations/cancelReservation.js';
-import {showFlashMessage} from "../components/ui.js";
+import { showFlashMessage } from "../components/ui.js";
+
 
 // Dictionnaire des explications pour les statuts de paiement HelloAsso
 const paymentStatusExplanations = {
@@ -218,7 +219,7 @@ async function refreshModalContent(modal, reservationId) {
                 }
 
                 const paymentItem = document.createElement('li');
-                paymentItem.className = 'list-group-item d-flex justify-content-between align-items-center p-1';
+                paymentItem.className = 'list-group-item d-flex justify-content-between align-items-center p-1 bg-light rounded';
                 paymentItem.innerHTML = `
                      <div class="small">
                          <span class="badge bg-secondary me-1">${payment.type || 'N/A'}</span> 
@@ -242,7 +243,7 @@ async function refreshModalContent(modal, reservationId) {
                 const isHidden = paymentsDetailsContainer.style.display === 'none';
                 paymentsDetailsContainer.style.display = isHidden ? 'block' : 'none';
                 e.target.textContent = isHidden
-                    ? 'Afficher le détail'
+                    ? 'Masquer le détail'
                     : 'Voir le détail des paiements';
             });
 
@@ -314,6 +315,50 @@ async function refreshModalContent(modal, reservationId) {
 
         } else if (toggleDetailsLink) {
             toggleDetailsLink.style.display = 'none';
+        }
+
+
+        /*---------------------------------
+
+        Section Mails
+
+         ---------------------------------*/
+        const mailSentContainer = modal.querySelector('#modal-mail_sent-details-container');
+        const toggleMailSentLink = modal.querySelector('#toggle-mail_sent-details');
+
+        toggleMailSentLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            const isHidden = mailSentContainer.style.display === 'none';
+            mailSentContainer.style.display = isHidden ? 'block' : 'none';
+            e.target.textContent = isHidden
+                ? 'Masquer le détail'
+                : 'Voir le détail des mails envoyés';
+        });
+
+        if (mailSentContainer && toggleMailSentLink && reservation.mailSent && reservation.mailSent.length > 0) {
+            toggleMailSentLink.style.display = 'inline';
+            mailSentContainer.innerHTML = ''; // Vider le conteneur
+
+            reservation.mailSent.forEach(mailSent => {
+                const d = new Date(mailSent.sentAt);
+                const sentAtFr = isNaN(d) ? mailSent.sentAt : d.toLocaleString('fr-FR', {
+                    dateStyle: 'short',
+                    timeStyle: 'short'
+                });
+
+                const mailSentItem = document.createElement('li');
+                mailSentItem.className = 'list-group-item d-flex justify-content-center p-1 bg-light rounded';
+                mailSentItem.innerHTML = `
+                     <small class="small">
+                        <span>Mail envoyé : <i>${mailSent.mailTemplateName}</i></span>
+                        <span>- le : <i>${sentAtFr}</i></span>
+                     </small>
+                 `;
+                mailSentContainer.appendChild(mailSentItem);
+
+            });
+        } else if (toggleMailSentLink) {
+            toggleMailSentLink.style.display = 'none';
         }
 
         /*---------------------------------

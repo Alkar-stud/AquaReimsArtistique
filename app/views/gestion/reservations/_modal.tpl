@@ -75,7 +75,7 @@
 
                         <hr class="my-4">
                         <!-- section pour le paiement -->
-                        <div id="modal-payment-section">
+                        <div id="modal-mail-sent-section">
                             <h4>Paiements</h4>
                             <div id="modal-payment-list" class="d-flex justify-content-around text-center p-2 bg-light rounded">
                                 <div>
@@ -126,6 +126,27 @@
                         </div>
 
                     </form>
+
+
+                    <hr class="my-4">
+                    <!-- section pour les mails -->
+                    <div id="modal-mail_sent-section">
+                        <h4>Mails</h4>
+                        <div id="modal-mail_sent-list" class="d-flex justify-content-around text-center p-2 bg-light rounded">
+                            <div>
+                                <strong>Mail(s) envoyé(s)</strong><br>
+                                <span id="modal-nb-mail-sent">{{ count($reservation->getMailSent()) }}</span>
+                            </div>
+                        </div>
+                        <div class="text-end mt-1">
+                            <a href="#" id="toggle-mail_sent-details" class="small" style="display: none;">Voir les mails envoyés</a>
+                        </div>
+                        <div id="modal-mail_sent-details-container" class="mt-2" style="display: none;">
+                            <!-- Les détails des mails seront injectés ici par JavaScript -->
+                        </div>
+                    </div>
+
+
                     {% if str_contains($userPermissions, 'D') %}
                     <br>
                     <div id="token-container">

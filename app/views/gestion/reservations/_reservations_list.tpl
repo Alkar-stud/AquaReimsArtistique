@@ -213,7 +213,7 @@ $qParam = !empty($searchQuery) ? ('&q=' . urlencode($searchQuery)) : '';
 </div>
 
 <!-- Modal Détails Réservation -->
-{% include '/gestion/reservations/_modal.tpl' with {'reservation' => $reservation} %}
+{% include '/gestion/reservations/_modal.tpl' with {'reservation' => $reservation, 'emailsTemplatesToSendManually' => $emailsTemplatesToSendManually} %}
 
 {% if $totalPages > 1 %}
 <nav aria-label="Page navigation">

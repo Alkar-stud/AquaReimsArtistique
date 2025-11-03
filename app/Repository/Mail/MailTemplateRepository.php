@@ -47,6 +47,39 @@ class MailTemplateRepository extends AbstractRepository
         return $results ? $this->hydrate($results[0]) : null;
     }
 
+
+    /**
+     * Retourne les templates dont le code est dans la liste fournie.
+     * @param string[] $codes
+     * @return MailTemplate[]
+     */
+    public function findByCodes(array $codes): array
+    {
+        // Nettoyage: uniques, strings non vides
+        $codes = array_values(array_unique(array_filter(
+            $codes,
+            static fn($c) => is_string($c) && $c !== ''
+        )));
+        if (!$codes) {
+            return [];
+        }
+
+        // Placeholders nommés pour le IN (...)
+        $placeholders = [];
+        $params = [];
+        foreach ($codes as $i => $code) {
+            $key = "code_$i";
+            $placeholders[] = ":$key";
+            $params[$key] = $code;
+        }
+
+        $in = implode(',', $placeholders);
+        $sql = "SELECT * FROM $this->tableName WHERE code IN ($in) ORDER BY code";
+        $rows = $this->query($sql, $params);
+
+        return array_map([$this, 'hydrate'], $rows);
+    }
+
     /**
      * Insère un nouveau template.
      * @return int ID inséré (0 si échec)

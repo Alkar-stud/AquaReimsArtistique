@@ -10,6 +10,9 @@ use app\Repository\Reservation\ReservationPaymentRepository;
 use app\Repository\Reservation\ReservationRepository;
 use app\Services\Event\EventQueryService;
 use app\Services\Log\Logger;
+use app\Services\Mails\MailPrepareService;
+use app\Services\Mails\MailService;
+use app\Services\Mails\MailTemplateService;
 use app\Services\Pagination\PaginationService;
 use app\Services\Payment\HelloAssoService;
 use app\Services\Payment\PaymentWebhookService;
@@ -34,6 +37,8 @@ class ReservationsController extends AbstractController
     private ReservationTokenService $reservationTokenService;
     private PdfGenerationService $PdfGenerationService;
     private ReservationQueryService $reservationQueryService;
+    private MailService $mailService;
+    private MailPrepareService $mailPrepareService;
 
     function __construct(
         EventQueryService $eventQueryService,
@@ -47,6 +52,8 @@ class ReservationsController extends AbstractController
         ReservationTokenService $reservationTokenService,
         PdfGenerationService $PdfGenerationService,
         ReservationQueryService $reservationQueryService,
+        MailService $mailService,
+        MailPrepareService $mailPrepareService,
     )
     {
         parent::__construct(false);
@@ -61,6 +68,8 @@ class ReservationsController extends AbstractController
         $this->reservationTokenService = $reservationTokenService;
         $this->PdfGenerationService = $PdfGenerationService;
         $this->reservationQueryService = $reservationQueryService;
+        $this->mailService = $mailService;
+        $this->mailPrepareService = $mailPrepareService;
     }
 
     #[Route('/gestion/reservations', name: 'app_gestion_reservations')]
@@ -108,10 +117,14 @@ class ReservationsController extends AbstractController
             );
         }
 
+        //On récupère les mailTemplates envoyables manuellement :
+        $emailsTemplatesToSendManually = $this->mailService->emailsTemplatesToSendManually();
+
         $this->render('/gestion/reservations', [
             'events' => $events,
             'selectedSessionId' => $sessionId,
             'tab' => $tab,
+            'emailsTemplatesToSendManually' => $emailsTemplatesToSendManually,
             'reservations' => $paginator ? $paginator->getItems() : [],
             'currentPage' => $paginator ? $paginator->getCurrentPage() : 1,
             'totalPages' => $paginator ? $paginator->getTotalPages() : 0,
@@ -341,23 +354,6 @@ class ReservationsController extends AbstractController
         $this->json(['success' => true, 'reservation' => $newReservation->toArray()]);
     }
 
-
-
-
-    #[Route('/gestion/reservations/exports/{sessionId}', name: 'app_gestion_reservations_exports', methods: ['GET'])]
-    public function exportsOption(int $sessionId): void
-    {
-        // Vérifier les permissions de l'utilisateur connecté
-        $this->checkUserPermission('R');
-
-        //On récupère la session
-        $eventSession = $this->reservationRepository->findBySession($sessionId, false, null, null, null, true, true);
-
-        // On renvoie true pour le moment
-        $this->json(['success' => true]);
-    }
-
-
     /**
      * Vérifie et retourne une erreur si l'accès n'est pas suffisant
      *
@@ -421,12 +417,35 @@ class ReservationsController extends AbstractController
             // On envoie le PDF construit au navigateur.
             $pdf->Output('I', $this->PdfGenerationService->getFilenameForPdf($pdfType,$sessionId) . '.pdf');
             exit;
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             http_response_code(404);
             die("Erreur lors de la génération du PDF : " . $e->getMessage());
         }
     }
 
+    #[Route('/gestion/reservations/send-mail', name: 'app_gestion_reservations_send_email', methods: ['POST'])]
+    public function sendEmail(): void
+    {
+        // Vérifier les permissions de l'utilisateur connecté
+        $this->checkUserPermission('U');
 
+        $data = $this->getAndCheckPostData(['reservationId', 'templateCode']);
+        //on récupère la réservation pour l'envoyer au mail
+        $reservation = $this->reservationRepository->findById($data['reservationId'], true, true);
+        if (!$reservation) {
+            $this->json(['success' => false, 'message' => 'Réservation non trouvée.'], 404);
+        }
+
+        //On essaie d'envoyer le mail demandé
+        $returnEmailSent = $this->mailPrepareService->sendReservationConfirmationEmail($reservation, $data['templateCode']);
+        //On enregistre l'envoi
+        $this->mailService->recordMailSent($reservation, $data['templateCode']);
+
+        if (!$returnEmailSent) {
+            $this->json(['success' => false, 'message' => 'Mail non envoyé']);
+        }
+
+        $this->json(['success' => true, 'message' => 'Mail envoyé', 'reservation' => $reservation->toArray()]);
+    }
 
 }

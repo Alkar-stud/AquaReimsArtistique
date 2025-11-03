@@ -45,7 +45,7 @@ async function refreshModalContent(modal, reservationId) {
             throw new Error(`Erreur serveur : ${response.statusText}`);
         }
         const reservation = await response.json();
-        console.log('reservation : ', reservation);
+console.log('reservation : ', reservation);
         // Restaurer le HTML et remplir la modale
         modalBody.innerHTML = originalModalBodyHtml;
 
@@ -326,6 +326,46 @@ async function refreshModalContent(modal, reservationId) {
         const mailSentContainer = modal.querySelector('#modal-mail_sent-details-container');
         const toggleMailSentLink = modal.querySelector('#toggle-mail_sent-details');
 
+        const sendMailBtn = modal.querySelector('#modal-send-mail-template-btn');
+        if (sendMailBtn) {
+            sendMailBtn.addEventListener('click', async () => {
+                const select = modal.querySelector('#modal-mail-template-selector');
+                const templateCode = select ? select.value : '';
+                if (!templateCode) {
+                    alert('Choisissez un modèle de mail.');
+                    return;
+                }
+
+                const reservationId = modal.querySelector('#modal_reservation_id').value;
+                const original = sendMailBtn.innerHTML;
+                sendMailBtn.disabled = true;
+                sendMailBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+
+                try {
+                    // Adaptez l’URL au contrôleur qui enverra le mail.
+                    const result = await apiPost('/gestion/reservations/send-mail', {
+                        reservationId,
+                        templateCode
+                    });
+
+                    if (result.success) {
+console.log('retour : ', result);
+                        showFlashMessage('success', result.message, 'send-email-dialog');
+                        // Met à jour la section "mails envoyés" et l’ouvre
+                        updateMailSentSection(modal, result.reservation);
+                    } else {
+                        throw new Error(result.message || 'Erreur lors de l’envoi du mail.');
+                    }
+                } catch (e) {
+                    alert(`Erreur: ${e.userMessage || e.message}`);
+                } finally {
+                    sendMailBtn.disabled = false;
+                    sendMailBtn.innerHTML = original;
+                }
+            });
+        }
+
+
         toggleMailSentLink.addEventListener('click', (e) => {
             e.preventDefault();
             const isHidden = mailSentContainer.style.display === 'none';
@@ -541,5 +581,56 @@ export function initReservationModal() {
             });
         }
 
+    }
+}
+
+
+// --- Utilitaire: met à jour la section "Mails envoyés" et l'ouvre ---
+function updateMailSentSection(modal, reservation) {
+    const mailSentContainer = modal.querySelector('#modal-mail_sent-details-container');
+    const toggleMailSentLink = modal.querySelector('#toggle-mail_sent-details');
+    const nbMailSent = modal.querySelector('#modal-nb-mail-sent');
+
+    if (!mailSentContainer || !toggleMailSentLink) return;
+
+    const list = Array.isArray(reservation?.mailSent) ? reservation.mailSent : [];
+
+    // Met à jour le compteur
+    if (nbMailSent) nbMailSent.textContent = String(list.length);
+
+    // Affiche le lien si des mails existent
+    toggleMailSentLink.style.display = list.length > 0 ? 'inline' : 'none';
+
+    // Reconstruit la liste
+    mailSentContainer.innerHTML = '';
+    list.forEach(mailSent => {
+        const d = new Date(mailSent.sentAt);
+        const sentAtFr = isNaN(d) ? mailSent.sentAt : d.toLocaleString('fr-FR', {
+            dateStyle: 'short',
+            timeStyle: 'short'
+        });
+
+        const li = document.createElement('li');
+        li.className = 'list-group-item d-flex justify-content-center p-1 bg-light rounded';
+        li.innerHTML = `
+            <small class="small">
+                <span>Mail envoyé : <i>${mailSent.mailTemplateName}</i></span>
+                <span>- le : <i>${sentAtFr}</i></span>
+            </small>
+        `;
+        mailSentContainer.appendChild(li);
+    });
+
+    // Ouvre la section "comme si" l'utilisateur cliquait
+    if (list.length > 0) {
+        if (mailSentContainer.style.display === 'none') {
+            toggleMailSentLink.click();
+        } else {
+            mailSentContainer.style.display = 'block';
+            toggleMailSentLink.textContent = 'Masquer le détail';
+        }
+    } else {
+        mailSentContainer.style.display = 'none';
+        toggleMailSentLink.textContent = 'Voir le détail des mails envoyés';
     }
 }

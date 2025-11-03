@@ -141,6 +141,25 @@
                         <div class="text-end mt-1">
                             <a href="#" id="toggle-mail_sent-details" class="small" style="display: none;">Voir les mails envoyés</a>
                         </div>
+                        {% if !empty($emailsTemplatesToSendManually) %}
+                        <div id="modal-mail-manual-send" class="mt-3">
+                            <div class="input-group">
+                                <label class="input-group-text" for="modal-mail-template-selector">Modèle</label>
+                                <select id="modal-mail-template-selector" class="form-select" {{ $isReadOnly ? 'disabled' : '' }}>
+                                    <option value="" selected disabled>— Choisir un modèle de mail à envoyer —</option>
+                                    {% foreach $emailsTemplatesToSendManually as $tpl %}
+                                    <option value="{{ $tpl->getCode() }}">{{ $tpl->getCode() }} — {{ $tpl->getSubject() }}</option>
+                                    {% endforeach %}
+                                </select>
+                                <button class="btn btn-primary" id="modal-send-mail-template-btn" {{ $isReadOnly ? 'disabled' : '' }}>
+                                    <i class="bi bi-envelope"></i>&nbsp;Envoyer
+                                </button>
+                            </div>
+                            <div class="form-text" id="send-email-dialog">Le mail sera envoyé au réservant.</div>
+                        </div>
+                        {% else %}
+                        <div class="alert alert-warning mt-3">Aucun modèle de mail manuel disponible.</div>
+                        {% endif %}
                         <div id="modal-mail_sent-details-container" class="mt-2" style="display: none;">
                             <!-- Les détails des mails seront injectés ici par JavaScript -->
                         </div>

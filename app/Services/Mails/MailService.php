@@ -27,7 +27,7 @@ class MailService
      */
     public function __construct(
         MailTemplateRepository $mailTemplateRepository = new MailTemplateRepository(),
-        ReservationMailSentRepository $reservationMailSentRepository = new ReservationMailSentRepository()
+        ReservationMailSentRepository $reservationMailSentRepository = new ReservationMailSentRepository(),
     )
     {
         $this->mailTemplateRepository = $mailTemplateRepository;
@@ -158,4 +158,15 @@ class MailService
             return false;
         }
     }
+
+    /**
+     * Pour retourner les templates qu'il est possible d'envoyer manuellement
+     *
+     * @return array
+     */
+    public function emailsTemplatesToSendManually(): array
+    {
+        return $this->mailTemplateRepository->findByCodes(['paiement_confirme','summary','paiement_relance_1','paiement_relance_2']);
+    }
+
 }

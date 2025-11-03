@@ -27,7 +27,7 @@ class SendRecapEmailController extends AbstractController
      * Exemple “après minuit pour la veille”: '/reservations/send-final-recap?token=change-me&shift=-1'.
      */
     #[Route('/reservations/send-final-recap', name: 'app_reservations_send-final-recap', methods: ['GET'])]
-    public function exports(): void
+    public function sendFinalRecapEmail(): void
     {
         $cronToken = (string)($_GET['token'] ?? '');
         if ($cronToken !== self::CRON_TOKEN) {

@@ -6,6 +6,7 @@ use app\Repository\Reservation\ReservationRepository;
 use app\Services\Mails\MailPrepareService;
 use app\Services\Mails\MailService;
 use app\Services\Pdf\PdfGenerationService;
+use Throwable;
 
 final class ReservationFinalSummaryService
 {
@@ -70,8 +71,6 @@ final class ReservationFinalSummaryService
             //On génère le PDF à mettre en PJ et on récupère le binaire pour ensuite l'attacher au mail
             $pdf = $this->pdfGenerationService->generateUnitPdf('RecapFinal', $reservation->getId(), $params);
 
-$pdf->Output('I', 'ARA-recapitulatif-de-votre-reservation');
-die;
             // Créer un fichier temporaire
             $pdfPath = sys_get_temp_dir() . '/recap_' . $reservation->getId() . '_' . uniqid() . '.pdf';
             file_put_contents($pdfPath, $pdf->Output('S'));
@@ -90,9 +89,9 @@ die;
                     $failed++;
                     $errors[] = ['reservationId' => $reservation->getId(), 'error' => 'send returned false'];
                 }
-            } catch (\Throwable $e) {
+            } catch (Throwable $e) {
                 // Nettoyage en cas d'erreur
-                if (isset($pdfPath) && is_file($pdfPath)) {
+                if (is_file($pdfPath)) {
                     @unlink($pdfPath);
                 }
                 $failed++;

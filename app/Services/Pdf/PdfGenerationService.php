@@ -78,7 +78,7 @@ readonly class PdfGenerationService
 
         $data = [
             'reservationId' => $reservationId,
-            '$params' => $params,
+            'params' => $params,
         ];
 
         return $builder->build($data);

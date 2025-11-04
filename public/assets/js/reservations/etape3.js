@@ -10,7 +10,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!form) return;
 
     const container = form;
-    const alertDiv = document.getElementById('reservationStep3Alert');
+    const alertDiv = document.getElementById('reservationAlert');
     const placesRestantesSpan = document.getElementById('placesRestantes');
     const dejaReserveesSpan = document.getElementById('dejaReservees');
     const submitButton = document.getElementById('submitButton');

@@ -12,7 +12,7 @@ class SessionValidateService
      *
      * @param array|null $sessionData Le tableau de la session à vérifier.
      * @param string $activityKey La clé contenant le timestamp de la dernière activité (ex: 'last_activity').
-     * @param string $timeoutConstant La constante contenant la durée du timeout au format ISO 8601 (ex: TIMEOUT_PLACE_RESERV).
+     * @param string $timeoutConstant La constante contenant la durée du timeout au format ISO 8601.
      * @return bool True si la session est active, false sinon.
      * @throws Exception
      */

@@ -8,6 +8,17 @@ import {
     validatePhoneField
 } from '../components/formContactValidator.js';
 
+// Met seulement aria-invalid et, si fourni, un message personnalisé.
+function syncAriaFromResult(input, errorEl, isValid, customMessage) {
+    input.setAttribute('aria-invalid', isValid ? 'false' : 'true');
+    if (!errorEl) return;
+    if (isValid) {
+        errorEl.textContent = '';
+    } else if (customMessage) {
+        errorEl.textContent = String(customMessage);
+    }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     const form = document.getElementById('reservationInfosForm');
     if (!form) return;
@@ -18,46 +29,73 @@ document.addEventListener('DOMContentLoaded', () => {
     const phoneInput = document.getElementById('phone');
     const eventIdInput = document.getElementById('event_id');
 
+    const nameErr = document.getElementById('name_error');
+    const firstnameErr = document.getElementById('firstname_error');
+    const emailErr = document.getElementById('email_error');
+    const phoneErr = document.getElementById('phone_error');
+
     if (!nameInput || !firstnameInput || !emailInput || !phoneInput || !eventIdInput) {
         console.error("Un ou plusieurs champs du formulaire de l'étape 2 sont manquants.");
         return;
     }
 
+    const updateNamePair = () => {
+        const ok = validateNameAndFirstname(nameInput, firstnameInput);
+        syncAriaFromResult(nameInput, nameErr, ok);
+        syncAriaFromResult(firstnameInput, firstnameErr, ok);
+    };
+
+    const updateEmail = () => {
+        const ok = validateEmailField(emailInput);
+        syncAriaFromResult(emailInput, emailErr, ok);
+    };
+
+    const updatePhone = () => {
+        const ok = validatePhoneField(phoneInput);
+        syncAriaFromResult(phoneInput, phoneErr, ok);
+    };
+
     ['input', 'blur'].forEach(evt => {
-        nameInput.addEventListener(evt, () => validateNameAndFirstname(nameInput, firstnameInput));
-        firstnameInput.addEventListener(evt, () => validateNameAndFirstname(nameInput, firstnameInput));
-        emailInput.addEventListener(evt, () => validateEmailField(emailInput));
-        phoneInput.addEventListener(evt, () => validatePhoneField(phoneInput));
+        nameInput.addEventListener(evt, updateNamePair);
+        firstnameInput.addEventListener(evt, updateNamePair);
+        emailInput.addEventListener(evt, updateEmail);
+        phoneInput.addEventListener(evt, updatePhone);
     });
 
     form.addEventListener('submit', (e) => {
         e.preventDefault();
 
-        // Exécute toutes les validations
         const isNameValid = validateNameAndFirstname(nameInput, firstnameInput);
         const isEmailValid = validateEmailField(emailInput);
         const isPhoneValid = validatePhoneField(phoneInput);
 
-        // La validation HTML5 s'occupe des champs requis
+        syncAriaFromResult(nameInput, nameErr, isNameValid);
+        syncAriaFromResult(firstnameInput, firstnameErr, isNameValid);
+        syncAriaFromResult(emailInput, emailErr, isEmailValid);
+        syncAriaFromResult(phoneInput, phoneErr, isPhoneValid);
+
         if (!isNameValid || !isEmailValid || !isPhoneValid || !form.checkValidity()) {
             e.stopPropagation();
-            (form.querySelector('.is-invalid') || nameInput).focus();
+            const firstInvalid = form.querySelector('.is-invalid,[aria-invalid="true"]') || nameInput;
+            firstInvalid.focus();
             showFlashMessage('danger', 'Veuillez corriger les erreurs dans le formulaire.');
-        } else {
-            step2Valid(
-                nameInput.value.trim(),
-                firstnameInput.value.trim(),
-                emailInput.value.trim(),
-                phoneInput.value.trim(),
-                eventIdInput.value
-            );
+            const region = document.getElementById('reservationAlert');
+            if (region) region.focus();
+            return;
         }
+
+        step2Valid(
+            nameInput.value.trim(),
+            firstnameInput.value.trim(),
+            emailInput.value.trim(),
+            phoneInput.value.trim(),
+            eventIdInput.value
+        );
     });
 });
 
 function step2Valid(name, firstname, email, phone, eventId) {
     const alertDiv = document.getElementById('reservationAlert');
-    // Vérification si email déjà utilisé dans d'autres réservations du même event
     apiPost('/reservation/check-duplicate-email', {
         event_id: eventId,
         email: email
@@ -70,45 +108,39 @@ function step2Valid(name, firstname, email, phone, eventId) {
                     html += `<li>${summary.nb_places} place(s) pour la séance du ${summary.session_date}</li>`;
                 });
                 html += `</ul><p>Que souhaitez-vous faire ?</p>
-                        <button id="continueBtn" class="btn btn-success me-2">Continuer ma nouvelle réservation</button>
-                        <button id="resendBtn" class="btn btn-info">Renvoyer le(s) mail(s) de confirmation</button>
-                        <button id="cancelBtn" class="btn btn-secondary">Annuler</button>
+                        <button id="continueBtn" class="btn btn-success me-2 mb-2">Continuer ma nouvelle réservation</button>
+                        <button id="resendBtn" class="btn btn-info me-2 mb-2">Renvoyer le(s) mail(s) de confirmation</button>
+                        <button id="cancelBtn" class="btn btn-secondary mb-2">Annuler</button>
                     </div>`;
                 alertDiv.innerHTML = html;
+                alertDiv.focus();
 
                 document.getElementById('continueBtn').onclick = () => submitEtape2(name, firstname, email, phone, eventId);
                 document.getElementById('cancelBtn').onclick = () => alertDiv.innerHTML = '';
                 document.getElementById('resendBtn').onclick = () => {
-                    apiPost('/reservation/resend-confirmation', {
-                        email: email,
-                        event_id: eventId
-                    })
+                    apiPost('/reservation/resend-confirmation', { email, event_id: eventId })
                         .then(res => {
                             if (res.success) {
-                                alertDiv.innerHTML = '<div class="alert alert-success">Mail(s) de confirmation renvoyé(s) !</div>';
+                                alertDiv.innerHTML = '<div class="alert alert-success">Mail(s) de confirmation renvoyé(s) \!</div>';
                             } else {
                                 alertDiv.innerHTML = `<div class="alert alert-danger">${res.error}</div>`;
                             }
+                            alertDiv.focus();
                         });
                 };
             } else {
                 submitEtape2(name, firstname, email, phone, eventId);
             }
-
         })
         .catch((err) => {
             showFlashMessage('danger', err.userMessage || err.message);
+            const region = document.getElementById('reservationAlert');
+            if (region) region.focus();
         });
-
 }
+
 function submitEtape2(name, firstname, email, phone, eventId) {
-    apiPost('/reservation/valid/2', {
-        name: name,
-        firstname: firstname,
-        email: email,
-        phone: phone,
-        event_id: eventId
-    })
+    apiPost('/reservation/valid/2', { name, firstname, email, phone, event_id: eventId })
         .then((data) => {
             if (data.success) {
                 window.location.href = '/reservation/etape3Display';
@@ -117,12 +149,10 @@ function submitEtape2(name, firstname, email, phone, eventId) {
                     window.location.href = data.redirect;
                     return;
                 }
-                // On construit un message d'erreur détaillé à partir de l'objet 'errors'
                 let errorHtml = '<ul>';
                 if (data.errors && typeof data.errors === 'object') {
                     for (const key in data.errors) {
-                        // On échappe le message pour la sécurité
-                        const safeMessage = data.errors[key].replace(/</g, "&lt;").replace(/>/g, "&gt;");
+                        const safeMessage = String(data.errors[key]).replace(/</g, "&lt;").replace(/>/g, "&gt;");
                         errorHtml += `<li>${safeMessage}</li>`;
                     }
                 } else {
@@ -130,10 +160,11 @@ function submitEtape2(name, firstname, email, phone, eventId) {
                 }
                 errorHtml += '</ul>';
                 showFlashMessage('danger', errorHtml);
+                const region = document.getElementById('reservationAlert');
+                if (region) region.focus();
             }
         })
         .catch((err) => {
-            // On vérifie si l'erreur contient un objet 'data' avec des 'errors' détaillés
             if (err.data && err.data.errors && typeof err.data.errors === 'object') {
                 let errorHtml = '<ul>';
                 for (const key in err.data.errors) {
@@ -143,8 +174,9 @@ function submitEtape2(name, firstname, email, phone, eventId) {
                 errorHtml += '</ul>';
                 showFlashMessage('danger', errorHtml);
             } else {
-                // Sinon, on utilise le message d'erreur générique fourni par apiPost
                 showFlashMessage('danger', err.userMessage || err.message);
             }
+            const region = document.getElementById('reservationAlert');
+            if (region) region.focus();
         });
 }

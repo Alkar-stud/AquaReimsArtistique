@@ -31,3 +31,8 @@
     vertical-align: middle;
     height: auto;              /* évite les hauteurs forcées héritées */
 }
+
+.btn:focus-visible {
+    outline: 2px solid var(--ara-color-purple);
+    outline-offset: 2px;
+}

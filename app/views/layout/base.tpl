@@ -57,9 +57,15 @@
 <!-- Outils de débogage -->
 <link rel="stylesheet" href="/assets/css/components/debug-bar.css">
 <div id="debug-container">
-    <div id="debug-toggle" title="Afficher/Masquer le bandeau de débogage">
-        <i class="bi bi-bug-fill"></i>
-    </div>
+    <button id="debug-toggle"
+            class="debug-toggle"
+            type="button"
+            aria-controls="debug-bar"
+            aria-expanded="false"
+            title="Afficher/Masquer le bandeau de débogage">
+        <i class="bi bi-bug-fill" aria-hidden="true"></i>
+        <span class="visually-hidden">Ouvrir le bandeau de débogage</span>
+    </button>
     <div id="debug-bar">
         <div id="screen-dimensions-display"></div>
         {% if ($user_is_authenticated ?? false) || ($reservation_session_active ?? false) %}

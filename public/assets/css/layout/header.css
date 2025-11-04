@@ -21,13 +21,13 @@
     margin-right: .5rem;
     margin-left: 0 !important;
     padding-left: 0 !important;
-    color: var(--ara-color-lightblue) !important;
+    color: var(--ara-color-white) !important;
     font-weight: bold;
 }
 
 /* Style pour le bouton du menu mobile */
 .navbar-toggler {
-    border-color: var(--ara-color-lightblue);
+    border-color: var(--ara-color-lightgray);
 }
 
 .navbar-toggler:focus {
@@ -53,7 +53,7 @@
 
 .nav-link:hover, .nav-link:focus,
 .dropdown-item:hover, .dropdown-item:focus,
-    .dropdown-item.active-link, .dropdown-item.active-link:focus, .dropdown-item.active-link:visited {
+.dropdown-item.active-link, .dropdown-item.active-link:focus, .dropdown-item.active-link:visited {
     background-color: var(--ara-color-purple) !important;
     color: var(--ara-color-white) !important;
     box-shadow: 0 2px 8px rgba(92,130,206,0.15);
@@ -79,10 +79,9 @@ header .container img {
     height: 80px;
 }
 
-
-
 /* Style pour les menus déroulants */
-.nav-item.dropdown:hover .dropdown-menu {
+.nav-item.dropdown:hover .dropdown-menu,
+.nav-item.dropdown:focus-within .dropdown-menu {
     height: 100%;
     margin: 0;
     display: flex;

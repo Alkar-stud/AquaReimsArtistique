@@ -1,3 +1,6 @@
+{% php %}
+$page_css = ['/assets/css/pages/home.css'];
+{% endphp %}
 <div class="container py-4">
     {% if !empty($contents) %}
     {% foreach $contents as $content %}

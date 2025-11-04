@@ -17,3 +17,32 @@ body {
 }
 
 #content { padding: 2rem; }
+
+/* Lien d’évitement */
+.skip-link {
+    position: absolute; left: 0.5rem; top: -40px;
+    background: var(--ara-color-darkblue); color: var(--ara-color-white);
+    padding: 0.5rem 0.75rem; z-index: 1000; border-radius: .25rem;
+}
+.skip-link:focus { top: 0.5rem; }
+
+/* Focus très visibles */
+:focus-visible {
+    outline: 3px solid var(--ara-color-darkpink);
+    outline-offset: 2px;
+}
+.navbar .nav-link:focus-visible,
+.btn:focus-visible,
+.form-control:focus-visible { box-shadow: none; }
+
+/* Réduire les animations si demandé */
+@media (prefers-reduced-motion: reduce) {
+    * { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
+}
+
+/* Ciblage tactile minimal */
+.btn, .form-control { min-height: 44px; }
+
+/* Liens clairs sur fonds colorés */
+footer a.link-light:focus,
+footer a.link-light:hover { text-decoration: underline; }

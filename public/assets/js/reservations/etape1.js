@@ -2,6 +2,7 @@
 
 import { apiPost } from '../components/apiClient.js';
 import { initAccessCodeHandler } from './specialCodeHandler.js';
+import { setButtonState, syncAriaDisabled, watchDisabledAttr, setAccessCodeError, clearAccessCodeError } from "../components/utils.js";
 
 /**
  * Met à jour la liste des nageuses en fonction du groupe sélectionné.
@@ -37,6 +38,7 @@ async function validateAndReserve(eventCard) {
     const eventId = eventCard.dataset.eventId;
     const errorEl = eventCard.querySelector(`#form_error_message_${eventId}`);
     errorEl.textContent = '';
+    clearAccessCodeError(eventCard, eventId);
 
     // Validation de la session
     const sessionRadio = eventCard.querySelector(`input[name="session_${eventId}"]:checked`);
@@ -50,8 +52,6 @@ async function validateAndReserve(eventCard) {
     const swimmerSelect = eventCard.querySelector(`#swimmer_${eventId}`);
     const groupSelect = eventCard.querySelector(`#swimmer_group_${eventId}`);
     let swimmerId = null;
-
-    // On vérifie s'il y a une sélection de groupe (ce qui implique une sélection de nageuse)
     if (groupSelect) {
         if (!groupSelect.value) {
             errorEl.textContent = 'Veuillez sélectionner un groupe.';
@@ -64,14 +64,17 @@ async function validateAndReserve(eventCard) {
         swimmerId = swimmerSelect.value;
     }
 
-    // Validation du code d'accès (si le champ est visible et non validé)
+    // Validation du code d'accès
     const codeInput = eventCard.querySelector(`#access_code_input_${eventId}`);
     let accessCode = null;
     if (codeInput && !codeInput.disabled) {
         accessCode = codeInput.value.trim();
         if (!accessCode) {
+            setAccessCodeError(eventCard, eventId, "Veuillez saisir et valider un code d'accès.");
             errorEl.textContent = "Veuillez valider un code d'accès.";
             return;
+        } else {
+            clearAccessCodeError(eventCard, eventId);
         }
     }
 
@@ -85,7 +88,7 @@ async function validateAndReserve(eventCard) {
 
     const reserveBtn = eventCard.querySelector(`#btn_reserver_${eventId}`);
     if (reserveBtn) {
-        reserveBtn.disabled = true;
+        setButtonState(reserveBtn, false); // désactive et met aria-disabled="true"
         reserveBtn.innerHTML = 'Validation... <span class="spinner-border spinner-border-sm"></span>';
     }
 
@@ -98,8 +101,16 @@ async function validateAndReserve(eventCard) {
         }
     } catch (error) {
         errorEl.textContent = error.userMessage || error.message;
-        if (reserveBtn) reserveBtn.disabled = false;
-        if (reserveBtn) reserveBtn.innerHTML = 'Réserver';
+
+        // Si un code d'accès est en jeu, annoncer l'erreur via aria-live et marquer le champ
+        if (codeInput && !codeInput.disabled) {
+            setAccessCodeError(eventCard, eventId, error.userMessage || error.message);
+        }
+
+        if (reserveBtn) {
+            setButtonState(reserveBtn, true); // réactive et met aria-disabled="false"
+            reserveBtn.innerHTML = 'Réserver';
+        }
     }
 }
 
@@ -124,6 +135,8 @@ document.addEventListener('DOMContentLoaded', () => {
         // Gestionnaire pour le bouton "Réserver"
         const reserveBtn = card.querySelector(`#btn_reserver_${eventId}`);
         if (reserveBtn) {
+            // Synchronise `aria-disabled` avec l’attribut `disabled`, même si un autre module le modifie
+            watchDisabledAttr(reserveBtn);
             reserveBtn.addEventListener('click', () => validateAndReserve(card));
         }
     });

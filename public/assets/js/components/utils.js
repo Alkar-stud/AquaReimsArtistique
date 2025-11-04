@@ -24,6 +24,77 @@ export function buttonLoading(btn, on) {
     }
 }
 
+/** Helpers ARIA
+ *
+ * @param btn
+ * @param enabled
+ */
+export function setButtonState(btn, enabled) {
+    if (!btn) return;
+    if (enabled) {
+        btn.disabled = false;
+        btn.removeAttribute('disabled');
+        btn.setAttribute('aria-disabled', 'false');
+    } else {
+        btn.disabled = true;
+        btn.setAttribute('aria-disabled', 'true');
+    }
+}
+
+/**
+ *
+ * @param btn
+ */
+export function syncAriaDisabled(btn) {
+    if (!btn) return;
+    btn.setAttribute('aria-disabled', btn.disabled ? 'true' : 'false');
+}
+
+/**
+ *
+ * @param btn
+ */
+export function watchDisabledAttr(btn) {
+    if (!btn) return;
+    // Init
+    syncAriaDisabled(btn);
+    // Observe changes to `disabled` and mirror to `aria-disabled`
+    const mo = new MutationObserver((mutations) => {
+        for (const m of mutations) {
+            if (m.type === 'attributes' && m.attributeName === 'disabled') {
+                syncAriaDisabled(m.target);
+            }
+        }
+    });
+    mo.observe(btn, { attributes: true, attributeFilter: ['disabled'] });
+}
+
+/**
+ *
+ * @param card
+ * @param eventId
+ * @param message
+ */
+export function setAccessCodeError(card, eventId, message) {
+    const input = card.querySelector(`#access_code_input_${eventId}`);
+    const status = card.querySelector(`#access_code_status_${eventId}`);
+    if (input) input.setAttribute('aria-invalid', 'true');
+    if (status) status.textContent = message || '';
+}
+
+/**
+ *
+ * @param card
+ * @param eventId
+ */
+export function clearAccessCodeError(card, eventId) {
+    const input = card.querySelector(`#access_code_input_${eventId}`);
+    const status = card.querySelector(`#access_code_status_${eventId}`);
+    if (input) input.setAttribute('aria-invalid', 'false');
+    if (status) status.textContent = '';
+}
+
+
 /**
  * Formate un montant en centimes en chaîne de caractères Euro.
  * @param {number} cents - Le montant en centimes.

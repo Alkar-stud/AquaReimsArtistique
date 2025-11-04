@@ -35,7 +35,7 @@
 
                     {% if $event->getLimitationPerSwimmer() !== null %}
                     <p>
-                        <strong>Je choisis la nageuse que je viens surtout voir (mais aussi les autres ^^) :</strong>
+                        <label for="swimmer_group_{{ $event->getId() }}"><strong>Je choisis la nageuse que je viens surtout voir (mais aussi les autres ^^) :</strong></label>
                         <select id="swimmer_group_{{ $event->getId() }}" data-event-id="{{ $event->getId() }}" class="form-select d-inline w-auto ms-2">
                             <option value="">Sélectionner un groupe</option>
                             {% foreach ($groupes ?? []) as $groupe %}
@@ -46,7 +46,7 @@
                         </select>
                     </p>
                     <p id="swimmer_container_{{ $event->getId() }}" style="display:none;">
-                        <strong>Nageuse :</strong>
+                        <label for="swimmer_{{ $event->getId() }}"><strong>Nageuse :</strong></label>
                         <select id="swimmer_{{ $event->getId() }}" class="form-select d-inline w-auto ms-2">
                             <option value="">Sélectionner une nageuse</option>
                         </select>
@@ -64,7 +64,9 @@
                                 value="{{ $sessions[0]->getId() }}"
                                 checked
                         >
-                        {{ $sessions[0]->getEventStartAt()->format('d/m/Y H:i') }}
+                        <label class="form-check-label" for="session_{{ $event->getId() }}_{{ $sessions[0]->getId() }}">
+                            {{ $sessions[0]->getEventStartAt()->format('d/m/Y H:i') }}
+                        </label>
                         {% else %}
                         {% foreach $sessions as $session %}
                     <div class="form-check">
@@ -87,14 +89,34 @@
                     {% endif %}
 
                     {% if !$periodeOuverte || $codeNecessaire %}
-                    <div class="alert alert-secondary mt-3">
+                    <div
+                            class="alert alert-secondary mt-3"
+                            id="event_note_{{ $event->getId() }}"
+                            role="status"
+                            aria-live="polite"
+                    >
                         {% if $periodeOuverte && $codeNecessaire %}
                         <div class="mb-2">
                             <label for="access_code_input_{{ $event->getId() }}"><strong>Code d'accès requis :</strong></label>
-                            <input type="text" id="access_code_input_{{ $event->getId() }}" class="form-control d-inline w-auto ms-2" />
-                            <button type="button" class="btn btn-primary ms-2" id="validate_code_btn_{{ $event->getId() }}">Valider le code</button>
+                            <input
+                                type="text"
+                                id="access_code_input_{{ $event->getId() }}"
+                                class="form-control d-inline w-auto ms-2"
+                                aria-describedby="access_code_status_{{ $event->getId() }}"
+                                aria-invalid="false"
+                                autocomplete="one-time-code"
+                            />
+                            <button
+                                type="button"
+                                class="btn btn-primary ms-2"
+                                id="validate_code_btn_{{ $event->getId() }}"
+                                aria-controls="access_code_status_{{ $event->getId() }} btn_reserver_{{ $event->getId() }}"
+                                aria-describedby="event_note_{{ $event->getId() }}"
+                            >
+                                Valider le code
+                            </button>
                             <br>
-                            <span id="access_code_status_{{ $event->getId() }}" class="ms-2"></span>
+                            <span id="access_code_status_{{ $event->getId() }}" class="ms-2" aria-live="polite"></span>
                         </div>
                         {% else %}
                         {% if (isset($periodesCloses[$event->getId()])) %}
@@ -112,14 +134,22 @@
                     {% endif %}
 
                     <button
-                            class="btn btn-success mt-3"
-                            id="btn_reserver_{{ $event->getId() }}"
-                            {{ $buttonDisabled }}
+                        type="button"
+                        class="btn btn-success mt-3"
+                        id="btn_reserver_{{ $event->getId() }}"
+                        {{ $buttonDisabled }}
+                        aria-disabled="{{ $buttonDisabled ? 'true' : 'false' }}"
+                        aria-describedby="event_note_{{ $event->getId() }} form_error_message_{{ $event->getId() }}"
                     >
                         Réserver
                     </button>
 
-                    <div id="form_error_message_{{ $event->getId() }}" class="text-danger mt-2"></div>
+                    <div
+                            id="form_error_message_{{ $event->getId() }}"
+                            class="text-danger mt-2"
+                            role="alert"
+                            aria-live="assertive"
+                    ></div>
                 </div>
             </div>
         </div>

@@ -17,3 +17,11 @@
         <a href="/forgot-password" class="link-secondary">Mot de passe oublié ?</a>
     </div>
 </div>
+
+{% if ($_ENV['APP_DEBUG'] == "true") %}
+{% php %}
+echo '<pre>';
+print_r($_SESSION);
+echo '</pre>';
+{% endphp %}
+{% endif %}

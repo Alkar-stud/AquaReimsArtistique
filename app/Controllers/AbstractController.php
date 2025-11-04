@@ -7,12 +7,14 @@ use app\Enums\LogType;
 use app\Models\User\User;
 use app\Repository\User\UserRepository;
 use app\Services\FlashMessageService;
+use app\Services\Log\Handler\ErrorHandler;
 use app\Services\Log\Logger;
 use app\Services\Log\LoggingBootstrap;
 use app\Services\Log\RequestContext;
 use app\Services\Reservation\ReservationSessionService;
 use app\Services\Security\SessionValidateService;
 use app\Services\Security\CsrfService;
+use app\Services\Security\AuthorizationService;
 use app\Utils\DurationHelper;
 use Exception;
 use Throwable;
@@ -23,8 +25,9 @@ abstract class AbstractController
     private SessionValidateService $sessionValidateService;
     protected ?CsrfService $csrfService = null;
     protected ReservationSessionService $reservationSessionService;
-    private static bool $globalHandlersRegistered = false;
     protected ?User $currentUser = null;
+    private array $securityConfig;
+    protected AuthorizationService $authorizationService;
 
     /**
      * Initialise l'environnement contrôleur.
@@ -45,7 +48,7 @@ abstract class AbstractController
     {
         // Bootstrap logging + contexte requête (X-Request-Id)
         LoggingBootstrap::ensureInitialized();
-        self::registerGlobalErrorHandlers();
+        ErrorHandler::register(($_ENV['APP_DEBUG'] ?? 'false') === 'true');
 
         // Configuration et démarrage de la session
         $this->configureSession();
@@ -55,6 +58,10 @@ abstract class AbstractController
 
         RequestContext::boot();
 
+        // Charge la config de sécurité
+        $this->securityConfig = require __DIR__ . '/../../config/security.php';
+
+        // Initialisation des services
         // Validation de la session utilisateur (y compris la régénération)
         $this->sessionValidateService = new SessionValidateService();
         // On initialise le service de messages flash ici, car il peut être appelé
@@ -76,6 +83,8 @@ abstract class AbstractController
         // Validation du token CSRF pour les requêtes POST, PUT, etc.
         // Doit se faire après l'initialisation de CsrfService.
         $this->maybeEnforceCsrf();
+
+        $this->authorizationService = new AuthorizationService();
 
         // Journaliser la requête dans le channel "url" (maintenant que l'utilisateur est connu)
         Logger::get()->info(
@@ -269,7 +278,7 @@ abstract class AbstractController
         }
 
         if (!$this->sessionValidateService->isSessionActive($_SESSION['user'] ?? null, 'LAST_ACTIVITY', TIMEOUT_SESSION)) {
-            $this->logoutAndRedirect('Votre session a expiré pour cause d\'inactivité. Veuillez vous reconnecter.', true);
+            $this->logoutAndRedirect('Votre session a expiré pour cause d\'inactivité. Veuillez vous reconnecter.');
             return;
         }
         $userRepository = new UserRepository();
@@ -305,14 +314,13 @@ abstract class AbstractController
      * - Envoie un en-tête `Location` et termine le script.
      *
      * @param string $message Message à afficher après redirection.
-     * @param bool $saveRedirectUrl Si true, sauvegarde l'URL courante si elle est interne.
      * @return void
      */
-    private function logoutAndRedirect(string $message, bool $saveRedirectUrl = false): void
+    private function logoutAndRedirect(string $message): void
     {
         $redirectUrlAfterLogin = null;
 
-        if ($saveRedirectUrl && isset($_SERVER['REQUEST_URI'])) {
+        if (isset($_SERVER['REQUEST_URI'])) {
             $redirectUrl = $_SERVER['REQUEST_URI'];
             if ($this->isValidInternalRedirect($redirectUrl)) {
                 $redirectUrlAfterLogin = $redirectUrl;
@@ -511,7 +519,7 @@ abstract class AbstractController
     }
 
     /**
-     * Applique la validation/consommation CSRF pour les méthodes mutatrices \[POST, PUT, PATCH, DELETE\].
+     * Applique la validation/consommation CSRF pour les méthodes matrices \[POST, PUT, PATCH, DELETE\].
      * - En mode debug, la validation est désactivée.
      * - En cas d'échec, renvoie HTTP 419 avec un nouveau jeton et termine le script.
      *
@@ -590,27 +598,6 @@ abstract class AbstractController
     }
 
     /**
-     * Retourne la capacité de l'utilisateur courant sur la fonctionnalité réservations.
-     * - Lecture des niveaux requis depuis la config `security.php`.
-     *
-     * Effets de bord:
-     * - En cas d'absence de droit, définit un message flash et redirige vers `/gestion`.
-     *
-     * @return string Chaîne de permissions (ex. `R`, `CRU`, `CRUD`), sinon redirection.
-     */
-    protected function whatCanDoCurrentUser():string
-    {
-        $minRoleLevel = (require __DIR__ . '/../../config/security.php')['reservations_access_level'];
-        $return = $minRoleLevel[$this->currentUser->getRole()->getLevel()] ?? '';
-
-        if (empty($return)) {
-            $this->flashMessageService->setFlashMessage('danger', "Accès refusé");
-            $this->redirect('/gestion');
-        }
-        return $return;
-    }
-
-    /**
      * Redirige vers l'URL donnée avec un en-tête `Location` puis termine le script.
      *
      * @param string $url URL absolue ou relative au site.
@@ -648,162 +635,21 @@ abstract class AbstractController
     }
 
     /**
-     * Enregistre les gestionnaires globaux d'erreurs/exceptions (une seule fois).
-     * - Exceptions non interceptées.
-     * - Erreurs PHP.
-     * - Erreurs fatales en fin de script.
-     *
-     * @return void
-     */
-    private static function registerGlobalErrorHandlers(): void
-    {
-        if (self::$globalHandlersRegistered) {
-            return;
-        }
-
-        // Exceptions non interceptées
-        set_exception_handler([self::class, 'handleUncaughtException']);
-
-        // Erreurs PHP (warnings, notices, etc.)
-        set_error_handler([self::class, 'handlePhpError']);
-
-        // Erreurs fatales en fin de script
-        register_shutdown_function([self::class, 'handleShutdown']);
-
-        self::$globalHandlersRegistered = true;
-    }
-
-    /**
-     * Gestionnaire des exceptions non interceptées.
-     * - Journalise l'exception.
-     * - Répond avec une erreur HTTP 500 puis termine.
-     *
-     * @param Throwable $e Exception non interceptée.
-     * @return void
-     */
-    public static function handleUncaughtException(Throwable $e): void
-    {
-        // Toujours initialiser le logger si besoin
-        LoggingBootstrap::ensureInitialized();
-
-        Logger::get()->error(
-            LogType::APPLICATION->value,
-            'uncaught_exception',
-            ['exception' => $e]
-        );
-
-        self::respondHttp500($e);
-    }
-
-    /**
-     * Gestionnaire des erreurs PHP.
-     * - Journalise l'erreur avec un niveau approprié.
-     * - Retourne false pour laisser le gestionnaire natif continuer.
-     *
-     * @param int $errno Code d'erreur PHP.
-     * @param string $errstr Message d'erreur.
-     * @param string $errfile Fichier source de l'erreur.
-     * @param int $errline Ligne de l'erreur.
-     * @return bool False pour déléguer au handler interne après logging.
-     */
-    public static function handlePhpError(int $errno, string $errstr, string $errfile, int $errline): bool
-    {
-        LoggingBootstrap::ensureInitialized();
-
-        $level = match ($errno) {
-            E_USER_ERROR, E_RECOVERABLE_ERROR => 'ERROR',
-            E_WARNING, E_USER_WARNING => 'WARNING',
-            E_NOTICE, E_USER_NOTICE, E_DEPRECATED, E_USER_DEPRECATED => 'NOTICE',
-            default => 'INFO',
-        };
-
-        Logger::get()->log(
-            $level,
-            LogType::APPLICATION->value,
-            'php_error',
-            ['errno' => $errno, 'message' => $errstr, 'file' => $errfile . ':' . $errline]
-        );
-
-        // Laisser le handler natif continuer (retourner false)
-        return false;
-    }
-
-    /**
-     * Gestionnaire de fin d'exécution.
-     * - Si une erreur fatale est détectée, la journalise et renvoie une réponse 500.
-     *
-     * @return void
-     */
-    public static function handleShutdown(): void
-    {
-        $err = error_get_last();
-        if (!$err) {
-            return;
-        }
-
-        $fatalTypes = [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR];
-        if (in_array($err['type'] ?? 0, $fatalTypes, true)) {
-            LoggingBootstrap::ensureInitialized();
-
-            Logger::get()->critical(
-                LogType::APPLICATION->value,
-                'fatal_error',
-                ['type' => $err['type'], 'message' => $err['message'], 'file' => $err['file'] . ':' . $err['line']]
-            );
-
-            // Éviter tout double envoi si des headers sont déjà partis
-            if (!headers_sent()) {
-                self::respondHttp500('Fatal error');
-            }
-        }
-    }
-
-    /**
-     * Construit et envoie une réponse 500 JSON ou HTML selon `Accept`.
-     * - En mode debug, inclut les détails de l'erreur.
-     * - Termine toujours le script après envoi.
-     *
-     * @param Throwable|string|null $e Détails de l'erreur à loguer/afficher (optionnel).
-     * @return void
-     */
-    private static function respondHttp500(null|Throwable|string $e): void
-    {
-        // Évite tout output parasite si on est déjà en train de sortir quelque chose
-        http_response_code(500);
-
-        $isDebug = (($_ENV['APP_DEBUG'] ?? 'false') === 'true');
-        $accept = $_SERVER['HTTP_ACCEPT'] ?? '';
-        $isJson = str_contains($accept, 'application/json') || (($_SERVER['HTTP_X_REQUESTED_WITH'] ?? '') === 'XMLHttpRequest');
-
-        if ($isJson) {
-            header('Content-Type: application/json');
-            echo json_encode([
-                'error' => 'Internal Server Error',
-                'request_id' => RequestContext::getRequestId(),
-                'details' => $isDebug ? (string)($e instanceof Throwable ? $e : ($e ?? '')) : null,
-            ]);
-        } else {
-            $msg = $isDebug
-                ? '<pre class="alert alert-danger" style="white-space:pre-wrap;">' . htmlspecialchars((string)($e instanceof Throwable ? $e : ($e ?? '')), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '</pre>'
-                : 'Une erreur interne est survenue.';
-            header('Content-Type: text/html; charset=UTF-8');
-            echo $msg;
-        }
-        exit;
-    }
-
-
-    /**
      * Vérifie qu'une permission donnée est incluse dans les droits de l'utilisateur courant.
      * - En cas d'absence, renvoie une réponse JSON 403 via `json()` et termine le script.
      *
-     * @param string $level Permission requise (ex. `r`, `w`, `d`).
+     * @param string $required
+     * @param string $featureKey
      * @return void
      */
-    protected function checkUserPermission(string $level = ''): void
+    protected function checkUserPermission(string $required = '', string $featureKey = 'reservations_access_level'): void
     {
-        $userPermissions = $this->whatCanDoCurrentUser();
-        if (!str_contains($userPermissions, $level)) {
+        // Si l'utilisateur n'est pas chargé, on protège par défaut
+        if (!$this->currentUser) {
+            $this->json(['success' => false, 'message' => 'Accès refusé.'], 403);
+        }
+
+        if (!$this->authorizationService->hasPermission($this->currentUser, $required, $featureKey)) {
             $this->json(['success' => false, 'message' => 'Accès refusé. Vous n\'avez pas les droits nécessaires.'], 403);
         }
     }

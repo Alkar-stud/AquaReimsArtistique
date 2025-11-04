@@ -75,8 +75,8 @@ class ReservationsController extends AbstractController
     public function index(): void
     {
         // Vérifier les permissions de l'utilisateur connecté
-        $userPermissions = $this->whatCanDoCurrentUser();
-        $isReadOnly = !str_contains($userPermissions, 'U');
+        $userPermissions = $this->authorizationService->getPermissionsFor($this->currentUser);
+        $isReadOnly = !$this->authorizationService->hasPermission($this->currentUser, 'U');
 
         $tab = $_GET['tab'] ?? null;
         $sessionId = (int)($_GET['s'] ?? 0);

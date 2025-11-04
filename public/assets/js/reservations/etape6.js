@@ -10,7 +10,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!form) return;
 
     const container = form; // Utiliser le formulaire comme conteneur principal pour la délégation
-    const alertDiv = document.getElementById('reservationStep6Alert'); // Assurez-vous que cet ID existe dans le tpl
+    const alertDiv = document.getElementById('reservationAlert');
     const submitButton = document.getElementById('submitButton');
     const eventIdInput = document.getElementById('event_id');
     //On active le bouton par défaut

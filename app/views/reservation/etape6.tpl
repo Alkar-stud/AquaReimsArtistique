@@ -1,10 +1,23 @@
 <div class="container-fluid">
     <h2 class="mb-4">Choix des compléments</h2>
 
-    <form id="reservationPlacesForm">
+    {% php %}$jsonFlags = JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES;{% endphp %}
+
+    <form
+            id="reservationPlacesForm"
+            aria-describedby="step6-hint"
+            data-special-tarif-session="{{ json_encode($specialTarifSession ?? null, $jsonFlags) }}"
+    >
+        <p id="step6-hint" class="visually-hidden">
+            Saisissez la quantité souhaitée pour chaque complément. Les champs non remplis sont ignorés.
+            Si vous avez un code spécial, entrez‑le puis validez‑le.
+        </p>
+
         <input type="hidden" id="event_id" name="event_id" value="{{ $reservation['event_id'] }}">
+
+        <div id="reservationAlert" role="alert" aria-live="polite" tabindex="-1"></div>
+
         {% if !empty($allTarifsWithoutSeatForThisEvent) %}
-        <div id="reservationStep6Alert"></div>
         <div id="tarifsContainer">
             {% foreach $allTarifsWithoutSeatForThisEvent as $tarif %}
             {% if $tarif->getAccessCode() === null %}
@@ -14,36 +27,72 @@
                     ({{ $tarif->getSeatCount() }} place{{ $tarif->getSeatCount() > 1 ? 's':'' }} incluse{{ $tarif->getSeatCount() > 1 ? 's':'' }})
                     - {{ number_format($tarif->getPrice() / 100, 2, ',', ' ') }} €
                     <br>
-                    <div class="text small text-muted">
+                    <span class="text small text-muted">
                         {{ $tarif->getDescription() }}
-                    </div>
+                    </span>
                 </label>
-                <input type="number"
-                       class="form-control place-input"
-                       id="tarif_{{ $tarif->getId() }}"
-                       name="tarifs[{{ $tarif->getId() }}]"
-                       min="0"
-                       value="{{ isset($arrayTarifForForm[$tarif->getId()]) ? $arrayTarifForForm[$tarif->getId()] : 0 }}"
-                       data-nb-place="{{ $tarif->getSeatCount() ?? 1 }}">
+
+                <div id="tarif_{{ $tarif->getId() }}_help" class="visually-hidden">
+                    Chaque unité de ce complément comprend {{ $tarif->getSeatCount() }} place{{ $tarif->getSeatCount() > 1 ? 's':'' }}.
+                    Saisissez un nombre entier supérieur ou égal à 0.
+                </div>
+
+                <input
+                        type="number"
+                        class="form-control place-input"
+                        id="tarif_{{ $tarif->getId() }}"
+                        name="tarifs[{{ $tarif->getId() }}]"
+                        min="0"
+                        value="{{ isset($arrayTarifForForm[$tarif->getId()]) ? $arrayTarifForForm[$tarif->getId()] : 0 }}"
+                        data-nb-place="{{ $tarif->getSeatCount() ?? 1 }}"
+                        inputmode="numeric"
+                        aria-invalid="false"
+                        aria-describedby="step6-hint tarif_{{ $tarif->getId() }}_help tarif_{{ $tarif->getId() }}_error"
+                >
+                <div id="tarif_{{ $tarif->getId() }}_error" class="invalid-feedback" role="alert" aria-live="polite"></div>
             </div>
             {% endif %}
             {% endforeach %}
         </div>
         {% else %}
-        <div class="alert alert-info">Aucun tarif disponible pour cet événement.</div>
+        <div class="alert alert-info" role="status" aria-live="polite">Aucun complément disponible pour cet événement.</div>
         {% endif %}
 
         <hr>
+
         <div class="mb-3">
-            <label for="specialCode" class="form-label">Vous avez un code ?</label>
-            <div class="input-group">
-                <input type="text" class="form-control" id="specialCode" placeholder="Saisissez votre code" style="max-width: 250px;">
-                <button type="button" class="btn btn-outline-primary" id="validateCodeBtn">Valider le code</button>
+            <label for="specialCode" class="form-label">Vous avez un code ?</label>
+            <div id="specialCodeHelp" class="visually-hidden">
+                Entrez votre code puis utilisez le bouton pour le valider.
             </div>
-            <div id="specialCodeFeedback" class="form-text text-danger"></div>
+            <div class="input-group">
+                <input
+                        type="text"
+                        class="form-control"
+                        id="specialCode"
+                        placeholder="Saisissez votre code"
+                        style="max-width: 250px;"
+                        aria-invalid="false"
+                        aria-describedby="step6-hint specialCodeHelp specialCodeFeedback"
+                        autocomplete="off"
+                        spellcheck="false"
+                >
+                <button
+                        type="button"
+                        class="btn btn-outline-primary"
+                        id="validateCodeBtn"
+                        aria-describedby="specialCodeHelp"
+                >
+                    Valider le code
+                </button>
+            </div>
+            <div id="specialCodeFeedback" class="form-text text-danger" role="alert" aria-live="polite"></div>
         </div>
+
         <div id="specialTarifContainer"></div>
+
         <br>
+
         <div class="row">
             <div class="col-12 col-md-6 mb-2 mb-md-0">
                 <a href="/reservation/{{ $previousStep }}" class="btn btn-secondary w-100 w-md-auto">Modifier mon choix précédent</a>
@@ -53,11 +102,10 @@
             </div>
         </div>
     </form>
-
 </div>
 
 <script>
-    window.specialTarifSession  = {{! json_encode($specialTarifSession ?? null) !}}; // préremplissage code spécial
+    window.specialTarifSession = {{! json_encode($specialTarifSession ?? null) !}};
 </script>
 
 <script type="module" src="/assets/js/reservations/etape6.js" defer></script>

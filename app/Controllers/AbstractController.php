@@ -1,4 +1,5 @@
 <?php
+
 namespace app\Controllers;
 
 use app\Core\TemplateEngine;
@@ -23,9 +24,23 @@ abstract class AbstractController
     protected ?CsrfService $csrfService = null;
     protected ReservationSessionService $reservationSessionService;
     private static bool $globalHandlersRegistered = false;
-
     protected ?User $currentUser = null;
 
+    /**
+     * Initialise l'environnement contrôleur.
+     * - Démarre/Configure la session.
+     * - Initialise le contexte de requête et le logging.
+     * - Enregistre les gestionnaires globaux d'erreurs.
+     * - Valide la session utilisateur (sauf route publique).
+     * - Initialise le CSRF et applique la vérification conditionnelle.
+     * - Journalise la requête entrante.
+     *
+     * Effets de bord:
+     * - Peut rediriger vers `/login` et terminer le script en cas de session invalide.
+     * - Peut envoyer des en-têtes HTTP.
+     *
+     * @param bool $isPublicRoute Indique si la route est publique (pas de vérification de session utilisateur).
+     */
     public function __construct(bool $isPublicRoute = false)
     {
         // Bootstrap logging + contexte requête (X-Request-Id)
@@ -74,14 +89,21 @@ abstract class AbstractController
     }
 
     /**
-     * Injecte les données demandées par le controller dans la vue, en ajoutant les données communes, comme token CSRF ou les messages flashes
+     * Rend une vue avec un layout commun.
+     * - Injecte des données communes (URI, messages flash, utilisateur, debug, CSRF).
+     * - Peut rendre partiellement le contenu sans layout.
      *
-     * @param string $view
-     * @param array $data
-     * @param string $title
-     * @param int $statusCode
-     * @param string $csrfContext
-     * @param bool $partial
+     * Effets de bord:
+     * - Définit le code de statut HTTP.
+     * - Écrit la sortie HTML directement (echo).
+     * - Peut définir des en-têtes CSRF dans le layout.
+     *
+     * @param string $view Nom de la vue relative au répertoire `views` (sans extension).
+     * @param array $data Données à passer au template.
+     * @param string $title Titre de la page.
+     * @param int $statusCode Code HTTP à renvoyer.
+     * @param string $csrfContext Contexte CSRF à utiliser.
+     * @param bool $partial Si true, renvoie uniquement le contenu de la vue (sans layout).
      * @return void
      */
     protected function render(string $view, array $data = [], string $title = '', int $statusCode = 200, string $csrfContext = 'default', bool $partial = false): void
@@ -194,9 +216,11 @@ abstract class AbstractController
 
     /**
      * Pour le moteur de template, enrichit les tableaux pour faciliter les boucles dans les vues
+     * Prépare des structures de données adaptées aux boucles de templates.
+     * - Pour chaque tableau indexé \[0..n\], ajoute `key_loop` avec des entrées \{item, index, first, last, count\}.
      *
-     * @param array $data
-     * @return array
+     * @param array $data Données d'entrée.
+     * @return array Données enrichies de clés `*_loop`.
      */
     private function prepareLoopData(array $data): array
     {
@@ -220,11 +244,18 @@ abstract class AbstractController
     }
 
     /**
-     * Vérifie si le User est connecté (et non expiré) pour les routes non publiques
+     * Vérifie l'état de la session utilisateur pour les routes non publiques.
+     * - Valide l'activité et la péremption.
+     * - Régénère l'ID de session périodiquement et le persiste en base.
+     * - Recharge l'utilisateur courant.
      *
-     * @param bool $isPublicRoute
+     * Effets de bord:
+     * - Met à jour `$_SESSION['user']`.
+     * - Peut rediriger vers `/login` et terminer le script.
+     *
+     * @param bool $isPublicRoute Si true, aucune vérification n'est effectuée.
      * @return void
-     * @throws Exception
+     * @throws Exception En cas d'erreur interne lors d'opérations dépendantes (ex. dépôt).
      */
     public function checkUserSession(bool $isPublicRoute = false): void
     {
@@ -265,11 +296,16 @@ abstract class AbstractController
     }
 
     /**
-     * Supprime la session et redirige vers la page de login avec un message si besoin
-     * Enregistre l'URL en cours pour pouvoir y retourner après le login
+     * Supprime la session actuelle, enregistre un message flash et redirige vers `/login`.
+     * Optionnellement, mémorise l'URL courante pour y revenir après connexion.
      *
-     * @param string $message
-     * @param bool $saveRedirectUrl
+     * Effets de bord:
+     * - Vide `$_SESSION`, détruit et redémarre la session.
+     * - Définit un message flash.
+     * - Envoie un en-tête `Location` et termine le script.
+     *
+     * @param string $message Message à afficher après redirection.
+     * @param bool $saveRedirectUrl Si true, sauvegarde l'URL courante si elle est interne.
      * @return void
      */
     private function logoutAndRedirect(string $message, bool $saveRedirectUrl = false): void
@@ -296,7 +332,11 @@ abstract class AbstractController
     }
 
     /**
-     * Applique les paramètres de sécurité des cookies de session
+     * Applique les paramètres de sécurité et de cookie de la session selon l'environnement.
+     *
+     * Effets de bord:
+     * - Modifie les directives INI des sessions.
+     * - Définit le nom de session et les paramètres de cookie.
      *
      * @return void
      */
@@ -334,7 +374,9 @@ abstract class AbstractController
     }
 
     /**
-     * @param bool $destroyOldSession
+     * Régénère l'ID de session s'il y a une session active.
+     *
+     * @param bool $destroyOldSession Si true, détruit l'ancienne session.
      * @return void
      */
     protected function regenerateSessionId(bool $destroyOldSession = false): void
@@ -345,11 +387,17 @@ abstract class AbstractController
     }
 
     /**
-     * Prépare et envoie une réponse JSON avec gestion automatique du contexte CSRF
+     * Envoie une réponse JSON standardisée avec renouvellement du jeton CSRF.
+     * - Détecte automatiquement le contexte CSRF (entête `X-CSRF-Context` ou URI).
+     * - Ajoute des en-têtes `X-CSRF-Token` et `X-CSRF-Context`.
      *
-     * @param array $data
-     * @param int $statusCode
-     * @param string|null $csrfContext Contexte CSRF (si null, utilise l'en-tête X-CSRF-Context)
+     * Effets de bord:
+     * - Définit le code de statut HTTP et les en-têtes.
+     * - Écrit la réponse JSON et termine le script.
+     *
+     * @param array $data Données à sérialiser en JSON.
+     * @param int $statusCode Code HTTP de la réponse.
+     * @param string|null $csrfContext Contexte CSRF à utiliser, ou null pour auto.
      * @return void
      */
     protected function json(array $data, int $statusCode = 200, ?string $csrfContext = null): void
@@ -383,10 +431,11 @@ abstract class AbstractController
     }
 
     /**
-     * Vérifie si la redirection est bien interne
+     * Indique si une URL est une redirection interne sûre.
+     * - Doit commencer par `/` et ne pas contenir de double slash initial ni de schéma.
      *
-     * @param string $url
-     * @return bool
+     * @param string $url URL candidate.
+     * @return bool True si l'URL est interne.
      */
     private function isValidInternalRedirect(string $url): bool
     {
@@ -394,9 +443,11 @@ abstract class AbstractController
     }
 
     /**
-     * Détermine le contexte CSRF à partir de l'URL courante
+     * Détermine le contexte CSRF à partir de l'URL courante.
+     * - Les routes `/reservation` et leurs sous-chemins utilisent le contexte `/reservation`.
+     * - Sinon, utilise le premier segment de chemin (`/segment`) ou `default`.
      *
-     * @return string
+     * @return string Contexte CSRF.
      */
     protected function getCsrfContext(): string
     {
@@ -427,7 +478,9 @@ abstract class AbstractController
     // Referer si même origine (hôte comparé en ignorant le port)
 
     /**
-     * @return string|null
+     * Retourne le chemin de la requête courante sans query string.
+     *
+     * @return string|null Chemin absolu commençant par `/`.
      */
     private function getSameOriginRefererPath(): ?string
     {
@@ -448,7 +501,9 @@ abstract class AbstractController
     }
 
     /**
-     * @return CsrfService
+     * Accès au service CSRF initialisé.
+     *
+     * @return CsrfService Instance du service CSRF.
      */
     protected function csrf(): CsrfService
     {
@@ -456,7 +511,12 @@ abstract class AbstractController
     }
 
     /**
-     * Vérifie la validité du token CSRF pour les requêtes modifiant l'état
+     * Applique la validation/consommation CSRF pour les méthodes mutatrices \[POST, PUT, PATCH, DELETE\].
+     * - En mode debug, la validation est désactivée.
+     * - En cas d'échec, renvoie HTTP 419 avec un nouveau jeton et termine le script.
+     *
+     * Effets de bord:
+     * - Peut envoyer une réponse JSON et terminer l'exécution.
      *
      * @return void
      */
@@ -502,12 +562,15 @@ abstract class AbstractController
         }
     }
 
-
     /**
-     * Vérifie que le User connecté a bien le droit de faire ce qu'il demande
+     * Vérifie que l'utilisateur courant a un niveau de rôle suffisant pour gérer la ressource.
+     * - Un niveau numériquement plus petit signifie plus de privilèges.
      *
-     * @param int $minRoleLevel
-     * @param string|null $urlReturn
+     * Effets de bord:
+     * - Peut définir un message flash et rediriger vers `/gestion` (avec option de retour).
+     *
+     * @param int $minRoleLevel Niveau de rôle minimal requis.
+     * @param string|null $urlReturn Segment d'URL \[a-z_-]* pour retourner dans l'UI, ou null.
      * @return void
      */
     protected function checkIfCurrentUserIsAllowedToManagedThis(int $minRoleLevel = 99, ?string $urlReturn = null): void
@@ -527,11 +590,14 @@ abstract class AbstractController
     }
 
     /**
-     * Pour vérifier si le currentUser a le droit de lire, écrire, supprimer ou juste readonly (ou rien du tout)
+     * Retourne la capacité de l'utilisateur courant sur la fonctionnalité réservations.
+     * - Lecture des niveaux requis depuis la config `security.php`.
      *
-     * @return string
+     * Effets de bord:
+     * - En cas d'absence de droit, définit un message flash et redirige vers `/gestion`.
+     *
+     * @return string Chaîne de permissions (ex. `R`, `CRU`, `CRUD`), sinon redirection.
      */
-
     protected function whatCanDoCurrentUser():string
     {
         $minRoleLevel = (require __DIR__ . '/../../config/security.php')['reservations_access_level'];
@@ -545,9 +611,9 @@ abstract class AbstractController
     }
 
     /**
-     * Redirige vers une url donnée
+     * Redirige vers l'URL donnée avec un en-tête `Location` puis termine le script.
      *
-     * @param string $url
+     * @param string $url URL absolue ou relative au site.
      * @return void
      */
     protected function redirect(string $url): void
@@ -557,12 +623,13 @@ abstract class AbstractController
     }
 
     /**
-     * Récupère l'ancre et redirige vers celle-ci
+     * Construit et applique une redirection vers une URL, avec ancre optionnelle.
+     * - L'ancre peut être dérivée d'un identifiant ou du champ POST `form_anchor` (par défaut).
      *
-     * @param string $url
-     * @param string $anchorKey
-     * @param int $id
-     * @param string|null $context
+     * @param string $url URL de base.
+     * @param string $anchorKey Nom du champ POST contenant l'ancre si `$id` n'est pas fourni.
+     * @param int $id Identifiant d'élément \=> construit une ancre basée sur le contexte.
+     * @param string|null $context Contexte d'affichage (`desktop` \=> `config-row-`, sinon `config-card-`).
      * @return void
      */
     protected function redirectWithAnchor(string $url, string $anchorKey = 'form_anchor', int $id = 0, ?string $context = null): void
@@ -581,6 +648,11 @@ abstract class AbstractController
     }
 
     /**
+     * Enregistre les gestionnaires globaux d'erreurs/exceptions (une seule fois).
+     * - Exceptions non interceptées.
+     * - Erreurs PHP.
+     * - Erreurs fatales en fin de script.
+     *
      * @return void
      */
     private static function registerGlobalErrorHandlers(): void
@@ -602,7 +674,11 @@ abstract class AbstractController
     }
 
     /**
-     * @param Throwable $e
+     * Gestionnaire des exceptions non interceptées.
+     * - Journalise l'exception.
+     * - Répond avec une erreur HTTP 500 puis termine.
+     *
+     * @param Throwable $e Exception non interceptée.
      * @return void
      */
     public static function handleUncaughtException(Throwable $e): void
@@ -620,11 +696,15 @@ abstract class AbstractController
     }
 
     /**
-     * @param int $errno
-     * @param string $errstr
-     * @param string $errfile
-     * @param int $errline
-     * @return bool
+     * Gestionnaire des erreurs PHP.
+     * - Journalise l'erreur avec un niveau approprié.
+     * - Retourne false pour laisser le gestionnaire natif continuer.
+     *
+     * @param int $errno Code d'erreur PHP.
+     * @param string $errstr Message d'erreur.
+     * @param string $errfile Fichier source de l'erreur.
+     * @param int $errline Ligne de l'erreur.
+     * @return bool False pour déléguer au handler interne après logging.
      */
     public static function handlePhpError(int $errno, string $errstr, string $errfile, int $errline): bool
     {
@@ -649,6 +729,9 @@ abstract class AbstractController
     }
 
     /**
+     * Gestionnaire de fin d'exécution.
+     * - Si une erreur fatale est détectée, la journalise et renvoie une réponse 500.
+     *
      * @return void
      */
     public static function handleShutdown(): void
@@ -676,7 +759,11 @@ abstract class AbstractController
     }
 
     /**
-     * @param Throwable|string|null $e
+     * Construit et envoie une réponse 500 JSON ou HTML selon `Accept`.
+     * - En mode debug, inclut les détails de l'erreur.
+     * - Termine toujours le script après envoi.
+     *
+     * @param Throwable|string|null $e Détails de l'erreur à loguer/afficher (optionnel).
      * @return void
      */
     private static function respondHttp500(null|Throwable|string $e): void
@@ -707,9 +794,10 @@ abstract class AbstractController
 
 
     /**
-     * Vérifie et retourne une erreur si l'accès n'est pas suffisant
+     * Vérifie qu'une permission donnée est incluse dans les droits de l'utilisateur courant.
+     * - En cas d'absence, renvoie une réponse JSON 403 via `json()` et termine le script.
      *
-     * @param string $level
+     * @param string $level Permission requise (ex. `r`, `w`, `d`).
      * @return void
      */
     protected function checkUserPermission(string $level = ''): void

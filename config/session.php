@@ -16,7 +16,7 @@ return [
         'cookie_lifetime' => 0,
         'cookie_path' => '/',
         'cookie_domain' => '',
-        'cookie_secure' => false, // false pour le développement en local (http)
+        'cookie_secure' => true, // false pour le développement en local (http)
         'cookie_httponly' => true,
         'cookie_samesite' => 'Lax' // Lax est plus permissif pour le dev
     ]

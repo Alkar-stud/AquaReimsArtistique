@@ -150,7 +150,9 @@ class MigrationController
                 }
 
                 $this->pdo->beginTransaction();
+                //On exécute la requête SQL du fichier
                 $this->pdo->exec($sql);
+                //Puis on insère le nom du fichier dans la table migrations
                 $stmt = $this->pdo->prepare("INSERT INTO " . self::MIGRATIONS_TABLE . " (name) VALUES (:name)");
                 $stmt->execute(['name' => $file]);
                 $this->pdo->commit();

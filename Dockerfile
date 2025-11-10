@@ -2,8 +2,10 @@
 FROM php:8.2-apache
 
 
-RUN apt-get update && apt-get install -y libpng-dev libjpeg-dev libonig-dev libxml2-dev zip unzip && \
-    docker-php-ext-install pdo pdo_mysql
+RUN apt-get update && apt-get install -y \
+    libpng-dev libjpeg-dev libonig-dev libxml2-dev zip unzip libicu-dev \
+    && docker-php-ext-configure intl \
+    && docker-php-ext-install pdo pdo_mysql intl
 
 # Activer les modules Apache nécessaires et modifier la configuration d'Apache pour écouter sur le port 3000
 RUN a2enmod rewrite headers ssl && \

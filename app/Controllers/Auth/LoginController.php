@@ -42,7 +42,8 @@ class LoginController extends AbstractController
         if (
             $user &&
             $user->getUsername() === $username && // Vérification stricte de la casse
-            password_verify($password, $user->getPassword())
+            password_verify($password, $user->getPassword()) &&
+            $user->getIsActif()
         ) {
             Logger::get()->security('login_success', ['username' => $username, 'user_id' => $user->getId()]);
 

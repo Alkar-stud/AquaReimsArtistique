@@ -179,7 +179,7 @@
 <script>
     window.eventSessions = {{! json_encode($eventSessions ?? []) !}};
 </script>
-<script src="/assets/js/gestion/event_presentations.js" defer></script>
+
 <style>
     /* Cible les modales d'ajout et d'édition de cette page */
     #addModal .modal-dialog,

@@ -4,6 +4,8 @@ import { initReservationList } from './gestion/reservationList.js';
 import { initStatusToggles } from './gestion/statusToggle.js';
 import { initReservationExtracts } from './gestion/reservationsExports.js';
 import {initSearchReservation} from "./gestion/reservationSearch.js";
+import { initEventPresentations } from './gestion/event_presentations.js';
+
 
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -19,5 +21,6 @@ document.addEventListener('DOMContentLoaded', () => {
     initReservationModal();
     initStatusToggles();
     initReservationExtracts();
+    initEventPresentations();
 
 });

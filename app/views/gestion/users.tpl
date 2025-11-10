@@ -10,7 +10,7 @@
                 <th>Email</th>
                 <th>Nom d'affichage</th>
                 <th>Rôle</th>
-                <th>Actif</th>
+                <th>Statut actif</th>
                 <th>Actions</th>
             </tr>
             </thead>
@@ -51,7 +51,7 @@
             {% if !empty($users) %}
             {% foreach $users as $user %}
             <tr id="user-row-{{ $user->getId() }}">
-                <form method="POST" action="/gestion/users/edit"></form>
+                <form method="POST" action="/gestion/users/edit">
                     <input type="hidden" name="form_anchor" value="user-row-{{ $user->getId() }}">
                     <input type="hidden" name="user_id" value="{{ $user->getId() }}">
                     <td><input type="text" name="username" class="form-control" value="{{ $user->getUsername() }}" required></td>
@@ -88,7 +88,7 @@
                             <button type="submit" class="btn btn-secondary btn-sm">
                                 <i class="bi bi-save"></i>&nbsp;Enregistrer
                             </button>
-
+                </form>
                             <form method="POST" action="/gestion/users/delete" onsubmit="return confirm('Supprimer cet utilisateur ?');" class="d-inline">
                                 <input type="hidden" name="form_anchor" value="user-row-{{ $user->getId() }}">
                                 <input type="hidden" name="user_id" value="{{ $user->getId() }}">
@@ -137,7 +137,7 @@
                         </select>
                     </div>
                     <div class="mb-2">
-                        <label class="form-label d-block">Actif :</label>
+                        <label class="form-label d-block">Statut actif :</label>
                         <div class="form-check form-switch">
                             <!-- Ajout: default actif -->
                             <input type="hidden" name="is_active" value="1">
@@ -210,3 +210,5 @@
         {% endforeach %}
     </div>
 </div>
+
+<script type="module" src="/assets/js/gestion/users.js"></script>

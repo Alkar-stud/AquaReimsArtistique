@@ -108,10 +108,10 @@ class UserController extends AbstractController
             ->setRole($this->role)
             ->setIsActif($this->userDataValidationService->getIsActive())
             ->setSessionId(null);
+        $this->userRepository->update($user);
 
         $this->flashMessageService->setFlashMessage('success','Utilisateur modifié.');
 
-        $this->userRepository->update($user);
         $this->redirectWithAnchor('/gestion/users');
     }
 

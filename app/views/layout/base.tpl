@@ -22,11 +22,7 @@
 
     <title>{{ ($_ENV['APP_NAME'] ?? 'Titre') . ' - ' . ($title ?? '') }}</title>
 </head>
-<body class="d-flex flex-column min-vh-100"
-        {% if isset($js_data) %}
-      data-js-vars='{{! json_encode($js_data, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) !}}'
-        {% endif %}
->
+<body class="d-flex flex-column min-vh-100">
 {% include 'header.tpl' %}
 <main id="main-page" class="flex-grow-1">
     {% if $flash_message %}
@@ -84,6 +80,11 @@
         {% endif %}
     </div>
 </div>
+{% if isset($js_data) %}
+<script type="application/json" id="debug-data">
+        {{! json_encode($js_data, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) !}}
+    </script>
+{% endif %}
 <script src="/assets/js/components/debug-bar.js" defer></script>
 {% endif %}
 

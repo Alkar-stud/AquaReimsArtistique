@@ -11,6 +11,25 @@ use Dotenv\Exception\InvalidPathException;
 
 date_default_timezone_set('Europe/Paris');
 
+// Vérification de l'autoloader Composer
+$vendorDir = __DIR__ . '/../vendor';
+$autoloadFile = $vendorDir . '/autoload.php';
+
+if (!is_dir($vendorDir) || !is_file($autoloadFile)) {
+    http_response_code(404);
+    // Page 404 minimale sans dépendances
+    echo '<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"><title>404 - Ressource manquante</title>
+<style>body{font-family:Arial,sans-serif;background:#f7f7f9;margin:0;padding:40px;color:#333}
+.box{max-width:700px;margin:auto;background:#fff;border:1px solid #ddd;padding:30px;border-radius:8px}
+h1{margin-top:0;font-size:26px;color:#c00}
+code{background:#eee;padding:2px 5px;border-radius:4px}</style></head><body>
+<div class="box">
+<h1>404 - Dépendances introuvables</h1>
+<p>Le répertoire <code>/vendor</code> ou le fichier <code>vendor/autoload.php</code> est manquant.</p>
+</div></body></html>';
+    exit;
+}
+
 //Chargement des dépendances
 require_once __DIR__ . '/../vendor/autoload.php';
 

@@ -131,7 +131,47 @@ class MigrationController
         return $sqlFiles;
     }
 
+
     /**
+     * Nettoyage simplifié: enlève commentaires ligne (--, #) et blocs /* ... *\/ puis découpe sur ';'.
+     * Ne gère pas les cas complexes (procédures avec ';' interne, quotes imbriquées).
+     * Suffisant pour des fichiers de migrations simples.
+     */
+    private function simpleSplitStatements(string $sql): array
+    {
+        // Retire commentaires blocs
+        $sql = preg_replace('/\/\*.*?\*\//s', '', $sql) ?? $sql;
+
+        $lines = preg_split('/\R/', $sql) ?: [];
+        $filtered = [];
+        foreach ($lines as $line) {
+            $trim = trim($line);
+            if ($trim === '' || str_starts_with($trim, '--') || str_starts_with($trim, '#')) {
+                continue;
+            }
+            $filtered[] = $line;
+        }
+
+        $clean = trim(implode("\n", $filtered));
+        // Découpe naïve sur ';'
+        $parts = array_map('trim', explode(';', $clean));
+        // Filtre vide
+        return array_values(array_filter($parts, static fn($p) => $p !== ''));
+    }
+
+    /** Classification minimale. */
+    private function getStmtType(string $stmt): string
+    {
+        $s = strtoupper(ltrim($stmt));
+        if (preg_match('/^(CREATE|ALTER|DROP|TRUNCATE|RENAME)\b/', $s)) return 'DDL';
+        if (preg_match('/^(INSERT|UPDATE|DELETE|REPLACE|MERGE)\b/', $s)) return 'DML';
+        if (preg_match('/^(SELECT|SHOW|DESCRIBE|DESC|EXPLAIN)\b/', $s)) return 'DQL';
+        if (preg_match('/^(GRANT|REVOKE)\b/', $s)) return 'DCL';
+        return 'OTHER';
+    }
+
+    /**
+     * Applique chaque fichier SQL
      * @param string[] $files
      * @return array{appliedNow:string[], userMigrationApplied:bool}
      */
@@ -149,13 +189,43 @@ class MigrationController
                     continue;
                 }
 
-                $this->pdo->beginTransaction();
-                //On exécute la requête SQL du fichier
-                $this->pdo->exec($sql);
-                //Puis on insère le nom du fichier dans la table migrations
-                $stmt = $this->pdo->prepare("INSERT INTO " . self::MIGRATIONS_TABLE . " (name) VALUES (:name)");
-                $stmt->execute(['name' => $file]);
-                $this->pdo->commit();
+                $statements = $this->simpleSplitStatements($sql);
+                if ($statements === []) {
+                    echo "Fichier vide " . htmlspecialchars($file) . "<br>";
+                    continue;
+                }
+
+                // Exécute DDL/DCL hors transaction
+                try {
+                    foreach ($statements as $stmt) {
+                        $type = $this->getStmtType($stmt);
+                        if ($type === 'DDL' || $type === 'DCL') {
+                            $this->pdo->exec($stmt);
+                        }
+                    }
+                } catch (PDOException $e) {
+                    echo "Erreur DDL/DCL " . htmlspecialchars($file) . " : " . htmlspecialchars($e->getMessage()) . "<br>";
+                    continue;
+                }
+
+                //Pas de transaction/commit pour les requêtes DDL (Data Definition Language) car commit implicite de MySQL et donc plus rien à commit, ce qui lève une erreur de commit.
+                if ($this->getStmtType($statements[0]) == "DDL") {
+                    //On exécute la requête SQL du fichier
+                    $this->pdo->exec($sql);
+                    //Puis, on insère le nom du fichier dans la table migrations
+                    $stmt = $this->pdo->prepare("INSERT INTO " . self::MIGRATIONS_TABLE . " (name) VALUES (:name)");
+                    $stmt->execute(['name' => $file]);
+                } else {
+                    $this->pdo->beginTransaction();
+                    //On exécute la requête SQL du fichier
+                    $this->pdo->exec($sql);
+                    //Puis, on insère le nom du fichier dans la table migrations
+                    $stmt = $this->pdo->prepare("INSERT INTO " . self::MIGRATIONS_TABLE . " (name) VALUES (:name)");
+                    $stmt->execute(['name' => $file]);
+                    $this->pdo->commit();
+                }
+
+
 
                 $appliedNow[] = $file;
 

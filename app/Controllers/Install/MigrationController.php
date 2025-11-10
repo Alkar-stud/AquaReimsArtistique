@@ -19,7 +19,7 @@ class MigrationController
     use HasPdoConnection;
     private BuildLink $buildLink;
 
-    private const string MIGRATIONS_TABLE = 'migrations';
+    private const MIGRATIONS_TABLE = 'migrations';
     private string $migrationPath = __DIR__ . '/../../../database/migrations/';
 
     public function __construct()

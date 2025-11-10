@@ -70,7 +70,10 @@ class HelloAssoService
         $JsonData = json_encode($TabData);
 
         $ch = curl_init();
-        curl_setopt($ch, CURLOPT_URL, $_ENV['HELLOASSO_API_URL'] . '' . $this->urlApi . $_ENV['HELLOASSO_API_ORGANIZATION_ID'] . $this->urlCheckoutIntents);
+        curl_setopt($ch,
+            CURLOPT_URL,
+            $_ENV['HELLOASSO_API_URL'] . '' . $this->urlApi . $_ENV['HELLOASSO_API_ORGANIZATION_ID'] . $this->urlCheckoutIntents
+        );
         curl_setopt($ch, CURLOPT_POST, 1);// set post data to true
         curl_setopt($ch, CURLOPT_POSTFIELDS,$JsonData);   // post data
         curl_setopt($ch, CURLOPT_HTTPHEADER, array(

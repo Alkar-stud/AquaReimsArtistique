@@ -300,6 +300,138 @@ class ReservationRepository extends AbstractRepository
         return $this->hydrateRelations($list);
     }
 
+
+    /**
+     * Récupère des réservations liées à des tarifs (via reservation_detail ou reservation_complement)
+     * et ne sélectionne que les colonnes demandées (préserve un mapping whitelist pour éviter l'injection).
+     *
+     * @param int[] $tarifIds
+     * @param array $searchRows Liste des clés publiques à exporter (peut être un tableau indexé ou associatif)
+     * @param int $selectedSessionId
+     * @param bool $excludeCanceled
+     * @return array<int,array<string,mixed>>
+     */
+    public function findByTarifIdsForExport(array $tarifIds, array $searchRows, int $selectedSessionId, bool $excludeCanceled = true): array
+    {
+        if (empty($tarifIds)) return [];
+
+        // Normalisation des IDs
+        $tarifIds = array_values(array_unique(array_map('intval', $tarifIds)));
+        $allSessionReservations = (count($tarifIds) === 1 && $tarifIds[0] === 0);
+
+        // Whitelist des colonnes exportables (alias explicites)
+        $columnsAllowed = [
+            'reservationId'   => 'r.id AS reservationId',
+            'name'            => 'r.name AS name',
+            'firstName'       => 'r.firstname AS firstName',
+            'email'           => 'r.email AS email',
+            'phone'           => 'r.phone AS phone',
+            'totalAmount'     => 'r.total_amount AS totalAmount',
+            'totalAmountPaid' => 'r.total_amount_paid AS totalAmountPaid',
+            'isCanceled'      => 'r.is_canceled AS isCanceled',
+        ];
+
+        // Normalisation entrée utilisateur
+        $isAssoc = array_keys($searchRows) !== range(0, count($searchRows) - 1);
+        $requestedInput = $isAssoc ? array_keys($searchRows) : $searchRows;
+        $requested = array_values(array_intersect(array_keys($columnsAllowed), $requestedInput));
+        if (empty($requested)) {
+            $requested = array_keys($columnsAllowed);
+        }
+
+        // Forcer l'id pour ORDER BY
+        $implicitIdAdded = false;
+        if (!in_array('reservationId', $requested, true)) {
+            $requested[] = 'reservationId';
+            $implicitIdAdded = true;
+        }
+
+        // Construction liste SELECT
+        $selectParts = [];
+        foreach ($requested as $key) {
+            $selectParts[] = $columnsAllowed[$key];
+        }
+        $selectReservationColumns = implode(', ', $selectParts);
+
+        // MODE 1: Tous les tarifs de la session (sentinelle [0])
+        if ($allSessionReservations) {
+            $params = ['sessionId' => $selectedSessionId];
+            $where = ['r.event_session = :sessionId'];
+            if ($excludeCanceled) {
+                $where[] = 'r.is_canceled = 0';
+            }
+            $sql = "SELECT $selectReservationColumns
+                FROM {$this->tableName} r
+                WHERE " . implode(' AND ', $where) . "
+                ORDER BY reservationId";
+
+            $rows = $this->query($sql, $params) ?: [];
+
+            if ($implicitIdAdded) {
+                foreach ($rows as &$row) unset($row['reservationId']);
+                unset($row);
+            }
+            return $rows;
+        }
+
+        // MODE 2: Uniquement les participations liées aux tarifs fournis
+        $params = [];
+        $commonDetail = [];
+        $commonComplement = [];
+
+        // Sessions (placeholders distincts pour UNION)
+        $commonDetail[] = 'r.event_session = :session1';
+        $commonComplement[] = 'r.event_session = :session2';
+        $params['session1'] = $selectedSessionId;
+        $params['session2'] = $selectedSessionId;
+
+        if ($excludeCanceled) {
+            $commonDetail[] = 'r.is_canceled = 0';
+            $commonComplement[] = 'r.is_canceled = 0';
+        }
+
+        // Placeholders tarifs (distincts rd vs rc)
+        $rdPh = [];
+        $rcPh = [];
+        foreach ($tarifIds as $i => $id) {
+            $rdKey = 'rd_t' . $i;
+            $rcKey = 'rc_t' . $i;
+            $rdPh[] = ':' . $rdKey;
+            $rcPh[] = ':' . $rcKey;
+            $params[$rdKey] = $id;
+            $params[$rcKey] = $id;
+        }
+        if ($rdPh) {
+            $commonDetail[] = 'rd.tarif IN (' . implode(',', $rdPh) . ')';
+            $commonComplement[] = 'rc.tarif IN (' . implode(',', $rcPh) . ')';
+        }
+
+        // Sous-requête détails
+        $detailSql = "SELECT $selectReservationColumns, td.name AS tarifName
+                  FROM reservation r
+                  JOIN reservation_detail rd ON rd.reservation = r.id
+                  LEFT JOIN tarif td ON td.id = rd.tarif
+                  WHERE " . implode(' AND ', $commonDetail);
+
+        // Sous-requête compléments
+        $complementSql = "SELECT $selectReservationColumns, tc.name AS tarifName
+                      FROM reservation r
+                      JOIN reservation_complement rc ON rc.reservation = r.id
+                      LEFT JOIN tarif tc ON tc.id = rc.tarif
+                      WHERE " . implode(' AND ', $commonComplement);
+
+        $sql = "$detailSql UNION ALL $complementSql ORDER BY reservationId";
+
+        $rows = $this->query($sql, $params) ?: [];
+
+        if ($implicitIdAdded) {
+            foreach ($rows as &$row) unset($row['reservationId']);
+            unset($row);
+        }
+
+        return $rows;
+    }
+
     /** Helper privé pour construire le WHERE et les paramètres de la recherche texte
      *
      * @param string $searchQuery

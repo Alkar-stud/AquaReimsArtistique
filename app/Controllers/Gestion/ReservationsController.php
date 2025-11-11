@@ -20,6 +20,7 @@ use app\Services\Reservation\ReservationQueryService;
 use app\Services\Reservation\ReservationDeletionService;
 use app\Services\Reservation\ReservationTokenService;
 use app\Services\Reservation\ReservationUpdateService;
+use app\Utils\DataHelper;
 use Exception;
 use Throwable;
 
@@ -34,10 +35,10 @@ class ReservationsController extends AbstractController
     private ReservationPaymentRepository $reservationPaymentRepository;
     private HelloAssoService $helloAssoService;
     private ReservationTokenService $reservationTokenService;
-    private PdfGenerationService $PdfGenerationService;
     private ReservationQueryService $reservationQueryService;
     private MailService $mailService;
     private MailPrepareService $mailPrepareService;
+    private DataHelper $dataHelper;
 
     function __construct(
         EventQueryService $eventQueryService,
@@ -49,10 +50,10 @@ class ReservationsController extends AbstractController
         ReservationPaymentRepository $reservationPaymentRepository,
         HelloAssoService $helloAssoService,
         ReservationTokenService $reservationTokenService,
-        PdfGenerationService $PdfGenerationService,
         ReservationQueryService $reservationQueryService,
         MailService $mailService,
         MailPrepareService $mailPrepareService,
+        DataHelper $dataHelper,
     )
     {
         parent::__construct(false);
@@ -65,10 +66,10 @@ class ReservationsController extends AbstractController
         $this->reservationPaymentRepository = $reservationPaymentRepository;
         $this->helloAssoService = $helloAssoService;
         $this->reservationTokenService = $reservationTokenService;
-        $this->PdfGenerationService = $PdfGenerationService;
         $this->reservationQueryService = $reservationQueryService;
         $this->mailService = $mailService;
         $this->mailPrepareService = $mailPrepareService;
+        $this->dataHelper = $dataHelper;
     }
 
     #[Route('/gestion/reservations', name: 'app_gestion_reservations')]
@@ -161,7 +162,7 @@ class ReservationsController extends AbstractController
         // Vérifier les permissions de l'utilisateur connecté
         $this->checkUserPermission('U');
 
-        $data = $this->getAndCheckPostData(['reservationId']);
+        $data = $this->dataHelper->getAndCheckPostData(['reservationId']);
 
         $reservation = $this->reservationRepository->findById((int)$data['reservationId'], false, false, false, true);
         if (!$reservation) {
@@ -187,7 +188,7 @@ class ReservationsController extends AbstractController
         // Vérifier les permissions de l'utilisateur connecté
         $this->checkUserPermission('U');
 
-        $data = $this->getAndCheckPostData(['id', 'status']);
+        $data = $this->dataHelper->getAndCheckPostData(['id', 'status']);
 
         try {
             $this->reservationRepository->updateSingleField((int)$data['id'], 'is_checked', (bool)$data['status']);
@@ -231,14 +232,13 @@ class ReservationsController extends AbstractController
 
     }
 
-
     #[Route('/gestion/reservations/refresh-payment', name: 'app_gestion_reservations_refresh_payment', methods: ['POST'])]
     public function requestRefresh(): void
     {
         // Vérifier les permissions de l'utilisateur connecté
         $this->checkUserPermission('R');
 
-        $data = $this->getAndCheckPostData(['paymentId']);
+        $data = $this->dataHelper->getAndCheckPostData(['paymentId']);
 
         //On va chercher le paiementID de HelloAsso concerné
         $payment = $this->reservationPaymentRepository->findById($data['paymentId']);
@@ -261,7 +261,7 @@ class ReservationsController extends AbstractController
         // Vérifier les permissions de l'utilisateur connecté
         $this->checkUserPermission('U');
 
-        $data = $this->getAndCheckPostData(['paymentId']);
+        $data = $this->dataHelper->getAndCheckPostData(['paymentId']);
 
         //On va chercher le paiementID de HelloAsso concerné
         $payment = $this->reservationPaymentRepository->findById($data['paymentId']);
@@ -288,7 +288,7 @@ class ReservationsController extends AbstractController
         $this->checkUserPermission('U');
 
         //On récupère les données
-        $data = $this->getAndCheckPostData(['reservationId']);
+        $data = $this->dataHelper->getAndCheckPostData(['reservationId']);
 
         $reservation = $this->reservationRepository->findById($data['reservationId']);
         if (!$reservation) {
@@ -338,7 +338,7 @@ class ReservationsController extends AbstractController
         $this->checkUserPermission('U');
 
         //On récupère les données
-        $data = $this->getAndCheckPostData(['reservationId']);
+        $data = $this->dataHelper->getAndCheckPostData(['reservationId']);
 
         $reservation = $this->reservationRepository->findById($data['reservationId'], true, true, true);
         if (!$reservation) {
@@ -355,66 +355,13 @@ class ReservationsController extends AbstractController
         $this->json(['success' => true, 'reservation' => $newReservation->toArray()]);
     }
 
-    /**
-     * Récupère les données envoyées en POST et vérifie si la/les clés recherchées sont présentes
-     *
-     * @param array $keyToCheck
-     * @return array|null
-     */
-    private function getAndCheckPostData(array $keyToCheck = []): ?array
-    {
-        $data = json_decode(file_get_contents('php://input'), true) ?? [];
-
-        //On vérifie que c'est bien un tableau
-        if (!is_array($data)) {
-            $this->json(['success' => false, 'message' => 'Données invalides.']);
-            return null;
-        }
-
-        //S'il n'y a rien à vérifier, on retourne les données
-        if (empty($keyToCheck)) {
-            return $data;
-        }
-
-        //On vérifie si la ou les clés recherchées sont contenues dans $data
-        foreach ($keyToCheck as $key) {
-            if (!is_string($key) || !array_key_exists($key, $data)) {
-                $this->json(['success' => false, 'message' => 'Données manquantes.']);
-                return null;
-            }
-        }
-
-        return $data;
-    }
-
-    #[Route('/gestion/reservations/exports', name: 'app_gestion_reservations_exports', methods: ['GET'])]
-    public function exports(): void
-    {
-        // Récupérer les paramètres depuis $_GET
-        $sessionId = (int)($_GET['s'] ?? 0);
-        $pdfType = $_GET['pdf'] ?? 'ListeParticipants';
-        $sortOrder = $_GET['tri'] ?? 'IDreservation';
-
-        try {
-            // On construit le PDF en fonction de son type.
-            $pdf = $this->PdfGenerationService->generate($pdfType, $sessionId, $sortOrder);
-
-            // On envoie le PDF construit au navigateur.
-            $pdf->Output('I', $this->PdfGenerationService->getFilenameForPdf($pdfType,$sessionId) . '.pdf');
-            exit;
-        } catch (Exception $e) {
-            http_response_code(404);
-            die("Erreur lors de la génération du PDF : " . $e->getMessage());
-        }
-    }
-
     #[Route('/gestion/reservations/send-mail', name: 'app_gestion_reservations_send_email', methods: ['POST'])]
     public function sendEmail(): void
     {
         // Vérifier les permissions de l'utilisateur connecté
         $this->checkUserPermission('U');
 
-        $data = $this->getAndCheckPostData(['reservationId', 'templateCode']);
+        $data = $this->dataHelper->getAndCheckPostData(['reservationId', 'templateCode']);
         //on récupère la réservation pour l'envoyer au mail
         $reservation = $this->reservationRepository->findById($data['reservationId'], true, true);
         if (!$reservation) {

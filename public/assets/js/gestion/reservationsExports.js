@@ -1,34 +1,27 @@
+import { apiPost } from '../components/apiClient.js';
+
 /**
  * Initialise les interactions de la page d'extraction des réservations.
- * - Gère la sélection d'une session pour recharger la page avec les bonnes options.
- * - Met à jour le lien de génération de PDF dynamiquement.
  */
 function init() {
     const eventSelector = document.getElementById('event-selector-extracts');
     const optionsContainer = document.getElementById('export-options-container');
 
     if (!eventSelector || !optionsContainer) {
-        return; // Ne rien faire si les éléments ne sont pas sur la page
+        return;
     }
 
-    // On récupère l'ID de la session depuis le selecteur, car il est déjà chargé par le PHP
     const selectedSessionId = eventSelector.value;
 
-    /**
-     * Met à jour le lien du bouton PDF en fonction du type sélectionné.
-     * @param {string} sessionId L'ID de la session sélectionnée.
-     */
     function initPdfGenerator(sessionId) {
         const pdfTypeRadios = document.querySelectorAll('input[name="pdf-type-selector"]');
         const pdfSortRadios = document.querySelectorAll('input[name="pdf-sort-selector"]');
         const generatePdfBtn = document.getElementById('generate-pdf-btn');
 
-        // --- Logique pour le PDF ---
         if (pdfTypeRadios.length > 0 && pdfSortRadios.length > 0 && generatePdfBtn) {
             const updatePdfLink = () => {
                 const pdfType = document.querySelector('input[name="pdf-type-selector"]:checked').value;
                 const sortOrder = document.querySelector('input[name="pdf-sort-selector"]:checked').value;
-                // Construit l'URL exacte demandée pour la génération du PDF
                 const url = new URL('/gestion/reservations/exports', window.location.origin);
                 url.searchParams.set('s', sessionId);
                 url.searchParams.set('pdf', pdfType);
@@ -38,26 +31,84 @@ function init() {
 
             pdfTypeRadios.forEach(radio => radio.addEventListener('change', updatePdfLink));
             pdfSortRadios.forEach(radio => radio.addEventListener('change', updatePdfLink));
-            // Mettre à jour le lien une première fois au chargement
             updatePdfLink();
         }
     }
 
-    /**
-     * Initialise le bouton CSV pour afficher une alerte.
-     */
     function initCsvGenerator() {
         const generateCsvBtn = document.getElementById('generate-csv-btn');
-        // --- Logique pour le CSV ---
-        if (generateCsvBtn) {
-            generateCsvBtn.addEventListener('click', () => {
-                // Pour le moment, affiche juste une alerte comme demandé.
-                alert('La génération de CSV sera bientôt disponible !');
-            });
-        }
+        const fieldCheckboxes = document.querySelectorAll('input[id^="csv-field-"]');
+        const tarifSelector = document.getElementById('csv-tarif-selector');
+        const eventSelector = document.getElementById('event-selector-extracts');
+
+        if (!generateCsvBtn || !eventSelector) return;
+
+        generateCsvBtn.addEventListener('click', async (event) => {
+            event.preventDefault();
+
+            const selectedSessionId = eventSelector.value;
+
+            // Champs cochés
+            const checkedFields = Array.from(fieldCheckboxes)
+                .filter(cb => cb.checked)
+                .map(cb => {
+                    const labelEl = document.querySelector(`label[for="${cb.id}"]`);
+                    return {
+                        value: cb.value,
+                        label: labelEl ? labelEl.textContent.trim() : cb.value
+                    };
+                });
+
+            // Tarifs sélectionnés
+            const selectedTarif = tarifSelector
+                ? Array.from(tarifSelector.selectedOptions).map(option => option.value)
+                : [];
+
+            const payload = {
+                id: selectedSessionId,
+                checkedFields,
+                selectedTarif,
+            };
+
+            try {
+                const resp = await fetch('/gestion/reservations/extract-csv', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Accept': 'application/octet-stream' },
+                    body: JSON.stringify(payload),
+                });
+
+                // Erreurs serveur lisibles
+                const ct = resp.headers.get('content-type') || '';
+                if (!resp.ok) {
+                    const msg = ct.includes('application/json')
+                        ? (await resp.json()).message || 'Erreur lors de la génération du CSV.'
+                        : await resp.text();
+                    throw new Error(msg);
+                }
+
+                // Récupérer le nom du fichier depuis Content-Disposition
+                let fileName = 'export.csv';
+                const dispo = resp.headers.get('content-disposition') || '';
+                const match = dispo.match(/filename="?([^"]+)"?/i);
+                if (match && match[1]) fileName = match[1];
+
+                // Télécharger via Blob
+                const blob = await resp.blob();
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = fileName;
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                URL.revokeObjectURL(url);
+            } catch (e) {
+                console.error(e);
+                alert(e.message || 'Erreur lors de la génération du CSV.');
+            }
+        });
     }
 
-    // Gérer le changement de sélection de la session
     eventSelector.addEventListener('change', (event) => {
         const selectedSessionId = event.target.value;
         const url = new URL(window.location);
@@ -65,7 +116,6 @@ function init() {
         window.location.href = url.toString();
     });
 
-    // Initialiser les générateurs si les options sont déjà affichées au chargement de la page
     initPdfGenerator(selectedSessionId);
     initCsvGenerator();
 }

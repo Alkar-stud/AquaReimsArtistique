@@ -84,9 +84,13 @@ async function client(endpoint, { body, ...customConfig } = {}) {
     try {
         return JSON.parse(responseText);
     } catch {
+/*
         const error = new Error('Format de réponse invalide du serveur.');
         error.userMessage = 'La réponse du serveur est dans un format inattendu.';
         return Promise.reject(error);
+ */
+        return responseText;
+
     }
 }
 

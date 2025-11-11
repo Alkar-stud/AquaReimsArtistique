@@ -50,20 +50,20 @@
                 <p class="card-title fw-bold">Champs à inclure :</p>
                 <div class="d-flex flex-wrap">
                     <div class="form-check form-check-inline">
-                        <input class="form-check-input" type="checkbox" id="csv-field-nom" value="nom" checked>
-                        <label class="form-check-label" for="csv-field-nom">Nom</label>
+                        <input class="form-check-input" type="checkbox" id="csv-field-name" value="name" checked>
+                        <label class="form-check-label" for="csv-field-name">Nom</label>
                     </div>
                     <div class="form-check form-check-inline">
-                        <input class="form-check-input" type="checkbox" id="csv-field-prenom" value="prenom" checked>
-                        <label class="form-check-label" for="csv-field-prenom">Prénom</label>
+                        <input class="form-check-input" type="checkbox" id="csv-field-firstName" value="firstName" checked>
+                        <label class="form-check-label" for="csv-field-firstName">Prénom</label>
                     </div>
                     <div class="form-check form-check-inline">
                         <input class="form-check-input" type="checkbox" id="csv-field-email" value="email" checked>
                         <label class="form-check-label" for="csv-field-email">Email</label>
                     </div>
                     <div class="form-check form-check-inline">
-                        <input class="form-check-input" type="checkbox" id="csv-field-tel" value="tel" checked>
-                        <label class="form-check-label" for="csv-field-tel">Téléphone</label>
+                        <input class="form-check-input" type="checkbox" id="csv-field-phone" value="phone">
+                        <label class="form-check-label" for="csv-field-phone">Téléphone</label>
                     </div>
                 </div>
 

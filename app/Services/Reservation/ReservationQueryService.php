@@ -351,4 +351,21 @@ class ReservationQueryService
         ];
     }
 
+    public function getReservationsByTarifIds(array $tarifIds, array $checkedFields = [], int $selectedSessionId = 0): array
+    {
+        // champs par défaut si aucun n'est fourni
+        if (empty($checkedFields)) {
+            $searchRows = ['reservationId', 'name', 'firstName', 'email'];
+        } else {
+            //On prépare le tableau pour le repository
+            $searchRows = [];
+            foreach ($checkedFields as $field) {
+                $searchRows = array_column($checkedFields, 'value');
+            }
+        }
+
+        // On retourne le tableau avec les valeurs voulues
+        return $this->reservationRepository->findByTarifIdsForExport($tarifIds, $searchRows, $selectedSessionId);
+    }
+
 }

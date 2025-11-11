@@ -1,0 +1,24 @@
+name: Deploy on main branch update
+
+on:
+  push:
+    branches:
+      - dev
+  workflow_dispatch:  # Permet de déclencher le workflow manuellement
+jobs:
+  web-deploy:
+    name: 🎉 Deploy
+    runs-on: ubuntu-latest
+    steps:
+    - name: 🚚 Get latest code
+      uses: actions/checkout@v3
+    - name: 📂 Sync files
+      uses: SamKirkland/FTP-Deploy-Action@v4.3.4
+      with:
+        server: ${{ secrets.ara_ftp_host }}
+        username: ${{ secrets.ara_ftp_user }}
+        password: ${{ secrets.ara_ftp_password }}
+        exclude: |
+          **/.git*
+          **/.git*/**
+        server-dir: /          

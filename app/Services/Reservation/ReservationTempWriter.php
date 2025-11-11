@@ -24,10 +24,16 @@ final class ReservationTempWriter implements ReservationStorageInterface
     public function __construct(
         ReservationSessionService $reservationSessionService,
     ) {
+        $this->reservationSessionService = $reservationSessionService;
         // SleekDB est le primaire, MongoDB est le secondaire.
         $this->primaryStorage = new SleekReservationStorage();
-        $this->secondaryStorages = [new MongoReservationStorage()];
-        $this->reservationSessionService = $reservationSessionService;
+        // Désactiver les secondaires en prod / preprod
+        $env = strtolower($_ENV['APP_ENV'] ?? getenv('APP_ENV') ?: '');
+        if (in_array($env, ['production', 'preprod'], true)) {
+            $this->secondaryStorages = [];
+        } else {
+            $this->secondaryStorages = [new MongoReservationStorage()];
+        }
     }
 
     /**

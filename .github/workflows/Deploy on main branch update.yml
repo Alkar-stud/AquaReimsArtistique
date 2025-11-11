@@ -3,7 +3,7 @@ name: Deploy on main branch update
 on:
   push:
     branches:
-      - dev
+      - main
   workflow_dispatch:  # Permet de déclencher le workflow manuellement
 jobs:
   web-deploy:

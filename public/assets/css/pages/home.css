@@ -1,0 +1,28 @@
+/**
+ * Accueil
+ */
+.homepage-content {
+    text-align: center; /* Centre tout le contenu (texte, images) */
+}
+/* Cible tous les enfants directs (paragraphes, figures, etc.)
+   pour les centrer horizontalement. */
+.homepage-content > * {
+    margin-left: auto;
+    margin-right: auto;
+}
+/* Sur les écrans de bureau (768px et plus), on limite la largeur de la figure */
+@media (min-width: 768px) {
+    .homepage-content img {
+        width: 50%
+    }
+}
+.homepage-content img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 0.5rem;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    transition: transform 0.3s ease-in-out;
+}
+.homepage-content a:hover img {
+    transform: scale(1.09);
+}

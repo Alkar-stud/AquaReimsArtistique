@@ -1,0 +1,11 @@
+<?php
+namespace app\Services\Reservation;
+
+interface ReservationStorageInterface
+{
+    public function saveReservation(array $reservation): string;
+    public function findReservationById(string $id): ?array;
+    public function updateReservation(string $id, array $fields): int;
+    public function updateReservationByPrimaryId(string $primaryId, array $fields): int;
+    public function deleteReservation(string $id): int;
+}

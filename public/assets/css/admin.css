@@ -1,3 +1,4 @@
+@import "components/ckeditor.css";
 /*
  * Pour des tableaux transposés
  */
@@ -25,7 +26,7 @@
         border-bottom: 1px solid #eee;
     }
     .table-responsive td::before {
-        content: attr(data-label) " : ";
+        content: attr(data-label);
         position: absolute;
         left: 0;
         top: 0;
@@ -39,13 +40,13 @@
 
 
 /*
- * Gestion des tarifs
+ * gestion des tarifs
  */
 @media (max-width: 768px) {
     .d-md-block { display: none !important; }
     .d-md-none { display: block !important; }
 }
-@media (min-width: 769px) {
+@media (min-width: 768px) {
     .d-md-block { display: block !important; }
     .d-md-none { display: none !important; }
 }
@@ -86,3 +87,42 @@
     color: var(--ara-color-white);
     border-color: var(--ara-color-red);
 }
+
+@media (max-width: 768px) {
+    .modal-dialog {
+        max-width: 98vw;
+        margin: 0.5rem auto;
+    }
+    .modal-content {
+        border-radius: 0.5rem;
+    }
+    .modal-footer {
+        flex-direction: column !important;
+        gap: 0.5rem;
+    }
+}
+
+/*
+ * Styles spécifiques pour la section de gestion
+ */
+
+/* Rend les onglets de la modale plus compacts sur les petits écrans */
+@media (max-width: 576px) {
+    .nav-tabs-sm .nav-link {
+        padding: 0.5rem 0.4rem; /* Réduit l'espacement interne */
+        font-size: 0.8rem;     /* Réduit la taille de la police */
+    }
+}
+
+.btn-gestion {
+  display: inline-flex;
+  align-items: center;
+  gap: .4rem;
+  white-space: nowrap;
+}
+.btn-gestion .btn-label { display: none; }
+@media (min-width: 768px) {
+      .btn-gestion .btn-label { display: inline; }
+}
+.btn-gestion .bi { line-height: 1; }
+.btn-sm.btn-gestion .bi { font-size: .95em; }

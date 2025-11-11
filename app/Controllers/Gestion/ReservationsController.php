@@ -34,7 +34,6 @@ class ReservationsController extends AbstractController
     private ReservationPaymentRepository $reservationPaymentRepository;
     private HelloAssoService $helloAssoService;
     private ReservationTokenService $reservationTokenService;
-    private PdfGenerationService $PdfGenerationService;
     private ReservationQueryService $reservationQueryService;
     private MailService $mailService;
     private MailPrepareService $mailPrepareService;
@@ -49,7 +48,6 @@ class ReservationsController extends AbstractController
         ReservationPaymentRepository $reservationPaymentRepository,
         HelloAssoService $helloAssoService,
         ReservationTokenService $reservationTokenService,
-        PdfGenerationService $PdfGenerationService,
         ReservationQueryService $reservationQueryService,
         MailService $mailService,
         MailPrepareService $mailPrepareService,
@@ -65,7 +63,6 @@ class ReservationsController extends AbstractController
         $this->reservationPaymentRepository = $reservationPaymentRepository;
         $this->helloAssoService = $helloAssoService;
         $this->reservationTokenService = $reservationTokenService;
-        $this->PdfGenerationService = $PdfGenerationService;
         $this->reservationQueryService = $reservationQueryService;
         $this->mailService = $mailService;
         $this->mailPrepareService = $mailPrepareService;
@@ -385,27 +382,6 @@ class ReservationsController extends AbstractController
         }
 
         return $data;
-    }
-
-    #[Route('/gestion/reservations/exports', name: 'app_gestion_reservations_exports', methods: ['GET'])]
-    public function exports(): void
-    {
-        // Récupérer les paramètres depuis $_GET
-        $sessionId = (int)($_GET['s'] ?? 0);
-        $pdfType = $_GET['pdf'] ?? 'ListeParticipants';
-        $sortOrder = $_GET['tri'] ?? 'IDreservation';
-
-        try {
-            // On construit le PDF en fonction de son type.
-            $pdf = $this->PdfGenerationService->generate($pdfType, $sessionId, $sortOrder);
-
-            // On envoie le PDF construit au navigateur.
-            $pdf->Output('I', $this->PdfGenerationService->getFilenameForPdf($pdfType,$sessionId) . '.pdf');
-            exit;
-        } catch (Exception $e) {
-            http_response_code(404);
-            die("Erreur lors de la génération du PDF : " . $e->getMessage());
-        }
     }
 
     #[Route('/gestion/reservations/send-mail', name: 'app_gestion_reservations_send_email', methods: ['POST'])]

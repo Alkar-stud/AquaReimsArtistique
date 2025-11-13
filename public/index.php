@@ -117,12 +117,33 @@ if ($uri !== '/install' && !str_starts_with($uri, '/install/')) {
             // Si la table des migrations n'existe pas, on affiche un message clair.
             http_response_code(503); // Service Unavailable
             die(
-                '<div style="font-family: sans-serif; margin: 2em; padding: 2em; border: 2px solid #033BA8; border-radius: 5px; background: #E8F8FF; color: #2A2A2A; text-align: center;">' .
-                '<h2>Application non installée</h2>' .
+                '<!DOCTYPE html>' .
+                '<html lang="fr">' .
+                '<head>' .
+                '<meta charset="UTF-8">' .
+                '<meta name="viewport" content="width=device-width, initial-scale=1.0">' .
+                '<title>Application non installée</title>' .
+                '<style>' .
+                'body{font-family:system-ui,-apple-system,sans-serif;margin:0;padding:1rem;background:#f5f5f5;color:#2A2A2A}' .
+                '.container{max-width:600px;margin:2rem auto;padding:2rem;border:2px solid #033BA8;border-radius:5px;background:#E8F8FF;text-align:center}' .
+                'h1{font-size:clamp(1.5rem,5vw,2rem);margin:0 0 1rem;color:#033BA8}' .
+                'p{margin:0.5rem 0;line-height:1.6;font-size:clamp(0.875rem,2vw,1rem)}' .
+                '.btn{display:inline-block;margin-top:1.5rem;padding:0.75rem 1.5rem;background:#033BA8;color:#fff;text-decoration:none;border-radius:5px;font-weight:bold;transition:background 0.2s;border:2px solid transparent}' .
+                '.btn:hover,.btn:focus{background:#022a7a;outline:none;border-color:#fff}' .
+                '@media(max-width:640px){.container{margin:1rem;padding:1.5rem}}' .
+                '</style>' .
+                '</head>' .
+                '<body>' .
+                '<main>' .
+                '<div class="container" role="alert" aria-live="polite">' .
+                '<h1>Application non installée</h1>' .
                 '<p>L\'application ne semble pas encore être installée.</p>' .
                 '<p>Veuillez suivre le lien ci-dessous pour finaliser la configuration.</p>' .
-                '<p style="margin-top: 1.5em;"><a href="/install" style="padding: 10px 20px; background-color: #033BA8; color: #fff; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block; transition: background-color 0.2s;">Lancer l\'installation</a></p>' .
-                '</div>'
+                '<a href="/install" class="btn" role="button">Lancer l\'installation</a>' .
+                '</div>' .
+                '</main>' .
+                '</body>' .
+                '</html>'
             );
         }
 

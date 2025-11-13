@@ -43,7 +43,7 @@ final class ReservationTempWriter implements ReservationStorageInterface
      */
     public function saveReservation(array $reservation): string
     {
-        // Écriture sur le stockage primaire (source de vérité)
+        // Écriture sur le stockage primaire
         $primaryId = $this->primaryStorage->saveReservation($reservation);
 
         // Réplication sur les stockages secondaires (best effort)

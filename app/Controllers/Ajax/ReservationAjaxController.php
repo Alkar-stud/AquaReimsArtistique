@@ -69,6 +69,23 @@ class ReservationAjaxController extends AbstractController
             }
         }
 
+        //Pour la troisième étape, on vérifie si la capacité globale n'est pas dépassée
+        if ($step == 3) {
+            $totalCapacityLimit = $this->reservationQueryService->checkTotalCapacityLimit($session);
+            if ($totalCapacityLimit['limitReached']) {
+                $this->json([
+                    'success' => false,
+                    'error' => 'La capacité maximale de la piscine est atteinte.',
+                    'limit' => $totalCapacityLimit['limit']
+                ]);
+            } else {
+                $this->json([
+                    'success' => true,
+                    'limit' => $totalCapacityLimit['limit']
+                ]);
+            }
+        }
+
         //On récupère les données step4, il y a potentiellement des fichiers
         if ($step == 4) {
             $input = json_decode($_POST['participants'] ?? '[]', true);

@@ -351,6 +351,14 @@ class ReservationQueryService
         ];
     }
 
+    /**
+     * On récupère des éléments de réservation pour l'export en fonction des tarifs.
+     *
+     * @param array $tarifIds
+     * @param array $checkedFields
+     * @param int $selectedSessionId
+     * @return array
+     */
     public function getReservationsByTarifIds(array $tarifIds, array $checkedFields = [], int $selectedSessionId = 0): array
     {
         // champs par défaut si aucun n'est fourni
@@ -366,6 +374,29 @@ class ReservationQueryService
 
         // On retourne le tableau avec les valeurs voulues
         return $this->reservationRepository->findByTarifIdsForExport($tarifIds, $searchRows, $selectedSessionId);
+    }
+
+
+    /**
+     * Vérifie si la capacité totale de la piscine est atteinte et renvoi le nombre de places restantes
+     * @param array $session
+     * @return array
+     */
+    public function checkTotalCapacityLimit(array $session): array
+    {
+        //On récupère la capacité de la piscine
+        $event = $this->eventRepository->findById($session['event_id'], true);
+        $piscine = $event->getPiscine();
+
+        //On récupère le nombre de places actuellement réservées (et validées).
+        $nbPlaceReserved = $this->reservationDetailRepository->countBySession($session['event_session_id'], false, false, true);
+
+        //On vérifie la différence
+        if ($nbPlaceReserved >= $piscine->getMaxPlaces()) {
+            return ['limitReached' => true, 'limit' => $piscine->getMaxPlaces() - $nbPlaceReserved];
+        }
+
+        return ['limitReached' => false, 'limit' => $piscine->getMaxPlaces() - $nbPlaceReserved];
     }
 
 }

@@ -28,7 +28,7 @@
         <div class="col-md-6 mb-4">
             <div class="card event-card" data-event-id="{{ $event->getId() }}">
                 <div class="card-header bg-primary text-white">
-                    <h5 class="card-title">{{ $event->getName() }}</h5>
+                    <h2 class="card-title">{{ $event->getName() }}</h2>
                 </div>
                 <div class="card-body">
                     <p><strong>Lieu :</strong> {{ $piscineLibelle }}</p>

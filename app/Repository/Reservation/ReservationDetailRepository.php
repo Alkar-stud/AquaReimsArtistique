@@ -126,6 +126,22 @@ class ReservationDetailRepository extends AbstractRepository
     }
 
     /**
+     * Compte le nombre de détails pour une session
+     * @param int $sessionId
+     * @return int
+     */
+    public function countBySession(int $sessionId): int
+    {
+        $sql = "SELECT COUNT(*) as count 
+            FROM $this->tableName rd
+            INNER JOIN reservation r ON rd.reservation = r.id
+            WHERE r.event_session = :sessionId
+              AND r.is_canceled = 0;";
+        $result = $this->query($sql, ['sessionId' => $sessionId]);
+        return (int)($result[0]['count'] ?? 0);
+    }
+
+    /**
      * Détails pour une liste d'IDs de réservation.
      * @param int[] $reservationIds
      * @param bool $withReservation

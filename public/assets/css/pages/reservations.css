@@ -1,0 +1,5 @@
+.event-card .card-title {
+    font-size: 1.25rem; /* Taille équivalente à h5 */
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}

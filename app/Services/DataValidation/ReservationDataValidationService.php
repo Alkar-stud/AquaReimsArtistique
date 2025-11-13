@@ -12,6 +12,7 @@ use app\Repository\Swimmer\SwimmerRepository;
 use app\Services\Event\EventQueryService;
 use app\Services\FlashMessageService;
 use app\Services\Reservation\ReservationDataPersist;
+use app\Services\Reservation\ReservationQueryService;
 use app\Services\Reservation\ReservationSessionService;
 use app\Services\Swimmer\SwimmerQueryService;
 use app\Services\UploadService;
@@ -28,6 +29,7 @@ class ReservationDataValidationService
     private UploadService               $uploadService;
     private FlashMessageService         $flashMessageService;
     private ReservationDataPersist      $reservationDataPersist;
+    private ReservationQueryService $reservationQueryService;
 
     public function __construct(
         EventRepository                  $eventRepository,
@@ -39,6 +41,7 @@ class ReservationDataValidationService
         UploadService                    $uploadService,
         FlashMessageService              $flashMessageService,
         ReservationDataPersist           $reservationDataPersist,
+        ReservationQueryService $reservationQueryService,
     ) {
         $this->eventRepository = $eventRepository;
         $this->swimmerRepository = $swimmerRepository;
@@ -49,6 +52,7 @@ class ReservationDataValidationService
         $this->uploadService = $uploadService;
         $this->flashMessageService = $flashMessageService;
         $this->reservationDataPersist = $reservationDataPersist;
+        $this->reservationQueryService = $reservationQueryService;
     }
 
     /**
@@ -526,6 +530,12 @@ class ReservationDataValidationService
                     $errors["reservation_detail.$idx.tarif_access_code"] = 'Code d\'accès invalide pour ce tarif.';
                 }
             }
+        }
+
+        //On revérifie si il y a assez de places disponibles
+        $totalCapacityLimit = $this->reservationQueryService->checkTotalCapacityLimit($session);
+        if (!$totalCapacityLimit['limitReached']) {
+                $errors['limitReached'] = 'La capacité maximale de la piscine est atteinte.';
         }
 
         if (!empty($errors)) {

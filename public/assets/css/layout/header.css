@@ -62,8 +62,8 @@
 /* Style pour les liens actifs */
 .active-link, .active-link:focus,
 .dropdown-item.active-link, .dropdown-item.active-link:focus, .dropdown-item.active-link:visited {
-    background: var(--ara-color-purple);
-    color: var(--ara-color-white) !important;
+    background: var(--ara-color-purple-darker);
+    color: var(--ara-color-white);
     border-radius: 0.25rem;
 }
 

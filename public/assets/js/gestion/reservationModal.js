@@ -223,7 +223,7 @@ console.log('reservation : ', reservation);
                 paymentItem.innerHTML = `
                      <div class="small">
                          <span class="badge bg-secondary me-1">${payment.type || 'N/A'}</span> 
-                         ${new Date(payment.createdAt).toLocaleDateString('fr-FR')} -
+                         ${new Date(payment.createdAt).toLocaleString('fr-FR', {dateStyle: 'short', timeStyle: 'short'})} -
                          <strong>${(payment.amountPaid / 100).toFixed(2).replace('.', ',')} €</strong>${donationHtml}
                          <span class="ms-2 fst-italic text-muted">
                             (${payment.status || 'Inconnu'})

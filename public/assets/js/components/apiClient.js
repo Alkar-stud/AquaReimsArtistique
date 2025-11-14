@@ -68,12 +68,20 @@ async function client(endpoint, { body, ...customConfig } = {}) {
     const responseText = await response.text();
 
     if (!response.ok) {
+        //console.error("Réponse d'erreur du serveur :", responseText);
         let errorData;
         try {
             errorData = JSON.parse(responseText);
         } catch {
             errorData = { message: response.statusText || 'Réponse invalide du serveur.' };
         }
+
+        // Gestion de la redirection sur les réponses d'erreur (ex: session expirée 419)
+        if (errorData.redirect) {
+            window.location.href = errorData.redirect;
+            return new Promise(() => {}); // Empêche le code appelant de continuer
+        }
+
         const error = new Error(errorData.message);
         error.userMessage = extractErrorMessages(errorData);
         error.userMessage = errorData.message || errorData.errors || 'Une erreur de communication est survenue.';
@@ -82,7 +90,15 @@ async function client(endpoint, { body, ...customConfig } = {}) {
     }
 
     try {
-        return JSON.parse(responseText);
+        const data = JSON.parse(responseText);
+
+        // Gestion automatique de la redirection même en cas de succès
+        if (data.redirect) {
+            window.location.href = data.redirect;
+            return new Promise(() => {}); // Promesse en attente
+        }
+
+        return data;
     } catch {
         console.error('Réponse non-JSON reçue:', responseText);
         return responseText;

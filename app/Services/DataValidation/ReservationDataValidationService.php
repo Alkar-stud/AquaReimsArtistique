@@ -534,7 +534,7 @@ class ReservationDataValidationService
 
         //On revérifie si il y a assez de places disponibles
         $totalCapacityLimit = $this->reservationQueryService->checkTotalCapacityLimit($session);
-        if (!$totalCapacityLimit['limitReached']) {
+        if ($totalCapacityLimit['limitReached']) {
                 $errors['limitReached'] = 'La capacité maximale de la piscine est atteinte.';
         }
 

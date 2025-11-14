@@ -78,11 +78,6 @@ class ReservationAjaxController extends AbstractController
                     'error' => 'La capacité maximale de la piscine est atteinte.',
                     'limit' => $totalCapacityLimit['limit']
                 ]);
-            } else {
-                $this->json([
-                    'success' => true,
-                    'limit' => $totalCapacityLimit['limit']
-                ]);
             }
         }
 
@@ -106,7 +101,11 @@ class ReservationAjaxController extends AbstractController
         }
 
         //selon si place de la piscine sont numérotées au pas
-        $this->json(['success' => true, 'numerated_seat' => $result['data']['numerated_seat']]);
+        $this->json([
+            'success' => true,
+            'numerated_seat' => $result['data']['numerated_seat'],
+            'limit' => $totalCapacityLimit['limit'] ?? [],
+        ]);
     }
 
 

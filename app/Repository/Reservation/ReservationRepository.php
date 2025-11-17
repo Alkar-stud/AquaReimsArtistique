@@ -281,8 +281,8 @@ class ReservationRepository extends AbstractRepository
                   GROUP BY event
                 ) eid ON eid.event = r.event
                 WHERE r.is_canceled = 0
-                  AND es.event_start_at > '2025-12-06 01:00:00'
-                  AND eid.close_at <= '2025-12-06 01:00:00'
+                  AND es.event_start_at > NOW()
+                  AND eid.close_at <= NOW()
                 ORDER BY r.id
                 LIMIT $limit
     ";

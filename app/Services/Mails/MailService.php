@@ -212,25 +212,32 @@ class MailService
             $this->mailer->Body = $htmlBody ?? '';
             $this->mailer->AltBody = $textBody ?? '';
 
-            //  On ajoute l'image inline avec CID si fourni
+            // Image inline via CID: chemin fichier -> addEmbeddedImage, sinon binaire/data URI -> addStringEmbeddedImage
             if ($imageData && $cid) {
-                $this->mailer->addStringEmbeddedImage(
-                    $imageData,
-                    $cid,
-                    $filename,
-                    'base64',
-                    'image/png'
-                );
+                if (is_file($imageData)) {
+                    // Chemin fichier
+                    $this->mailer->addEmbeddedImage($imageData, $cid, '', 'base64', 'image/png', 'inline');
+                } else {
+                    // Binaire ou data URI
+                    $binary = $imageData;
+                    if (str_starts_with($imageData, 'data:image/')) {
+                        $comma = strpos($imageData, ',');
+                        $binary = $comma !== false ? base64_decode(substr($imageData, $comma + 1)) : '';
+                    }
+                    if ($binary !== '') {
+                        $this->mailer->addStringEmbeddedImage($binary, $cid, '', 'base64', 'image/png', 'inline');
+                    }
+                }
             }
 
-            // On ajoute le PDF en pièce jointe si fourni
+            // Pièce jointe PDF
             if ($pdfPath && is_file($pdfPath)) {
                 $this->mailer->addAttachment($pdfPath, $pdfName);
             }
 
             $this->mailer->send();
             return true;
-        } catch (Exception $e) {
+        } catch (\PHPMailer\PHPMailer\Exception $e) {
             error_log("Mailer Error: {$this->mailer->ErrorInfo} - $e");
             return false;
         }

@@ -43,6 +43,7 @@ readonly class MailPrepareService
     /**
      * @param Reservation $reservation
      * @param string $mailTemplate
+     * @param string|null $pdfPath
      * @return bool
      */
     public function sendReservationConfirmationEmail(Reservation $reservation, string $mailTemplate = 'paiement_confirme', ?string $pdfPath = null): bool
@@ -56,19 +57,49 @@ readonly class MailPrepareService
         // Nom du PDF pour la PJ
         $pdfName = 'Recapitulatif_ARA-' . str_pad($reservation->getId(), 5, '0', STR_PAD_LEFT) . '.pdf';
 
-        // Attachement inline du QR code d'entrée
-        return $this->mailService->sendMessageWithInlineImage(
-            $reservation->getEmail(),
-            $tpl->getSubject(),
-            $tpl->getBodyHtml(),
-            $tpl->getBodyText(),
-            $params['qrcodeEntrance'], // Données binaires
-            'qrcode_entrance',         // CID
-            'qrcode_entrance.png',      // Nom du fichier
-            $pdfPath,                  // Chemin du PDF
-            $pdfName                   // Nom du PDF
-        );
-        //return $this->sendTemplatedEmail($reservation->getEmail(), $mailTemplate, $params);
+        // Préparer le chemin du QR code inline
+        $inlineImagePath = $params['qrcodeEntrance'] ?? null;
+        $tempFileToRemove = null;
+
+        // Si on reçoit du binaire, écrire dans un fichier temporaire
+        if (is_string($inlineImagePath) && $inlineImagePath !== '' && !is_file($inlineImagePath)) {
+            // On suppose que c'est un binaire ; écrire en fichier temporaire
+            $tmp = sys_get_temp_dir() . '/qrcode_' . uniqid() . '.png';
+            if (false === @file_put_contents($tmp, $inlineImagePath)) {
+                error_log(sprintf('Impossible d\'écrire le binaire QR code pour reservation id=%d', $reservation->getId()));
+                // fallback : envoyer sans image inline
+                return $this->sendTemplatedEmail($reservation->getEmail(), $mailTemplate, $params);
+            }
+            $inlineImagePath = $tmp;
+            $tempFileToRemove = $tmp;
+        }
+
+        // Si pas de fichier valide, fallback sur envoi sans image
+        if (!is_string($inlineImagePath) || !is_file($inlineImagePath)) {
+            error_log(sprintf('QR code manquant ou non accessible pour la réservation id=%d, envoi sans image.', $reservation->getId()));
+            return $this->sendTemplatedEmail($reservation->getEmail(), $mailTemplate, $params);
+        }
+
+        try {
+            return $this->mailService->sendMessageWithInlineImage(
+                $reservation->getEmail(),
+                $tpl->getSubject(),
+                $tpl->getBodyHtml(),
+                $tpl->getBodyText(),
+                $inlineImagePath,        // chemin du fichier PNG pour l'image inline
+                'qrcode_entrance',       // CID
+                'qrcode_entrance.png',   // Nom du fichier
+                $pdfPath,                // Chemin du PDF
+                $pdfName                 // Nom du PDF
+            );
+        } catch (\Throwable $e) {
+            error_log(sprintf('Erreur envoi mail pour reservation id=%d : %s', $reservation->getId(), $e->getMessage()));
+            return false;
+        } finally {
+            if ($tempFileToRemove && is_file($tempFileToRemove)) {
+                @unlink($tempFileToRemove);
+            }
+        }
     }
 
     /**
@@ -81,8 +112,6 @@ readonly class MailPrepareService
         $params = $this->buildCancelReservationParams($reservation);
         return $this->sendTemplatedEmail($reservation->getEmail(), $templateEmail, $params);
     }
-
-    // Méthodes privées pour construire les paramètres
 
     /**
      * @param string $username
@@ -117,7 +146,6 @@ readonly class MailPrepareService
     {
         $recap = $this->summaryBuilder->buildFullRecap($reservation);
         $payment = $this->paymentCalculator->calculate($reservation);
-        // Générer le QR code
         $buildLink = new BuildLink();
         $qrCodeUrlModif = $buildLink->buildResetLink('/modifData', $reservation->getToken());
         $qrCodeUrlEntrance = $buildLink->buildResetLink('/entrance', $reservation->getToken());
@@ -125,14 +153,14 @@ readonly class MailPrepareService
         // Génération du QR code pour modification (fichier temporaire pour PDF)
         $qrcodeModifPath = QRCode::generate($qrCodeUrlModif, 250, 10);
 
-        // Générer le QR code d'entrée et créer directement la balise HTML
-        $qrcodeEntranceBinary = QRCode::generateBinary($qrCodeUrlEntrance, 250, 10);
+        // Génération du QR code d'entrée : on retourne un chemin de fichier (pour l'inline)
+        $qrcodeEntrancePath = QRCode::generate($qrCodeUrlEntrance, 250, 10);
 
         return [
             'name' => $reservation->getFirstName(),
             'token' => $reservation->getToken(),
             'qrcodeModif' => $qrcodeModifPath,
-            'qrcodeEntrance' => $qrcodeEntranceBinary,
+            'qrcodeEntrance' => $qrcodeEntrancePath, // chemin du PNG
             'qrcodeEntranceInMail' => '<img src="cid:qrcode_entrance" alt="QR Code d\'entrée" style="max-width: 250px; height: auto; display: block; margin: 20px auto;" />Montrez ce QR code pour faciliter votre entrée',
             'IDreservation' => 'ARA-' . str_pad($reservation->getId(), 5, '0', STR_PAD_LEFT),
             'EventName' => $reservation->getEventObject()->getName(),

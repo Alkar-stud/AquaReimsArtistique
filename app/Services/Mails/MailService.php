@@ -170,6 +170,9 @@ class MailService
     }
 
     /**
+     * Envoi d'un mail avec image inline (CID) et optionnellement un PDF en PJ.
+     * - $imageData peut être un chemin de fichier PNG ou des données binaires (ou data URI).
+     *
      * @param string $recipientEmail
      * @param string $subject
      * @param string|null $htmlBody

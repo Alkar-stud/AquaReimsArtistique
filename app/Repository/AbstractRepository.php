@@ -74,8 +74,10 @@ abstract class AbstractRepository
                     'error' => $e->getMessage(),
                 ]
             );
-            echo 'Erreur SQL : ' . $e->getMessage() . "\n";
-            echo 'Requête : ' . $this->sanitizeSql($sql) . "\n";
+            if ($_ENV['APP_DEBUG'] === 'true') {
+                echo 'Erreur SQL : ' . $e->getMessage() . "\n";
+                echo 'Requête : ' . $this->sanitizeSql($sql) . "\n";
+            }
             return [];
         }
     }

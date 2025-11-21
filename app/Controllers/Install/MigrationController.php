@@ -321,4 +321,16 @@ class MigrationController
         <?php
     }
 
+    /**
+     * Redirige vers l'URL donnée avec un en-tête `Location` puis termine le script.
+     *
+     * @param string $url URL absolue ou relative au site.
+     * @return void
+     */
+    private function redirect(string $url): void
+    {
+        header('Location: ' . $url);
+        exit;
+    }
+
 }

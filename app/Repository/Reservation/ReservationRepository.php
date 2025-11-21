@@ -106,8 +106,19 @@ class ReservationRepository extends AbstractRepository
         bool $withEventInscriptionDates = true,
         bool $withChildren = true
     ): ?Reservation {
-        $sql = "SELECT * FROM $this->tableName WHERE " . $field . " = :" . $field . ";";
-        $rows = $this->query($sql, [$field => $fieldValue]);
+        // Liste blanche des champs autorisés pour éviter toute injection via le nom de colonne
+        $allowed = [
+            'id', 'reservation_temp_id', 'name', 'firstname', 'email', 'phone',
+            'event', 'event_session', 'swimmer_if_limitation', 'token', 'is_canceled', 'is_checked'
+        ];
+
+        if (!in_array($field, $allowed, true)) {
+            // Si champ non autorisé
+            return null;
+        }
+
+        $sql = "SELECT * FROM $this->tableName WHERE " . $field . " = :value;";
+        $rows = $this->query($sql, ['value' => $fieldValue]);
         if (!$rows) return null;
 
         $r = $this->hydrate($rows[0]);
@@ -797,7 +808,10 @@ class ReservationRepository extends AbstractRepository
      */
     public function updateSingleField(int $id, string $field, mixed $value): bool
     {
-        $allowed = ['name', 'firstname', 'email', 'phone', 'total_amount', 'total_amount_paid', 'is_canceled', 'is_checked', 'complements_given_at'];
+        $allowed = [
+            'name', 'firstname', 'email', 'phone', 'total_amount', 'total_amount_paid',
+            'is_canceled', 'is_checked', 'complements_given_at'
+        ];
 
         if (!in_array($field, $allowed, true)) return false;
 

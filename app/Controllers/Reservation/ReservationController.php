@@ -56,8 +56,7 @@ class ReservationController extends AbstractController
         // On détermine les statuts des périodes d'inscription pour ces événements
         $inscriptionPeriodsStatus = $this->eventQueryService->getEventInscriptionPeriodsStatus($events);
 
-        //À récupérer seulement s'il y a un event qui en a besoin, sinon on envoie un tableau vide
-        // On récupère les nageurs triés par groupe.
+        // On récupère les nageurs triés par groupe
         $swimmerPerGroup = $this->swimmerQueryService->getSwimmerByGroup();
 
         // On récupère uniquement les groupes actifs qui ont des nageurs.

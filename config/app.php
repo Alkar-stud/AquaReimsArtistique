@@ -9,14 +9,39 @@ use app\Core\Database;
  */
 try {
     Database::getInstance();
-    // Récupérer les configurations
     $configRepo = new ConfigRepository();
-    $appConfigs = $configRepo->findAllAsKeyValue();
+    $configs = $configRepo->findAll(); // On récupère les objets pour accéder au type
 
-    // Définir chaque configuration comme une constante
-    foreach ($appConfigs as $key => $value) {
-        // On vérifie si la constante n'est pas déjà définie pour éviter les erreurs
+    foreach ($configs as $conf) {
+        $key = $conf->getConfigKey();
+        if (!preg_match('/^[A-Z0-9_]+$/', $key)) {
+            continue; // sécurité
+        }
         if (!defined($key)) {
+            // La valeur est déjà typée par hydrate(), mais on peut renforcer:
+            $value = $conf->getConfigValue();
+            $type = $conf->getConfigType();
+
+            switch ($type) {
+                case 'bool':
+                case 'boolean':
+                    $value = (bool)$value;
+                    break;
+                case 'int':
+                case 'integer':
+                    $value = (int)$value;
+                    break;
+                case 'float':
+                    $value = (float)$value;
+                    break;
+                case 'email':
+                case 'url':
+                case 'string':
+                default:
+                    $value = (string)$value;
+                    break;
+            }
+
             define($key, $value);
         }
     }

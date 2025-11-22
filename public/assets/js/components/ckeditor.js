@@ -25,9 +25,9 @@ import {
 	SimpleUploadAdapter,
 	SourceEditing,
 	Underline
-} from 'ckeditor5';
+} from "/assets/ckeditor5/ckeditor5.js";
 
-import translations from 'ckeditor5/translations/fr.js';
+import translations from "/assets/ckeditor5/translations/fr.js";
 
 /**
  * Create a free account with a trial: https://portal.ckeditor.com/checkout?plan=free

@@ -105,6 +105,18 @@ export function formatEuro(cents) {
     return v.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
 }
 
+/**
+ *
+ * @param isoString
+ * @returns {string}
+ */
+export function formatTime(isoString) {
+    if (!isoString) return '';
+    const d = new Date(isoString);
+    if (Number.isNaN(d.getTime())) return '';
+    return d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+}
+
 
 export function extractErrorMessages(errorData) {
     const fallback = 'Une erreur de communication est survenue.';

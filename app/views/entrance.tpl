@@ -3,9 +3,9 @@
         <h5 class="mb-2">Réservation ARA-{{ str_pad($reservation->getId(), 5, '0', STR_PAD_LEFT) }}</h5>
         <div class="d-flex gap-2 mb-2">
             {% if $reservation->isCanceled() %}
-            <span class="badge bg-danger">Annulée</span>
+            <span class="badge bg-danger">Réservation annulée</span>
             {% else %}
-            <span class="badge bg-success">Confirmée</span>
+            <span class="badge bg-success">Réservation confirmée</span>
             {% endif %}
             {% if $reservation->isChecked() %}
             <span class="badge bg-success">Vérifiée</span>
@@ -53,9 +53,12 @@
                     class="btn btn-sm {% if $reservation->getComplementsGivenAt() %}btn-success{% else %}btn-outline-primary{% endif %}"
                     data-action="toggle-complements"
                     data-reservation-id="{{ $reservation->getId() }}"
-                    data-complement-given="{% if $reservation->getComplementsGivenAt() %}true{% else %}false{% endif %}">
-            {% if $reservation->getComplementsGivenAt() %}
-                <i class="bi bi-check-circle-fill"></i>&nbsp;Remis
+                    data-complement-given="{% if $reservation->getComplementsGivenAt() %}true{% else %}false{% endif %}"
+                    {% if $reservation->getComplementsGivenAt() %}
+                    data-complements-given-at="{{ $reservation->getComplementsGivenAt()->format('Y-m-d\\TH:i:s') }}"
+                    {% endif %}>
+                {% if $reservation->getComplementsGivenAt() %}
+                <i class="bi bi-check-circle-fill"></i>&nbsp;Remis à {{ $reservation->getComplementsGivenAt()->format('H:i') }}
                 {% else %}
                 <i class="bi bi-circle"></i>&nbsp;À remettre
                 {% endif %}

@@ -1,4 +1,5 @@
 import {apiPost} from "./components/apiClient.js";
+import {formatTime} from "./components/utils.js";
 
 document.addEventListener('DOMContentLoaded', () => {
 
@@ -61,9 +62,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     // Mettre à jour l'état et le visuel
                     toggleComplementsBtn.dataset.complementGiven = (!isGiven).toString();
                     if (!isGiven) {
+                        const ts = result.complements_given_at || new Date().toISOString();
+                        toggleComplementsBtn.dataset.complementsGivenAt = ts;
+                        const heure = formatTime(ts);
                         toggleComplementsBtn.classList.remove('btn-outline-primary');
                         toggleComplementsBtn.classList.add('btn-success');
-                        toggleComplementsBtn.innerHTML = '<i class="bi bi-check-circle-fill"></i>&nbsp;Remis';
+                        toggleComplementsBtn.innerHTML = `<i class="bi bi-check-circle-fill"></i>&nbsp;Remis à ${heure}`;
                     } else {
                         toggleComplementsBtn.classList.remove('btn-success');
                         toggleComplementsBtn.classList.add('btn-outline-primary');

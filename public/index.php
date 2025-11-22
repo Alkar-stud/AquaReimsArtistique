@@ -152,7 +152,7 @@ if ($uri !== '/install' && !str_starts_with($uri, '/install/')) {
 
         // Et vérifier le mode maintenance.
         /** @noinspection PhpUndefinedConstantInspection */
-        if (defined('MAINTENANCE') && MAINTENANCE && $uri !== '/login' && !str_starts_with($uri, '/gestion/configuration/configs')) {
+        if (defined('MAINTENANCE') && MAINTENANCE && !str_starts_with($uri,'/log') && !str_starts_with($uri, '/gestion/configs')) {
             $uri = '/maintenance';
         }
     } catch (PDOException $e) {

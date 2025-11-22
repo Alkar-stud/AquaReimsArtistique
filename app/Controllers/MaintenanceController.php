@@ -7,6 +7,10 @@ use app\Attributes\Route;
 
 class MaintenanceController extends AbstractController
 {
+    public function __construct()
+    {
+        parent::__construct(true);
+    }
     public function index(): void
     {
         //Si le user est role <= 1, il peut accéder à la page /gestion

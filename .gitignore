@@ -16,8 +16,8 @@
 
 # Dossiers de cache, log, etc. (si applicable)
 # La ligne ci-dessous est large. Assurez-vous qu'elle correspond à votre structure.
-storage/*
- !storage/.gitkeep
+/storage/*
+!/storage/.gitkeep
 
  # Contenu généré par les utilisateurs (uploads)
   /public/images/accueil/

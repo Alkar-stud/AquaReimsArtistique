@@ -38,14 +38,7 @@
 {% include 'footer.tpl' %}
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/js/bootstrap.bundle.min.js" integrity="sha384-ndDqU0Gzau9qJ1lfW4pNLlhNTkCfHzAVBReH9diLvGRem5+R9g2FzA8ZGN954O5Q" crossorigin="anonymous"></script>
 {% if $load_ckeditor %}
-<script type="importmap">
-    {
-        "imports": {
-            "ckeditor5": "/assets/ckeditor5/ckeditor5.js",
-            "ckeditor5/": "/assets/ckeditor5/"
-        }
-    }
-</script>
+
 <script type="module" src="/assets/js/components/ckeditor.js"></script>
 {% endif %}
 

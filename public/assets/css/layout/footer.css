@@ -1,4 +1,36 @@
+footer {
+    background-color: var(--ara-color-darkblue-darker); /* fond plus sombre pour meilleur contraste */
+    color: var(--ara-color-white);
+}
+
 footer small {
     line-height: 1.6;
     font-weight: 600;
+}
+
+
+/* Liens du footer : toujours très visibles */
+footer a,
+footer a.link-light {
+    text-decoration: underline;
+}
+
+/* États hover/focus : conserver contraste et ajouter retour visuel */
+footer a:hover,
+footer a:focus {
+    background-color: rgba(255,255,255,0.04); /* légère mise en relief sans couper le contraste */
+    box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+}
+
+footer a:focus-visible {
+    outline: 3px solid rgba(250,78,154,0.18); /* focus visible accessible */
+    outline-offset: 2px;
+}
+
+/* Ajustements pour petits écrans */
+@media (max-width: 768px) {
+    footer small {
+        font-size: 1rem;
+        font-weight: 700;
+    }
 }

@@ -22,7 +22,11 @@
 
         // Libellé de la piscine
         $piscineLibelle = $event->getPiscine() ? $event->getPiscine()->getLabel() : 'Non défini';
-
+        // Ne référencer que les éléments réellement présents
+        $describedBy = "form_error_message_{$event->getId()}";
+        if (!$periodeOuverte || $codeNecessaire) {
+        $describedBy = "event_note_{$event->getId()} " . $describedBy;
+        }
         {% endphp %}
 
         <div class="col-md-6 mb-4">
@@ -54,36 +58,42 @@
                     {% endif %}
 
                     {% if $nbSessions > 0 %}
-                    <p>
-                        <strong>{{ $nbSessions > 1 ? 'Séances' : 'Séance unique' }} :</strong>
+                    <fieldset class="mt-2" id="sessions_fieldset_{{ $event->getId() }}">
+                        <legend class="form-label">
+                            <strong>{{ $nbSessions > 1 ? 'Séances' : 'Séance unique' }}</strong>
+                        </legend>
+
                         {% if $nbSessions === 1 %}
-                        <input
-                                type="radio"
-                                name="session_{{ $event->getId() }}"
-                                id="session_{{ $event->getId() }}_{{ $sessions[0]->getId() }}"
-                                value="{{ $sessions[0]->getId() }}"
-                                checked
-                        >
-                        <label class="form-check-label" for="session_{{ $event->getId() }}_{{ $sessions[0]->getId() }}">
-                            {{ $sessions[0]->getEventStartAt()->format('d/m/Y H:i') }}
-                        </label>
+                        <div class="form-check">
+                            <input
+                                    class="form-check-input"
+                                    type="radio"
+                                    name="session_{{ $event->getId() }}"
+                                    id="session_{{ $event->getId() }}_{{ $sessions[0]->getId() }}"
+                                    value="{{ $sessions[0]->getId() }}"
+                                    checked
+                            >
+                            <label class="form-check-label" for="session_{{ $event->getId() }}_{{ $sessions[0]->getId() }}">
+                                {{ $sessions[0]->getEventStartAt()->format('d/m/Y H:i') }}
+                            </label>
+                        </div>
                         {% else %}
                         {% foreach $sessions as $session %}
-                    <div class="form-check">
-                        <input
-                                class="form-check-input"
-                                type="radio"
-                                name="session_{{ $event->getId() }}"
-                                id="session_{{ $event->getId() }}_{{ $session->getId() }}"
-                                value="{{ $session->getId() }}"
-                        >
-                        <label class="form-check-label" for="session_{{ $event->getId() }}_{{ $session->getId() }}">
-                            {{ $session->getSessionName() ?? '' }} {{ $session->getSessionName() ? ' : ' : '' }}{{ $session->getEventStartAt()->format('d/m/Y H:i') }}
-                        </label>
-                    </div>
-                    {% endforeach %}
-                    {% endif %}
-                    </p>
+                        <div class="form-check">
+                            <input
+                                    class="form-check-input"
+                                    type="radio"
+                                    name="session_{{ $event->getId() }}"
+                                    id="session_{{ $event->getId() }}_{{ $session->getId() }}"
+                                    value="{{ $session->getId() }}"
+                            >
+                            <label class="form-check-label" for="session_{{ $event->getId() }}_{{ $session->getId() }}">
+                                {{ $session->getSessionName() ?? '' }} {{ $session->getSessionName() ? ' : ' : '' }}{{ $session->getEventStartAt()->format('d/m/Y H:i') }}
+                            </label>
+                        </div>
+                        {% endforeach %}
+                        {% endif %}
+                    </fieldset>
                     {% else %}
                     <p><strong>Séance :</strong> Non défini</p>
                     {% endif %}
@@ -139,7 +149,7 @@
                         id="btn_reserver_{{ $event->getId() }}"
                         {{ $buttonDisabled }}
                         aria-disabled="{{ $buttonDisabled ? 'true' : 'false' }}"
-                        aria-describedby="event_note_{{ $event->getId() }} form_error_message_{{ $event->getId() }}"
+                        aria-describedby="{{ $describedBy }}"
                     >
                         Réserver
                     </button>

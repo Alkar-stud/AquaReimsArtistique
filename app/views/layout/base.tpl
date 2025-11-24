@@ -5,7 +5,6 @@
     <meta name="Description" content="Site de réservation pour les galas du Aqua Reims Artistique" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="content-type" content="no-cache">
-    <meta http-equiv="refresh" content="no-cache">
     <meta name="csrf-token" content="{{ $csrf_token ?? '' }}">
     <meta name="csrf-context" content="{{ $csrf_context ?? '' }}">
     <meta charset="UTF-8">

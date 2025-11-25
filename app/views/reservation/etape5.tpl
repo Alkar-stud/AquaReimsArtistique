@@ -13,8 +13,7 @@
             </div>
             <div class="text-center flex-fill">
                 <h2 class="h5 m-0">
-                    <span data-bleacher-zone-name>Zone</span>
-                    <small class="text-muted" data-bleacher-zone-meta>(0 rangs × 0 places)</small>
+                    <span class="fw-bold" data-bleacher-zone-name>Zone</span>
                 </h2>
             </div>
         </div>

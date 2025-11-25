@@ -9,7 +9,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     const zoneNameEl = bleacher.querySelector('[data-bleacher-zone-name]');
-    const zoneMetaEl = bleacher.querySelector('[data-bleacher-zone-meta]');
     const backBtn = bleacher.querySelector('[data-action="back-zones"]');
     const refreshBtn = bleacher.querySelector('[data-action="refresh-bleacher"]');
 
@@ -28,7 +27,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let gridInstance = null;
     async function loadZone(piscineId, zoneId) {
-        if (loading) return;
+        if (loading) {
+            return;
+        }
         loading = true;
         refreshBtn?.classList.add('disabled');
         try {
@@ -44,7 +45,6 @@ console.log('reçu : ', response.plan.zone);
 
             bleacher.dataset.zoneId = z.id ?? zoneId;
             zoneNameEl.textContent = z.zoneName ?? z.getZoneName ?? 'Zone';
-            zoneMetaEl.textContent = `(${nbRows} rangs × ${nbCols} places)`;
 
            if (response.plan) {
                const gridContainer = bleacher.querySelector('[data-bleacher-seats]');
@@ -64,15 +64,21 @@ console.log('reçu : ', response.plan.zone);
 
         const piscineEl = e.target.closest('[data-piscine-id]');
         const zoneEl = e.target.closest('[data-zone-id]');
-        if (!piscineEl || !zoneEl) return;
+        if (!piscineEl || !zoneEl) {
+            return;
+        }
         if (zoneEl.getAttribute('aria-disabled') === 'true') {
             e.preventDefault();
             return;
         }
         const piscineId = Number(piscineEl.dataset.piscineId);
         const zoneId = Number(zoneEl.dataset.zoneId);
-        if (!Number.isInteger(zoneId) || zoneId <= 0) return;
-        if (!Number.isInteger(piscineId) || piscineId <= 0) return;
+        if (!Number.isInteger(zoneId) || zoneId <= 0) {
+            return;
+        }
+        if (!Number.isInteger(piscineId) || piscineId <= 0) {
+            return;
+        }
 
         currentPiscineId = piscineId;
         currentZoneId = zoneId;

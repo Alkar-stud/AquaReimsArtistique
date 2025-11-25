@@ -58,6 +58,10 @@ class MigrationController
             }
         }
 
+        // Nettoie un éventuel flag de session
+        if (isset($_SESSION['applied_migrations']) && empty($toApply) && $this->doesAdminUserExist()) {
+            unset($_SESSION['applied_migrations']);
+        }
         // Doit-on afficher le formulaire email admin ?
         $needEmail = $userMigrationApplied
             || isset($_SESSION['applied_migrations'])
@@ -195,43 +199,60 @@ class MigrationController
                     continue;
                 }
 
-                // Exécute DDL/DCL hors transaction
-                try {
-                    foreach ($statements as $stmt) {
-                        $type = $this->getStmtType($stmt);
-                        if ($type === 'DDL' || $type === 'DCL') {
-                            $this->pdo->exec($stmt);
-                        }
+                // Détecte si le fichier contient du DDL/DCL
+                $hasDDL = false;
+                foreach ($statements as $stmt) {
+                    $type = $this->getStmtType($stmt);
+                    if ($type === 'DDL' || $type === 'DCL') {
+                        $hasDDL = true;
+                        break;
                     }
+                }
+
+                try {
+                    if ($hasDDL) {
+                        // Exécute chaque instruction sans transaction (DDL provoque des commits implicites)
+                        foreach ($statements as $stmt) {
+                            $isUserInsert = (bool)preg_match('/^\s*INSERT\s+(?:IGNORE\s+)?INTO\s+[`"]?user[`"]?\b/i', $stmt);
+                            $res = $this->pdo->exec($stmt);
+                            if ($res === false) {
+                                $err = $this->pdo->errorInfo();
+                                throw new PDOException($err[2] ?? 'Erreur lors de l\'exécution de la requête DDL/DCL');
+                            }
+                            if ($isUserInsert) {
+                                $userMigrationApplied = true;
+                            }
+                        }
+                    } else {
+                        // Regroupe les DML dans une transaction
+                        $this->pdo->beginTransaction();
+                        foreach ($statements as $stmt) {
+                            $isUserInsert = (bool)preg_match('/^\s*INSERT\s+(?:IGNORE\s+)?INTO\s+[`"]?user[`"]?\b/i', $stmt);
+                            $res = $this->pdo->exec($stmt);
+                            if ($res === false) {
+                                $err = $this->pdo->errorInfo();
+                                throw new PDOException($err[2] ?? 'Erreur lors de l\'exécution de la requête DML');
+                            }
+                            if ($isUserInsert) {
+                                $userMigrationApplied = true;
+                            }
+                        }
+                        $this->pdo->commit();
+                    }
+
+                    // Enregistre la migration
+                    $insert = $this->pdo->prepare("INSERT INTO " . self::MIGRATIONS_TABLE . " (name) VALUES (:name)");
+                    $insert->execute(['name' => $file]);
+
+                    $appliedNow[] = $file;
+
+                    // Ne plus se baser sur le nom du fichier pour détecter la migration user
                 } catch (PDOException $e) {
-                    echo "Erreur DDL/DCL " . htmlspecialchars($file) . " : " . htmlspecialchars($e->getMessage()) . "<br>";
+                    if ($this->pdo->inTransaction()) {
+                        $this->pdo->rollBack();
+                    }
+                    echo "Erreur DDL/DML " . htmlspecialchars($file) . " : " . htmlspecialchars($e->getMessage()) . "<br>";
                     continue;
-                }
-
-                //Pas de transaction/commit pour les requêtes DDL (Data Definition Language) car commit implicite de MySQL et donc plus rien à commit, ce qui lève une erreur de commit.
-                if ($this->getStmtType($statements[0]) == "DDL") {
-                    //On exécute la requête SQL du fichier
-                    $this->pdo->exec($sql);
-                    //Puis, on insère le nom du fichier dans la table migrations
-                    $stmt = $this->pdo->prepare("INSERT INTO " . self::MIGRATIONS_TABLE . " (name) VALUES (:name)");
-                    $stmt->execute(['name' => $file]);
-                } else {
-                    $this->pdo->beginTransaction();
-                    //On exécute la requête SQL du fichier
-                    $this->pdo->exec($sql);
-                    //Puis, on insère le nom du fichier dans la table migrations
-                    $stmt = $this->pdo->prepare("INSERT INTO " . self::MIGRATIONS_TABLE . " (name) VALUES (:name)");
-                    $stmt->execute(['name' => $file]);
-                    $this->pdo->commit();
-                }
-
-
-
-                $appliedNow[] = $file;
-
-                // Heuristique large : toute migration mentionnant "user" déclenche la suite d'initialisation
-                if (stripos($file, 'user') !== false) {
-                    $userMigrationApplied = true;
                 }
             } catch (PDOException $e) {
                 if ($this->pdo->inTransaction()) {
@@ -240,9 +261,6 @@ class MigrationController
                 echo "Erreur lors de la migration " . htmlspecialchars($file) . " : " . htmlspecialchars($e->getMessage()) . "<br>";
             }
         }
-
-        // Si la table/user existe maintenant, on force l'étape email
-        $userMigrationApplied = $userMigrationApplied || $this->doesAdminUserExist();
 
         return ['appliedNow' => $appliedNow, 'userMigrationApplied' => $userMigrationApplied];
     }

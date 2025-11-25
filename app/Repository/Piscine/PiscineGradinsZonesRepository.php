@@ -48,16 +48,10 @@ class PiscineGradinsZonesRepository extends AbstractRepository
      * Retourne les zones d'une piscine ordonnées par nom
      * @return PiscineGradinsZones[]
      */
-    public function findByPiscine(int $piscineId, bool $withPiscine = false): array
+    public function findByPiscine(Piscine $piscine): array
     {
         $sql = "SELECT * FROM $this->tableName WHERE piscine = :piscineId ORDER BY zone_name";
-        $rows = $this->query($sql, ['piscineId' => $piscineId]);
-
-        $piscine = null;
-        if ($withPiscine) {
-            $piscineRepo = new PiscineRepository();
-            $piscine = $piscineRepo->findById($piscineId);
-        }
+        $rows = $this->query($sql, ['piscineId' => $piscine->getId()]);
 
         return array_map(function(array $r) use ($piscine) {
             return $this->hydrate($r, $piscine);
@@ -162,14 +156,6 @@ class PiscineGradinsZonesRepository extends AbstractRepository
     }
 
     /**
-     * Wrapper explicite pour la bascule d'ouverture.
-     */
-    public function updateOpenStatus(int $id, bool $isOpen): bool
-    {
-        return $this->updateFields($id, ['is_open' => $isOpen]);
-    }
-
-    /**
      * Hydrate une zone depuis une ligne BDD.
      * @param array<string,mixed> $data
      */
@@ -191,4 +177,38 @@ class PiscineGradinsZonesRepository extends AbstractRepository
         }
         return $zone;
     }
+
+    /**
+     * Sérialise une zone en tableau.
+     * @param PiscineGradinsZones $zone
+     * @param bool $camelCase
+     * @return array
+     */
+    public function toArray(PiscineGradinsZones $zone, bool $camelCase = true): array
+    {
+        if ($camelCase) {
+            return [
+                'id' => $zone->getId(),
+                'piscineId' => $zone->getPiscine(),
+                'zoneName' => $zone->getZoneName(),
+                'nbSeatsVertically' => $zone->getNbSeatsVertically(),
+                'nbSeatsHorizontally' => $zone->getNbSeatsHorizontally(),
+                'isOpen' => $zone->isOpen(),
+                'isStairsAfter' => $zone->isStairsAfter(),
+                'comments' => $zone->getComments(),
+            ];
+        }
+
+        return [
+            'id' => $zone->getId(),
+            'piscine' => $zone->getPiscine(),
+            'zone_name' => $zone->getZoneName(),
+            'nb_seats_vertically' => $zone->getNbSeatsVertically(),
+            'nb_seats_horizontally' => $zone->getNbSeatsHorizontally(),
+            'is_open' => $zone->isOpen(),
+            'is_stairs_after' => $zone->isStairsAfter(),
+            'comments' => $zone->getComments(),
+        ];
+    }
+
 }

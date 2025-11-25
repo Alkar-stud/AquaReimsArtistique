@@ -3,10 +3,13 @@
 namespace app\Services\Reservation;
 
 use app\Core\Paginator;
+use app\Models\Piscine\Piscine;
 use app\Models\Reservation\Reservation;
 use app\Models\Reservation\ReservationMailSent;
 use app\Repository\Event\EventRepository;
 use app\Repository\Mail\MailTemplateRepository;
+use app\Repository\Piscine\PiscineGradinsPlacesRepository;
+use app\Repository\Piscine\PiscineGradinsZonesRepository;
 use app\Repository\Reservation\ReservationComplementRepository;
 use app\Repository\Reservation\ReservationDetailRepository;
 use app\Repository\Reservation\ReservationMailSentRepository;
@@ -398,5 +401,49 @@ class ReservationQueryService
 
         return ['limitReached' => false, 'limit' => $piscine->getMaxPlaces() - $nbPlaceReserved];
     }
+
+    /**
+     * Retourne les zones et leurs places, plus les listes d'IDs par statut,
+     * prêtes à être passées au contrôleur pour les vues piscine.
+     *
+     * - zones: PiscineGradinsZones[]
+     * - placesByZone: array<int, PiscineGradinsPlaces[]>
+     * - reservedPlaceIds, tempOtherPlaceIds, tempMyPlaceIds: int[]
+     * - zoneUrlPattern, zonesListUrl, viewMode: strings
+     *
+     * @param Piscine $piscine
+     * @return array
+     */
+    public function getAllSeatsInSwimmingPoolWithStatus(Piscine $piscine): array
+    {
+        $zonesRepo = new PiscineGradinsZonesRepository();
+        $placesRepo = new PiscineGradinsPlacesRepository();
+
+        // Récupère toutes les zones
+        $zones = $zonesRepo->findByPiscine($piscine);
+
+        // Indexe les places par zone et rattache l'objet zone à chaque place
+        $placesByZone = [];
+        foreach ($zones as $zone) {
+            $zoneId = $zone->getId();
+            $places = $placesRepo->findByFields(['zone' => $zoneId]);
+            foreach ($places as $p) {
+                $p->setZoneObject($zone);
+            }
+            $placesByZone[$zoneId] = $places;
+        }
+
+        return [
+            'zones' => $zones,
+            'placesByZone' => $placesByZone,
+            'reservedPlaceIds' => [],
+            'tempOtherPlaceIds' => [],
+            'tempMyPlaceIds' => [],
+            'zoneUrlPattern' => '/piscine/zone',
+            'zonesListUrl' => '/piscine/zones',
+            'viewMode' => 'readonly',
+        ];
+    }
+
 
 }

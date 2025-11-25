@@ -8,6 +8,7 @@ use app\Repository\Event\EventRepository;
 use app\Repository\Event\EventTarifRepository;
 use app\Services\DataValidation\ReservationDataValidationService;
 use app\Services\Event\EventQueryService;
+use app\Services\Reservation\ReservationQueryService;
 use app\Services\Reservation\ReservationSessionService;
 use app\Services\Swimmer\SwimmerQueryService;
 use app\Services\Tarif\TarifService;
@@ -20,6 +21,7 @@ class ReservationController extends AbstractController
     private EventTarifRepository $eventTarifRepository;
     private TarifService $tarifService;
     private EventRepository $eventRepository;
+    private ReservationQueryService $reservationQueryService;
 
     public function __construct(
         EventQueryService $eventQueryService,
@@ -29,6 +31,7 @@ class ReservationController extends AbstractController
         EventTarifRepository $eventTarifRepository,
         TarifService $tarifService,
         EventRepository $eventRepository,
+        ReservationQueryService $reservationQueryService,
     )
     {
         // On déclare la route comme publique pour éviter la redirection vers la page de login.
@@ -40,6 +43,7 @@ class ReservationController extends AbstractController
         $this->eventTarifRepository = $eventTarifRepository;
         $this->tarifService = $tarifService;
         $this->eventRepository = $eventRepository;
+        $this->reservationQueryService = $reservationQueryService;
     }
 
     /**
@@ -179,9 +183,29 @@ class ReservationController extends AbstractController
     {
         //On récupère la session
         $session = $this->reservationSessionService->getReservationSession();
+        if (!$session || empty($session['event_id'])) {
+            $this->redirect('/reservation'); // sécurité
+        }
+
+        //On récupère la piscine de cet event
+        $event = $this->eventRepository->findById($session['event_id'], true);
+        if (!$event) {
+            $this->redirect('/reservation'); // ou page d'erreur
+        }
+        //On récupère la piscine de cet event
+        $piscine = $event->getPiscine();
+
+        if (!$piscine || !$piscine->getNumberedSeats()) {
+            $this->redirect('/reservation/etape6Display');
+        }
+
+        //On récupère la liste des places leur statut sous forme de tableau pour l'envoyer à la vue
+        //On récupère la piscine de l'event.
+        $listPlacesAndStatus = $this->reservationQueryService->getAllSeatsInSwimmingPoolWithStatus($piscine);
 
         $this->render('reservation/etape5', [
             'reservation' => $session,
+            'zones' => $listPlacesAndStatus['zones'],
         ], 'Réservations');
     }
 

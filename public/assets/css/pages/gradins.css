@@ -141,3 +141,23 @@ table.zone-plan td.tdplaceTempSession {
 .legende .placeTempSession::before {
     background: var(--ara-color-gray);
 }
+
+
+/* Zone Card */
+.zone-card.zone-open {
+    cursor: pointer;
+    transition: box-shadow .15s, transform .15s;
+}
+.zone-card.zone-open:hover,
+.zone-card.zone-open:focus {
+    box-shadow: 0 .5rem 1rem rgba(0,0,0,.15);
+    transform: translateY(-2px);
+    outline: none;
+}
+.zone-card.zone-closed {
+    opacity: .55;
+    filter: grayscale(20%);
+}
+.zone-card.zone-closed .badge {
+    font-size: .7rem;
+}

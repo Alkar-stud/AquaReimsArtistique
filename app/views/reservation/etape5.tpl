@@ -10,10 +10,8 @@
             <div class="d-flex gap-2">
                 <a class="btn btn-outline-secondary btn-sm" href="#" data-action="back-zones">&larr; Retour aux zones</a>
                 <button type="button" class="btn btn-outline-primary btn-sm" data-action="refresh-bleacher">Actualiser</button>
-            </div>
-            <div class="text-center flex-fill">
-                <h2 class="h5 m-0">
-                    <span class="fw-bold" data-bleacher-zone-name>Zone</span>
+                <h2 class="card zone-card text-center m-0 p-2 d-inline-block">
+                    <span class="d-none d-md-inline-block">Zone </span><span class="fw-bold" data-bleacher-zone-name>Zone</span>
                 </h2>
             </div>
         </div>

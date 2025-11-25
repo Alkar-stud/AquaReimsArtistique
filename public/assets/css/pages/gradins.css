@@ -234,3 +234,89 @@ table.zone-plan td.tdplaceTempSession {
             box-shadow: 0 1px 0 rgba(0,0,0,.05);
         }
 }
+
+/* Tooltip pour les cases non cliquables */
+.bleacher-tooltip {
+    position: fixed;
+    left: 50%;
+    top: 0;
+    transform: translate(-50%, -100%);
+    background: rgba(0,0,0,0.85);
+    color: #fff;
+    padding: .35rem .6rem;
+    border-radius: .35rem;
+    font-size: .85rem;
+    line-height: 1;
+    pointer-events: none;
+    z-index: 9999;
+    white-space: nowrap;
+    box-shadow: 0 .25rem .5rem rgba(0,0,0,.15);
+}
+/* Petite adaptation pour affichage large */
+@media (min-width: 576px) {
+    .bleacher-tooltip { font-size: .9rem; }
+}
+
+table.zone-plan td.tdplaceNone {
+    background: var(--ara-color-white); /* fond blanc plein */
+    pointer-events: none;                 /* non interactif */
+    color: inherit;
+}
+
+/* placeholder pour garantir la taille si nécessaire */
+table.zone-plan td.tdplaceNone .seat-placeholder {
+    display: block;
+    width: 100%;
+    height: 100%;
+    line-height: 1;
+    visibility: hidden; /* invisible mais garde l'espace */
+}
+
+/* Ne pas appliquer l'effet hover aux cases "inexistantes" */
+table.zone-plan td:not(.tdplaceClosed):not(.tdplacePris):not(.tdplaceVIP):not(.tdplaceBenevole):not(.tdplaceTemp):not(.tdplaceNone):hover {
+    background: var(--ara-color-pink);
+    color: var(--ara-color-black);
+    cursor: pointer;
+}
+
+/* Case inexistante : fond blanc et non-interactive */
+table.zone-plan td.tdplaceNone {
+    background: var(--ara-color-white);
+    pointer-events: none;
+    color: inherit;
+}
+
+/* placeholder ne capte pas le pointeur (sécurité) */
+table.zone-plan td.tdplaceNone .seat-placeholder {
+    display: block;
+    width: 100%;
+    height: 100%;
+    line-height: 1;
+    visibility: hidden;
+    pointer-events: none;
+}
+
+table.zone-plan td.tdplaceNone {
+    border: 0 !important;        /* supprime toute bordure héritée */
+    background: var(--ara-color-white);
+    pointer-events: none;
+    color: inherit;
+    box-shadow: none !important;
+}
+
+/* s'assurer que le placeholder n'affiche rien et ne capte pas d'interaction */
+table.zone-plan td.tdplaceNone .seat-placeholder {
+    display: block;
+    width: 100%;
+    height: 100%;
+    visibility: hidden;
+    pointer-events: none;
+}
+
+/* si des règles bootstrap ajoutent un contour via outline ou box-shadow, les annuler */
+table.zone-plan td.tdplaceNone:focus,
+table.zone-plan td.tdplaceNone:active {
+    outline: none !important;
+    box-shadow: none !important;
+}
+

@@ -1,5 +1,6 @@
 import {apiGet} from "../components/apiClient.js";
 import {createBleacherGrid} from "../components/bleacherGrid.js";
+
 document.addEventListener('DOMContentLoaded', () => {
     //Pour gérer les click sur les zones
     const zonesList = document.querySelector('[data-component="zones-list"]');
@@ -40,8 +41,6 @@ console.log('reçu : ', response.plan.zone);
                 return;
             }
             const z = response.plan.zone;
-            const nbRows = response.plan.rows?.length ?? 0;
-            const nbCols = response.plan.cols ?? 0;
 
             bleacher.dataset.zoneId = z.id ?? zoneId;
             zoneNameEl.textContent = z.zoneName ?? z.getZoneName ?? 'Zone';
@@ -59,9 +58,8 @@ console.log('reçu : ', response.plan.zone);
         }
     }
 
-    // Délégation de clic pour gérer aussi des ajouts dynamiques éventuels
+    // Gestion du clic sur une zone
     zonesList.addEventListener('click', async (e) => {
-
         const piscineEl = e.target.closest('[data-piscine-id]');
         const zoneEl = e.target.closest('[data-zone-id]');
         if (!piscineEl || !zoneEl) {
@@ -83,8 +81,8 @@ console.log('reçu : ', response.plan.zone);
         currentPiscineId = piscineId;
         currentZoneId = zoneId;
 
-        console.log('Piscine ID:', piscineEl.dataset.piscineId);
-        console.log('Zone ID:', zoneEl.dataset.zoneId);
+console.log('Piscine ID:', piscineEl.dataset.piscineId);
+console.log('Zone ID:', zoneEl.dataset.zoneId);
         await loadZone(piscineId, zoneId);
         showBleacher();
     });

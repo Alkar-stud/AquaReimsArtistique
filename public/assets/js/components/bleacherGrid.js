@@ -1,5 +1,54 @@
-// plan: réponse seatingPlanService.getZonePlan(zone)
-// options: { mode: 'readonly' | 'reservation' | 'admin', onSeatClick(seatData, domButton) }
+//gestion du mouse hover et touch start et end
+let __bleacherTooltipEl = null;
+function ensureBleacherTooltip() {
+    if (__bleacherTooltipEl) return __bleacherTooltipEl;
+    const el = document.createElement('div');
+    el.className = 'bleacher-tooltip';
+    el.style.opacity = '0';
+    el.style.transition = 'opacity .12s ease';
+    el.setAttribute('role', 'status');
+    el.setAttribute('aria-hidden', 'true');
+    document.body.appendChild(el);
+    __bleacherTooltipEl = el;
+    return el;
+}
+function showBleacherTooltip(target, text, touchPoint = null) {
+    if (!text) return;
+    const el = ensureBleacherTooltip();
+    el.textContent = text;
+    el.setAttribute('aria-hidden', 'false');
+    el.style.opacity = '1';
+
+    // Position: prefer touch coordinates if fournis, sinon au-dessus du target centré
+    const rect = target.getBoundingClientRect();
+    let left, top;
+    if (touchPoint) {
+        left = Math.round(touchPoint.clientX);
+        top = Math.round(touchPoint.clientY - 10);
+    } else {
+        left = Math.round(rect.left + rect.width / 2);
+        top = Math.round(rect.top - 8);
+    }
+    // Apply with offset and keep on-screen
+    const margin = 8;
+    el.style.left = Math.min(window.innerWidth - margin, Math.max(margin, left)) + 'px';
+    // calc top en utilisant la hauteur connue de l'élément si disponible
+    const offsetH = el.offsetHeight || 32;
+    el.style.top = Math.max(margin, top - offsetH) + 'px';
+    el.style.transform = 'translate(-50%, -100%)';
+    clearTimeout(el.__hideTimeout);
+    // auto-hide after 2.5s on touch
+    el.__hideTimeout = setTimeout(() => hideBleacherTooltip(), 2500);
+}
+function hideBleacherTooltip() {
+    const el = __bleacherTooltipEl;
+    if (!el) return;
+    el.style.opacity = '0';
+    el.setAttribute('aria-hidden', 'true');
+    clearTimeout(el.__hideTimeout);
+}
+
+// Création de la grille
 export function createBleacherGrid(container, plan, options = {}) {
     if (!container) {
         return null;
@@ -38,7 +87,7 @@ export function createBleacherGrid(container, plan, options = {}) {
             let status = 'available';
 
             if (!seatData.exists) {
-                tdClass = 'tdplaceVide';
+                tdClass = 'tdplaceNone';
                 status = 'empty';
             } else {
                 if (!seatData.open) {
@@ -68,61 +117,102 @@ export function createBleacherGrid(container, plan, options = {}) {
             const seatNumber = String(i + 1).padStart(2, '0');
             const seatCode = `${zoneName}${rankNumber}${seatNumber}`;
 
-            // Bouton (même en readonly pour uniformiser DOM)
-            const btn = document.createElement('button');
-            btn.type = 'button';
-            btn.className = 'seat btn p-0 w-100 h-100';
-            btn.textContent = seatCode;
-
-            // Data attrs
-            btn.dataset.seatCode = seatCode;
-            btn.dataset.zoneName = zoneName;
-            btn.dataset.rowIndex = row.index;
-            if (row.rank != null) {
-                btn.dataset.rowRank = row.rank;
-            }
-            btn.dataset.number = seatNumber;
-            btn.dataset.status = status;
-
-            if (seatData.exists) {
-                btn.dataset.seatId = seatData.id;
-                btn.dataset.open = seatData.open ? '1' : '0';
-                if (seatData.pmr) {
-                    btn.dataset.pmr = '1';
-                }
-                if (seatData.vip) {
-                    btn.dataset.vip = '1';
-                }
-                if (seatData.volunteer) {
-                    btn.dataset.volunteer = '1';
-                }
+            if (!seatData.exists) {
+                // Ne PAS créer de bouton pour les places inexistantes.
+                td.dataset.empty = '1';
+                td.setAttribute('role', 'presentation');
+                // placeholder pour garder gabarit visuel si besoin (inutile si CSS gère taille)
+                const placeholder = document.createElement('span');
+                placeholder.className = 'seat-placeholder';
+                placeholder.innerHTML = '&nbsp;';
+                td.appendChild(placeholder);
             } else {
-                btn.dataset.empty = '1';
-            }
+                // Bouton (même en readonly pour uniformiser DOM)
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'seat btn p-0 w-100 h-100';
+                btn.textContent = seatCode;
 
-            // Désactivation si non cliquable
-            const interactive = (mode !== 'readonly') && seatData.exists && status === 'available';
-            if (!interactive) {
-                btn.disabled = true;
-            }
+                // Data attrs
+                btn.dataset.seatCode = seatCode;
+                btn.dataset.zoneName = zoneName;
+                btn.dataset.rowIndex = row.index;
+                if (row.rank != null) {
+                    btn.dataset.rowRank = row.rank;
+                }
+                btn.dataset.number = seatNumber;
+                btn.dataset.status = status;
 
-            // Gestion clic futur
-            if (interactive && typeof options.onSeatClick === 'function') {
-                btn.addEventListener('click', () => options.onSeatClick({
-                    seatId: seatData.id,
-                    code: seatCode,
-                    zone: zoneName,
-                    rowIndex: row.index,
-                    rowRank: row.rank,
-                    number: seatNumber,
-                    status
-                }, btn));
-            }
+                if (seatData.exists) {
+                    btn.dataset.seatId = seatData.id;
+                    btn.dataset.open = seatData.open ? '1' : '0';
+                    if (seatData.pmr) {
+                        btn.dataset.pmr = '1';
+                    }
+                    if (seatData.vip) {
+                        btn.dataset.vip = '1';
+                    }
+                    if (seatData.volunteer) {
+                        btn.dataset.volunteer = '1';
+                    }
+                } else {
+                    btn.dataset.empty = '1';
+                }
 
-            td.appendChild(btn);
+                // Désactivation si non cliquable
+                const interactive = (mode !== 'readonly') && seatData.exists && status === 'available';
+                if (!interactive) {
+                    btn.disabled = true;
+
+                    // Déterminer texte tooltip succinct
+                    let tooltipText = 'Non disponible';
+                    if (!seatData.exists) tooltipText = 'Aucune place';
+                    else if (!seatData.open) tooltipText = 'Fermée';
+                    else if (seatData.pmr) tooltipText = 'Réservée aux PMR';
+                    else if (seatData.vip) tooltipText = 'Place VIP';
+                    else if (seatData.volunteer) tooltipText = 'Réservée aux bénévoles';
+
+                    // accessibilité / fallback navigateur
+                    btn.title = tooltipText;
+                    btn.dataset.tooltip = tooltipText;
+
+                    // Attacher les événements sur la cellule <td> (les boutons désactivés peuvent ne pas recevoir focus/événements)
+                    td.dataset.tooltip = tooltipText;
+
+                    td.addEventListener('mouseenter', () => showBleacherTooltip(btn, tooltipText));
+                    td.addEventListener('mouseleave', () => hideBleacherTooltip());
+
+                    // événements tactiles (touchstart pour afficher, touchend/touchcancel pour cacher)
+                    td.addEventListener('touchstart', (ev) => {
+                        const touch = ev.touches && ev.touches[0];
+                        showBleacherTooltip(btn, tooltipText, touch);
+                    }, {passive: true});
+                    td.addEventListener('touchend', () => hideBleacherTooltip());
+                    td.addEventListener('touchcancel', () => hideBleacherTooltip());
+
+                    // keyboard: rendre la td focussable et afficher tooltip au focus
+                    td.tabIndex = 0;
+                    td.addEventListener('focus', () => showBleacherTooltip(btn, tooltipText));
+                    td.addEventListener('blur', () => hideBleacherTooltip());
+                }
+
+                // Gestion clic futur
+                if (interactive && typeof options.onSeatClick === 'function') {
+                    btn.addEventListener('click', () => options.onSeatClick({
+                        seatId: seatData.id,
+                        code: seatCode,
+                        zone: zoneName,
+                        rowIndex: row.index,
+                        rowRank: row.rank,
+                        number: seatNumber,
+                        status
+                    }, btn));
+                }
+
+                td.appendChild(btn);
+            }
             tr.appendChild(td);
         }
-
         tbody.appendChild(tr);
     });
 

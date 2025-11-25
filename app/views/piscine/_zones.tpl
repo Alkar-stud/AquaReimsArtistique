@@ -3,7 +3,7 @@
         <h2 class="h5 m-0">Zones</h2>
     </div>
 
-    <div class="row g-3 row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-6" data-component="zones-list">
+    <div class="row g-3 row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-6">
         {% foreach $zones as $z %}
         <div class="col">
             {% if $z->isOpen() %}

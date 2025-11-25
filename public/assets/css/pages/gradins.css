@@ -1,16 +1,23 @@
-/*  CSS pour l'affichage des gradins */
+/* CSS pour l'affichage des gradins */
 
+/* Base tableau */
 table.zone-plan td,
 table.zone-plan th {
     border: 1px solid var(--ara-color-black);
     padding: 5px 0;
 }
 
+/* Boutons/places - style commun */
 table.zone-plan .seat.btn {
+    background: none;
+    color: inherit;
     border: none;
     box-shadow: none;
+    font-variant-numeric: tabular-nums;
+    -webkit-tap-highlight-color: transparent;
 }
-/* Titre de zone dans la vue gradins: style encadré (contour) */
+
+/* Titre de zone */
 [data-bleacher-zone-name].zone-title {
     display: inline-block;
     font-weight: 700;
@@ -21,87 +28,58 @@ table.zone-plan .seat.btn {
     border-radius: .375rem;
     background-color: var(--ara-color-white);
 }
-/* Desktop (>=992px): styles par défaut conservés */
+
+/* Desktop (>=992px) */
 @media (min-width: 992px) {
-        table.zone-plan { width: 100%; }
-        table.zone-plan td,
-        table.zone-plan th { padding: 5px 0; }
+    table.zone-plan { width: 100%; }
+    table.zone-plan td,
+    table.zone-plan th { padding: 5px 0; }
 }
 
-
-
-/* Place libre : survol et sélection sur la cellule sauf pour les places non réservables */
-table.zone-plan td:not(.tdplaceClosed):not(.tdplacePris):not(.tdplaceVIP):not(.tdplaceBenevole):not(.tdplaceTemp):hover {
+/* Hover pour places interactives (ne pas appliquer aux états non-interactifs) */
+table.zone-plan td:not(.tdplaceClosed):not(.tdplacePris):not(.tdplaceVIP):not(.tdplaceBenevole):not(.tdplaceTemp):not(.tdplaceNone):hover {
     background: var(--ara-color-pink);
     color: var(--ara-color-black);
     cursor: pointer;
 }
 
-/* Pour surcharger le style bootstrap de table table-bordered */
-table.zone-plan td .seat.btn {
-    background: none !important;
-    color: inherit;
-    border: none;
-    box-shadow: none;
-}
+/* Couleurs / états */
+table.zone-plan th.thEscaliers { background-color: #808080; }
 
-/*  Couleur des escaliers */
-table.zone-plan th.thEscaliers {
-    background-color: #808080; /* gris */
-}
-
-/*  Couleur des cases fermées */
 table.zone-plan td.tdplaceClosed {
     background-color: var(--ara-color-black);
     color: var(--ara-color-white);
 }
 
-/*  Couleur des cases vide */
-table.zone-plan .tdplaceVide {
-    background: transparent; /* blanc */
-}
+table.zone-plan .tdplaceVide { background: transparent; }
 
-/*  Couleur des cases déjà réservées */
 table.zone-plan td.tdplacePris {
-    background: var(--ara-color-red); /* rouge */
-    color: var(--ara-color-white); /* blanc */
+    background: var(--ara-color-red);
+    color: var(--ara-color-white);
 }
 
-/*  Couleur des cases PMR non réservées */
 table.zone-plan td.tdplacePMR {
     background: var(--ara-color-darkblue);
     color: var(--ara-color-white);
 }
 
-/*  Couleur des cases VIP */
-table.zone-plan .tdplaceVIP {
-    background-color: var(--ara-color-darkpink);
-}
+table.zone-plan .tdplaceVIP { background-color: var(--ara-color-darkpink); }
 
-/*  Couleur des cases Bénévole */
-table.zone-plan .tdplaceBenevole {
-    background: var(--ara-color-purple);
-}
+table.zone-plan .tdplaceBenevole { background: var(--ara-color-purple); }
 
-/*  Couleur des cases en cours de réservation par d'autres */
-table.zone-plan td.tdplaceTemp {
-    background-color: var(--ara-color-darkgray); /* gris clair */
-}
+table.zone-plan td.tdplaceTemp { background-color: var(--ara-color-darkgray); }
 
-/*  Couleur des cases en cours de réservation par le visiteur */
 table.zone-plan td.tdplaceTempSession {
-    background-color: var(--ara-color-gray); /* gris */
+    background-color: var(--ara-color-gray);
     color: var(--ara-color-black);
 }
 
-
-/* Legende */
+/* Legend */
 .legende .case {
     align-items: center;
     display: flex;
     position: relative;
 }
-
 .legende .case::before {
     border: 1px solid var(--ara-color-black);
     content: "";
@@ -110,42 +88,16 @@ table.zone-plan td.tdplaceTempSession {
     width: 30px;
     margin-right: .5rem;
 }
+.legende .placeClosed::before { background-color: var(--ara-color-black); color: var(--ara-color-white); }
+.legende .placeVide::before { background: transparent; }
+.legende .placePMR::before { background: var(--ara-color-darkblue); }
+.legende .placePris::before { background: var(--ara-color-red); }
+.legende .placeVIP::before { background-color: var(--ara-color-darkpink); }
+.legende .placeBenevole::before { background: var(--ara-color-purple); }
+.legende .placeTemp::before { background: var(--ara-color-darkgray); }
+.legende .placeTempSession::before { background: var(--ara-color-gray); }
 
-.legende .placeClosed::before {
-    background-color: var(--ara-color-black); /* noir */
-    color: var(--ara-color-white); /* blanc */
-}
-
-.legende .placeVide::before {
-    background: transparent;
-}
-
-.legende .placePMR::before {
-    background: var(--ara-color-darkblue);
-}
-
-.legende .placePris::before {
-    background: var(--ara-color-red);
-}
-
-.legende .placeVIP::before {
-    background-color: var(--ara-color-darkpink);
-}
-
-.legende .placeBenevole::before {
-    background: var(--ara-color-purple);
-}
-
-.legende .placeTemp::before {
-    background: var(--ara-color-darkgray);
-}
-
-.legende .placeTempSession::before {
-    background: var(--ara-color-gray);
-}
-
-
-/* Zone Card */
+/* Zone card */
 .zone-card.zone-open {
     cursor: pointer;
     transition: box-shadow .15s, transform .15s;
@@ -160,79 +112,73 @@ table.zone-plan td.tdplaceTempSession {
     opacity: .55;
     filter: grayscale(20%);
 }
-.zone-card.zone-closed .badge {
-    font-size: .7rem;
-}
+.zone-card.zone-closed .badge { font-size: .7rem; }
 
 /* ===== Mobile-friendly grid (<=991.98px) ===== */
 @media (max-width: 991.98px) {
-        /* Conteneur scrollable */
-        [data-bleacher-seats] {
-            overflow-x: auto;
-            -webkit-overflow-scrolling: touch;
-            touch-action: pan-x;
-        }
-        /* Le tableau prend la taille de son contenu */
-        table.zone-plan {
-            width: max-content;
-            border-collapse: separate;
-            border-spacing: 0;
-            font-size: .8rem;
-        }
-        /* Cellules compactes */
-        table.zone-plan td,
-        table.zone-plan th { padding: 0; }
-        table.zone-plan td {
-            min-width: clamp(34px, 7.5vw, 48px);
-            height: clamp(34px, 7.5vw, 48px);
-        }
-        /* Bouton plein format */
-        table.zone-plan .seat.btn {
-            display: block;
-            width: 100%;
-            height: 100%;
-            padding: 0;
-            line-height: 1;
-            border: none;
-            box-shadow: none;
-            background: none !important;
-            color: inherit;
-            font-variant-numeric: tabular-nums;
-            -webkit-tap-highlight-color: transparent;
-        }
+    [data-bleacher-seats] {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        touch-action: pan-x;
+    }
+    table.zone-plan {
+        width: max-content;
+        border-collapse: separate;
+        border-spacing: 0;
+        font-size: .8rem;
+    }
+    table.zone-plan td,
+    table.zone-plan th { padding: 0; }
+    table.zone-plan td {
+        min-width: clamp(34px, 7.5vw, 48px);
+        height: clamp(34px, 7.5vw, 48px);
+    }
+    table.zone-plan .seat.btn {
+        display: block;
+        width: 100%;
+        height: 100%;
+        padding: 0;
+        line-height: 1;
+        background: none;
+        color: inherit;
+        border: none;
+        box-shadow: none;
+    }
 }
+
 /* Très petit écran (<=576px) */
 @media (max-width: 575.98px) {
-        table.zone-plan td {
-            min-width: clamp(36px, 10vw, 52px);
-            height: clamp(36px, 10vw, 52px);
-        }
-        /* Masque le texte et affiche uniquement le numéro */
-        table.zone-plan .seat.btn { font-size: 0; }
-        table.zone-plan .seat.btn::after {
-            content: attr(data-number);
-            font-size: 12px;
-            font-weight: 600;
-        }
-        .legende { font-size: .85rem; }
+    table.zone-plan td {
+        min-width: clamp(36px, 10vw, 52px);
+        height: clamp(36px, 10vw, 52px);
+    }
+    /* Masque le texte et affiche uniquement le numéro via data-number */
+    table.zone-plan .seat.btn { font-size: 0; }
+    table.zone-plan .seat.btn::after {
+        content: attr(data-number);
+        font-size: 12px;
+        font-weight: 600;
+    }
+    .legende { font-size: .85rem; }
 }
+
 /* Sticky repères en mobile (<=768px) */
 @media (max-width: 767.98px) {
-        table.zone-plan td:first-child,
-        table.zone-plan th:first-child {
-            position: sticky;
-            left: 0;
-            z-index: 1;
-            background: var(--ara-color-white);
-            box-shadow: 1px 0 0 rgba(0,0,0,.05);
-        }
-        table.zone-plan thead th {
-            position: sticky;
-            top: 0;
-            z-index: 2;
-            background: var(--ara-color-white);
-            box-shadow: 0 1px 0 rgba(0,0,0,.05);
-        }
+    table.zone-plan td:first-child,
+    table.zone-plan th:first-child {
+        position: sticky;
+        left: 0;
+        z-index: 1;
+        background: var(--ara-color-white);
+        box-shadow: 1px 0 0 rgba(0,0,0,.05);
+    }
+    table.zone-plan thead th {
+        position: sticky;
+        top: 0;
+        z-index: 2;
+        background: var(--ara-color-white);
+        box-shadow: 0 1px 0 rgba(0,0,0,.05);
+    }
 }
 
 /* Tooltip pour les cases non cliquables */
@@ -252,71 +198,85 @@ table.zone-plan td.tdplaceTempSession {
     white-space: nowrap;
     box-shadow: 0 .25rem .5rem rgba(0,0,0,.15);
 }
-/* Petite adaptation pour affichage large */
 @media (min-width: 576px) {
     .bleacher-tooltip { font-size: .9rem; }
 }
 
+/* Case inexistante : fond blanc, non-interactive, pas de bordure/ombre ni focus indésirable */
 table.zone-plan td.tdplaceNone {
-    background: var(--ara-color-white); /* fond blanc plein */
-    pointer-events: none;                 /* non interactif */
+    background: var(--ara-color-white);
+    pointer-events: none;
     color: inherit;
+    border: 0;
+    box-shadow: none;
+    outline: none;
 }
 
-/* placeholder pour garantir la taille si nécessaire */
+/* placeholder pour garantir la taille si nécessaire (invisible, ne capte pas les événements) */
 table.zone-plan td.tdplaceNone .seat-placeholder {
     display: block;
     width: 100%;
     height: 100%;
     line-height: 1;
-    visibility: hidden; /* invisible mais garde l'espace */
+    visibility: hidden;
+    pointer-events: none;
 }
 
-/* Ne pas appliquer l'effet hover aux cases "inexistantes" */
-table.zone-plan td:not(.tdplaceClosed):not(.tdplacePris):not(.tdplaceVIP):not(.tdplaceBenevole):not(.tdplaceTemp):not(.tdplaceNone):hover {
-    background: var(--ara-color-pink);
+/* styles pour boutons nav latéraux (placé près du conteneur des gradins) */
+.nav-zone-btn {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 50;
+    border-radius: 999px;
+    width: 40px;
+    height: 40px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255,255,255,0.9);
+    border: 1px solid rgba(0,0,0,0.08);
+    box-shadow: 0 .25rem .5rem rgba(0,0,0,.08);
     color: var(--ara-color-black);
     cursor: pointer;
+    transition: transform .12s, opacity .12s;
+}
+.nav-zone-btn:disabled { opacity: 0.45; cursor: default; pointer-events: auto; }
+
+.bleacher-container { position: relative; }
+.nav-zone-btn.prev { left: 8px; }
+.nav-zone-btn.next { right: 8px; }
+.gradins-row {
+    display: block; /* mobile : empilé */
+    gap: .5rem;
+    align-items: stretch;
 }
 
-/* Case inexistante : fond blanc et non-interactive */
-table.zone-plan td.tdplaceNone {
-    background: var(--ara-color-white);
-    pointer-events: none;
-    color: inherit;
+/* Desktop / tablette (>=768px) : rangée en flex et boutons hors du flux */
+@media (min-width: 768px) {
+    .gradins-row {
+        display: flex;
+        align-items: center;
+        gap: .5rem;
+    }
+
+    .gradins-row .nav-zone-btn {
+        position: relative;
+        top: 0;
+        left: 0;
+        transform: none;
+        margin: 0;
+    }
+
+    .gradins-row .bleacher-container {
+        flex: 1 1 auto;
+    }
+
+    .gradins-row .nav-zone-btn.prev { margin-right: .5rem; }
+    .gradins-row .nav-zone-btn.next { margin-left: .5rem; }
 }
 
-/* placeholder ne capte pas le pointeur (sécurité) */
-table.zone-plan td.tdplaceNone .seat-placeholder {
-    display: block;
-    width: 100%;
-    height: 100%;
-    line-height: 1;
-    visibility: hidden;
-    pointer-events: none;
+/* Conserver la taille réduite sur très petit écran */
+@media (max-width: 575.98px) {
+    .nav-zone-btn { width: 36px; height: 36px; }
 }
-
-table.zone-plan td.tdplaceNone {
-    border: 0 !important;        /* supprime toute bordure héritée */
-    background: var(--ara-color-white);
-    pointer-events: none;
-    color: inherit;
-    box-shadow: none !important;
-}
-
-/* s'assurer que le placeholder n'affiche rien et ne capte pas d'interaction */
-table.zone-plan td.tdplaceNone .seat-placeholder {
-    display: block;
-    width: 100%;
-    height: 100%;
-    visibility: hidden;
-    pointer-events: none;
-}
-
-/* si des règles bootstrap ajoutent un contour via outline ou box-shadow, les annuler */
-table.zone-plan td.tdplaceNone:focus,
-table.zone-plan td.tdplaceNone:active {
-    outline: none !important;
-    box-shadow: none !important;
-}
-

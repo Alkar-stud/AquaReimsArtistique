@@ -28,16 +28,20 @@
                 <div class="col-6 col-md-3 case placeTempSession">En cours (vous)</div>
             </div>
         </div>
-        <div class="bleacher-container mb-4">
-            <div class="gradins-wrapper" data-mode="readonly">
-                <section>
-                    <div class="gradins" data-bleacher-seats>
-                        <!-- Places générées en JS -->
-                    </div>
-                </section>
+        <div class="gradins-row align-items-center mb-2">
+            <button type="button" class="nav-zone-btn prev d-none d-md-inline-flex" data-action="prev-zone" aria-label="Zone précédente">&larr;</button>
 
+            <div class="bleacher-container mb-4">
+                <div class="gradins-wrapper" data-mode="readonly">
+                    <section>
+                        <div class="gradins" data-bleacher-seats>
+                            <!-- Places générées en JS -->
+                        </div>
+                    </section>
+                </div>
             </div>
 
+            <button type="button" class="nav-zone-btn next d-none d-md-inline-flex" data-action="next-zone" aria-label="Zone suivante">&rarr;</button>
         </div>
     </div>
 

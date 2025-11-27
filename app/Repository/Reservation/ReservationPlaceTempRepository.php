@@ -69,26 +69,6 @@ class ReservationPlaceTempRepository extends AbstractRepository
     }
 
     /**
-     * Insère une nouvelle réservation temporaire
-     * @param string $sessionId
-     * @param int $eventSessionId
-     * @param int $seatId
-     * @param int $index
-     * @param DateTime $expireAt
-     * @return bool
-     */
-    public function insertTempReservation(string $sessionId, int $eventSessionId, int $seatId, int $index, DateTime $expireAt): bool
-    {
-        $reservationTemp = new ReservationPlaceTemp();
-        $reservationTemp->setSession($sessionId)
-            ->setEventSessionId($eventSessionId)
-            ->setPlaceId($seatId)
-            ->setIndex($index)
-            ->setExpireAt($expireAt->format('Y-m-d H:i:s'));
-        return $this->insert($reservationTemp);
-    }
-
-    /**
      * Met à jour une réservation temporaire
      * @param ReservationPlaceTemp $reservation
      * @return bool

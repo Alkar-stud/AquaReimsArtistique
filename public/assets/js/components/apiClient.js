@@ -55,7 +55,6 @@ async function client(endpoint, { body, ...customConfig } = {}) {
             config.body = JSON.stringify(body);
         }
     }
-console.log('Envoyé : ', endpoint, config);
     const response = await fetch(endpoint, config);
 
     // Rafraîchit le jeton et le contexte si fournis par le serveur

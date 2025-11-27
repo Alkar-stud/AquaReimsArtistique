@@ -47,7 +47,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (response.plan) {
                 const gridContainer = bleacher.querySelector('[data-bleacher-seats]');
-                gridInstance = createBleacherGrid(gridContainer, response.plan, { mode: 'reservation' });
+                gridInstance = createBleacherGrid(gridContainer, response.plan, {
+                    mode: 'reservation',
+                    onSeatClick: (seat, btn) => {
+                        console.log('Seat ID:', seat.seatId);
+                    }
+                });
             }
 
             // Mettre à jour état courant et boutons de navigation
@@ -55,12 +60,16 @@ document.addEventListener('DOMContentLoaded', () => {
             currentZoneId = zoneId;
             updateNavButtons();
 
+            // Retourne le conteneur de la grille pour référence future
+            return bleacher.querySelector('[data-bleacher-seats]');
+
         } catch (err) {
             console.error('Erreur API:', err);
         } finally {
             loading = false;
             refreshBtn?.classList.remove('disabled');
         }
+        return null;
     }
 
     // Récupère la liste ordonnée des zones DOM pour une piscine donnée
@@ -83,13 +92,43 @@ document.addEventListener('DOMContentLoaded', () => {
         nextBtn.disabled = !(idx >= 0 && idx < zoneIds.length - 1);
     }
 
+    // Positionne le scroller réellement scrollable après rebuild (double rAF)
+    function setBleacherScrollerEdge(scroller, position = 'start') {
+        console.log('ok position : ', position);
+        if (!scroller) {
+            console.warn('setBleacherScrollerEdge: scroller introuvable');
+            return;
+        }
+
+        const min = 0;
+        const max = Math.max(0, scroller.scrollWidth - scroller.clientWidth);
+        console.log('Bleacher scroll min:', min, 'max:', max);
+
+        // Positionner le scroller après rebuild (double rAF + setTimeout pour sécurité)
+        const setScroll = () => {
+            if (position === 'start') {
+                scroller.scrollLeft = min;
+            } else if (position === 'end') {
+                scroller.scrollLeft = max;
+            }
+        };
+
+        requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+                setTimeout(setScroll, 10);
+            });
+        });
+    }
+
     async function goToPrevZone() {
         const zoneIds = getZonesForPiscine(currentPiscineId);
         const idx = zoneIds.indexOf(Number(currentZoneId));
         if (idx > 0) {
             const newZoneId = zoneIds[idx - 1];
-            await loadZone(currentPiscineId, newZoneId);
+            const scroller = await loadZone(currentPiscineId, newZoneId);
             showBleacher();
+            // positionner à la fin après rendu
+            setBleacherScrollerEdge(scroller, 'end');
         }
     }
     async function goToNextZone() {
@@ -97,8 +136,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const idx = zoneIds.indexOf(Number(currentZoneId));
         if (idx >= 0 && idx < zoneIds.length - 1) {
             const newZoneId = zoneIds[idx + 1];
-            await loadZone(currentPiscineId, newZoneId);
+            const scroller = await loadZone(currentPiscineId, newZoneId);
             showBleacher();
+            // positionner au début après rendu
+            setBleacherScrollerEdge(scroller, 'start');
         }
     }
 
@@ -147,61 +188,74 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Comportement mobile : swipe à l'extrémité pour changer de zone ---
     (function attachEdgeSwipe() {
-        const scroller = bleacher.querySelector('[data-bleacher-seats]');
-        if (!scroller) return;
+        if (!bleacher) return;
 
         let startX = 0;
         let startY = 0;
-        let moved = false;
-        let triggered = false; // empêche retrigger avant touchend
-        const THRESHOLD = 40; // px nécessaires pour déclencher change zone
-        const EDGE_TOLERANCE = 4; // tolérance bord
+        let triggered = false;
+        let edgeStart = false;
+        let activeScroller = null;
 
-        scroller.addEventListener('touchstart', (ev) => {
-            if (!ev.touches || !ev.touches[0]) return;
-            const t = ev.touches[0];
-            startX = t.clientX;
-            startY = t.clientY;
-            moved = false;
-            triggered = false;
-        }, {passive: true});
+        const THRESHOLD = 80;      // distance horizontale minimale (px)
+        const EDGE_TOLERANCE = 24; // tolérance sur le scrollLeft pour considérer qu'on est "à l'extrémité"
+        const EDGE_ZONE = 92;      // tolérance en px depuis le bord du scroller
 
-        scroller.addEventListener('touchmove', (ev) => {
-            if (triggered) return;
+        // Résout le scroller (ici l'élément [data-bleacher-seats])
+        function resolveScroller() {
+            return bleacher.querySelector('[data-bleacher-seats]');
+        }
+
+        // Attache au conteneur bleacher pour rester valide même si le contenu change
+        bleacher.addEventListener('touchstart', (ev) => {
             const t = ev.touches && ev.touches[0];
             if (!t) return;
+            startX = t.clientX;
+            startY = t.clientY;
+            triggered = false;
+
+            activeScroller = resolveScroller();
+            if (!activeScroller) {
+                edgeStart = false;
+                return;
+            }
+            const rect = activeScroller.getBoundingClientRect();
+            // Détecte démarrage du geste près du bord du scroller (gauche ou droite)
+            edgeStart = (startX <= rect.left + EDGE_ZONE) || (startX >= rect.right - EDGE_ZONE);
+        }, {passive: true});
+
+        bleacher.addEventListener('touchmove', (ev) => {
+            if (triggered) return;
+            const t = ev.touches && ev.touches[0];
+            if (!t || !activeScroller) return;
             const dx = t.clientX - startX;
             const dy = t.clientY - startY;
-            // ignorer scroll vertical important
-            if (Math.abs(dy) > Math.abs(dx)) return;
-            moved = true;
 
+            // Ignorer si c'est majoritairement un scroll vertical
+            if (Math.abs(dy) > Math.abs(dx)) return;
+
+            const scroller = activeScroller;
             const maxScrollLeft = scroller.scrollWidth - scroller.clientWidth;
             const atLeftEdge = scroller.scrollLeft <= EDGE_TOLERANCE;
             const atRightEdge = scroller.scrollLeft >= Math.max(0, maxScrollLeft - EDGE_TOLERANCE);
 
-            // swipe vers la droite (dx > 0) quand on est déjà à gauche -> prev
-            if (atLeftEdge && dx > THRESHOLD) {
+            if (atLeftEdge && edgeStart && dx > THRESHOLD) {
                 triggered = true;
                 goToPrevZone();
-            }
-            // swipe vers la gauche (dx < 0) quand on est déjà à droite -> next
-            else if (atRightEdge && dx < -THRESHOLD) {
+            } else if (atRightEdge && edgeStart && dx < -THRESHOLD) {
                 triggered = true;
                 goToNextZone();
             }
         }, {passive: true});
 
-        scroller.addEventListener('touchend', () => {
-            // reset pour autoriser un nouveau geste
+        bleacher.addEventListener('touchend', () => {
             triggered = false;
-            moved = false;
+            edgeStart = false;
+            activeScroller = null;
         }, {passive: true});
 
-        // Mettre à jour boutons quand on redimensionne / scroller rebuild
         window.addEventListener('resize', updateNavButtons);
     })();
 
-    // Initial update (au cas où la page a pré-chargé une piscine/zone)
+    // Initial update
     updateNavButtons();
 });

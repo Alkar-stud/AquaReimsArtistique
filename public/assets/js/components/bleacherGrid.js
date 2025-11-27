@@ -59,6 +59,23 @@ export function createBleacherGrid(container, plan, options = {}) {
     const rows = Array.isArray(plan.rows) ? plan.rows : [];
     const cols = plan.cols || 0;
 
+    // Injecte un style minimal pour la colonne mobile
+    if (!document.getElementById('bleacher-mobile-style')) {
+        const style = document.createElement('style');
+        style.id = 'bleacher-mobile-style';
+        style.textContent = `
+            .mobile-row-label { width: 4.5rem; vertical-align: middle; padding: .25rem; text-align: center; }
+            .mobile-row-label .mobile-row-content { font-size: .85rem; white-space: nowrap; line-height: 1; }
+            .mobile-row-label .zone-name { font-weight: 700; display: block; }
+            .mobile-row-label .row-rank { display: block; color: #6c757d; font-size: .85rem; }
+            /* Masquer sur md+ (Bootstrap utils) */
+            @media (min-width: 768px) { .mobile-row-label { display: none !important; } }
+            /* Optionnel : meilleure tenue visuelle sur petit écran */
+            .zone-plan td { vertical-align: middle; }
+        `;
+        document.head.appendChild(style);
+    }
+
     // Nettoyage
     container.innerHTML = '';
     container.dataset.mode = mode;
@@ -77,6 +94,22 @@ export function createBleacherGrid(container, plan, options = {}) {
         if (row.rank != null) {
             tr.dataset.rowRank = row.rank;
         }
+
+        // Calcul du "rankNumber" utilisé pour l'affichage mobile et le code
+        const rankNumber = (row.rank != null && row.rank !== '') ? row.rank : row.index;
+
+        // Colonne mobile: visible uniquement sur petits écrans, affiche zone + rang
+        const mobileLabelTd = document.createElement('td');
+        mobileLabelTd.className = 'mobile-row-label d-md-none';
+        mobileLabelTd.setAttribute('role', 'presentation');
+        const mobileContent = document.createElement('div');
+        mobileContent.className = 'mobile-row-content';
+        const spanZone = document.createElement('span');
+        spanZone.className = 'zone-name';
+        spanZone.textContent = zoneName + rankNumber + 'xx';
+        mobileContent.appendChild(spanZone);
+        mobileLabelTd.appendChild(mobileContent);
+        tr.appendChild(mobileLabelTd);
 
         for (let i = 0; i < row.seats.length; i++) {
             const seatData = row.seats[i];
@@ -113,7 +146,6 @@ export function createBleacherGrid(container, plan, options = {}) {
             td.className = tdClass;
 
             // Construction nom complet du siège à afficher
-            const rankNumber = (row.rank != null && row.rank !== '') ? row.rank : row.index;
             const seatNumber = String(i + 1).padStart(2, '0');
             const seatCode = `${zoneName}${rankNumber}${seatNumber}`;
 

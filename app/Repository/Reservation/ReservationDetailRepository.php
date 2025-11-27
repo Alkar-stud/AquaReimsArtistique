@@ -81,18 +81,21 @@ class ReservationDetailRepository extends AbstractRepository
      * @param bool $withReservation
      * @param bool $withTarif
      * @param bool $withPlace
-     * @return ReservationDetail[]
+     * @return ReservationDetail|null
      */
     public function findByPlaceNumber(
         int $placeId,
         bool $withReservation = false,
         bool $withTarif = false,
         bool $withPlace = false
-    ): array {
-        $sql = "SELECT * FROM $this->tableName WHERE place_number = :placeNumber ORDER BY created_at DESC";
+    ): ?ReservationDetail {
+        $sql = "SELECT * FROM $this->tableName WHERE place_number = :placeNumber ORDER BY created_at DESC LIMIT 1";
         $rows = $this->query($sql, ['placeNumber' => $placeId]);
-        $details = array_map([$this, 'hydrate'], $rows);
-        return $this->hydrateRelations($details, $withReservation, $withTarif, $withPlace);
+        if (!$rows) return null;
+
+        $d = $this->hydrate($rows[0]);
+        $hydrated = $this->hydrateRelations([$d], $withReservation, $withTarif, $withPlace);
+        return $hydrated[0] ?? null;
     }
 
     /**

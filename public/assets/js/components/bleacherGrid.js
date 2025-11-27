@@ -192,7 +192,7 @@ export function createBleacherGrid(container, plan, options = {}) {
                 }
 
                 // Désactivation si non cliquable
-                const interactive = (mode !== 'readonly') && seatData.exists && status === 'available';
+                const interactive = (mode !== 'readonly') && seatData.exists && (status === 'available' || status === 'pmr');
                 if (!interactive) {
                     btn.disabled = true;
 
@@ -228,7 +228,7 @@ export function createBleacherGrid(container, plan, options = {}) {
                     td.addEventListener('blur', () => hideBleacherTooltip());
                 }
 
-                // Gestion clic futur
+                // Gestion clic
                 if (interactive && typeof options.onSeatClick === 'function') {
                     btn.addEventListener('click', () => options.onSeatClick({
                         seatId: seatData.id,

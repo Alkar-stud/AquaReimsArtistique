@@ -17,9 +17,9 @@ class ReservationTemp extends AbstractModel
     private int $event_session;
     private ?EventSession $eventSessionObject = null;
     private string $session_id;
-    private string $name;
-    private string $firstname;
-    private string $email;
+    private ?string $name = null;
+    private ?string $firstname = null;
+    private ?string $email = null;
     private ?string $phone = null;
     private ?int $swimmer_if_limitation = null;
     private ?Swimmer $swimmer = null;
@@ -35,9 +35,9 @@ class ReservationTemp extends AbstractModel
     public function getEventSession(): int { return $this->event_session; }
     public function getEventSessionObject(): ?EventSession { return $this->eventSessionObject; }
     public function getSessionId(): string { return $this->session_id; }
-    public function getName(): string { return $this->name; }
-    public function getFirstName(): string { return $this->firstname; }
-    public function getEmail(): string { return $this->email; }
+    public function getName(): ?string { return $this->name; }
+    public function getFirstName(): ?string { return $this->firstname; }
+    public function getEmail(): ?string { return $this->email; }
     public function getPhone(): ?string { return $this->phone; }
     public function getSwimmerId(): ?int { return $this->swimmer_if_limitation; }
     public function getSwimmer(): ?Swimmer { return $this->swimmer; }
@@ -60,9 +60,9 @@ class ReservationTemp extends AbstractModel
         return $this;
     }
     public function setSessionId(string $session_id): self { $this->session_id = $session_id; return $this; }
-    public function setName(string $name): self { $this->name = $name; return $this; }
-    public function setFirstName(string $firstname): self { $this->firstname = $firstname; return $this; }
-    public function setEmail(string $email): self { $this->email = $email; return $this; }
+    public function setName(?string $name): self { $this->name = ($name === '' ? null : $name); return $this; }
+    public function setFirstName(?string $firstname): self { $this->firstname = ($firstname === '' ? null : $firstname); return $this; }
+    public function setEmail(?string $email): self { $this->email = ($email === '' ? null : $email); return $this; }
     public function setPhone(?string $phone): self { $this->phone = ($phone === '' ? null : $phone); return $this; }
     public function setSwimmerId(?int $swimmer_if_limitation): self { $this->swimmer_if_limitation = $swimmer_if_limitation; return $this; }
     public function setSwimmer(?Swimmer $swimmer): self { $this->swimmer = $swimmer; if ($swimmer) $this->swimmer_if_limitation = $swimmer->getId(); return $this; }

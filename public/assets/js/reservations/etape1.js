@@ -66,15 +66,23 @@ async function validateAndReserve(eventCard) {
 
     // Validation du code d'accès
     const codeInput = eventCard.querySelector(`#access_code_input_${eventId}`);
+    const validateBtn = eventCard.querySelector(`#validate_code_btn_${eventId}`);
+
     let accessCode = null;
-    if (codeInput && !codeInput.disabled) {
-        accessCode = codeInput.value.trim();
-        if (!accessCode) {
-            setAccessCodeError(eventCard, eventId, "Veuillez saisir et valider un code d'accès.");
-            errorEl.textContent = "Veuillez valider un code d'accès.";
-            return;
-        } else {
-            clearAccessCodeError(eventCard, eventId);
+    if (codeInput) {
+        accessCode = codeInput.value ? codeInput.value.trim() : null;
+        const validated = (validateBtn && validateBtn.disabled) || codeInput.disabled;
+
+        if (!validated) {
+            if (!accessCode) {
+                setAccessCodeError(eventCard, eventId, "Veuillez saisir et valider un code d'accès.");
+                errorEl.textContent = "Veuillez valider un code d'accès.";
+                return;
+            } else {
+                setAccessCodeError(eventCard, eventId, "Veuillez valider le code saisi avant de continuer.");
+                errorEl.textContent = "Veuillez valider un code d'accès.";
+                return;
+            }
         }
     }
 

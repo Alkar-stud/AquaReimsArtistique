@@ -2,7 +2,7 @@
 CREATE TABLE IF NOT EXISTS `reservation_detail_temp` (
     `id` bigint NOT NULL AUTO_INCREMENT PRIMARY KEY,
     `reservation_temp` bigint NOT NULL,
-    FOREIGN KEY (`reservation_temp`) REFERENCES `reservation`(`id`),
+    FOREIGN KEY (`reservation_temp`) REFERENCES `reservation_temp`(`id`),
     `name` VARCHAR(255) NULL,
     `firstname` VARCHAR(255) NULL,
     `tarif` bigint NOT NULL,

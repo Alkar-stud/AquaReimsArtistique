@@ -50,7 +50,7 @@ class ReservationController extends AbstractController
      * Page d'accueil du processus de réservation
      */
     #[Route('/reservation', name: 'app_reservation')]
-    public function index(): void
+    public function etape1Display(): void
     {
         // On commence une nouvelle session de réservation, on nettoie les anciennes données de $_SESSION.
         $this->reservationSessionService->clearReservationSession();
@@ -66,13 +66,17 @@ class ReservationController extends AbstractController
         // On récupère uniquement les groupes actifs qui ont des nageurs.
         $groupes = $this->swimmerQueryService->getActiveGroupsWithSwimmers(array_keys($swimmerPerGroup));
 
+        //On récupère le nombre de spectateurs par session
+        $nbSpectatorsPerSession = $this->reservationQueryService->getNbSpectatorsPerSession($events);
+
         $this->render('reservation/etape1', [
             'events' => $events,
             'periodesOuvertes' => $inscriptionPeriodsStatus['periodesOuvertes'],
             'nextPublicOuvertures' => $inscriptionPeriodsStatus['nextPublicOuvertures'],
             'periodesCloses' => $inscriptionPeriodsStatus['periodesCloses'],
             'groupes' => $groupes,
-            'swimmerPerGroup' => $swimmerPerGroup
+            'swimmerPerGroup' => $swimmerPerGroup,
+            'nbSpectatorsPerSession' => $nbSpectatorsPerSession,
         ], 'Réservations');
     }
 

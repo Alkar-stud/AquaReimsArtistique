@@ -51,8 +51,8 @@ class ReservationTempRepository extends AbstractRepository
     public function insert(ReservationTemp $m): bool
     {
         $sql = "INSERT INTO {$this->tableName}
-            (event, event_session, session_id, name, firstname, email, phone, swimmer_if_limitation, created_at, updated_at)
-            VALUES (:event, :event_session, :session_id, :name, :firstname, :email, :phone, :swimmer_if_limitation, :created_at, :updated_at)";
+            (event, event_session, session_id, name, firstname, email, phone, swimmer_if_limitation, access_code, created_at)
+            VALUES (:event, :event_session, :session_id, :name, :firstname, :email, :phone, :swimmer_if_limitation, :access_code, :created_at)";
         $params = [
             'event' => $m->getEvent(),
             'event_session' => $m->getEventSession(),
@@ -62,8 +62,8 @@ class ReservationTempRepository extends AbstractRepository
             'email' => $m->getEmail(),
             'phone' => $m->getPhone(),
             'swimmer_if_limitation' => $m->getSwimmerId(),
+            'access_code' => $m->getAccessCode(),
             'created_at' => $m->getCreatedAt()->format('Y-m-d H:i:s'),
-            'updated_at' => $m->getUpdatedAt()?->format('Y-m-d H:i:s'),
         ];
         $ok = $this->execute($sql, $params);
         if ($ok) {
@@ -71,6 +71,20 @@ class ReservationTempRepository extends AbstractRepository
         }
         return $ok;
     }
+
+    /**
+     * Pour supprimer tous les éléments par session_id
+     *
+     * @param string $sessionId
+     * @return bool
+     */
+    public function deleteBySession(string $sessionId): bool
+    {
+        $sql = "DELETE FROM $this->tableName WHERE session_id = :session_id";
+        return $this->execute($sql, ['session_id' => $sessionId]);
+    }
+
+
 
     /**
      * Convertit une ligne de résultat SQL en instance de ReservationTemp.

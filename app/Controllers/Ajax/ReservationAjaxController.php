@@ -59,8 +59,10 @@ class ReservationAjaxController extends AbstractController
             $this->json(['success' => false, 400, 'error' => 'Cette étape n\'existe pas']);
         }
 
-        //On récupère la session
+        //On récupère la session dans $_SESSION
         $session = $this->reservationSessionService->getReservationSession();
+        //On récupère la réservation en cours
+        $reservationTemp = $this->reservationSessionService->getReservationTempSession();
 
         //On vérifie si la session est expirée
         if (!$session || $this->reservationSessionService->isReservationSessionExpired($session)) {
@@ -72,17 +74,9 @@ class ReservationAjaxController extends AbstractController
             ], 200);
         }
 
-        //on vérifie les données des étapes précédentes
-        for ($i = 1; $i <= $step; $i++) {
-            $return = $this->reservationDataValidationService->checkPreviousStep($i, $session);
-            if (!$return['success']) {
-                $this->json($return, 400);
-            }
-        }
-
         //Pour la troisième étape, on vérifie si la capacité globale n'est pas dépassée
         if ($step == 3) {
-            $totalCapacityLimit = $this->reservationQueryService->checkTotalCapacityLimit($session);
+            $totalCapacityLimit = $this->reservationQueryService->checkTotalCapacityLimit($session['event_id'], $session['event_session_id']);
             if ($totalCapacityLimit['limitReached']) {
                 $this->json([
                     'success' => false,
@@ -105,7 +99,9 @@ class ReservationAjaxController extends AbstractController
             $files = null;
         }
 
-        $result = $this->reservationDataValidationService->validateAndPersistDataPerStep($step, $input, $files);
+        $result = $this->reservationDataValidationService->validateDataPerStep($reservationTemp, $step, $input, $files);
+
+//        $result = $this->reservationDataValidationService->validateAndPersistDataPerStep($step, $input, $files);
 
         if (!$result['success']) {
             $this->json($result, 200);

@@ -382,17 +382,18 @@ class ReservationQueryService
 
     /**
      * Vérifie si la capacité totale de la piscine est atteinte et renvoi le nombre de places restantes
-     * @param array $session
+     * @param int $event_id
+     * @param int $event_session_id
      * @return array
      */
-    public function checkTotalCapacityLimit(array $session): array
+    public function checkTotalCapacityLimit(int $event_id, int $event_session_id): array
     {
         //On récupère la capacité de la piscine
-        $event = $this->eventRepository->findById($session['event_id'], true);
+        $event = $this->eventRepository->findById($event_id, true);
         $piscine = $event->getPiscine();
 
         //On récupère le nombre de places actuellement réservées (et validées).
-        $nbPlaceReserved = $this->reservationDetailRepository->countBySession($session['event_session_id'], false, false, true);
+        $nbPlaceReserved = $this->reservationDetailRepository->countBySession($event_session_id, false, false, true);
 
         //On vérifie la différence
         if ($nbPlaceReserved >= $piscine->getMaxPlaces()) {
@@ -445,5 +446,27 @@ class ReservationQueryService
         ];
     }
 
+    /**
+     * Retourne le nombre de spectateurs inscrits par session
+     *
+     * @param array $events
+     * @return array
+     */
+    public function getNbSpectatorsPerSession(array $events): array
+    {
+        $nbSpectatorsPerSession = [];
+        foreach ($events as $event) {
+            foreach ($event->getSessions() as $session) {
+                $countDetail = $this->reservationDetailRepository->countBySession($session->getId());
+                $nbSpectatorsPerSession[$session->getId()]['qty'] = $countDetail;
+                if ($countDetail >= $event->getPiscine()->getMaxPlaces()) {
+                    $nbSpectatorsPerSession[$session->getId()]['is_full'] = true;
+                } else {
+                    $nbSpectatorsPerSession[$session->getId()]['is_full'] = false;
+                }
+            }
+        }
+        return $nbSpectatorsPerSession;
+    }
 
 }

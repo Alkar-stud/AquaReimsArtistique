@@ -6,8 +6,10 @@ use app\DTO\ReservationComplementItemDTO;
 use app\DTO\ReservationDetailItemDTO;
 use app\DTO\ReservationSelectionSessionDTO;
 use app\DTO\ReservationUserDTO;
+use app\Models\Reservation\ReservationTemp;
 use app\Repository\Event\EventRepository;
 use app\Repository\Event\EventTarifRepository;
+use app\Repository\Reservation\ReservationTempRepository;
 use app\Repository\Swimmer\SwimmerRepository;
 use app\Services\Event\EventQueryService;
 use app\Services\FlashMessageService;
@@ -16,6 +18,7 @@ use app\Services\Reservation\ReservationQueryService;
 use app\Services\Reservation\ReservationSessionService;
 use app\Services\Swimmer\SwimmerQueryService;
 use app\Services\UploadService;
+use app\Utils\StringHelper;
 use DateTimeImmutable;
 
 class ReservationDataValidationService
@@ -30,6 +33,7 @@ class ReservationDataValidationService
     private FlashMessageService         $flashMessageService;
     private ReservationDataPersist      $reservationDataPersist;
     private ReservationQueryService $reservationQueryService;
+    private ReservationTempRepository $reservationTempRepository;
 
     public function __construct(
         EventRepository                  $eventRepository,
@@ -41,7 +45,8 @@ class ReservationDataValidationService
         UploadService                    $uploadService,
         FlashMessageService              $flashMessageService,
         ReservationDataPersist           $reservationDataPersist,
-        ReservationQueryService $reservationQueryService,
+        ReservationQueryService          $reservationQueryService,
+        ReservationTempRepository        $reservationTempRepository,
     ) {
         $this->eventRepository = $eventRepository;
         $this->swimmerRepository = $swimmerRepository;
@@ -53,7 +58,157 @@ class ReservationDataValidationService
         $this->flashMessageService = $flashMessageService;
         $this->reservationDataPersist = $reservationDataPersist;
         $this->reservationQueryService = $reservationQueryService;
+        $this->reservationTempRepository = $reservationTempRepository;
     }
+
+    /**
+     * Validation des données étape par étape.
+     *
+     * @param ReservationTemp|null $reservationTemp
+     * @param int $step
+     * @param array $data
+     * @param array|null $file
+     * @return array
+     */
+    public function validateDataPerStep(?ReservationTemp $reservationTemp, int $step, array $data, ?array $file = null): array
+    {
+        $sessionId = session_id();
+        if ($step == 1) {
+            $reservationTemp = $this->validateDataStep1($data, $sessionId);
+            //Si on a bien l'objet, on l'insère pour récupérer l'ID
+            if (!$reservationTemp) {
+                return ['success' => false, 'errors' => ['Erreur serveur'], 'data' => []];
+            }
+            $this->reservationTempRepository->insert($reservationTemp);
+        }
+        if ($step == 2) {
+            print_r($data);
+            $reservationTemp = $this->validateDataStep2($data, $sessionId);
+            print_r($reservationTemp);
+        }
+
+        if (gettype($reservationTemp->getEvent()) == 'integer') {
+            $isSeatsWithNumberInEventSwimmingPool = $this->eventRepository->findById($reservationTemp->getEvent(), true)->getPiscine()->getNumberedSeats();
+        } else {
+            $isSeatsWithNumberInEventSwimmingPool = false;
+        }
+
+        return ['success' => true, 'errors' => [], 'data' => ['numerated_seat' => $isSeatsWithNumberInEventSwimmingPool]];
+    }
+
+    /**
+     * Étape 1: valide event, session, nageur ou code d'accès.
+     * Retourne l'objet si ok, null si non.
+     *
+     * @param array $data
+     * @param string $sessionId
+     * @return array|ReservationTemp
+     */
+    public function validateDataStep1(array $data, string $sessionId): array|ReservationTemp
+    {
+        $errors = [];
+
+        // On vérifie que les clés requises existent dans les données reçues.
+        $requiredKeys = ['event_id', 'event_session_id', 'swimmer_id', 'access_code'];
+        $missingKeys = array_diff($requiredKeys, array_keys($data));
+
+        if (!empty($missingKeys)) {
+            foreach ($missingKeys as $key) {
+                $errors[$key] = "Le champ '$key' est manquant.";
+            }
+        }
+
+        if ($errors) {
+            $errors['success'] = false;
+            return $errors;
+        }
+
+        $reservationTemp = new ReservationTemp(); // Note: $row n'est pas défini ici, j'utilise $data
+        $reservationTemp->setEvent((int)$data['event_id']);
+        $reservationTemp->setEventSession((int)$data['event_session_id']);
+        $reservationTemp->setSessionId($sessionId);
+        $reservationTemp->setSwimmerId($data['swimmer_id'] !== null ? (int)$data['swimmer_id'] : null);
+        $reservationTemp->setAccessCode($data['access_code'] !== null ? (string)$data['access_code'] : null);
+
+        return $reservationTemp;
+    }
+
+
+    /**
+     * Étape 2: valide name, firstname, email, phone
+     * Retourne l'objet si ok, null si non.
+     *
+     * @param array $data
+     * @param string $sessionId
+     * @return array|ReservationTemp
+     */
+    public function validateDataStep2(array $data, string $sessionId): array|ReservationTemp
+    {
+        $errors = [];
+
+        // Normalise, trim et met en majuscules (avec les accents)
+        if (!empty($data['name'])) {
+            $name = StringHelper::toUpperCase($data['name']);
+        } else {
+            $name = null;
+        }
+        // Normalise, trim et met en majuscules les 1ères lettres (avec les accents)
+        if (!empty($data['firstname'])) {
+            $firstname = StringHelper::toTitleCase($data['firstname']);
+        } else {
+            $firstname = null;
+        }
+
+        //Vérification des données
+        if (!empty($data['email'])) {
+            if (filter_var($data['email'], FILTER_VALIDATE_EMAIL)) {
+                $email = $data['email'];
+            }
+        } else {
+            $errors['email'] = 'Email invalide.';
+            $email = null;
+        }
+        $phone = null;
+        if (!empty($data['phone'])) {
+            if (!preg_match('/^(?:0[1-9]\d{8}|\+33[1-9]\d{8})$/', str_replace(' ', '', $data['phone']))) {
+                $errors['phone'] = 'Numéro de téléphone invalide (doit être au format 0XXXXXXXXX ou +33XXXXXXXXX).';
+            } else {
+                $phone = $data['phone'];
+            }
+        }
+
+        // Validation spécifique HelloAsso pour le nom et le prénom
+        if (empty($errors)) {
+            $errors = array_merge($errors, $this->validateHelloAssoNameField('nom', $name));
+            $errors = array_merge($errors, $this->validateHelloAssoNameField('prénom', $firstname));
+            // Vérification finale : nom et prénom ne doivent pas être identiques
+            if (empty($errors) && mb_strtolower($name, 'UTF-8') === mb_strtolower($firstname, 'UTF-8')) {
+                $errors['name'] = 'Le nom et le prénom ne peuvent pas être identiques.';
+            }
+        }
+
+        if ($errors) {
+            $errors['success'] = false;
+            return $errors;
+        }
+
+echo session_id();;
+die;
+
+        $reservationTemp = new ReservationTemp();
+        $reservationTemp->setName($name);
+        $reservationTemp->setFirstname($firstname);
+        $reservationTemp->setEmail($email);
+        $reservationTemp->setPhone($phone);
+
+
+
+        return $reservationTemp;
+    }
+
+
+
+
 
     /**
      * Validation étape par étape. L'étape courante avec le tableau $input et les précédentes avec le contenu de $_SESSION
@@ -533,7 +688,7 @@ class ReservationDataValidationService
         }
 
         //On revérifie si il y a assez de places disponibles
-        $totalCapacityLimit = $this->reservationQueryService->checkTotalCapacityLimit($session);
+        $totalCapacityLimit = $this->reservationQueryService->checkTotalCapacityLimit($session['event_id'], $session['event_session_id']);
         if ($totalCapacityLimit['limitReached']) {
                 $errors['limitReached'] = 'La capacité maximale de la piscine est atteinte.';
         }

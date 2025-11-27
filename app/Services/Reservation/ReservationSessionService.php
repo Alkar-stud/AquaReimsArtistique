@@ -3,15 +3,27 @@
 namespace app\Services\Reservation;
 
 use app\Models\Tarif\Tarif;
+use app\Repository\Reservation\ReservationComplementTempRepository;
+use app\Repository\Reservation\ReservationDetailTempRepository;
+use app\Repository\Reservation\ReservationTempRepository;
 use app\Utils\DurationHelper;
 use JsonSerializable;
 
 class ReservationSessionService
 {
+    private ?ReservationTempRepository $reservationTempRepository = null;
+    private ?ReservationDetailTempRepository $reservationDetailTempRepository = null;
+    private ?ReservationComplementTempRepository $reservationComplementTempRepository = null;
 
     public function __construct(
+        ?ReservationTempRepository $reservationTempRepository = null,
+        ?ReservationDetailTempRepository $reservationDetailTempRepository = null,
+        ?ReservationComplementTempRepository $reservationComplementTempRepository = null
     )
     {
+        $this->reservationTempRepository = $reservationTempRepository;
+        $this->reservationDetailTempRepository = $reservationDetailTempRepository;
+        $this->reservationComplementTempRepository = $reservationComplementTempRepository;
     }
 
     /**
@@ -20,6 +32,7 @@ class ReservationSessionService
     public function clearReservationSession(): void
     {
         $_SESSION['reservation'] = $this->getDefaultReservationStructure();
+        $this->reservationTempRepository->deleteBySession(session_id());
     }
 
     /**
@@ -32,6 +45,7 @@ class ReservationSessionService
         return [
             'event_id' => null,
             'event_session_id' => null,
+            'reservation_temp_id' => null,
             'swimmer_id' => null,
             'limit_per_swimmer' => null,
             'access_code_used' => null,
@@ -46,6 +60,34 @@ class ReservationSessionService
             'last_activity' => time(),
         ];
     }
+
+    /** Récupère les données de la session de réservation en cours.
+     *
+     */
+    public function getReservationTempSession(): ?array
+    {
+        $session = ['reservation' => null, 'reservation_details' => null, 'reservation_complements' => null];
+        //On va chercher les infos dans les tables _temp à l'aide de session_id()
+        $sessionId = session_id();
+
+        // On récupère la session en cours dans la table
+        $reservationTemp = $this->getReservationTempRepository()->findBySessionId($sessionId);
+        if (!$reservationTemp) {
+            return null;
+        }
+        $session['reservation'] = $reservationTemp;
+
+        // On va ensuite chercher s'il y a des places assises réservées
+        $reservationDetails = $this->getReservationDetailTempRepository()->findByReservationTemp($reservationTemp->getId());
+        $session['reservation_details'] = $reservationDetails; // peut être []
+
+        // On va ensuite chercher s'il y a des compléments réservés
+        $reservationComplements = $this->getReservationComplementTempRepository()->findByReservationTemp($reservationTemp->getId());
+        $session['reservation_complements'] = $reservationComplements; // peut être []
+
+        return $session;
+    }
+
 
     /**
      * Récupère les données de la session de réservation en cours.
@@ -249,5 +291,41 @@ class ReservationSessionService
         return $complements;
     }
 
+    /**
+     * Méthode lazy pour instancier le repository ReservationTemp uniquement si nécessaire
+     * @return ReservationTempRepository
+     */
+    private function getReservationTempRepository(): ReservationTempRepository
+    {
+        if ($this->reservationTempRepository === null) {
+            $this->reservationTempRepository = new ReservationTempRepository();
+        }
+        return $this->reservationTempRepository;
+    }
 
- }
+    /**
+     * Méthode lazy pour instancier le repository uniquement si nécessaire
+     * @return ReservationDetailTempRepository
+     */
+    private function getReservationDetailTempRepository(): ReservationDetailTempRepository
+    {
+        if ($this->reservationDetailTempRepository === null) {
+            $this->reservationDetailTempRepository = new ReservationDetailTempRepository();
+        }
+        return $this->reservationDetailTempRepository;
+    }
+
+    /**
+     * Méthode lazy pour instancier le repository uniquement si nécessaire
+     * @return ReservationComplementTempRepository
+     */
+    private function getReservationComplementTempRepository(): ReservationComplementTempRepository
+    {
+        if ($this->reservationComplementTempRepository === null) {
+            $this->reservationComplementTempRepository = new ReservationComplementTempRepository();
+        }
+        return $this->reservationComplementTempRepository;
+    }
+
+
+}

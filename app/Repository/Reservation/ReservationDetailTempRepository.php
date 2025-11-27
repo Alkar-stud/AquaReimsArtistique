@@ -11,6 +11,12 @@ class ReservationDetailTempRepository extends AbstractRepository
         parent::__construct('reservation_detail_temp');
     }
 
+    /**
+     * Récupère un détail de réservation temporaire par son identifiant.
+     *
+     * @param int $id Identifiant du détail.
+     * @return ReservationDetailTemp|null Modèle si trouvé, sinon null.
+     */
     public function findById(int $id): ?ReservationDetailTemp
     {
         $rows = $this->query("SELECT * FROM {$this->tableName} WHERE id = :id", ['id' => $id]);
@@ -18,13 +24,27 @@ class ReservationDetailTempRepository extends AbstractRepository
         return $this->mapRowToModel($rows[0]);
     }
 
-    /** @return ReservationDetailTemp[] */
+    /**
+     * Récupère tous les détails liés à une réservation temporaire.
+     *
+     * @param int $reservationTempId Identifiant de la réservation temporaire.
+     * @return ReservationDetailTemp[] Tableau d'instances (vide si aucune).
+     */
     public function findByReservationTemp(int $reservationTempId): array
     {
         $rows = $this->query("SELECT * FROM {$this->tableName} WHERE reservation_temp = :rid", ['rid' => $reservationTempId]);
         return array_map(fn($r) => $this->mapRowToModel($r), $rows);
     }
 
+    /**
+     * Insère un détail de réservation temporaire en base.
+     *
+     * Les champs optionnels (par ex. justificatif, place_number) peuvent être null.
+     * En cas de succès, l'identifiant auto-incrémenté est affecté au modèle.
+     *
+     * @param ReservationDetailTemp $d Modèle à insérer.
+     * @return bool True si l'insertion a réussi, false sinon.
+     */
     public function insert(ReservationDetailTemp $d): bool
     {
         $sql = "INSERT INTO {$this->tableName}
@@ -49,6 +69,14 @@ class ReservationDetailTempRepository extends AbstractRepository
         return $ok;
     }
 
+    /**
+     * Convertit une ligne SQL en instance de ReservationDetailTemp.
+     *
+     * Gère les conversions de types et les champs optionnels.
+     *
+     * @param array $row Ligne associatif depuis la base.
+     * @return ReservationDetailTemp Modèle peuplé.
+     */
     private function mapRowToModel(array $row): ReservationDetailTemp
     {
         $m = new ReservationDetailTemp();

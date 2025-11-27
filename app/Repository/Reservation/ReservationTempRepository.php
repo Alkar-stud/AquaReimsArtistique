@@ -12,6 +12,12 @@ class ReservationTempRepository extends AbstractRepository
         parent::__construct('reservation_temp');
     }
 
+    /**
+     * Récupère une réservation temporaire par son identifiant.
+     *
+     * @param int $id Identifiant de la réservation temporaire.
+     * @return ReservationTemp|null Instance mappée si trouvée, sinon null.
+     */
     public function findById(int $id): ?ReservationTemp
     {
         $rows = $this->query("SELECT * FROM {$this->tableName} WHERE id = :id", ['id' => $id]);
@@ -19,6 +25,12 @@ class ReservationTempRepository extends AbstractRepository
         return $this->mapRowToModel($rows[0]);
     }
 
+    /**
+     * Récupère la première réservation temporaire correspondant à un identifiant de session.
+     *
+     * @param string $sessionId Identifiant de session (session_id).
+     * @return ReservationTemp|null Instance mappée si trouvée, sinon null.
+     */
     public function findBySessionId(string $sessionId): ?ReservationTemp
     {
         $rows = $this->query("SELECT * FROM {$this->tableName} WHERE session_id = :session_id LIMIT 1", ['session_id' => $sessionId]);
@@ -26,6 +38,16 @@ class ReservationTempRepository extends AbstractRepository
         return $this->mapRowToModel($rows[0]);
     }
 
+    /**
+     * Insère une nouvelle réservation temporaire en base.
+     *
+     * Le modèle doit contenir les valeurs nécessaires. Les dates sont formatées
+     * avant insertion. En cas de succès, l'identifiant auto-incrémenté est affecté
+     * au modèle via setId.
+     *
+     * @param ReservationTemp $m Modèle à insérer.
+     * @return bool True si l'insertion a réussi, false sinon.
+     */
     public function insert(ReservationTemp $m): bool
     {
         $sql = "INSERT INTO {$this->tableName}
@@ -50,6 +72,14 @@ class ReservationTempRepository extends AbstractRepository
         return $ok;
     }
 
+    /**
+     * Convertit une ligne de résultat SQL en instance de ReservationTemp.
+     *
+     * Gère les conversions de types pour les champs numériques et les dates.
+     *
+     * @param array $row Ligne associatif provenant de la base de données.
+     * @return ReservationTemp Modèle peuplé à partir de la ligne fournie.
+     */
     private function mapRowToModel(array $row): ReservationTemp
     {
         $m = new ReservationTemp();

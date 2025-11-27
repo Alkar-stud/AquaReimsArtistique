@@ -5,6 +5,7 @@ CREATE TABLE IF NOT EXISTS `reservation_temp` (
         FOREIGN KEY (`event`) REFERENCES `event`(`id`),
         `event_session` bigint NOT NULL,
         FOREIGN KEY (`event_session`) REFERENCES `event_session`(`id`),
+        `access_code` CHAR(24) NULL,
         `session_id` varchar(128) NOT NULL,
         `name` VARCHAR(255) NULL,
         `firstname` VARCHAR(255) NULL,

@@ -23,6 +23,7 @@ class ReservationTemp extends AbstractModel
     private ?string $phone = null;
     private ?int $swimmer_if_limitation = null;
     private ?Swimmer $swimmer = null;
+    private ?string $access_code = null;
 
     // relations enfants (optionnel)
     private array $details = [];
@@ -40,8 +41,7 @@ class ReservationTemp extends AbstractModel
     public function getPhone(): ?string { return $this->phone; }
     public function getSwimmerId(): ?int { return $this->swimmer_if_limitation; }
     public function getSwimmer(): ?Swimmer { return $this->swimmer; }
-    public function getCreatedAt(): DateTimeInterface { return $this->created_at; }
-    public function getUpdatedAt(): ?DateTimeInterface { return $this->updated_at; }
+    public function getAccessCode(): ?string { return $this->access_code; }
     public function getDetails(): array { return $this->details; }
     public function getComplements(): array { return $this->complements; }
 
@@ -66,6 +66,7 @@ class ReservationTemp extends AbstractModel
     public function setPhone(?string $phone): self { $this->phone = ($phone === '' ? null : $phone); return $this; }
     public function setSwimmerId(?int $swimmer_if_limitation): self { $this->swimmer_if_limitation = $swimmer_if_limitation; return $this; }
     public function setSwimmer(?Swimmer $swimmer): self { $this->swimmer = $swimmer; if ($swimmer) $this->swimmer_if_limitation = $swimmer->getId(); return $this; }
+    public function setAccessCode(?string $access_code): self { $this->access_code = $access_code; return $this; }
     public function setDetails(array $details): self { $this->details = $details; return $this; }
     public function setComplements(array $complements): self { $this->complements = $complements; return $this; }
 

@@ -99,7 +99,7 @@ class EventTarifRepository extends AbstractRepository
      * @param int $tarifId
      * @return bool
      */
-    public function exists(int $eventId, int $tarifId): bool
+    public function associationExists(int $eventId, int $tarifId): bool
     {
         $sql = "SELECT 1 FROM $this->tableName WHERE `event` = :event AND `tarif` = :tarif";
         return !empty($this->query($sql, ['event' => $eventId, 'tarif' => $tarifId]));

@@ -3,18 +3,22 @@
 namespace app\Services\Tarif;
 
 use app\Models\Tarif\Tarif;
+use app\Repository\Event\EventTarifRepository;
 use app\Repository\Tarif\TarifRepository;
 
 class TarifService
 {
     private TarifRepository $tarifRepository;
+    private EventTarifRepository $eventTarifRepository;
 
 
     public function __construct(
         TarifRepository $tarifRepository,
+        EventTarifRepository $eventTarifRepository,
     )
     {
         $this->tarifRepository = $tarifRepository;
+        $this->eventTarifRepository = $eventTarifRepository;
     }
 
     /**
@@ -233,5 +237,20 @@ class TarifService
         return mb_strtolower($trimmed);
     }
 
+
+    /**
+     * Vérifie si un tarif donné est bien associé à un événement spécifique.
+     *
+     * @param int $tarifId L'ID du tarif à vérifier.
+     * @param int $eventId L'ID de l'événement contextuel.
+     * @return bool
+     */
+    public function isTarifAssociatedWithEvent(int $tarifId, int $eventId): bool
+    {
+        if ($tarifId <= 0 || $eventId <= 0) {
+            return false;
+        }
+        return $this->eventTarifRepository->associationExists($eventId, $tarifId);
+    }
 
 }

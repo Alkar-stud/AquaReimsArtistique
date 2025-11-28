@@ -112,30 +112,34 @@ class ReservationController extends AbstractController
     public function etape3Display(): void
     {
         //On récupère la session
-        $session = $this->reservationSessionService->getReservationSession();
+        $session = $this->reservationSessionService->getReservationTempSession();
 
         //On vérifie si la session est expirée
-        if (!$session || $this->reservationSessionService->isReservationSessionExpired($session)) {
+        $reservationTemp = $session['reservation'] ?? null;
+        if (!$reservationTemp) {
             $this->flashMessageService->setFlashMessage('warning', 'Votre session a expiré. Merci de recommencer votre réservation.');
-            $this->redirect('/reservation?session_expiree=r3');
+            $this->redirect('/reservation?session_expiree=r2');
         }
 
         // Valider l'étape 1
-        if (!$this->reservationDataValidationService->checkPreviousStep(1, $session)) {
-            $this->flashMessageService->setFlashMessage('danger', 'Erreur dans le parcours 1, veuillez recommencer');
-            $this->redirect('/reservation');
+        $result = $this->reservationDataValidationService->checkPreviousStep(1, $session);
+        if (!$result['success']) {
+            $this->flashMessageService->setFlashMessage('warning', 'Erreur de validation des données de l\'étape 1. Merci de recommencer votre réservation.');
+            $this->redirect('/reservation?session_erreur=cps1');
         }
+
         // Valider l'étape 2
-        if (!$this->reservationDataValidationService->checkPreviousStep(2, $session)) {
-            $this->flashMessageService->setFlashMessage('danger', 'Erreur dans le parcours 2, veuillez recommencer');
-            $this->redirect('/reservation');
+        $result = $this->reservationDataValidationService->checkPreviousStep(2, $session);
+        if (!$result['success']) {
+            $this->flashMessageService->setFlashMessage('warning', 'Erreur de validation des données de l\'étape 2. Merci de recommencer votre réservation.');
+            $this->redirect('/reservation?session_erreur=cps2');
         }
 
         //Récupération des limites et l'état de la réservation par nageur
         $swimmerLimitReached = $this->swimmerQueryService->getStateOfLimitPerSwimmer($session);
 
         // Récupération des tarifs avec place assise de cet event
-        $allTarifsWithSeatForThisEvent = $this->eventTarifRepository->findTarifsByEvent($session['event_id']);
+        $allTarifsWithSeatForThisEvent = $this->eventTarifRepository->findTarifsByEvent($session['reservation']->getEvent());
 
         // Préparation des données à envoyer à la vue, construit le "pré-remplissage" s'il existe déjà un tarif avec code en session à l'aide du tableau des tarifs de cet event
         $dataForViewSpecialCode = $this->tarifService->getAllTarifAndPrepareViewWithSpecialCode(
@@ -143,14 +147,15 @@ class ReservationController extends AbstractController
             $session,
             'reservation_detail'
         );
-        //Préparation des données déjà saisie à cette étape, regroupé par id et quantité
-        $arrayTarifForForm = $this->reservationSessionService->arraySessionForFormStep3($session['reservation_detail'], $allTarifsWithSeatForThisEvent);
 
+        //Préparation des données déjà saisie à cette étape, regroupé par id et quantité
+        $arrayTarifForForm = $this->reservationSessionService->arraySessionForFormStep3($session['reservation_details'], $allTarifsWithSeatForThisEvent);
+$arrayTarifForForm = [];
         //On envoie aussi le tableau des détails, pour préremplir si on est dans le cas d'un retour au niveau des étapes
         $this->render('reservation/etape3', [
+            'reservation'                   => $session,
             'allTarifsWithSeatForThisEvent' => $allTarifsWithSeatForThisEvent,  // tous les objets Tarif de Event index par leur ID
             'swimmerLimit'                  => $swimmerLimitReached,            // limitReached=> true|false, limit=> int|null = limit max, currentReservations=> int|null = nb actuel
-            'event_id'                      => $session['event_id'],
             'specialTarifSession'           => $dataForViewSpecialCode,         //Tarif du code spécial saisi en tableau
             'arrayTarifForForm'             => $arrayTarifForForm,
         ], 'Réservations');

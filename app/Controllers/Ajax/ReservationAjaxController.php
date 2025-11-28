@@ -60,12 +60,12 @@ class ReservationAjaxController extends AbstractController
         }
 
         //On récupère la session dans $_SESSION
-        $session = $this->reservationSessionService->getReservationSession();
+        //$session = $this->reservationSessionService->getReservationSession();
         //On récupère la réservation en cours.
         $session = $this->reservationSessionService->getReservationTempSession();
 
         //On vérifie si la session est expirée : si on ne trouve rien ET qu'on a dépassé l'étape1, c'est que c'est expiré.
-        if (!$session && $step > 1) {
+        if (!$session['reservation'] && $step > 1) {
             $flashMessageService = new FlashMessageService();
             $flashMessageService->setFlashMessage('warning', 'Votre session a expiré. Merci de recommencer votre réservation.');
             $this->json([
@@ -76,7 +76,7 @@ class ReservationAjaxController extends AbstractController
 
         //Pour la troisième étape, on vérifie si la capacité globale n'est pas dépassée
         if ($step == 3) {
-            $totalCapacityLimit = $this->reservationQueryService->checkTotalCapacityLimit($session['event_id'], $session['event_session_id']);
+            $totalCapacityLimit = $this->reservationQueryService->checkTotalCapacityLimit($session['reservation']->getEvent(), $session['reservation']->getEventSession());
             if ($totalCapacityLimit['limitReached']) {
                 $this->json([
                     'success' => false,
@@ -99,7 +99,10 @@ class ReservationAjaxController extends AbstractController
             $files = null;
         }
 
+
+
         $result = $this->reservationDataValidationService->validateDataPerStep($session['reservation'], $step, $input, $files);
+
 
 //        $result = $this->reservationDataValidationService->validateAndPersistDataPerStep($step, $input, $files);
 
@@ -245,7 +248,7 @@ class ReservationAjaxController extends AbstractController
         $input = json_decode(file_get_contents('php://input'), true);
         $eventId = (int)($input['event_id'] ?? 0);
         $code = trim($input['code'] ?? '');
-        $withSeat = array_key_exists('with_seat', $input) ? (bool)$input['with_seat'] : true;
+        $withSeat = !array_key_exists('with_seat', $input) || $input['with_seat'];
 
         //On va chercher le tarif correspondant s'il y en a un
         $result = $this->tarifService->validateSpecialCode($eventId, $code, $withSeat);

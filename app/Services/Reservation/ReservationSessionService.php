@@ -63,7 +63,7 @@ class ReservationSessionService
 
     /** Récupère les données de la session de réservation en cours.
      *
-     * @return array
+     * @return array {reservation: object|null, reservation_details: array|null, reservation_complements: array|null}
      */
     public function getReservationTempSession(): array
     {
@@ -71,7 +71,6 @@ class ReservationSessionService
 
         // Avant de récupérer la session en cours, on nettoie toutes les réservations temporaires expirées
         $this->clearExpiredReservations();
-        // ou celle en cours si step == 1 pour qu'il n'y ait qu'une seule fois session_id dans la table.
 
         $session = ['reservation' => null, 'reservation_details' => null, 'reservation_complements' => null];
         //On va chercher les infos dans les tables _temp à l'aide de session_id()
@@ -189,21 +188,11 @@ class ReservationSessionService
     }
 
     /**
-     * Supprime à la première étape les entrées liées à session_id pour éviter des doublons
-     *
-     * @param string $sessionId
-     */
-    private function clearForNewStart(string $sessionId): void
-    {
-        $this->getReservationTempRepository()->deleteBySession($sessionId);
-    }
-
-    /**
-     * @param array $reservationDetails
+     * @param array|null $reservationDetails
      * @param $allEventTarifs
      * @return array
      */
-    public function arraySessionForFormStep3(array $reservationDetails, $allEventTarifs): array
+    public function arraySessionForFormStep3(?array $reservationDetails, $allEventTarifs): array
     {
         //on parcourt le tableau pour retourner un autre tableau avec index=tarif_id et valeur=quantité de ce tarif
         if (empty($reservationDetails)) {

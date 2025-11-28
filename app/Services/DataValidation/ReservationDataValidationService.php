@@ -96,13 +96,23 @@ class ReservationDataValidationService
         }
 
         if ($step == 2) {
-            if (!$reservationTemp) {
-                return ['success' => false, 'errors' => ['session' => 'Session de réservation introuvable. Veuillez recommencer.'], 'data' => []];
-            }
-            $result = $this->validateDataStep2($reservationTemp, $data);
+            //On crée un objet temporaire pour cette étape
+            $reservationTempForStep2 = clone $reservationTemp;
+            $reservationTempForStep2->setName((string)$data['name'] ?? null);
+            $reservationTempForStep2->setFirstname((string)$data['firstname'] ?? null);
+            $reservationTempForStep2->setEmail((string)$data['email'] ?? null);
+            $reservationTempForStep2->setPhone((string)$data['phone'] ?? null);
+
+            $result = $this->validateDataStep2($reservationTempForStep2);
+
             if (!$result['success']) {
                 return ['success' => false, 'errors' => $result['errors'], 'data' => []];
             }
+            // On met à jour l'objet principal avec les données validées du clone
+            $reservationTemp->setName($reservationTempForStep2->getName());
+            $reservationTemp->setFirstName($reservationTempForStep2->getFirstName());
+            $reservationTemp->setEmail($reservationTempForStep2->getEmail());
+            $reservationTemp->setPhone($reservationTempForStep2->getPhone());
             $this->reservationTempRepository->update($reservationTemp);
         }
 
@@ -219,68 +229,49 @@ class ReservationDataValidationService
     /**
      * Étape 2: valide name, firstname, email, phone
      * Retourne l'objet si ok, null si non.
-     * 
-     * @param ReservationTemp $reservationTemp L'objet à mettre à jour.
-     * @param array $data
+     *
+     * @param ReservationTemp $reservationTemp
      * @return array
      */
-    public function validateDataStep2(ReservationTemp $reservationTemp, array $data): array
+    public function validateDataStep2(ReservationTemp $reservationTemp): array
     {
         $errors = [];
 
-        // Normalise, trim et met en majuscules (avec les accents)
-        if (!empty($data['name'])) {
-            $name = StringHelper::toUpperCase($data['name']);
-        } else {
-            $name = null;
-        }
-        // Normalise, trim et met en majuscules les 1ères lettres (avec les accents)
-        if (!empty($data['firstname'])) {
-            $firstname = StringHelper::toTitleCase($data['firstname']);
-        } else {
-            $firstname = null;
-        }
+        $name = $reservationTemp->getName();
+        $firstname = $reservationTemp->getFirstName();
+        $email = $reservationTemp->getEmail();
+        $phone = $reservationTemp->getPhone();
 
         //Vérification des données
-        $email = null;
-        if (!empty($data['email'])) {
-            $candidate = trim($data['email']);
+        if (!empty($email)) {
+            $candidate = trim($email);
             if (filter_var($candidate, FILTER_VALIDATE_EMAIL)) {
                 $email = $candidate;
             } else {
                 $errors['email'] = 'Email invalide.';
             }
         } else {
-            $errors['email'] = 'Email invalide.';
+            $errors['email'] = 'L\'email est obligatoire.';
         }
-        $phone = null;
-        if (!empty($data['phone'])) {
-            if (!preg_match('/^(?:0[1-9]\d{8}|\+33[1-9]\d{8})$/', str_replace(' ', '', $data['phone']))) {
+
+        if (!empty($phone)) {
+            if (!preg_match('/^(?:0[1-9]\d{8}|\+33[1-9]\d{8})$/', str_replace(' ', '', $phone))) {
                 $errors['phone'] = 'Numéro de téléphone invalide (doit être au format 0XXXXXXXXX ou +33XXXXXXXXX).';
-            } else {
-                $phone = $data['phone'];
             }
         }
 
-        // Validation spécifique HelloAsso pour le nom et le prénom
-        if (empty($errors)) {
-            $errors = array_merge($errors, $this->validateHelloAssoNameField('nom', $name));
-            $errors = array_merge($errors, $this->validateHelloAssoNameField('prénom', $firstname));
-            // Vérification finale : nom et prénom ne doivent pas être identiques
-            if (empty($errors) && mb_strtolower($name, 'UTF-8') === mb_strtolower($firstname, 'UTF-8')) {
-                $errors['name'] = 'Le nom et le prénom ne peuvent pas être identiques.';
-            }
+        // Validation spécifique HelloAsso pour le nom et le prénom (uniquement si les champs sont remplis)
+        $errors = array_merge($errors, $this->validateHelloAssoNameField('nom', $name));
+        $errors = array_merge($errors, $this->validateHelloAssoNameField('prénom', $firstname));
+
+        // Vérification finale : nom et prénom ne doivent pas être identiques
+        if ($name && $firstname && mb_strtolower($name, 'UTF-8') === mb_strtolower($firstname, 'UTF-8')) {
+            $errors['name'] = 'Le nom et le prénom ne peuvent pas être identiques.';
         }
 
-        if ($errors) {
+        if (!empty($errors)) {
             return ['success' => false, 'errors' => $errors];
         }
-
-        // Met à jour l'objet existant
-        $reservationTemp->setName($name);
-        $reservationTemp->setFirstname($firstname);
-        $reservationTemp->setEmail($email);
-        $reservationTemp->setPhone($phone);
 
         return ['success' => true, 'errors' => []];
     }
@@ -670,12 +661,18 @@ class ReservationDataValidationService
      * Valide un champ (nom ou prénom) selon les règles spécifiques de HelloAsso.
      *
      * @param string $fieldName Le nom du champ pour les messages d'erreur (ex: 'nom', 'prénom').
-     * @param string $value La valeur à valider.
+     * @param string|null $value La valeur à valider.
      * @return array Les erreurs trouvées.
      */
-    private function validateHelloAssoNameField(string $fieldName, string $value): array
+    private function validateHelloAssoNameField(string $fieldName, ?string $value): array
     {
         $errors = [];
+
+        if (empty($value)) {
+            $errors[$fieldName] = "Le champ $fieldName est obligatoire.";
+            return $errors;
+        }
+
         $lowerValue = mb_strtolower($value, 'UTF-8');
 
         // Liste des valeurs interdites

@@ -5,6 +5,7 @@
         <p id="step2-hint" class="visually-hidden">Les champs marqués \* sont obligatoires.</p>
 
         <input type="hidden" id="event_id" name="event_id" value="{{ $reservation['event_id'] }}">
+        <input type="hidden" id="event_session_id" name="event_session_id" value="{{ $reservation['event_session_id'] }}">
 
         <div class="mb-3">
             <label for="name" class="form-label">Nom *</label>

@@ -64,6 +64,19 @@ class ReservationComplementTempRepository extends AbstractRepository
         return $ok;
     }
 
+
+    public function update(ReservationComplementTemp $reservationComplementTemp): bool
+    {
+        $params = [
+            'reservation_temp' => $reservationComplementTemp->getReservationTemp(),
+            'tarif' => $reservationComplementTemp->getTarif(),
+            'tarif_access_code' => $reservationComplementTemp->getTarifAccessCode(),
+            'qty' => $reservationComplementTemp->getQty(),
+            'updated_at' => $reservationComplementTemp->getUpdatedAt()?->format('Y-m-d H:i:s'),
+        ];
+        return $this->updateById($reservationComplementTemp->getId(), $params);
+    }
+
     /**
      * Convertit une ligne SQL en instance de ReservationComplementTemp.
      *

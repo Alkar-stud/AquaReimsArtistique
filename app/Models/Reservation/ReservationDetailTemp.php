@@ -2,6 +2,7 @@
 namespace app\Models\Reservation;
 
 use app\Models\AbstractModel;
+use app\Utils\StringHelper;
 use app\Models\Piscine\PiscineGradinsPlaces;
 use DateTime;
 use DateTimeInterface;
@@ -38,8 +39,16 @@ class ReservationDetailTemp extends AbstractModel
     // --- SETTERS ---
     public function setReservationTemp(int $reservation_temp): self { $this->reservation_temp = $reservation_temp; return $this; }
     public function setReservationObject(?ReservationTemp $reservationObject): self { $this->reservationObject = $reservationObject; if ($reservationObject) $this->reservation_temp = $reservationObject->getId(); return $this; }
-    public function setName(?string $name): self { $this->name = $name; return $this; }
-    public function setFirstName(?string $firstname): self { $this->firstname = $firstname; return $this; }
+    public function setName(?string $name): self
+    {
+        $this->name = ($name === null || $name === '') ? null : StringHelper::toUpperCase($name);
+        return $this;
+    }
+    public function setFirstName(?string $firstname): self
+    {
+        $this->firstname = ($firstname === null || $firstname === '') ? null : StringHelper::toTitleCase($firstname);
+        return $this;
+    }
     public function setTarif(int $tarif): self { $this->tarif = $tarif; return $this; }
     public function setTarifObject(?object $tarifObject): self { $this->tarifObject = $tarifObject; return $this; }
     public function setTarifAccessCode(?string $tarif_access_code): self { $this->tarif_access_code = $tarif_access_code; return $this; }

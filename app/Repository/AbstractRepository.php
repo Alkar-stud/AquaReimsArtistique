@@ -32,6 +32,36 @@ abstract class AbstractRepository
     }
 
     /**
+     * Update un enregistrement par son ID.
+     * @param int $id
+     * @param array $data
+     * @return bool
+     */
+    protected function updateById(int $id, array $data): bool
+    {
+        if ($id <= 0) {
+            return false;
+        }
+
+        // retirer les valeurs nulles explicites
+        if (empty($data)) {
+            return true;
+        }
+
+        $sets = [];
+        $params = [];
+        foreach ($data as $col => $val) {
+            $paramName = $col;
+            $sets[] = "$col = :$paramName";
+            $params[$paramName] = $val;
+        }
+        $params['id'] = $id;
+
+        $sql = "UPDATE {$this->tableName} SET " . implode(', ', $sets) . " WHERE id = :id";
+        return $this->execute($sql, $params);
+    }
+
+    /**
      * Supprime un enregistrement par son ID.
      * @param int $id
      * @return bool

@@ -5,6 +5,7 @@ use app\Models\AbstractModel;
 use app\Models\Event\Event;
 use app\Models\Event\EventSession;
 use app\Models\Swimmer\Swimmer;
+use app\Utils\StringHelper;
 use DateTime;
 use DateTimeInterface;
 
@@ -92,8 +93,16 @@ class Reservation extends AbstractModel
 
     public function setReservationTempId(?string $reservation_temp_id): self { $this->reservation_temp_id = $reservation_temp_id; return $this; }
 
-    public function setName(string $name): self { $this->name = $name; return $this; }
-    public function setFirstName(string $firstname): self { $this->firstname = $firstname; return $this; }
+    public function setName(string $name): self
+    {
+        $this->name = StringHelper::toUpperCase($name);
+        return $this;
+    }
+    public function setFirstName(string $firstname): self
+    {
+        $this->firstname = StringHelper::toTitleCase($firstname);
+        return $this;
+    }
     public function setEmail(string $email): self { $this->email = $email; return $this; }
     public function setPhone(?string $phone): self { $this->phone = ($phone === '' ? null : $phone); return $this; }
 

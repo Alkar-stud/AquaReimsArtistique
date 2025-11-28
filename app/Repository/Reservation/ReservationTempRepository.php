@@ -72,6 +72,30 @@ class ReservationTempRepository extends AbstractRepository
         return $ok;
     }
 
+
+    /**
+     * Update l'objet
+     *
+     * @param ReservationTemp $reservationTemp
+     * @return bool
+     */
+    public function update(ReservationTemp $reservationTemp): bool
+    {
+        $params = [
+            'event' => $reservationTemp->getEvent(),
+            'event_session' => $reservationTemp->getEventSession(),
+            'session_id' => $reservationTemp->getSessionId(),
+            'name' => $reservationTemp->getName(),
+            'firstname' => $reservationTemp->getFirstName(),
+            'email' => $reservationTemp->getEmail(),
+            'phone' => $reservationTemp->getPhone(),
+            'swimmer_if_limitation' => $reservationTemp->getSwimmerId(),
+            'access_code' => $reservationTemp->getAccessCode(),
+            'updated_at' => $reservationTemp->getUpdatedAt()?->format('Y-m-d H:i:s'),
+        ];
+        return $this->updateById($reservationTemp->getId(), $params);
+    }
+
     /**
      * Pour supprimer tous les éléments par session_id
      *
@@ -102,7 +126,7 @@ class ReservationTempRepository extends AbstractRepository
      *
      * Gère les conversions de types pour les champs numériques et les dates.
      *
-     * @param array $row Ligne associatif provenant de la base de données.
+     * @param array $row Ligne associative provenant de la base de données.
      * @return ReservationTemp Modèle peuplé à partir de la ligne fournie.
      */
     private function mapRowToModel(array $row): ReservationTemp

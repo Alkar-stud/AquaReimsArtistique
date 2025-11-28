@@ -5,6 +5,7 @@ use app\Models\AbstractModel;
 use app\Models\Event\Event;
 use app\Models\Event\EventSession;
 use app\Models\Swimmer\Swimmer;
+use app\Utils\StringHelper;
 use DateTime;
 use DateTimeInterface;
 
@@ -60,8 +61,16 @@ class ReservationTemp extends AbstractModel
         return $this;
     }
     public function setSessionId(string $session_id): self { $this->session_id = $session_id; return $this; }
-    public function setName(?string $name): self { $this->name = ($name === '' ? null : $name); return $this; }
-    public function setFirstName(?string $firstname): self { $this->firstname = ($firstname === '' ? null : $firstname); return $this; }
+    public function setName(?string $name): self
+    {
+        $this->name = ($name === null || $name === '') ? null : StringHelper::toUpperCase($name);
+        return $this;
+    }
+    public function setFirstName(?string $firstname): self
+    {
+        $this->firstname = ($firstname === null || $firstname === '') ? null : StringHelper::toTitleCase($firstname);
+        return $this;
+    }
     public function setEmail(?string $email): self { $this->email = ($email === '' ? null : $email); return $this; }
     public function setPhone(?string $phone): self { $this->phone = ($phone === '' ? null : $phone); return $this; }
     public function setSwimmerId(?int $swimmer_if_limitation): self { $this->swimmer_if_limitation = $swimmer_if_limitation; return $this; }

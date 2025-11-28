@@ -70,6 +70,27 @@ class ReservationDetailTempRepository extends AbstractRepository
     }
 
     /**
+     * Update l'objet
+     * @param ReservationDetailTemp $reservationDetailTemp
+     * @return bool
+     */
+    public function update(ReservationDetailTemp $reservationDetailTemp): bool
+    {
+        $params = [
+            'reservation_temp' => $reservationDetailTemp->getReservationTemp(),
+            'name' => $reservationDetailTemp->getName(),
+            'firstname' => $reservationDetailTemp->getFirstName(),
+            'tarif' => $reservationDetailTemp->getTarif(),
+            'tarif_access_code' => $reservationDetailTemp->getTarifAccessCode(),
+            'justificatif_name' => $reservationDetailTemp->getJustificatifName(),
+            'justificatif_original_name' => $reservationDetailTemp->getJustificatifOriginalName(),
+            'place_number' => $reservationDetailTemp->getPlaceNumber(),
+            'updated_at' => $reservationDetailTemp->getUpdatedAt()?->format('Y-m-d H:i:s'),
+        ];
+        return $this->updateById($reservationDetailTemp->getId(), $params);
+    }
+
+    /**
      * Convertit une ligne SQL en instance de ReservationDetailTemp.
      *
      * Gère les conversions de types et les champs optionnels.

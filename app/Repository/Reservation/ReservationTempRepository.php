@@ -91,7 +91,6 @@ class ReservationTempRepository extends AbstractRepository
             'phone' => $reservationTemp->getPhone(),
             'swimmer_if_limitation' => $reservationTemp->getSwimmerId(),
             'access_code' => $reservationTemp->getAccessCode(),
-            'updated_at' => $reservationTemp->getUpdatedAt()?->format('Y-m-d H:i:s'),
         ];
         return $this->updateById($reservationTemp->getId(), $params);
     }

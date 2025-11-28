@@ -57,7 +57,7 @@ abstract class AbstractRepository
         }
         $params['id'] = $id;
 
-        $sql = "UPDATE {$this->tableName} SET " . implode(', ', $sets) . " WHERE id = :id";
+        $sql = "UPDATE {$this->tableName} SET " . implode(', ', $sets) . ", updated_at = NOW() WHERE id = :id";
         return $this->execute($sql, $params);
     }
 

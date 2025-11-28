@@ -129,7 +129,7 @@ class ReservationDetailRepository extends AbstractRepository
     }
 
     /**
-     * Compte le nombre de détails pour une session
+     * Compte le nombre de personnes (de détails) pour une session
      * @param int $sessionId
      * @return int
      */

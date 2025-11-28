@@ -84,7 +84,18 @@ class ReservationTempRepository extends AbstractRepository
         return $this->execute($sql, ['session_id' => $sessionId]);
     }
 
-
+    /**
+     * Supprime les réservations temporaires dont la date de création est plus ancienne
+     * que l'intervalle de secondes spécifié.
+     *
+     * @param int $timeoutSeconds Le timeout en secondes.
+     * @return bool
+     */
+    public function deleteByTimeout(int $timeoutSeconds): bool
+    {
+        $sql = "DELETE FROM {$this->tableName} WHERE created_at < NOW() - INTERVAL :seconds SECOND";
+        return $this->execute($sql, ['seconds' => $timeoutSeconds]);
+    }
 
     /**
      * Convertit une ligne de résultat SQL en instance de ReservationTemp.

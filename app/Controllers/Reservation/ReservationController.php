@@ -8,6 +8,7 @@ use app\Repository\Event\EventRepository;
 use app\Repository\Event\EventTarifRepository;
 use app\Services\DataValidation\ReservationDataValidationService;
 use app\Services\Event\EventQueryService;
+use app\Services\FlashMessageService;
 use app\Services\Reservation\ReservationQueryService;
 use app\Services\Reservation\ReservationSessionService;
 use app\Services\Swimmer\SwimmerQueryService;
@@ -85,16 +86,21 @@ class ReservationController extends AbstractController
     public function etape2Display(): void
     {
         //On récupère la session
-        $session = $this->reservationSessionService->getReservationSession();
+        $session = $this->reservationSessionService->getReservationTempSession();
 
         //On vérifie si la session est expirée
-        if (!$session || $this->reservationSessionService->isReservationSessionExpired($session)) {
+        if (!$session) {
             $this->flashMessageService->setFlashMessage('warning', 'Votre session a expiré. Merci de recommencer votre réservation.');
             $this->redirect('/reservation?session_expiree=r2');
         }
 
-        // Valider l'étape 1 avec le DTO
-        $this->reservationDataValidationService->checkPreviousStep(1, $session);
+        // Valider l'étape 1
+        $result = $this->reservationDataValidationService->checkPreviousStep(1, $session);
+
+        if (!$result['success']) {
+            $this->flashMessageService->setFlashMessage('warning', 'Erreur de validation des données. Merci de recommencer votre réservation.');
+            $this->redirect('/reservation?session_erreur=cps1');
+        }
 
         $this->render('reservation/etape2', [
             'reservation' => $session,

@@ -51,7 +51,7 @@ class ReservationAjaxController extends AbstractController
      * @return void
      *
      */
-    #[Route('/reservation/valid/{step}', name: 'etape1', methods: ['POST'])]
+    #[Route('/reservation/valid/{step}', name: 'etapes', methods: ['POST'])]
     public function validStep(int $step): void
     {
         //On vérifie
@@ -61,11 +61,11 @@ class ReservationAjaxController extends AbstractController
 
         //On récupère la session dans $_SESSION
         $session = $this->reservationSessionService->getReservationSession();
-        //On récupère la réservation en cours
-        $reservationTemp = $this->reservationSessionService->getReservationTempSession();
+        //On récupère la réservation en cours.
+        $session = $this->reservationSessionService->getReservationTempSession();
 
-        //On vérifie si la session est expirée
-        if (!$session || $this->reservationSessionService->isReservationSessionExpired($session)) {
+        //On vérifie si la session est expirée : si on ne trouve rien ET qu'on a dépassé l'étape1, c'est que c'est expiré.
+        if (!$session && $step > 1) {
             $flashMessageService = new FlashMessageService();
             $flashMessageService->setFlashMessage('warning', 'Votre session a expiré. Merci de recommencer votre réservation.');
             $this->json([
@@ -99,7 +99,7 @@ class ReservationAjaxController extends AbstractController
             $files = null;
         }
 
-        $result = $this->reservationDataValidationService->validateDataPerStep($reservationTemp, $step, $input, $files);
+        $result = $this->reservationDataValidationService->validateDataPerStep($session['reservation'], $step, $input, $files);
 
 //        $result = $this->reservationDataValidationService->validateAndPersistDataPerStep($step, $input, $files);
 

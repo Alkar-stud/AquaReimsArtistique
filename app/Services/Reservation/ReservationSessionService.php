@@ -63,17 +63,23 @@ class ReservationSessionService
 
     /** Récupère les données de la session de réservation en cours.
      *
+     * @return array
      */
-    public function getReservationTempSession(): ?array
+    public function getReservationTempSession(): array
     {
+        $sessionId = session_id();
+
+        // Avant de récupérer la session en cours, on nettoie toutes les réservations temporaires expirées
+        $this->clearExpiredReservations();
+        // ou celle en cours si step == 1 pour qu'il n'y ait qu'une seule fois session_id dans la table.
+
         $session = ['reservation' => null, 'reservation_details' => null, 'reservation_complements' => null];
         //On va chercher les infos dans les tables _temp à l'aide de session_id()
-        $sessionId = session_id();
 
         // On récupère la session en cours dans la table
         $reservationTemp = $this->getReservationTempRepository()->findBySessionId($sessionId);
         if (!$reservationTemp) {
-            return null;
+            return $session;
         }
         $session['reservation'] = $reservationTemp;
 
@@ -170,6 +176,26 @@ class ReservationSessionService
         }
         $ttl = $this->getReservationTimeoutDuration();
         return (time() - $last) > $ttl;
+    }
+
+    /**
+     * Supprime toutes les réservations temporaires expirées de la base de données.
+     * Le timeout est défini par la constante TIMEOUT_PLACE_RESERV.
+     */
+    private function clearExpiredReservations(): void
+    {
+        $timeoutSeconds = $this->getReservationTimeoutDuration();
+        $this->getReservationTempRepository()->deleteByTimeout($timeoutSeconds);
+    }
+
+    /**
+     * Supprime à la première étape les entrées liées à session_id pour éviter des doublons
+     *
+     * @param string $sessionId
+     */
+    private function clearForNewStart(string $sessionId): void
+    {
+        $this->getReservationTempRepository()->deleteBySession($sessionId);
     }
 
     /**

@@ -9,6 +9,7 @@ use app\DTO\ReservationUserDTO;
 use app\Models\Reservation\ReservationTemp;
 use app\Repository\Event\EventRepository;
 use app\Repository\Event\EventTarifRepository;
+use app\Repository\Reservation\ReservationDetailRepository;
 use app\Repository\Reservation\ReservationTempRepository;
 use app\Repository\Swimmer\SwimmerRepository;
 use app\Services\Event\EventQueryService;
@@ -19,6 +20,7 @@ use app\Services\Reservation\ReservationSessionService;
 use app\Services\Swimmer\SwimmerQueryService;
 use app\Services\UploadService;
 use app\Utils\StringHelper;
+use DateTime;
 use DateTimeImmutable;
 
 class ReservationDataValidationService
@@ -34,6 +36,7 @@ class ReservationDataValidationService
     private ReservationDataPersist      $reservationDataPersist;
     private ReservationQueryService $reservationQueryService;
     private ReservationTempRepository $reservationTempRepository;
+    private ReservationDetailRepository $reservationDetailRepository;
 
     public function __construct(
         EventRepository                  $eventRepository,
@@ -47,6 +50,7 @@ class ReservationDataValidationService
         ReservationDataPersist           $reservationDataPersist,
         ReservationQueryService          $reservationQueryService,
         ReservationTempRepository        $reservationTempRepository,
+        ReservationDetailRepository      $reservationDetailRepository,
     ) {
         $this->eventRepository = $eventRepository;
         $this->swimmerRepository = $swimmerRepository;
@@ -59,10 +63,11 @@ class ReservationDataValidationService
         $this->reservationDataPersist = $reservationDataPersist;
         $this->reservationQueryService = $reservationQueryService;
         $this->reservationTempRepository = $reservationTempRepository;
+        $this->reservationDetailRepository = $reservationDetailRepository;
     }
 
     /**
-     * Validation des données étape par étape.
+     * Validation des données étape par étape et insertion/update des données.
      *
      * @param ReservationTemp|null $reservationTemp
      * @param int $step
@@ -74,17 +79,31 @@ class ReservationDataValidationService
     {
         $sessionId = session_id();
         if ($step == 1) {
-            $reservationTemp = $this->validateDataStep1($data, $sessionId);
-            //Si on a bien l'objet, on l'insère pour récupérer l'ID
-            if (!$reservationTemp) {
-                return ['success' => false, 'errors' => ['Erreur serveur'], 'data' => []];
+            //On construit l'objet et on valide les données dedans avec un retour success = true/false et errors
+            $reservationTemp = new ReservationTemp();
+            $reservationTemp->setSessionId($sessionId);
+            $reservationTemp->setEvent((int)($data['event_id'] ?? 0));
+            $reservationTemp->setEventSession((int)($data['event_session_id'] ?? 0));
+            $reservationTemp->setSwimmerId(isset($data['swimmer_id']) ? (int)$data['swimmer_id'] : null);
+            $reservationTemp->setAccessCode(isset($data['access_code']) ? (string)$data['access_code'] : null);
+
+            $result = $this->validateDataStep1($reservationTemp);
+
+            if (!$result['success']) {
+                return ['success' => false, 'errors' => $result['errors'], 'data' => []];
             }
             $this->reservationTempRepository->insert($reservationTemp);
         }
+
         if ($step == 2) {
-            print_r($data);
-            $reservationTemp = $this->validateDataStep2($data, $sessionId);
-            print_r($reservationTemp);
+            if (!$reservationTemp) {
+                return ['success' => false, 'errors' => ['session' => 'Session de réservation introuvable. Veuillez recommencer.'], 'data' => []];
+            }
+            $result = $this->validateDataStep2($reservationTemp, $data);
+            if (!$result['success']) {
+                return ['success' => false, 'errors' => $result['errors'], 'data' => []];
+            }
+            $this->reservationTempRepository->update($reservationTemp);
         }
 
         if (gettype($reservationTemp->getEvent()) == 'integer') {
@@ -98,51 +117,114 @@ class ReservationDataValidationService
 
     /**
      * Étape 1: valide event, session, nageur ou code d'accès.
-     * Retourne l'objet si ok, null si non.
+     * Retourne success = true/false et errors
      *
-     * @param array $data
-     * @param string $sessionId
-     * @return array|ReservationTemp
+     * @param ReservationTemp $reservationTemp
+     * @return array
      */
-    public function validateDataStep1(array $data, string $sessionId): array|ReservationTemp
+    public function validateDataStep1(ReservationTemp $reservationTemp): array
     {
         $errors = [];
 
-        // On vérifie que les clés requises existent dans les données reçues.
-        $requiredKeys = ['event_id', 'event_session_id', 'swimmer_id', 'access_code'];
-        $missingKeys = array_diff($requiredKeys, array_keys($data));
+        //On vérifie que l'événement existe bien
+        $event = $this->eventRepository->findById($reservationTemp->getEvent(), true, true, true);
+        if (!$event) {
+            $errors['event_id'] = 'Événement introuvable.';
+            return ['success' => false, 'errors' => $errors];
+        }
 
-        if (!empty($missingKeys)) {
-            foreach ($missingKeys as $key) {
-                $errors[$key] = "Le champ '$key' est manquant.";
+        // On valide que la session fait bien partie de l'événement
+        $selectedSession = null;
+        foreach ($event->getSessions() as $eventSession) {
+            if ($eventSession->getId() == $reservationTemp->getEventSession()) {
+                $selectedSession = $eventSession;
+                break;
             }
         }
 
-        if ($errors) {
-            $errors['success'] = false;
-            return $errors;
+        if (!$selectedSession) {
+            $errors['event_session_id'] = 'Session introuvable pour cet événement.';
+        } elseif ($selectedSession->getEventStartAt() < new DateTime()) {
+            $errors['event_session_id'] = 'Cette session est déjà passée.';
         }
 
-        $reservationTemp = new ReservationTemp(); // Note: $row n'est pas défini ici, j'utilise $data
-        $reservationTemp->setEvent((int)$data['event_id']);
-        $reservationTemp->setEventSession((int)$data['event_session_id']);
-        $reservationTemp->setSessionId($sessionId);
-        $reservationTemp->setSwimmerId($data['swimmer_id'] !== null ? (int)$data['swimmer_id'] : null);
-        $reservationTemp->setAccessCode($data['access_code'] !== null ? (string)$data['access_code'] : null);
+        //On compte tous spectateurs déjà confirmés (donc déjà payé).
+        $nbSpectator = $this->reservationDetailRepository->countBySession($reservationTemp->getEventSession());
 
-        return $reservationTemp;
+        //on vérifie que le quota n'est pas atteint
+        if ($event->getPiscine()->getMaxPlaces() > 0 && $nbSpectator >= $event->getPiscine()->getMaxPlaces()) {
+            $errors['event_session_id'] = 'Le maximum de spectateurs autorisés est atteint.';
+        }
+
+        // On valide la période d'inscription et le code d'accès
+        $now = new DateTime();
+        $openPeriods = [];
+        $upcomingPeriods = [];
+        foreach ($event->getInscriptionDates() as $period) {
+            if ($period->getStartRegistrationAt() <= $now && $period->getCloseRegistrationAt() > $now) {
+                $openPeriods[] = $period;
+            } elseif ($period->getStartRegistrationAt() > $now) {
+                $upcomingPeriods[] = $period;
+            }
+        }
+
+        if (empty($openPeriods)) {
+            $errors['access_code'] = 'Aucune période d\'inscription n\'est actuellement ouverte.';
+            if (!empty($upcomingPeriods)) {
+                //déjà trié par ordre de début
+                $nextPeriod = $upcomingPeriods[0];
+                $errors['access_code'] = 'Les inscriptions ouvriront le ' . $nextPeriod->getStartRegistrationAt()->format('d/m/Y à H:i') . '.';
+            }
+        } else {
+            $accessCode = $reservationTemp->getAccessCode();
+            $validPeriodFound = false;
+            $isCodeRequired = false;
+
+            foreach ($openPeriods as $period) {
+                if ($period->getAccessCode() === null) {
+                    $validPeriodFound = true;
+                    break; // Une période ouverte sans code suffit
+                }
+                $isCodeRequired = true; // Au moins une période ouverte requiert un code
+                if ($accessCode !== null && $period->getAccessCode() === $accessCode) {
+                    $validPeriodFound = true;
+                    break;
+                }
+            }
+
+            if (!$validPeriodFound && $isCodeRequired) {
+                $errors['access_code'] = 'Un code d\'accès valide est requis pour s\'inscrire maintenant.';
+            }
+        }
+
+        //On vérifie si l'event a une limitation
+        //Si oui, on vérifie si on a bien un swimmer_id
+        if ($event->getLimitationPerSwimmer() !== null && $reservationTemp->getSwimmerId() === null) {
+            $errors['swimmer_id'] = 'Le choix d\'une nageuse est requis pour cet événement.';
+        } else if ($reservationTemp->getSwimmerId() !== null) {
+            $swimmer = $this->swimmerRepository->findById($reservationTemp->getSwimmerId());
+            if (!$swimmer) {
+                $errors['swimmer_id'] = 'Nageuse invalide.';
+            }
+        }
+
+        if (!empty($errors)) {
+            return ['success' => false, 'errors' => $errors];
+        }
+
+        return ['success' => true, 'errors' => []];
     }
 
 
     /**
      * Étape 2: valide name, firstname, email, phone
      * Retourne l'objet si ok, null si non.
-     *
+     * 
+     * @param ReservationTemp $reservationTemp L'objet à mettre à jour.
      * @param array $data
-     * @param string $sessionId
-     * @return array|ReservationTemp
+     * @return array
      */
-    public function validateDataStep2(array $data, string $sessionId): array|ReservationTemp
+    public function validateDataStep2(ReservationTemp $reservationTemp, array $data): array
     {
         $errors = [];
 
@@ -160,13 +242,16 @@ class ReservationDataValidationService
         }
 
         //Vérification des données
+        $email = null;
         if (!empty($data['email'])) {
-            if (filter_var($data['email'], FILTER_VALIDATE_EMAIL)) {
-                $email = $data['email'];
+            $candidate = trim($data['email']);
+            if (filter_var($candidate, FILTER_VALIDATE_EMAIL)) {
+                $email = $candidate;
+            } else {
+                $errors['email'] = 'Email invalide.';
             }
         } else {
             $errors['email'] = 'Email invalide.';
-            $email = null;
         }
         $phone = null;
         if (!empty($data['phone'])) {
@@ -188,22 +273,16 @@ class ReservationDataValidationService
         }
 
         if ($errors) {
-            $errors['success'] = false;
-            return $errors;
+            return ['success' => false, 'errors' => $errors];
         }
 
-echo session_id();;
-die;
-
-        $reservationTemp = new ReservationTemp();
+        // Met à jour l'objet existant
         $reservationTemp->setName($name);
         $reservationTemp->setFirstname($firstname);
         $reservationTemp->setEmail($email);
         $reservationTemp->setPhone($phone);
 
-
-
-        return $reservationTemp;
+        return ['success' => true, 'errors' => []];
     }
 
 

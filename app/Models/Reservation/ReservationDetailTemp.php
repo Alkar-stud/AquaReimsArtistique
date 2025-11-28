@@ -10,11 +10,9 @@ use DateTimeInterface;
 class ReservationDetailTemp extends AbstractModel
 {
     private int $reservation_temp;
-    private ?ReservationTemp $reservationObject = null;
     private ?string $name = null;
     private ?string $firstname = null;
     private int $tarif;
-    private ?object $tarifObject = null;
     private ?string $tarif_access_code = null;
     private ?string $justificatif_name = null;
     private ?string $justificatif_original_name = null;
@@ -23,11 +21,9 @@ class ReservationDetailTemp extends AbstractModel
 
     // --- GETTERS ---
     public function getReservationTemp(): int { return $this->reservation_temp; }
-    public function getReservationObject(): ?ReservationTemp { return $this->reservationObject; }
     public function getName(): ?string { return $this->name; }
     public function getFirstName(): ?string { return $this->firstname; }
     public function getTarif(): int { return $this->tarif; }
-    public function getTarifObject(): ?object { return $this->tarifObject; }
     public function getTarifAccessCode(): ?string { return $this->tarif_access_code; }
     public function getJustificatifName(): ?string { return $this->justificatif_name; }
     public function getJustificatifOriginalName(): ?string { return $this->justificatif_original_name; }
@@ -38,7 +34,6 @@ class ReservationDetailTemp extends AbstractModel
 
     // --- SETTERS ---
     public function setReservationTemp(int $reservation_temp): self { $this->reservation_temp = $reservation_temp; return $this; }
-    public function setReservationObject(?ReservationTemp $reservationObject): self { $this->reservationObject = $reservationObject; if ($reservationObject) $this->reservation_temp = $reservationObject->getId(); return $this; }
     public function setName(?string $name): self
     {
         $this->name = ($name === null || $name === '') ? null : StringHelper::toUpperCase($name);
@@ -59,7 +54,6 @@ class ReservationDetailTemp extends AbstractModel
 
     public function toArray(): array
     {
-        $tarifObject = $this->getTarifObject();
         $placeObject = $this->getPlaceObject();
 
         return [
@@ -68,9 +62,6 @@ class ReservationDetailTemp extends AbstractModel
             'name' => $this->getName(),
             'firstname' => $this->getFirstName(),
             'tarifId' => $this->getTarif(),
-            'tarifName' => $tarifObject?->getName(),
-            'tarifDescription' => $tarifObject?->getDescription(),
-            'tarifPrice' => $tarifObject?->getPrice(),
             'tarifAccessCode' => $this->getTarifAccessCode(),
             'justificatifName' => $this->getJustificatifName(),
             'justificatifOriginalName' => $this->getJustificatifOriginalName(),

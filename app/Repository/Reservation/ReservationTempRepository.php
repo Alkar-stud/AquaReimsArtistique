@@ -141,6 +141,7 @@ class ReservationTempRepository extends AbstractRepository
         $m->setEmail($row['email']);
         $m->setPhone($row['phone']);
         $m->setSwimmerId($row['swimmer_if_limitation'] !== null ? (int)$row['swimmer_if_limitation'] : null);
+        $m->setAccessCode($row['access_code']);
         $m->setCreatedAt($row['created_at']);
         if ($row['updated_at'] !== null) {
             $m->setUpdatedAt($row['updated_at']);

@@ -189,13 +189,8 @@ class ReservationController extends AbstractController
             $this->redirect('/reservation');
         }
 
-
-        //On récupère la liste des tarifs à envoyer à la vue sous forme de tableau indexé avec les ID
-        $tarifs = $this->tarifService->getIndexedTarifFromEvent($session['reservation_details']);
-
         $this->render('reservation/etape4', [
             'reservation' => $session,
-            'tarifs' => $tarifs
         ], 'Réservations');
     }
 

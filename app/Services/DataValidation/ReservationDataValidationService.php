@@ -1097,7 +1097,7 @@ class ReservationDataValidationService
 
 
     /**
-     * Génère un nom de fichier unique pour un justificatif.
+     * Génère un nom de fichier unique pour un fichier.
      *
      * @param string $name
      * @param string $firstname
@@ -1111,8 +1111,11 @@ class ReservationDataValidationService
         $now = new DateTimeImmutable('now');
         $timestamp = $now->format('YmdHis');
 
-        $safeNom = strtolower(preg_replace('/[^a-z0-9]/i', '', $name));
-        $safePrenom = strtolower(preg_replace('/[^a-z0-9]/i', '', $firstname));
+        $normalizer = \Normalizer::class;
+        $name = $normalizer::normalize($name, \Normalizer::FORM_D);
+        $firstname = $normalizer::normalize($firstname, \Normalizer::FORM_D);
+        $safeNom = strtolower(preg_replace('/[^a-z0-9]/i', '', $name ?? ''));
+        $safePrenom = strtolower(preg_replace('/[^a-z0-9]/i', '', $firstname ?? ''));
 
         return "{$timestamp}_{$tarifId}_{$safeNom}_$safePrenom.$extension";
     }

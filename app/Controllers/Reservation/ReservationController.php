@@ -127,7 +127,6 @@ class ReservationController extends AbstractController
             $this->flashMessageService->setFlashMessage('warning', 'Erreur de validation des données de l\'étape 1. Merci de recommencer votre réservation.');
             $this->redirect('/reservation?session_erreur=cps1');
         }
-
         // Valider l'étape 2
         $result = $this->reservationDataValidationService->checkPreviousStep(2, $session);
         if (!$result['success']) {
@@ -144,13 +143,12 @@ class ReservationController extends AbstractController
         // Préparation des données à envoyer à la vue, construit le "pré-remplissage" s'il existe déjà un tarif avec code en session à l'aide du tableau des tarifs de cet event
         $dataForViewSpecialCode = $this->tarifService->getAllTarifAndPrepareViewWithSpecialCode(
             $allTarifsWithSeatForThisEvent,
-            $session,
-            'reservation_detail'
+            $session['reservation_details']
         );
 
         //Préparation des données déjà saisie à cette étape, regroupé par id et quantité
-        $arrayTarifForForm = $this->reservationSessionService->arraySessionForFormStep3($session['reservation_details'], $allTarifsWithSeatForThisEvent);
-$arrayTarifForForm = [];
+        $arrayTarifForForm = $this->reservationSessionService->getTarifQuantitiesFromDetails($session['reservation_details'], $allTarifsWithSeatForThisEvent);
+
         //On envoie aussi le tableau des détails, pour préremplir si on est dans le cas d'un retour au niveau des étapes
         $this->render('reservation/etape3', [
             'reservation'                   => $session,
@@ -165,12 +163,13 @@ $arrayTarifForForm = [];
     public function etape4Display(): void
     {
         //On récupère la session
-        $session = $this->reservationSessionService->getReservationSession();
+        $session = $this->reservationSessionService->getReservationTempSession();
 
         //On vérifie si la session est expirée
-        if (!$session || $this->reservationSessionService->isReservationSessionExpired($session)) {
+        $reservationTemp = $session['reservation'] ?? null;
+        if (!$reservationTemp) {
             $this->flashMessageService->setFlashMessage('warning', 'Votre session a expiré. Merci de recommencer votre réservation.');
-            $this->redirect('/reservation?session_expiree=r4');
+            $this->redirect('/reservation?session_expiree=r2');
         }
 
         // Valider l'étape 1
@@ -184,8 +183,15 @@ $arrayTarifForForm = [];
             $this->redirect('/reservation');
         }
 
+        // Valider l'étape 3
+        if (!$this->reservationDataValidationService->checkPreviousStep(3, $session)) {
+            $this->flashMessageService->setFlashMessage('danger', 'Erreur dans le parcours, veuillez recommencer');
+            $this->redirect('/reservation');
+        }
+
+
         //On récupère la liste des tarifs à envoyer à la vue sous forme de tableau indexé avec les ID
-        $tarifs = $this->tarifService->getIndexedTarifFromEvent($session['reservation_detail']);
+        $tarifs = $this->tarifService->getIndexedTarifFromEvent($session['reservation_details']);
 
         $this->render('reservation/etape4', [
             'reservation' => $session,
@@ -265,7 +271,7 @@ $arrayTarifForForm = [];
         $event = $this->eventRepository->findById($session['event_id'], true);
 
         //Préparation des données déjà saisie à cette étape, regroupé par id et quantité
-        $arrayTarifForForm = $this->reservationSessionService->arraySessionForFormStep3($session['reservation_complement'], $allTarifsWithoutSeatForThisEvent);
+        $arrayTarifForForm = $this->reservationSessionService->getComplementQuantities($session['reservation_complement']);
 
         $this->render('reservation/etape6', [
             'reservation'                       => $session,

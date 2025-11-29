@@ -2,6 +2,7 @@
 
 namespace app\Services\Tarif;
 
+use app\Models\Reservation\ReservationDetailTemp;
 use app\Models\Tarif\Tarif;
 use app\Repository\Event\EventTarifRepository;
 use app\Repository\Tarif\TarifRepository;
@@ -124,19 +125,16 @@ class TarifService
      * Construit le "pré-remplissage" s'il existe déjà un tarif avec code en session.
      *
      * @param array $allTarifsForThisEvent
-     * @param array $session
-     * @param string $dto Le texte du DTO attendu (detail ou complement)
+     * @param ReservationDetailTemp[] $details
      * @return array|null
      */
-    public function getAllTarifAndPrepareViewWithSpecialCode(array $allTarifsForThisEvent, array $session, string $dto): ?array
+    public function getAllTarifAndPrepareViewWithSpecialCode(array $allTarifsForThisEvent, array $details): ?array
     {
         $specialTarifSession = null;
-        $details = $session[$dto] ?? [];
-
-        if (is_array($details) && !empty($details)) {
-            foreach ($details as $d) {
-                $code = is_object($d) ? ($d->tarif_access_code ?? null) : ($d['tarif_access_code'] ?? null);
-                $tarifId = (int)(is_object($d) ? ($d->tarif_id ?? 0) : ($d['tarif_id'] ?? 0));
+        if (!empty($details)) {
+            foreach ($details as $detail) {
+                $code = $detail->getTarifAccessCode();
+                $tarifId = $detail->getTarif();
                 if (!$code || $tarifId <= 0) {
                     continue;
                 }
@@ -162,10 +160,10 @@ class TarifService
     /**
      * Retourne un tableau d'objet Tarif indexé par leur ID à partir de la session[reservation][reservation_detail]
      *
-     * @param array $listTarifsEventsSelected
+     * @param array|null $listTarifsEventsSelected
      * @return array
      */
-    public function getIndexedTarifFromEvent(array $listTarifsEventsSelected): array
+    public function getIndexedTarifFromEvent(?array $listTarifsEventsSelected): array
     {
         // Extraire les ids de tarif depuis $listTarifsEventsSelected
         $ids = [];

@@ -146,30 +146,86 @@ class ReservationDataValidationService
                 return ['success' => false, 'errors' => ['event_id' => 'Événement introuvable.'], 'data' => []];
             }
 
-            $reservationDetailTempTab = [];
-            //On construit le tableau avec les objets et on valide les données dedans
-            foreach ($data['tarifs'] as $tarifId => $qty) {
-                for ($i = 0; $i < $qty; $i++) {
-                    $reservationDetailTemp = new ReservationDetailTemp();
-                    $reservationDetailTemp->setReservationTemp($reservationTemp->getId());
-                    $reservationDetailTemp->setTarif((int)$tarifId);
-                    if (array_key_exists($tarifId, $data['special'])) {
-                        $reservationDetailTemp->setTarifAccessCode($data['special'][$tarifId]);
+            // Récupérer les détails existants et les regrouper par tarifId
+            $existingDetailsRaw = $this->reservationDetailTempRepository->findByFields(['reservation_temp' => $reservationTemp->getId()]);
+            $existingDetailsByTarif = [];
+            foreach ($existingDetailsRaw as $detail) {
+                $existingDetailsByTarif[$detail->getTarif()][] = $detail;
+            }
+
+            $finalDetails = [];
+            $detailsToDelete = [];
+            $detailsToInsert = [];
+
+            $allTarifIds = array_unique(array_merge(array_keys($data['tarifs'] ?? []), array_keys($existingDetailsByTarif)));
+
+            foreach ($allTarifIds as $tarifId) {
+                $tarif = $this->tarifRepository->findById($tarifId);
+                if (!$tarif || $tarif->getSeatCount() === null) { // On ne traite que les tarifs avec places
+                    continue;
+                }
+
+                $desiredPackQty = (int)($data['tarifs'][$tarifId] ?? 0);
+                $desiredSeatCount = $desiredPackQty * $tarif->getSeatCount();
+
+                $existingTarifDetails = $existingDetailsByTarif[$tarifId] ?? [];
+                $existingSeatCount = count($existingTarifDetails);
+
+                if ($desiredSeatCount > $existingSeatCount) {
+                    // --- AJOUT ---
+                    // On garde les existants
+                    $finalDetails = array_merge($finalDetails, $existingTarifDetails);
+                    // On ajoute les nouveaux
+                    $toAddCount = $desiredSeatCount - $existingSeatCount;
+                    for ($i = 0; $i < $toAddCount; $i++) {
+                        $newDetail = new ReservationDetailTemp();
+                        $newDetail->setReservationTemp($reservationTemp->getId());
+                        $newDetail->setTarif($tarifId);
+                        // Gérer le code d'accès si applicable
+                        if (isset($data['special'][$tarifId])) {
+                            $newDetail->setTarifAccessCode($data['special'][$tarifId]);
+                        }
+                        $detailsToInsert[] = $newDetail;
+                        $finalDetails[] = $newDetail;
                     }
-                    $reservationDetailTempTab[] = $reservationDetailTemp;
+                } elseif ($desiredSeatCount < $existingSeatCount) {
+                    // --- SUPPRESSION ---
+                    // On garde les premiers
+                    $keptDetails = array_slice($existingTarifDetails, 0, $desiredSeatCount);
+                    $finalDetails = array_merge($finalDetails, $keptDetails);
+                    // On marque les autres pour suppression
+                    $detailsToDelete = array_merge($detailsToDelete, array_slice($existingTarifDetails, $desiredSeatCount));
+                } else {
+                    // --- MAINTIEN ---
+                    // Le nombre n'a pas changé, on garde tout
+                    $finalDetails = array_merge($finalDetails, $existingTarifDetails);
                 }
             }
 
-            $result = $this->validateDataStep3($reservationDetailTempTab, $event);
+            // Validation des données
+            $result = $this->validateDataStep3($finalDetails, $event);
 
             if (!$result['success']) {
                 return ['success' => false, 'errors' => $result['errors'], 'data' => []];
             }
-            foreach ($reservationDetailTempTab as $detail) {
-                $this->reservationDetailTempRepository->insert($detail);
+
+            // Persistance en base de données dans une transaction
+            try {
+                $this->reservationDetailTempRepository->beginTransaction();
+
+                foreach ($detailsToDelete as $detail) {
+                    $this->reservationDetailTempRepository->delete($detail->getId());
+                }
+                foreach ($detailsToInsert as $detail) {
+                    $this->reservationDetailTempRepository->insert($detail);
+                }
+                $this->reservationDetailTempRepository->commit();
+            } catch (\Exception $e) {
+                $this->reservationDetailTempRepository->rollBack();
+                // Log l'erreur $e->getMessage()
+                return ['success' => false, 'errors' => ['global' => 'Une erreur serveur est survenue lors de la mise à jour des places.'], 'data' => []];
             }
         }
-
 
 
         if (gettype($reservationTemp->getEvent()) == 'integer') {
@@ -608,16 +664,17 @@ class ReservationDataValidationService
             }
         }
 
-
-        $effective = [];
-
         if ($step > 3) {
-            $dto3 = ReservationDetailItemDTO::fromArray($effective);
-            $check = $this->validateStep3($dto3);
+            $event = $this->eventRepository->findById($session['reservation']->getEvent());
+            $check = $this->validateDataStep3($session['reservation_details'], $event);
             if (!$check['success']) {
                 return ['success' => false, 'errors' => $check['errors']];
             }
         }
+
+
+        $effective = [];
+
 
         if ($step > 6) {
             $dt6 = ReservationComplementItemDTO::fromArray($effective);

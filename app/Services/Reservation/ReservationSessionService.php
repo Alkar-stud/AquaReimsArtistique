@@ -2,6 +2,8 @@
 
 namespace app\Services\Reservation;
 
+use app\Models\Reservation\ReservationComplementTemp;
+use app\Models\Reservation\ReservationDetailTemp;
 use app\Models\Tarif\Tarif;
 use app\Repository\Reservation\ReservationComplementTempRepository;
 use app\Repository\Reservation\ReservationDetailTempRepository;
@@ -11,9 +13,9 @@ use JsonSerializable;
 
 class ReservationSessionService
 {
-    private ?ReservationTempRepository $reservationTempRepository = null;
-    private ?ReservationDetailTempRepository $reservationDetailTempRepository = null;
-    private ?ReservationComplementTempRepository $reservationComplementTempRepository = null;
+    private ?ReservationTempRepository $reservationTempRepository;
+    private ?ReservationDetailTempRepository $reservationDetailTempRepository;
+    private ?ReservationComplementTempRepository $reservationComplementTempRepository;
 
     public function __construct(
         ?ReservationTempRepository $reservationTempRepository = null,
@@ -188,33 +190,61 @@ class ReservationSessionService
     }
 
     /**
-     * @param array|null $reservationDetails
-     * @param $allEventTarifs
+     * Calcule les quantités de chaque "pack" de tarifs à partir des détails de réservation de places.
+     *
+     * @param ReservationDetailTemp[]|null $reservationDetails
+     * @param Tarif[] $allEventTarifs
      * @return array
      */
-    public function arraySessionForFormStep3(?array $reservationDetails, $allEventTarifs): array
+    public function getTarifQuantitiesFromDetails(?array $reservationDetails, array $allEventTarifs): array
     {
-        //on parcourt le tableau pour retourner un autre tableau avec index=tarif_id et valeur=quantité de ce tarif
         if (empty($reservationDetails)) {
             return [];
         }
-        // Compter le nombre de places pour chaque tarif_id
-        $tarifIds = array_column($reservationDetails, 'tarif_id');
+
+        // Compter le nombre de places réservées pour chaque tarif_id
+        $tarifIds = [];
+        foreach ($reservationDetails as $detail) {
+            $tarifIds[] = $detail->getTarif();
+        }
         $placesPerTarifId = array_count_values($tarifIds);
 
         // Convertir le nombre de places en nombre de "packs" (quantité de tarifs)
         $tarifQuantities = [];
         foreach ($allEventTarifs as $tarif) {
             $tarifId = $tarif->getId();
-            $nbPlacesInTarif = $tarif->getSeatCount() ?? 1;
-            if (isset($placesPerTarifId[$tarifId])) {
-                // On s'assure que la division est entière et logique.
-                // Si on a 4 places pour un tarif de 4 places, ça fait 1 pack.
-                // La division par zéro est évitée car getNbPlace() renvoie 1 par défaut.
-                $tarifQuantities[$tarifId] = (int)($placesPerTarifId[$tarifId] / $nbPlacesInTarif);
+            $nbPlacesInTarif = $tarif->getSeatCount();
+
+            // On ne traite que les tarifs qui ont des places, qui sont dans la réservation,
+            // et qui n'ont PAS de code d'accès (car les tarifs spéciaux sont gérés séparément dans la vue).
+            if ($tarif->getAccessCode() === null && isset($placesPerTarifId[$tarifId])) {
+                // Pour un pack de 4 places, si on a 8 réservations, ça fait 2 packs.
+                // On évite la division par zéro ou par null.
+                if ($nbPlacesInTarif > 0) {
+                    $tarifQuantities[$tarifId] = (int)($placesPerTarifId[$tarifId] / $nbPlacesInTarif);
+                }
             }
         }
         return $tarifQuantities;
+    }
+
+    /**
+     * Calcule les quantités pour chaque tarif de type "complément".
+     *
+     * @param ReservationComplementTemp[]|null $reservationComplements
+     * @return array Un tableau [tarif_id => quantite]
+     */
+    public function getComplementQuantities(?array $reservationComplements): array
+    {
+        if (empty($reservationComplements)) {
+            return [];
+        }
+
+        $quantities = [];
+        foreach ($reservationComplements as $complement) {
+            $quantities[$complement->getTarif()] = $complement->getQty();
+        }
+        return $quantities;
     }
 
     /**

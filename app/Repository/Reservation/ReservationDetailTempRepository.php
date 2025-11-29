@@ -6,6 +6,17 @@ use app\Models\Reservation\ReservationDetailTemp;
 
 class ReservationDetailTempRepository extends AbstractRepository
 {
+    private array $fieldsAllowed = [
+        'reservation_temp',
+        'name',
+        'firstname',
+        'tarif',
+        'tarif_access_code',
+        'justificatif_name',
+        'justificatif_original_name',
+        'place_number',
+    ];
+
     public function __construct()
     {
         parent::__construct('reservation_detail_temp');
@@ -32,7 +43,48 @@ class ReservationDetailTempRepository extends AbstractRepository
      */
     public function findByReservationTemp(int $reservationTempId): array
     {
-        $rows = $this->query("SELECT * FROM {$this->tableName} WHERE reservation_temp = :rid", ['rid' => $reservationTempId]);
+        $rows = $this->query("SELECT * FROM {$this->tableName} WHERE reservation_temp = :reservationTempId", ['reservationTempId' => $reservationTempId]);
+        return array_map(fn($r) => $this->mapRowToModel($r), $rows);
+    }
+
+
+    /**
+     * Cherche par plusieurs champs/valeurs
+     * @param array $criteria
+     * @return array
+     */
+    public function findByFields(array $criteria): array
+    {
+        if (empty($criteria)) {
+            return [];
+        }
+
+        $params = [];
+        $clauses = [];
+        $i = 0;
+
+        foreach ($criteria as $field => $val) {
+            if (!in_array($field, $this->fieldsAllowed, true)) {
+                continue;
+            }
+
+            if ($val === null) {
+                $clauses[] = "`$field` IS NULL";
+            } else {
+                $p = "p{$i}";
+                $clauses[] = "`$field` = :$p";
+                $params[$p] = $val;
+                $i++;
+            }
+        }
+
+        if (empty($clauses)) {
+            return [];
+        }
+
+        $sql = "SELECT * FROM `{$this->tableName}` WHERE " . implode(' AND ', $clauses);
+        $rows = $this->query($sql, $params);
+
         return array_map(fn($r) => $this->mapRowToModel($r), $rows);
     }
 

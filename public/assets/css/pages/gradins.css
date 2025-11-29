@@ -42,7 +42,7 @@ table.zone-plan .seat.btn {
         padding: 2px 0;
     }
     table.zone-plan .seat.btn {
-        font-size: 0.75rem; /* Police plus petite pour les noms de siège */
+        font-size: 0.8rem; /* Police légèrement plus grande pour la lisibilité */
         padding: 0;
     }
 }
@@ -67,6 +67,7 @@ table.zone-plan .tdplaceVide { background: transparent; }
 table.zone-plan td.tdplacePris {
     background: var(--ara-color-red);
     color: var(--ara-color-white);
+    font-weight: bold; /* Améliore la lisibilité sur fond rouge */
 }
 
 table.zone-plan td.tdplacePMR {
@@ -74,11 +75,20 @@ table.zone-plan td.tdplacePMR {
     color: var(--ara-color-white);
 }
 
-table.zone-plan .tdplaceVIP { background-color: var(--ara-color-darkpink); }
+table.zone-plan .tdplaceVIP {
+    background-color: var(--ara-color-darkpink);
+    color: var(--ara-color-white); /* Correction pour contraste AAA */
+}
 
-table.zone-plan .tdplaceBenevole { background: var(--ara-color-purple); }
+table.zone-plan .tdplaceBenevole {
+    background: var(--ara-color-purple);
+    color: var(--ara-color-white); /* Correction pour contraste AAA */
+}
 
-table.zone-plan td.tdplaceTemp { background-color: var(--ara-color-darkgray); }
+table.zone-plan td.tdplaceTemp {
+    background-color: var(--ara-color-darkgray);
+    color: var(--ara-color-white); /* Correction pour contraste AAA */
+}
 
 table.zone-plan td.tdplaceTempSession {
     background-color: var(--ara-color-gray);

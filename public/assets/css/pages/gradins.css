@@ -77,17 +77,17 @@ table.zone-plan td.tdplacePMR {
 
 table.zone-plan .tdplaceVIP {
     background-color: var(--ara-color-darkpink);
-    color: var(--ara-color-white); /* Correction pour contraste AAA */
+    color: var(--ara-color-white); /* Correction pour contraste */
 }
 
 table.zone-plan .tdplaceBenevole {
     background: var(--ara-color-purple);
-    color: var(--ara-color-white); /* Correction pour contraste AAA */
+    color: var(--ara-color-white); /* Correction pour contraste */
 }
 
 table.zone-plan td.tdplaceTemp {
     background-color: var(--ara-color-darkgray);
-    color: var(--ara-color-white); /* Correction pour contraste AAA */
+    color: var(--ara-color-white); /* Correction pour contraste */
 }
 
 table.zone-plan td.tdplaceTempSession {

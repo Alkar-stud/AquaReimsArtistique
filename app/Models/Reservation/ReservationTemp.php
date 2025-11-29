@@ -13,6 +13,7 @@ class ReservationTemp extends AbstractModel
 {
     // FK vers event
     private int $event;
+    private ?Event $eventObject = null;
     // FK vers event_session
     private int $event_session;
     private string $session_id;
@@ -26,6 +27,7 @@ class ReservationTemp extends AbstractModel
 
     // --- GETTERS ---
     public function getEvent(): int { return $this->event; }
+    public function getEventObject(): ?Event { return $this->eventObject; }
     public function getEventSession(): int { return $this->event_session; }
     public function getSessionId(): string { return $this->session_id; }
     public function getName(): ?string { return $this->name; }
@@ -37,6 +39,11 @@ class ReservationTemp extends AbstractModel
 
     // --- SETTERS ---
     public function setEvent(int $event): self { $this->event = $event; return $this; }
+    public function setEventObject(?Event $eventObject): self {
+        $this->eventObject = $eventObject;
+        if ($eventObject) { $this->event = $eventObject->getId(); }
+        return $this;
+    }
     public function setEventSession(int $event_session): self { $this->event_session = $event_session; return $this; }
     public function setSessionId(string $session_id): self { $this->session_id = $session_id; return $this; }
     public function setName(?string $name): self

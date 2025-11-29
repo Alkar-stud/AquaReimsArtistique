@@ -2,14 +2,30 @@
 namespace app\Repository\Reservation;
 
 use app\Repository\AbstractRepository;
+use app\Repository\Event\EventRepository;
 use app\Models\Reservation\ReservationTemp;
 use DateTime;
 
 class ReservationTempRepository extends AbstractRepository
 {
-    public function __construct()
+    private ?EventRepository $eventRepository;
+
+    public function __construct(?EventRepository $eventRepository = null)
     {
         parent::__construct('reservation_temp');
+        $this->eventRepository = $eventRepository;
+    }
+
+    /**
+     * Méthode lazy pour instancier le repository Event uniquement si nécessaire.
+     * @return EventRepository
+     */
+    private function getEventRepository(): EventRepository
+    {
+        if ($this->eventRepository === null) {
+            $this->eventRepository = new EventRepository();
+        }
+        return $this->eventRepository;
     }
 
     /**
@@ -22,7 +38,10 @@ class ReservationTempRepository extends AbstractRepository
     {
         $rows = $this->query("SELECT * FROM {$this->tableName} WHERE id = :id", ['id' => $id]);
         if (empty($rows)) return null;
-        return $this->mapRowToModel($rows[0]);
+
+        $reservation = $this->hydrate($rows[0]);
+        $this->hydrateRelations([$reservation]);
+        return $reservation;
     }
 
     /**
@@ -35,7 +54,10 @@ class ReservationTempRepository extends AbstractRepository
     {
         $rows = $this->query("SELECT * FROM {$this->tableName} WHERE session_id = :session_id LIMIT 1", ['session_id' => $sessionId]);
         if (empty($rows)) return null;
-        return $this->mapRowToModel($rows[0]);
+
+        $reservation = $this->hydrate($rows[0]);
+        $this->hydrateRelations([$reservation]);
+        return $reservation;
     }
 
     /**
@@ -128,7 +150,7 @@ class ReservationTempRepository extends AbstractRepository
      * @param array $row Ligne associative provenant de la base de données.
      * @return ReservationTemp Modèle peuplé à partir de la ligne fournie.
      */
-    private function mapRowToModel(array $row): ReservationTemp
+    protected function hydrate(array $row): ReservationTemp
     {
         $m = new ReservationTemp();
         $m->setId((int)$row['id']);
@@ -146,5 +168,33 @@ class ReservationTempRepository extends AbstractRepository
             $m->setUpdatedAt($row['updated_at']);
         }
         return $m;
+    }
+
+    /**
+     * Hydrate les relations (ici, l'objet Event) pour une liste de réservations temporaires.
+     *
+     * @param ReservationTemp[] $reservations
+     * @return void
+     */
+    private function hydrateRelations(array $reservations): void
+    {
+        if (empty($reservations)) {
+            return;
+        }
+
+        $eventIds = array_unique(array_map(fn($r) => $r->getEvent(), $reservations));
+        if (empty($eventIds)) {
+            return;
+        }
+
+        $events = $this->getEventRepository()->findByIds($eventIds, true, false, true);
+        $eventsById = [];
+        foreach ($events as $event) {
+            $eventsById[$event->getId()] = $event;
+        }
+
+        foreach ($reservations as $reservation) {
+            $reservation->setEventObject($eventsById[$reservation->getEvent()] ?? null);
+        }
     }
 }

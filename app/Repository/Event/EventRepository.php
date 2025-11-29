@@ -83,6 +83,72 @@ class EventRepository extends AbstractRepository
     }
 
     /**
+     * Retourne une liste d'événements par leurs IDs
+     * @param int[] $ids
+     * @param bool $withPiscine
+     * @param bool $withSessions
+     * @param bool $withInscriptionDates
+     * @param bool $withTarifs
+     * @param bool $withPresentations
+     * @return Event[]
+     */
+    public function findByIds(
+        array $ids,
+        bool $withPiscine = false,
+        bool $withSessions = false,
+        bool $withInscriptionDates = false,
+        bool $withTarifs = true,
+        bool $withPresentations = false
+    ): array {
+        if (empty($ids)) {
+            return [];
+        }
+
+        $placeholders = implode(',', array_fill(0, count($ids), '?'));
+        $sql = "SELECT * FROM {$this->tableName} WHERE id IN ($placeholders)";
+        $rows = $this->query($sql, $ids);
+        if (!$rows) {
+            return [];
+        }
+
+        $events = array_map(fn($row) => $this->hydrate($row), $rows);
+        $eventsById = [];
+        foreach ($events as $event) {
+            $eventsById[$event->getId()] = $event;
+        }
+
+        if ($withPiscine) {
+            $piscineRepo = new PiscineRepository();
+            $piscineIds = array_unique(array_map(fn(Event $e) => $e->getPlace(), $events));
+            $piscinesResult = $piscineRepo->findByIds($piscineIds);
+
+            // On ré-indexe le tableau de piscines par leur ID pour une association facile.
+            $piscinesById = [];
+            foreach ($piscinesResult as $piscine) {
+                $piscinesById[$piscine->getId()] = $piscine;
+            }
+
+            foreach ($events as $event) {
+                $event->setPiscine($piscinesById[$event->getPlace()] ?? null);
+            }
+        }
+
+        if ($withSessions) {
+            // Logique à implémenter si besoin
+        }
+
+        if ($withInscriptionDates) {
+            $inscRepo = new EventInscriptionDateRepository();
+            $inscDatesByEvent = $inscRepo->findByEventIds($ids);
+            foreach ($events as $event) {
+                $event->setInscriptionDates($inscDatesByEvent[$event->getId()] ?? []);
+            }
+        }
+
+        return array_values($events);
+    }
+
+    /**
      * Retourne tous les événements à venir ou passés ordonnés par date de début
      *
      * @param bool|null $isUpComing

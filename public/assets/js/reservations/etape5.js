@@ -1,5 +1,5 @@
 import {apiGet} from "../components/apiClient.js";
-import {createBleacherGrid} from "../components/bleacherGrid.js";
+import {createBleacherGrid, applySeatStates} from "../components/bleacherGrid.js";
 
 document.addEventListener('DOMContentLoaded', () => {
     const zonesList = document.querySelector('[data-component="zones-list"]');
@@ -16,9 +16,34 @@ document.addEventListener('DOMContentLoaded', () => {
     const prevBtn = bleacher.querySelector('[data-action="prev-zone"]');
     const nextBtn = bleacher.querySelector('[data-action="next-zone"]');
 
+    const container = zonesList.closest('.container-fluid');
+    const eventSessionId = container?.dataset.eventSessionId;
+    if (!eventSessionId || !container) {
+        console.error("L'ID de la session de l'événement (eventSessionId) ou le conteneur principal est manquant.");
+        return;
+    }
+
     let currentPiscineId = null;
     let currentZoneId = null;
     let loading = false;
+
+    /**
+     * Gère le clic sur un siège disponible.
+     * Pour l'instant, affiche les informations en console.
+     * C'est ici que sera implémentée la logique d'ajout/retrait de la sélection.
+     * @param {object} seat - L'objet représentant le siège cliqué.
+     * @param {HTMLButtonElement} btn - Le bouton du siège.
+     */
+    function handleSeatClick(seat, btn) {
+        // Le statut est 'available' pour une place vide, ou 'in_cart_session' pour une place sélectionnée.
+        const currentStatus = btn.dataset.status || 'available';
+
+        console.log(`Clic sur une place avec le statut : ${currentStatus}. Prêt pour la sélection/désélection !`, {
+            id: seat.seatId,
+            code: seat.code,
+            status: currentStatus
+        });
+    }
 
     function showZones() {
         bleacher.classList.add('d-none');
@@ -34,25 +59,39 @@ document.addEventListener('DOMContentLoaded', () => {
         if (loading) return;
         loading = true;
         refreshBtn?.classList.add('disabled');
+
         try {
-            const response = await apiGet(`/piscine/gradins/${piscineId}/${zoneId}`, {});
-            if (!response.success || !response.plan || !response.plan.zone) {
-                console.warn('Plan invalide', response);
+            // --- Appel 1: Récupérer la structure du plan ---
+            const structureResponse = await apiGet(`/piscine/gradins/${piscineId}/${zoneId}`);
+            if (!structureResponse.success || !structureResponse.plan || !structureResponse.plan.zone) {
+                console.warn('Plan de structure invalide', structureResponse);
                 return;
             }
-            const z = response.plan.zone;
 
+            // --- Appel 2: Récupérer l'état des sièges ---
+            let seatStates = {};
+            try {
+                const stateResponse = await apiGet(`/reservation/seat-states/${eventSessionId}`);
+                if (stateResponse.success && stateResponse.seatStates) {
+                    seatStates = stateResponse.seatStates;
+                }
+            } catch (stateErr) {
+                console.warn("Impossible de charger l'état des sièges, affichage du plan vierge.", stateErr);
+            }
+
+            const z = structureResponse.plan.zone;
             bleacher.dataset.zoneId = z.id ?? zoneId;
-            zoneNameEl.textContent = z.zoneName ?? z.getZoneName ?? 'Zone';
+            zoneNameEl.textContent = z.zoneName ?? 'Zone';
 
-            if (response.plan) {
+            if (structureResponse.plan) {
                 const gridContainer = bleacher.querySelector('[data-bleacher-seats]');
-                gridInstance = createBleacherGrid(gridContainer, response.plan, {
+                // On crée la grille "vierge"
+                gridInstance = createBleacherGrid(gridContainer, structureResponse.plan, {
                     mode: 'reservation',
-                    onSeatClick: (seat, btn) => {
-                        console.log('Seat ID:', seat.seatId);
-                    }
+                    onSeatClick: handleSeatClick
                 });
+                // On applique les états dynamiques sur la grille qui vient d'être créée
+                applySeatStates(gridContainer, seatStates);
             }
 
             // Mettre à jour état courant et boutons de navigation
@@ -94,7 +133,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Positionne le scroller réellement scrollable après rebuild (double rAF)
     function setBleacherScrollerEdge(scroller, position = 'start') {
-        console.log('ok position : ', position);
         if (!scroller) {
             console.warn('setBleacherScrollerEdge: scroller introuvable');
             return;
@@ -102,7 +140,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const min = 0;
         const max = Math.max(0, scroller.scrollWidth - scroller.clientWidth);
-        console.log('Bleacher scroll min:', min, 'max:', max);
 
         // Positionner le scroller après rebuild (double rAF + setTimeout pour sécurité)
         const setScroll = () => {

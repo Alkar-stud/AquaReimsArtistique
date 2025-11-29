@@ -31,9 +31,20 @@ table.zone-plan .seat.btn {
 
 /* Desktop (>=992px) */
 @media (min-width: 992px) {
-    table.zone-plan { width: 100%; }
-    table.zone-plan td,
-    table.zone-plan th { padding: 5px 0; }
+    table.zone-plan {
+        width: 100%;
+    }
+    table.zone-plan td {
+        height: 36px; /* Hauteur fixe pour les cellules */
+        padding: 0;
+    }
+    table.zone-plan th {
+        padding: 2px 0;
+    }
+    table.zone-plan .seat.btn {
+        font-size: 0.75rem; /* Police plus petite pour les noms de siège */
+        padding: 0;
+    }
 }
 
 /* Hover pour places interactives (ne pas appliquer aux états non-interactifs) */
@@ -72,6 +83,21 @@ table.zone-plan td.tdplaceTemp { background-color: var(--ara-color-darkgray); }
 table.zone-plan td.tdplaceTempSession {
     background-color: var(--ara-color-gray);
     color: var(--ara-color-black);
+}
+
+/* Header du gradin */
+.bleacher-header {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+.bleacher-controls {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+@media (min-width: 992px) {
+    .bleacher-header { flex-direction: row; justify-content: space-between; align-items: center; }
 }
 
 /* Legend */

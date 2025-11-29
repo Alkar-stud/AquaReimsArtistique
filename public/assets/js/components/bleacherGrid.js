@@ -48,6 +48,87 @@ function hideBleacherTooltip() {
     clearTimeout(el.__hideTimeout);
 }
 
+/**
+ * Attache les événements pour afficher une infobulle sur une cellule de gradin.
+ * @param {HTMLTableCellElement} td La cellule <td> qui recevra les événements.
+ * @param {HTMLButtonElement} btn Le bouton à l'intérieur de la cellule.
+ * @param {string} tooltipText Le texte à afficher.
+ */
+function attachTooltipEvents(td, btn, tooltipText) {
+    if (!td || !btn || !tooltipText) return;
+
+    // Assigner le texte pour l'accessibilité et comme fallback
+    btn.title = tooltipText;
+    td.dataset.tooltip = tooltipText;
+
+    // Événements pour la souris
+    td.addEventListener('mouseenter', () => showBleacherTooltip(btn, tooltipText));
+    td.addEventListener('mouseleave', () => hideBleacherTooltip());
+
+    // Événements pour le tactile
+    td.addEventListener('touchstart', (ev) => {
+        const touch = ev.touches && ev.touches[0];
+        showBleacherTooltip(btn, tooltipText, touch);
+    }, { passive: true });
+    td.addEventListener('touchend', () => hideBleacherTooltip());
+    td.addEventListener('touchcancel', () => hideBleacherTooltip());
+}
+
+/**
+ * Applique les états dynamiques (réservé, en cours...) à une grille de gradin déjà construite.
+ * @param {HTMLElement} container - Le conteneur de la grille (ex: l'élément avec `data-bleacher-seats`).
+ * @param {Object} seatStates - Un objet où les clés sont les ID des sièges et les valeurs leur statut.
+ */
+export function applySeatStates(container, seatStates) {
+    if (!container || !seatStates) {
+        return;
+    }
+
+    // Map des statuts reçus de l'API vers les classes CSS de la légende
+    const statusToClassMap = {
+        'occupied': 'tdplacePris',
+        'in_cart_other': 'tdplaceTemp',
+        'in_cart_session': 'tdplaceTempSession',
+        'vip': 'tdplaceVIP',
+        'benevole': 'tdplaceBenevole',
+        'closed': 'tdplaceClosed',
+    };
+
+    // On parcourt les états reçus
+    for (const seatId in seatStates) {
+        const status = seatStates[seatId];
+        const cssClass = statusToClassMap[status];
+        const seatButton = container.querySelector(`button[data-seat-id="${seatId}"]`);
+
+        // Si on trouve le siège et qu'on a une classe correspondante
+        if (seatButton && cssClass) {
+            const td = seatButton.closest('td');
+            if (td) {
+                // On retire les classes de statut précédentes pour éviter les conflits
+                Object.values(statusToClassMap).forEach(c => td.classList.remove(c));
+                td.classList.remove('tdplaceVide'); // On retire aussi la classe par défaut
+                
+                // On ajoute la nouvelle classe
+                td.classList.add(cssClass);
+                // On désactive le bouton SAUF si c'est une place déjà dans la sélection de l'utilisateur
+                seatButton.disabled = (status !== 'in_cart_session');
+                seatButton.dataset.status = status; // On met à jour le statut sur le bouton
+
+                // Déterminer le texte de l'infobulle et l'attacher
+                let tooltipText = 'Non disponible';
+                if (status === 'occupied') tooltipText = 'Déjà réservée';
+                else if (status === 'in_cart_other') tooltipText = 'En cours de réservation';
+                else if (status === 'in_cart_session') tooltipText = 'Dans votre sélection';
+                else if (status === 'vip') tooltipText = 'Place VIP';
+                else if (status === 'benevole') tooltipText = 'Réservée aux bénévoles';
+                else if (status === 'closed') tooltipText = 'Fermée';
+
+                attachTooltipEvents(td, seatButton, tooltipText);
+            }
+        }
+    }
+}
+
 // Création de la grille
 export function createBleacherGrid(container, plan, options = {}) {
     if (!container) {
@@ -55,7 +136,6 @@ export function createBleacherGrid(container, plan, options = {}) {
     }
     const mode = options.mode || 'readonly';
     const zone = plan.zone;
-    const zoneName = zone.zoneName || zone.getZoneName || zone.getZoneName?.() || 'Z';
     const rows = Array.isArray(plan.rows) ? plan.rows : [];
     const cols = plan.cols || 0;
 
@@ -83,7 +163,7 @@ export function createBleacherGrid(container, plan, options = {}) {
     // Table
     const table = document.createElement('table');
     table.className = 'zone-plan table table-bordered table-sm';
-    table.dataset.zoneName = zoneName;
+    table.dataset.zoneName = zone.zoneName;
 
     const tbody = document.createElement('tbody');
 
@@ -106,7 +186,7 @@ export function createBleacherGrid(container, plan, options = {}) {
         mobileContent.className = 'mobile-row-content';
         const spanZone = document.createElement('span');
         spanZone.className = 'zone-name';
-        spanZone.textContent = zoneName + rankNumber + 'xx';
+        spanZone.textContent = zone.zoneName + rankNumber + 'xx';
         mobileContent.appendChild(spanZone);
         mobileLabelTd.appendChild(mobileContent);
         tr.appendChild(mobileLabelTd);
@@ -116,7 +196,7 @@ export function createBleacherGrid(container, plan, options = {}) {
             const td = document.createElement('td');
 
             // Détermination des classes CSS basées sur état
-            let tdClass = 'tdplaceVide';
+            let tdClass;
             let status = 'available';
 
             if (!seatData.exists) {
@@ -140,14 +220,11 @@ export function createBleacherGrid(container, plan, options = {}) {
                 }
             }
 
-            // TODO Placeholder pour futurs états
-            // if (seatData.reserved) { tdClass = 'tdplacePris'; status='reserved'; }
-
             td.className = tdClass;
 
             // Construction nom complet du siège à afficher
             const seatNumber = String(i + 1).padStart(2, '0');
-            const seatCode = `${zoneName}${rankNumber}${seatNumber}`;
+            const seatCode = `${zone.zoneName}${rankNumber}${seatNumber}`;
 
             if (!seatData.exists) {
                 // Ne PAS créer de bouton pour les places inexistantes.
@@ -167,7 +244,7 @@ export function createBleacherGrid(container, plan, options = {}) {
 
                 // Data attrs
                 btn.dataset.seatCode = seatCode;
-                btn.dataset.zoneName = zoneName;
+                btn.dataset.zoneName = zone.zoneName;
                 btn.dataset.rowIndex = row.index;
                 if (row.rank != null) {
                     btn.dataset.rowRank = row.rank;
@@ -204,28 +281,7 @@ export function createBleacherGrid(container, plan, options = {}) {
                     else if (seatData.vip) tooltipText = 'Place VIP';
                     else if (seatData.volunteer) tooltipText = 'Réservée aux bénévoles';
 
-                    // accessibilité / fallback navigateur
-                    btn.title = tooltipText;
-                    btn.dataset.tooltip = tooltipText;
-
-                    // Attacher les événements sur la cellule <td> (les boutons désactivés peuvent ne pas recevoir focus/événements)
-                    td.dataset.tooltip = tooltipText;
-
-                    td.addEventListener('mouseenter', () => showBleacherTooltip(btn, tooltipText));
-                    td.addEventListener('mouseleave', () => hideBleacherTooltip());
-
-                    // événements tactiles (touchstart pour afficher, touchend/touchcancel pour cacher)
-                    td.addEventListener('touchstart', (ev) => {
-                        const touch = ev.touches && ev.touches[0];
-                        showBleacherTooltip(btn, tooltipText, touch);
-                    }, {passive: true});
-                    td.addEventListener('touchend', () => hideBleacherTooltip());
-                    td.addEventListener('touchcancel', () => hideBleacherTooltip());
-
-                    // keyboard: rendre la td focussable et afficher tooltip au focus
-                    td.tabIndex = 0;
-                    td.addEventListener('focus', () => showBleacherTooltip(btn, tooltipText));
-                    td.addEventListener('blur', () => hideBleacherTooltip());
+                    attachTooltipEvents(td, btn, tooltipText);
                 }
 
                 // Gestion clic
@@ -233,7 +289,7 @@ export function createBleacherGrid(container, plan, options = {}) {
                     btn.addEventListener('click', () => options.onSeatClick({
                         seatId: seatData.id,
                         code: seatCode,
-                        zone: zoneName,
+                        zone: zone.zoneName,
                         rowIndex: row.index,
                         rowRank: row.rank,
                         number: seatNumber,

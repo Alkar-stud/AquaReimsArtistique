@@ -469,4 +469,17 @@ class ReservationQueryService
         return $nbSpectatorsPerSession;
     }
 
+    /**
+     * Pour récupérer toutes les places assises enregistrées et payées pour une session donnée.
+     *
+     * @param int $eventSessionId
+     * @return array
+     */
+    public function getSeatStates(int $eventSessionId): array
+    {
+
+
+    }
+
+
 }

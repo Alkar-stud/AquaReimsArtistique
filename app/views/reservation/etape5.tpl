@@ -1,4 +1,4 @@
-<div class="container-fluid">
+<div class="container-fluid" data-event-session-id="{{ $eventSessionId ?? '0' }}">
     <h2 class="mb-4">Choix des places assises</h2>
 
     <!-- Liste des zones (visible au départ) -->
@@ -6,28 +6,36 @@
 
     <!-- Bleacher pré-rendu caché (placeholders remplis côté JS) -->
     <div class="container my-3 d-none" data-component="bleacher" data-zone-id="0">
-        <div class="d-flex align-items-center justify-content-between mb-3">
-            <div class="d-flex gap-2">
+        <div class="bleacher-header mb-3">
+            <div class="bleacher-controls">
                 <a class="btn btn-outline-secondary btn-sm" href="#" data-action="back-zones">&larr; Retour aux zones</a>
                 <button type="button" class="btn btn-outline-primary btn-sm" data-action="refresh-bleacher">Actualiser</button>
                 <h2 class="card zone-card text-center m-0 p-2 d-inline-block">
                     <span class="d-none d-md-inline-block">Zone </span><span class="fw-bold" data-bleacher-zone-name>Zone</span>
                 </h2>
             </div>
-        </div>
-
-        <div class="legende my-3">
-            <div class="row g-2">
-                <div class="col-6 col-md-3 case placeVide">Place vide</div>
-                <div class="col-6 col-md-3 case placeClosed">Fermée</div>
-                <div class="col-6 col-md-3 case placePMR">PMR</div>
-                <div class="col-6 col-md-3 case placeVIP">VIP</div>
-                <div class="col-6 col-md-3 case placeBenevole">Bénévole</div>
-                <div class="col-6 col-md-3 case placePris">Réservée</div>
-                <div class="col-6 col-md-3 case placeTemp">En cours (autres)</div>
-                <div class="col-6 col-md-3 case placeTempSession">En cours (vous)</div>
+            <div class="legende">
+                <div class="row g-2">
+                    <div class="col-6 col-md-auto case placeVide">Place vide</div>
+                    <div class="col-6 col-md-auto case placeClosed">Fermée</div>
+                    <div class="col-6 col-md-auto case placePMR">PMR</div>
+                    <div class="col-6 col-md-auto case placeVIP">VIP</div>
+                    <div class="col-6 col-md-auto case placeBenevole">Bénévole</div>
+                    <div class="col-6 col-md-auto case placePris">Réservée</div>
+                    <div class="col-6 col-md-auto case placeTemp">En cours (autres)</div>
+                    <div class="col-6 col-md-auto case placeTempSession">En cours (vous)</div>
+                </div>
             </div>
         </div>
+
+        <!-- Conteneur pour la liste des participants à placer -->
+        <div id="participants-to-seat-container" class="my-3">
+            <!--
+                Le JavaScript pourra remplir cette zone avec la liste des participants
+                qui n'ont pas encore de siège attribué.
+            -->
+        </div>
+
         <div class="gradins-row align-items-center mb-2">
             <button type="button" class="nav-zone-btn prev d-none d-md-inline-flex" data-action="prev-zone" aria-label="Zone précédente">&larr;</button>
 

@@ -317,4 +317,50 @@ if ($step >= 5) {
         $this->json(['success' => true], 200, 'reservation');
     }
 
+    //======================================================================
+    // ETAPE 5 : Choix des places numérotées
+    //======================================================================
+    #[Route('/reservation/seat-states/{eventSessionId}', name: 'seat_states', methods: ['GET'])]
+    public function seatStates(int $eventSessionId): void
+    {
+        $seatStates = [21 => "occupied", 41 => "in_cart_other", 61 => "in_cart_session", 81 => "vip", 101 => "benevole"]; // Exemple: la place avec l'ID 41 est occupée
+        //On récupère toutes les places réservées et payées
+
+
+        /* Doit renvoyer quelque chose du style :
+        {
+          "success": true,
+          "seatStates": {
+            "123": "occupied",
+            "124": "occupied",
+            "250": "in_cart_other",
+            "251": "in_cart_session",
+            "310": "vip",
+            "311": "benevole"
+          }
+        }
+        */
+
+
+
+        $this->json(
+            [
+                'success' => true,
+                'seatStates' => $seatStates
+            ]
+        );
+    }
+
+    #[Route('/reservation/etape5AddSeat', name: 'etape5_add_seat', methods: ['POST'])]
+    public function etape5AddSeat(): void
+    {
+
+    }
+
+    #[Route('/reservation/etape5RemoveSeat', name: 'etape5_remove_seat', methods: ['POST'])]
+    public function etape5RemoveSeat(): void
+    {
+
+    }
+
 }

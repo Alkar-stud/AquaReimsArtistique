@@ -276,7 +276,7 @@ class ReservationDataValidationService
             }
 
             // Valider les données de tous les participants.
-            $validationResult = $this->validateDataStep4($detailsToUpdate, array_keys($data));
+            $validationResult = $this->validateDataStep4($detailsToUpdate);
             $errors = array_merge($errors, $validationResult['errors']);
 
             if (!empty($errors)) {
@@ -506,10 +506,9 @@ class ReservationDataValidationService
      * Retourne tableau ['success' => true/false, 'errors' => $errors[]]
      *
      * @param ReservationDetailTemp[] $details
-     * @param array $submittedIds Ordre des IDs soumis par le formulaire
      * @return array
      */
-    public function validateDataStep4(array $details, array $submittedIds): array
+    public function validateDataStep4(array $details): array
     {
         $errors = [];
 
@@ -752,10 +751,19 @@ class ReservationDataValidationService
             }
         }
 
+        if ($step > 4) {
+            $event = $this->eventRepository->findById($session['reservation']->getEvent());
+            $check = $this->validateDataStep4($session['reservation_details']);
+            if (!$check['success']) {
+                return ['success' => false, 'errors' => $check['errors']];
+            }
+        }
+
+        if ($step > 5 && $session['reservation']->getEventObject()->getPiscine()->getNumberedSeats() === true) {
+
+        }
 
         $effective = [];
-
-
         if ($step > 6) {
             $dt6 = ReservationComplementItemDTO::fromArray($effective);
             $check = $this->validateStep6($dt6);

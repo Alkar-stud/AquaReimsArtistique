@@ -198,14 +198,40 @@ class ReservationController extends AbstractController
     public function etape5Display(): void
     {
         //On récupère la session
-        $session = $this->reservationSessionService->getReservationSession();
-        if (!$session || empty($session['event_id'])) {
-            $this->redirect('/reservation'); // sécurité
+        $session = $this->reservationSessionService->getReservationTempSession();
+
+        //On vérifie si la session est expirée
+        $reservationTemp = $session['reservation'] ?? null;
+        if (!$reservationTemp) {
+            $this->flashMessageService->setFlashMessage('warning', 'Votre session a expiré. Merci de recommencer votre réservation.');
+            $this->redirect('/reservation?session_expiree=r2');
+        }
+
+        // Valider l'étape 1
+        if (!$this->reservationDataValidationService->checkPreviousStep(1, $session)) {
+            $this->flashMessageService->setFlashMessage('danger', 'Erreur dans le parcours, veuillez recommencer');
+            $this->redirect('/reservation');
+        }
+        // Valider l'étape 2
+        if (!$this->reservationDataValidationService->checkPreviousStep(2, $session)) {
+            $this->flashMessageService->setFlashMessage('danger', 'Erreur dans le parcours, veuillez recommencer');
+            $this->redirect('/reservation');
+        }
+        // Valider l'étape 3
+        if (!$this->reservationDataValidationService->checkPreviousStep(3, $session)) {
+            $this->flashMessageService->setFlashMessage('danger', 'Erreur dans le parcours, veuillez recommencer');
+            $this->redirect('/reservation');
+        }
+        // Valider l'étape 4
+        if (!$this->reservationDataValidationService->checkPreviousStep(4, $session)) {
+            $this->flashMessageService->setFlashMessage('danger', 'Erreur dans le parcours, veuillez recommencer');
+            $this->redirect('/reservation');
         }
 
         //On récupère la piscine de cet event
-        $event = $this->eventRepository->findById($session['event_id'], true);
+        $event = $this->eventRepository->findById($session['reservation']->getEvent(), true);
         if (!$event) {
+            $this->flashMessageService->setFlashMessage('danger', 'Évènement inconnu, veuillez recommencer');
             $this->redirect('/reservation'); // ou page d'erreur
         }
         //On récupère la piscine de cet event

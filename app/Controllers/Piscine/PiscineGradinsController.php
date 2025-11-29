@@ -37,7 +37,7 @@ class PiscineGradinsController extends AbstractController
      * @param int $zoneId
      */
     #[Route('/piscine/gradins/{piscineId}/{zoneId}', name: 'get_piscine_gradins', methods: ['GET'])]
-    public function index(int $piscineId, int $zoneId): void
+    public function toDisplayBleacherEmpty(int $piscineId, int $zoneId): void
     {
         if ($piscineId < 0) {
             $this->json([

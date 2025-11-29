@@ -85,7 +85,7 @@ class ReservationSessionService
         $session['reservation'] = $reservationTemp;
 
         // On va ensuite chercher s'il y a des places assises réservées
-        $reservationDetails = $this->getReservationDetailTempRepository()->findByReservationTemp($reservationTemp->getId());
+        $reservationDetails = $this->getReservationDetailTempRepository()->findByFields(['reservation_temp' => $reservationTemp->getId()]);
         $session['reservation_details'] = $reservationDetails; // peut être []
 
         // On va ensuite chercher s'il y a des compléments réservés

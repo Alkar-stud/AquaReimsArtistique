@@ -36,19 +36,6 @@ class ReservationDetailTempRepository extends AbstractRepository
     }
 
     /**
-     * Récupère tous les détails liés à une réservation temporaire.
-     *
-     * @param int $reservationTempId Identifiant de la réservation temporaire.
-     * @return ReservationDetailTemp[] Tableau d'instances (vide si aucune).
-     */
-    public function findByReservationTemp(int $reservationTempId): array
-    {
-        $rows = $this->query("SELECT * FROM {$this->tableName} WHERE reservation_temp = :reservationTempId", ['reservationTempId' => $reservationTempId]);
-        return array_map(fn($r) => $this->mapRowToModel($r), $rows);
-    }
-
-
-    /**
      * Cherche par plusieurs champs/valeurs
      * @param array $criteria
      * @return array

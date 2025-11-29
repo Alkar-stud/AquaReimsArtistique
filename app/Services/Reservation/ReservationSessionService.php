@@ -5,10 +5,12 @@ namespace app\Services\Reservation;
 use app\Models\Reservation\ReservationComplementTemp;
 use app\Models\Reservation\ReservationDetailTemp;
 use app\Models\Tarif\Tarif;
+use app\Repository\Piscine\PiscineGradinsPlacesRepository;
 use app\Repository\Reservation\ReservationComplementTempRepository;
 use app\Repository\Reservation\ReservationDetailTempRepository;
 use app\Repository\Reservation\ReservationTempRepository;
 use app\Utils\DurationHelper;
+use app\Utils\FilesHelper;
 use JsonSerializable;
 
 class ReservationSessionService
@@ -16,16 +18,22 @@ class ReservationSessionService
     private ?ReservationTempRepository $reservationTempRepository;
     private ?ReservationDetailTempRepository $reservationDetailTempRepository;
     private ?ReservationComplementTempRepository $reservationComplementTempRepository;
+    private ?PiscineGradinsPlacesRepository $piscineGradinsPlacesRepository;
+    private ?FilesHelper $filesHelper;
 
     public function __construct(
         ?ReservationTempRepository $reservationTempRepository = null,
         ?ReservationDetailTempRepository $reservationDetailTempRepository = null,
-        ?ReservationComplementTempRepository $reservationComplementTempRepository = null
+        ?ReservationComplementTempRepository $reservationComplementTempRepository = null,
+        ?PiscineGradinsPlacesRepository $piscineGradinsPlacesRepository = null,
+        ?FilesHelper $filesHelper = null
     )
     {
         $this->reservationTempRepository = $reservationTempRepository;
         $this->reservationDetailTempRepository = $reservationDetailTempRepository;
         $this->reservationComplementTempRepository = $reservationComplementTempRepository;
+        $this->piscineGradinsPlacesRepository = $piscineGradinsPlacesRepository;
+        $this->filesHelper = $filesHelper;
     }
 
     /**
@@ -186,7 +194,27 @@ class ReservationSessionService
     private function clearExpiredReservations(): void
     {
         $timeoutSeconds = $this->getReservationTimeoutDuration();
-        $this->getReservationTempRepository()->deleteByTimeout($timeoutSeconds);
+        $expiredReservations = $this->getReservationTempRepository()->findExpired($timeoutSeconds);
+
+        if (empty($expiredReservations)) {
+            return;
+        }
+
+        $reservationIds = array_map(fn($r) => $r->getId(), $expiredReservations);
+
+        // Récupérer les détails associés pour trouver les fichiers à supprimer
+        $detailsToDelete = $this->getReservationDetailTempRepository()->findByFields(['reservation_temp' => $reservationIds]);
+        $detailIdsToDelete = array_map(fn($d) => $d->getId(), $detailsToDelete);
+
+        if (!empty($detailIdsToDelete)) {
+            $proofFilesToDelete = $this->getReservationDetailTempRepository()->findJustificatifNamesByIds($detailIdsToDelete);
+            foreach ($proofFilesToDelete as $fileName) {
+                $this->getFilesHelper()->deleteFile(UPLOAD_PROOF_PATH . 'temp/', $fileName);
+            }
+        }
+
+        // Supprimer les enregistrements de la base de données
+        $this->getReservationTempRepository()->deleteByIds($reservationIds);
     }
 
     /**
@@ -372,5 +400,28 @@ class ReservationSessionService
         return $this->reservationComplementTempRepository;
     }
 
+    /**
+     * Méthode lazy pour instancier le repository uniquement si nécessaire
+     * @return PiscineGradinsPlacesRepository
+     */
+    private function getPiscineGradinsPlacesRepository(): PiscineGradinsPlacesRepository
+    {
+        if ($this->piscineGradinsPlacesRepository === null) {
+            $this->piscineGradinsPlacesRepository = new PiscineGradinsPlacesRepository();
+        }
+        return $this->piscineGradinsPlacesRepository;
+    }
+
+    /**
+     * Méthode lazy pour instancier le helper de fichiers uniquement si nécessaire.
+     * @return FilesHelper
+     */
+    private function getFilesHelper(): FilesHelper
+    {
+        if ($this->filesHelper === null) {
+            $this->filesHelper = new FilesHelper();
+        }
+        return $this->filesHelper;
+    }
 
 }

@@ -122,6 +122,26 @@ class ReservationDetailTempRepository extends AbstractRepository
     }
 
     /**
+     * Récupère les noms des fichiers justificatifs pour une liste d'IDs de détails.
+     *
+     * @param int[] $detailIds
+     * @return string[]
+     */
+    public function findJustificatifNamesByIds(array $detailIds): array
+    {
+        if (empty($detailIds)) {
+            return [];
+        }
+
+        $placeholders = implode(',', array_fill(0, count($detailIds), '?'));
+        $sql = "SELECT justificatif_name FROM {$this->tableName} WHERE id IN ($placeholders) AND justificatif_name IS NOT NULL";
+
+        $results = $this->query($sql, $detailIds);
+
+        return array_column($results, 'justificatif_name');
+    }
+
+    /**
      * Insère un détail de réservation temporaire en base.
      *
      * Les champs optionnels (par ex. justificatif, place_number) peuvent être null.

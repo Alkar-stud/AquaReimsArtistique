@@ -235,7 +235,6 @@ class ReservationDataValidationService
                 $detailsById[$detail->getId()] = $detail;
             }
 
-
             $errors = [];
             $detailsToUpdate = [];
 

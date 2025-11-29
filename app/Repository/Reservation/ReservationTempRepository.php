@@ -130,16 +130,41 @@ class ReservationTempRepository extends AbstractRepository
     }
 
     /**
-     * Supprime les réservations temporaires dont la date de création est plus ancienne
-     * que l'intervalle de secondes spécifié.
+     * Trouve les réservations temporaires expirées.
      *
      * @param int $timeoutSeconds Le timeout en secondes.
+     * @return ReservationTemp[]
+     */
+    public function findExpired(int $timeoutSeconds): array
+    {
+        $sql = "SELECT * FROM {$this->tableName} WHERE created_at < NOW() - INTERVAL :seconds SECOND";
+        $rows = $this->query($sql, ['seconds' => $timeoutSeconds]);
+
+        if (empty($rows)) {
+            return [];
+        }
+
+        $reservations = array_map(fn($row) => $this->hydrate($row), $rows);
+        $this->hydrateRelations($reservations);
+        return $reservations;
+    }
+
+    /**
+     * Supprime une liste de réservations temporaires par leurs IDs.
+     *
+     * @param int[] $ids
      * @return bool
      */
-    public function deleteByTimeout(int $timeoutSeconds): bool
+    public function deleteByIds(array $ids): bool
     {
-        $sql = "DELETE FROM {$this->tableName} WHERE created_at < NOW() - INTERVAL :seconds SECOND";
-        return $this->execute($sql, ['seconds' => $timeoutSeconds]);
+        if (empty($ids)) {
+            return true;
+        }
+
+        $placeholders = implode(',', array_fill(0, count($ids), '?'));
+        $sql = "DELETE FROM {$this->tableName} WHERE id IN ($placeholders)";
+
+        return $this->execute($sql, $ids);
     }
 
     /**

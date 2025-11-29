@@ -30,27 +30,24 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Construction du FormData
         const formData = new FormData();
-        const participants = [];
-        const nameInputs = form.querySelectorAll('input[name="names[]"]');
-        const firstnameInputs = form.querySelectorAll('input[name="firstnames[]"]');
-        const justificatifInputs = form.querySelectorAll('input[name="justificatifs[]"]');
+        const participantsData = {};
+        const participantRows = form.querySelectorAll('.participant-row');
 
-        nameInputs.forEach((input, i) => {
-            const participantData = {
-                name: input.value.trim(),
-                firstname: firstnameInputs[i].value.trim(),
-            };
+        participantRows.forEach((row, index) => {
+            const detailId = row.querySelector('input[name="detail_ids[]"]').value;
+            const name = row.querySelector('input[name="names[]"]').value.trim();
+            const firstname = row.querySelector('input[name="firstnames[]"]').value.trim();
+            const justificatifInput = row.querySelector('input[name="justificatifs[]"]');
 
-            if (justificatifInputs[i] && justificatifInputs[i].files && justificatifInputs[i].files[0]) {
-                formData.append(`justificatif_${i}`, justificatifInputs[i].files[0]);
-                // On ajoute le nom du fichier au payload JSON pour garder le nom original le temps de la transaction
-                // Car le fichier n'est pas stocké sous son nom original (doublon, sécurité...)
-                participantData.justificatif = justificatifInputs[i].files[0].name;
+            participantsData[detailId] = { name, firstname };
+
+            if (justificatifInput && justificatifInput.files && justificatifInput.files[0]) {
+                // On associe le fichier à l'ID du détail
+                formData.append(`justificatifs[${detailId}]`, justificatifInput.files[0]);
             }
-            participants.push(participantData);
         });
 
-        formData.append('participants', JSON.stringify(participants));
+        formData.append('participants', JSON.stringify(participantsData));
 
         try {
             const data = await apiPost('/reservation/valid/4', formData);

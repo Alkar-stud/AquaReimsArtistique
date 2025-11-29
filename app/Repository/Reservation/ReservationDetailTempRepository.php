@@ -2,6 +2,7 @@
 namespace app\Repository\Reservation;
 
 use app\Repository\AbstractRepository;
+use app\Repository\Tarif\TarifRepository;
 use app\Models\Reservation\ReservationDetailTemp;
 
 class ReservationDetailTempRepository extends AbstractRepository
@@ -17,9 +18,25 @@ class ReservationDetailTempRepository extends AbstractRepository
         'place_number',
     ];
 
-    public function __construct()
+    private ?TarifRepository $tarifRepository;
+
+    public function __construct(?TarifRepository $tarifRepository = null)
     {
         parent::__construct('reservation_detail_temp');
+        $this->tarifRepository = $tarifRepository;
+    }
+
+    /**
+     * Méthode lazy pour instancier le repository Tarif uniquement si nécessaire.
+     *
+     * @return TarifRepository
+     */
+    private function getTarifRepository(): TarifRepository
+    {
+        if ($this->tarifRepository === null) {
+            $this->tarifRepository = new TarifRepository();
+        }
+        return $this->tarifRepository;
     }
 
     /**
@@ -32,7 +49,10 @@ class ReservationDetailTempRepository extends AbstractRepository
     {
         $rows = $this->query("SELECT * FROM {$this->tableName} WHERE id = :id", ['id' => $id]);
         if (empty($rows)) return null;
-        return $this->mapRowToModel($rows[0]);
+
+        $detail = $this->hydrate($rows[0]);
+        $this->hydrateRelations([$detail]);
+        return $detail;
     }
 
     /**
@@ -72,7 +92,10 @@ class ReservationDetailTempRepository extends AbstractRepository
         $sql = "SELECT * FROM `{$this->tableName}` WHERE " . implode(' AND ', $clauses);
         $rows = $this->query($sql, $params);
 
-        return array_map(fn($r) => $this->mapRowToModel($r), $rows);
+        $details = array_map(fn($r) => $this->hydrate($r), $rows);
+        $this->hydrateRelations($details);
+
+        return $details;
     }
 
     /**
@@ -137,7 +160,7 @@ class ReservationDetailTempRepository extends AbstractRepository
      * @param array $row Ligne associatif depuis la base.
      * @return ReservationDetailTemp Modèle peuplé.
      */
-    private function mapRowToModel(array $row): ReservationDetailTemp
+    protected function hydrate(array $row): ReservationDetailTemp
     {
         $m = new ReservationDetailTemp();
         $m->setId((int)$row['id']);
@@ -154,5 +177,32 @@ class ReservationDetailTempRepository extends AbstractRepository
             $m->setUpdatedAt($row['updated_at']);
         }
         return $m;
+    }
+
+    /**
+     * Hydrate les relations (ici, l'objet Tarif) pour une liste de détails.
+     *
+     * @param ReservationDetailTemp[] $details
+     * @return void
+     */
+    private function hydrateRelations(array $details): void
+    {
+        if (empty($details)) {
+            return;
+        }
+
+        $tarifIds = array_unique(array_map(fn($d) => $d->getTarif(), $details));
+        if (empty($tarifIds)) {
+            return;
+        }
+
+        $tarifs = $this->getTarifRepository()->findByIds($tarifIds);
+        $tarifsById = [];
+        foreach ($tarifs as $tarif) {
+            $tarifsById[$tarif->getId()] = $tarif;
+        }
+        foreach ($details as $detail) {
+            $detail->setTarifObject($tarifsById[$detail->getTarif()] ?? null);
+        }
     }
 }

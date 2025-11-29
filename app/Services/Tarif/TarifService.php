@@ -158,46 +158,6 @@ class TarifService
     }
 
     /**
-     * Retourne un tableau d'objet Tarif indexé par leur ID à partir de la session[reservation][reservation_detail]
-     *
-     * @param array|null $listTarifsEventsSelected
-     * @return array
-     */
-    public function getIndexedTarifFromEvent(?array $listTarifsEventsSelected): array
-    {
-        // Extraire les ids de tarif depuis $listTarifsEventsSelected
-        $ids = [];
-        foreach ($listTarifsEventsSelected as $row) {
-            $id = is_array($row)
-                ? ($row['tarif_id'] ?? null)
-                : ($row->tarif_id ?? null);
-
-            $id = (int)$id;
-            if ($id > 0) {
-                $ids[] = $id;
-            }
-        }
-
-        if (empty($ids)) {
-            return [];
-        }
-
-        // Dé-dupliquer
-        $ids = array_values(array_unique($ids));
-
-        // Charger les tarifs correspondants
-        $tarifs = $this->tarifRepository->findByIds($ids);
-
-        // Indexer par id
-        $indexed = [];
-        foreach ($tarifs as $tarif) {
-            $indexed[$tarif->getId()] = $tarif;
-        }
-
-        return $indexed;
-    }
-
-    /**
      * Vérifie si un code d'accès est déjà utilisé dans le même type (avec/sans places).
      * - Insensible à la casse et aux espaces.
      * - Inclut les tarifs inactifs.

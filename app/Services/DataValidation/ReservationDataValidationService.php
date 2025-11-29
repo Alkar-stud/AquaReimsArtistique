@@ -227,6 +227,68 @@ class ReservationDataValidationService
             }
         }
 
+        if($step == 4) {
+            // Récupérer tous les détails existants pour cette réservation temporaire.
+            $details = $this->reservationDetailTempRepository->findByFields(['reservation_temp' => $reservationTemp->getId()]);
+            $detailsById = [];
+            foreach ($details as $detail) {
+                $detailsById[$detail->getId()] = $detail;
+            }
+
+
+            $errors = [];
+            $detailsToUpdate = [];
+
+            // Parcourir chaque participant soumis et mettre à jour l'objet correspondant.
+            foreach ($data as $detailId => $participantData) {
+                if (!isset($detailsById[$detailId])) continue; // Sécurité: on ne traite que les IDs attendus
+
+                $detail = $detailsById[$detailId];
+                $detail->setName($participantData['name'] ?? null);
+                $detail->setFirstName($participantData['firstname'] ?? null);
+
+                $tarif = $detail->getTarifObject();
+                if ($tarif && $tarif->getRequiresProof()) {
+                    // Un justificatif est requis. Vérifions si un nouveau fichier est uploadé.
+                    if (isset($file['justificatifs']['error'][$detailId]) && $file['justificatifs']['error'][$detailId] === UPLOAD_ERR_OK) {
+                        // Un nouveau fichier est fourni, on le traite.
+                        $uploadedFile = [
+                            'name' => $file['justificatifs']['name'][$detailId],
+                            'type' => $file['justificatifs']['type'][$detailId],
+                            'tmp_name' => $file['justificatifs']['tmp_name'][$detailId],
+                            'error' => $file['justificatifs']['error'][$detailId],
+                            'size' => $file['justificatifs']['size'][$detailId],
+                        ];
+
+                        $newFileName = $this->generateUniqueProofName($detail->getName(), $detail->getFirstName(), $detail->getTarif(), pathinfo($uploadedFile['name'], PATHINFO_EXTENSION));
+                        $uploadResult = $this->uploadService->handleUpload($uploadedFile, UPLOAD_PROOF_PATH . 'temp/', $newFileName);
+
+                        if ($uploadResult['success']) {
+                            $detail->setJustificatifName($newFileName);
+                            $detail->setJustificatifOriginalName($uploadedFile['name']);
+                        } else {
+                            // L'upload a échoué, on ajoute une erreur spécifique.
+                            $errors["justificatifs[{$detailId}]"] = $uploadResult['error'];
+                        }
+                    }
+                }
+                $detailsToUpdate[] = $detail;
+            }
+
+            // Valider les données de tous les participants.
+            $validationResult = $this->validateDataStep4($detailsToUpdate, array_keys($data));
+            $errors = array_merge($errors, $validationResult['errors']);
+
+            if (!empty($errors)) {
+                return ['success' => false, 'errors' => $errors];
+            }
+
+            // Persister les modifications en base de données.
+            foreach ($detailsToUpdate as $detailToUpdate) {
+                $this->reservationDetailTempRepository->update($detailToUpdate);
+            }
+        }
+
 
         if (gettype($reservationTemp->getEvent()) == 'integer') {
             $isSeatsWithNumberInEventSwimmingPool = $this->eventRepository->findById($reservationTemp->getEvent(), true)->getPiscine()->getNumberedSeats();
@@ -443,23 +505,41 @@ class ReservationDataValidationService
      * Étape 4: valide name, firstname pour chaque tarif
      * Retourne tableau ['success' => true/false, 'errors' => $errors[]]
      *
-     * @param ReservationDetailTemp $reservationDetailTemp
+     * @param ReservationDetailTemp[] $details
+     * @param array $submittedIds Ordre des IDs soumis par le formulaire
      * @return array
      */
-    public function validateDataStep4(ReservationDetailTemp $reservationDetailTemp): array
+    public function validateDataStep4(array $details, array $submittedIds): array
     {
         $errors = [];
+
+        foreach ($details as $detail) {
+            $participantErrors = [];
+            $participantErrors = array_merge($participantErrors, $this->validateHelloAssoNameField("nom", $detail->getName()));
+            $participantErrors = array_merge($participantErrors, $this->validateHelloAssoNameField("prénom", $detail->getFirstName()));
+
+            // Vérifier si un justificatif est requis mais manquant
+            $tarif = $detail->getTarifObject();
+            if ($tarif && $tarif->getRequiresProof() && empty($detail->getJustificatifName())) {
+                $participantErrors['justificatifs'] = 'Un justificatif est requis pour ce tarif.';
+            }
+
+            if (!empty($participantErrors)) {
+                // Préfixer les clés d'erreur pour les faire correspondre aux champs du formulaire (ex: names[0], justificatifs[1])
+                // On utilise l'ID du détail pour faire le lien avec le champ du formulaire.
+                $detailId = $detail->getId();
+                foreach ($participantErrors as $field => $message) {
+                    $errors["{$field}[{$detailId}]"] = $message;
+                }
+            }
+        }
 
         if (!empty($errors)) {
             return ['success' => false, 'errors' => $errors];
         }
 
         return ['success' => true, 'errors' => []];
-
     }
-
-
-
 
     /**
      * Validation étape par étape. L'étape courante avec le tableau $input et les précédentes avec le contenu de $_SESSION

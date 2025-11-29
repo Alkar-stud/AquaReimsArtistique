@@ -13,6 +13,7 @@ class ReservationDetailTemp extends AbstractModel
     private ?string $name = null;
     private ?string $firstname = null;
     private int $tarif;
+    private ?object $tarifObject = null;
     private ?string $tarif_access_code = null;
     private ?string $justificatif_name = null;
     private ?string $justificatif_original_name = null;
@@ -24,6 +25,7 @@ class ReservationDetailTemp extends AbstractModel
     public function getName(): ?string { return $this->name; }
     public function getFirstName(): ?string { return $this->firstname; }
     public function getTarif(): int { return $this->tarif; }
+    public function getTarifObject(): ?object { return $this->tarifObject; }
     public function getTarifAccessCode(): ?string { return $this->tarif_access_code; }
     public function getJustificatifName(): ?string { return $this->justificatif_name; }
     public function getJustificatifOriginalName(): ?string { return $this->justificatif_original_name; }

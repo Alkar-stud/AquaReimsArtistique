@@ -99,10 +99,9 @@ class ReservationAjaxController extends AbstractController
             $files = null;
         }
 
-
-
         $result = $this->reservationDataValidationService->validateDataPerStep($session['reservation'], $step, $input, $files);
-if ($step >= 4) {
+if ($step >= 5) {
+    print_r($input);
     print_r($result);
     die;
 }

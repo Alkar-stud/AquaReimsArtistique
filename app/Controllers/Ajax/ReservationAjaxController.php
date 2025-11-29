@@ -323,20 +323,20 @@ if ($step >= 5) {
     #[Route('/reservation/seat-states/{eventSessionId}', name: 'seat_states', methods: ['GET'])]
     public function seatStates(int $eventSessionId): void
     {
-        $seatStates = [21 => "occupied", 41 => "in_cart_other", 61 => "in_cart_session", 81 => "vip", 101 => "benevole"]; // Exemple: la place avec l'ID 41 est occupée
-        //On récupère toutes les places réservées et payées
-
+        $seatStates = (object)[]; // Pour forcer l'objet tableau dans le JSON si tableau vide reçu du Service
+        $seatStates = [21 => "occupied", 41 => "in_cart_other", 61 => "in_cart_session", 81 => "vip", 101 => "benevole"]; // Exemples
+        //On récupère le tableau
+        $seatStates = $this->reservationQueryService->getSeatStates($eventSessionId);
 
         /* Doit renvoyer quelque chose du style :
         {
           "success": true,
           "seatStates": {
-            "123": "occupied",
-            "124": "occupied",
-            "250": "in_cart_other",
-            "251": "in_cart_session",
-            "310": "vip",
-            "311": "benevole"
+            123: "occupied",
+            250: "in_cart_other",
+            251: "in_cart_session",
+            310: "vip",
+            311: "benevole"
           }
         }
         */

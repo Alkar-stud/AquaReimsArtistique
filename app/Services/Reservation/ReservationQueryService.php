@@ -12,6 +12,7 @@ use app\Repository\Piscine\PiscineGradinsPlacesRepository;
 use app\Repository\Piscine\PiscineGradinsZonesRepository;
 use app\Repository\Reservation\ReservationComplementRepository;
 use app\Repository\Reservation\ReservationDetailRepository;
+use app\Repository\Reservation\ReservationDetailTempRepository;
 use app\Repository\Reservation\ReservationMailSentRepository;
 use app\Repository\Reservation\ReservationRepository;
 use app\Services\Mails\MailPrepareService;
@@ -25,6 +26,7 @@ class ReservationQueryService
     private ReservationPriceCalculator $priceCalculator;
     private ReservationComplementRepository $reservationComplementRepository;
     private ReservationDetailRepository $reservationDetailRepository;
+    private ReservationDetailTempRepository $reservationDetailTempRepository;
 
     public function __construct(
         ReservationRepository $reservationRepository,
@@ -33,6 +35,7 @@ class ReservationQueryService
         ReservationPriceCalculator $priceCalculator,
         ReservationComplementRepository $reservationComplementRepository,
         ReservationDetailRepository $reservationDetailRepository,
+        ReservationDetailTempRepository $reservationDetailTempRepository,
     )
     {
         $this->reservationRepository = $reservationRepository;
@@ -41,6 +44,7 @@ class ReservationQueryService
         $this->priceCalculator = $priceCalculator;
         $this->reservationComplementRepository = $reservationComplementRepository;
         $this->reservationDetailRepository = $reservationDetailRepository;
+        $this->reservationDetailTempRepository = $reservationDetailTempRepository;
     }
 
     /**
@@ -477,8 +481,31 @@ class ReservationQueryService
      */
     public function getSeatStates(int $eventSessionId): array
     {
+        $seatStates = [];
+        $currentUserSessionId = session_id();
 
+        // Places déjà payées (statut le plus prioritaire)
+        $occupiedSeats = $this->reservationDetailRepository->findReservedSeatsForSession($eventSessionId);
+        foreach ($occupiedSeats as $seatId => $reservationId) {
+            if ($seatId) {
+                $seatStates[$seatId] = 'occupied';
+            }
+        }
 
+        // Places en cours de réservation dans les paniers
+        $inCartSeats = $this->reservationDetailTempRepository->findSeatStatesForSession($eventSessionId);
+        foreach ($inCartSeats as $seatId => $seatSessionId) {
+            // On ne met à jour que si la place n'est pas déjà marquée comme payée
+            if (!isset($seatStates[$seatId])) {
+                if ($seatSessionId === $currentUserSessionId) {
+                    $seatStates[$seatId] = 'in_cart_session';
+                } else {
+                    $seatStates[$seatId] = 'in_cart_other';
+                }
+            }
+        }
+
+        return $seatStates;
     }
 
 

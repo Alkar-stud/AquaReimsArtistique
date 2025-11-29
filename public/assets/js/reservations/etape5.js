@@ -70,6 +70,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // --- Appel 2: Récupérer l'état des sièges ---
             let seatStates = {};
+console.log('eventSessionId', eventSessionId);
             try {
                 const stateResponse = await apiGet(`/reservation/seat-states/${eventSessionId}`);
                 if (stateResponse.success && stateResponse.seatStates) {

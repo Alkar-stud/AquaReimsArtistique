@@ -1,4 +1,4 @@
-<div class="container-fluid" data-event-session-id="{{ $eventSessionId ?? '0' }}">
+<div class="container-fluid" data-event-session-id="{{ $reservation['reservation']->getEventSession() ?? '0' }}">
     <h2 class="mb-4">Choix des places assises</h2>
 
     <!-- Liste des zones (visible au départ) -->
@@ -68,7 +68,7 @@
 {% if ($_ENV['APP_DEBUG'] == "true") %}
 {% php %}
 echo '<pre>';
-print_r($_SESSION['reservation']);
+print_r($reservation);
 echo '</pre>';
 {% endphp %}
 {% endif %}

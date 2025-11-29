@@ -99,6 +99,29 @@ class ReservationDetailTempRepository extends AbstractRepository
     }
 
     /**
+     * Récupère les places en cours de réservation pour une session d'événement,
+     * avec l'ID de session temporaire associé.
+     *
+     * @param int $eventSessionId L'ID de la session de l'événement.
+     * @return array
+     */
+    public function findSeatStatesForSession(int $eventSessionId): array
+    {
+        $sql = "SELECT
+                    rdt.place_number,
+                    rt.session_id
+                FROM reservation_detail_temp rdt
+                JOIN reservation_temp rt ON rdt.reservation_temp = rt.id
+                WHERE rt.event_session = :eventSessionId
+                  AND rdt.place_number IS NOT NULL";
+
+        $results = $this->query($sql, ['eventSessionId' => $eventSessionId]);
+
+        // Retourne un tableau associatif [place_number => session_id]
+        return array_column($results, 'session_id', 'place_number');
+    }
+
+    /**
      * Insère un détail de réservation temporaire en base.
      *
      * Les champs optionnels (par ex. justificatif, place_number) peuvent être null.

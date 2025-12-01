@@ -281,14 +281,10 @@ class ReservationController extends AbstractController
         $allTarifsWithoutSeatForThisEvent = $this->eventTarifRepository->findTarifsByEvent($session['reservation']->getEvent(), false);
 
         // Préparation des données à envoyer à la vue, construit le "pré-remplissage" s'il existe déjà un tarif avec code en session à l'aide du tableau des tarifs de cet event
-/*
         $dataForViewSpecialCode = $this->tarifService->getAllTarifAndPrepareViewWithSpecialCode(
             $allTarifsWithoutSeatForThisEvent,
-            $session,
-            'reservation_complement'
+            $session['reservation_complements']
         );
-*/
-        $dataForViewSpecialCode = null;
 
         //On ajoute si les sièges sont numérotées pour le bouton retour dans la vue
         $event = $this->eventRepository->findById($session['reservation']->getEvent(), true);

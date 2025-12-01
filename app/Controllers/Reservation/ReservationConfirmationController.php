@@ -57,6 +57,8 @@ class ReservationConfirmationController extends AbstractController
     {
         //On récupère la session
         $session = $this->reservationSessionService->getReservationSession();
+        //Nouvelle méthode :
+        //$session = $this->reservationSessionService->getReservationTempSession();
 
         //On redirige si la session est expirée
         if (!isset($session['event_id'])) {

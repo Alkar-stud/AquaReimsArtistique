@@ -216,35 +216,11 @@ if ($step >= 6) {
         $this->json($result);
     }
 
-    /**
-     * Redirige vers session expirée si timeout session réservation est expiré
-     *
-     * @return array|null
-     */
-    private function redirectIfReservationSessionIsExpired(): ?array
-    {
-        $session = $this->reservationSessionService->getReservationSession();
-
-        //On vérifie si la session est expirée
-        if (!$session || $this->reservationSessionService->isReservationSessionExpired($session)) {
-            $this->json([
-                'success'  => false,
-                'error'    => 'Votre session a expiré. Merci de recommencer votre réservation.',
-                'redirect' => '/reservation?session_expiree=ra'
-            ], 419);
-        }
-
-        // Rafraîchir l'activité
-        $_SESSION['reservation']['last_activity'] = time();
-
-        return $session;
-    }
-
     //======================================================================
     // ETAPE 3 : Choix des places
     //======================================================================
 
-    //Pour valider les tarifs avec code
+    //Pour valider les tarifs avec code, étape 3 pour les places assises et étape 6 pour les compléments
     /**
      * @return void
      */
@@ -304,14 +280,14 @@ if ($step >= 6) {
         //Selon s'il y a des places assises ou non, on est dans reservation_detail ou reservation_complement
         if ($result->getSeatCount() === null) {
             // Récupérer les détails actuels de la session
-            $currentDetails = $this->reservationSessionService->getReservationSession()['reservation_complement'] ?? [];
+            $currentDetails = $this->reservationSessionService->getReservationTempSession()['reservation_complements'] ?? [];
             // Utiliser le service pour retirer le tarif
             $newDetails = $this->tarifService->removeTarifFromDetails($currentDetails, $tarifId);
             // Mettre à jour la session
             $this->reservationSessionService->setReservationSession('reservation_complement', $newDetails);
         } else {
             // Récupérer les détails actuels de la session
-            $currentDetails = $this->reservationSessionService->getReservationSession()['reservation_detail'] ?? [];
+            $currentDetails = $this->reservationSessionService->getReservationTempSession()['reservation_details'] ?? [];
             // Utiliser le service pour retirer le tarif
             $newDetails = $this->tarifService->removeTarifFromDetails($currentDetails, $tarifId);
             // Mettre à jour la session

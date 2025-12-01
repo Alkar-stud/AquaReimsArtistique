@@ -81,47 +81,53 @@ function attachTooltipEvents(td, btn, tooltipText) {
  */
 export function applySeatStates(container, seatStates) {
     if (!container || !seatStates) {
-        return;
+        return; // Ne rien faire si pas de conteneur ou d'états
     }
 
-    // Map des statuts reçus de l'API vers les classes CSS de la légende
+    // Map des statuts DYNAMIQUES reçus de l'API vers les classes CSS
     const statusToClassMap = {
         'occupied': 'tdplacePris',
         'in_cart_other': 'tdplaceTemp',
         'in_cart_session': 'tdplaceTempSession',
-        'vip': 'tdplaceVIP',
-        'benevole': 'tdplaceBenevole',
-        'closed': 'tdplaceClosed',
     };
 
-    // On parcourt les états reçus
+    // --- Étape 1: Réinitialiser toutes les places ayant un statut dynamique ---
+    // On cible toutes les cellules qui ont une des classes de statut dynamique.
+    const dynamicClassesSelector = Object.values(statusToClassMap).map(c => `.${c}`).join(',');
+    const seatsToReset = container.querySelectorAll(dynamicClassesSelector);
+
+    seatsToReset.forEach(td => {
+        // On retire toutes les classes de statut dynamique
+        Object.values(statusToClassMap).forEach(c => td.classList.remove(c));
+
+        // On réactive le bouton à l'intérieur s'il n'est pas déjà désactivé par un statut statique
+        const btn = td.querySelector('button:disabled');
+        if (btn && btn.dataset.status && statusToClassMap.hasOwnProperty(btn.dataset.status)) {
+            btn.disabled = false;
+            delete btn.dataset.status;
+        }
+    });
+
+    // --- Étape 2: Appliquer les nouveaux états dynamiques ---
     for (const seatId in seatStates) {
         const status = seatStates[seatId];
         const cssClass = statusToClassMap[status];
         const seatButton = container.querySelector(`button[data-seat-id="${seatId}"]`);
 
-        // Si on trouve le siège et qu'on a une classe correspondante
         if (seatButton && cssClass) {
             const td = seatButton.closest('td');
             if (td) {
-                // On retire les classes de statut précédentes pour éviter les conflits
-                Object.values(statusToClassMap).forEach(c => td.classList.remove(c));
-                td.classList.remove('tdplaceVide'); // On retire aussi la classe par défaut
-                
-                // On ajoute la nouvelle classe
+                // On ajoute la classe de statut dynamique
                 td.classList.add(cssClass);
-                // On désactive le bouton SAUF si c'est une place déjà dans la sélection de l'utilisateur
+                // On met à jour le statut et on désactive le bouton (sauf pour la session en cours)
                 seatButton.disabled = (status !== 'in_cart_session');
-                seatButton.dataset.status = status; // On met à jour le statut sur le bouton
+                seatButton.dataset.status = status;
 
                 // Déterminer le texte de l'infobulle et l'attacher
                 let tooltipText = 'Non disponible';
                 if (status === 'occupied') tooltipText = 'Déjà réservée';
                 else if (status === 'in_cart_other') tooltipText = 'En cours de réservation';
                 else if (status === 'in_cart_session') tooltipText = 'Dans votre sélection';
-                else if (status === 'vip') tooltipText = 'Place VIP';
-                else if (status === 'benevole') tooltipText = 'Réservée aux bénévoles';
-                else if (status === 'closed') tooltipText = 'Fermée';
 
                 attachTooltipEvents(td, seatButton, tooltipText);
             }
@@ -134,7 +140,6 @@ export function createBleacherGrid(container, plan, options = {}) {
     if (!container) {
         return null;
     }
-    const mode = options.mode || 'readonly';
     const zone = plan.zone;
     const rows = Array.isArray(plan.rows) ? plan.rows : [];
     const cols = plan.cols || 0;
@@ -158,7 +163,6 @@ export function createBleacherGrid(container, plan, options = {}) {
 
     // Nettoyage
     container.innerHTML = '';
-    container.dataset.mode = mode;
 
     // Table
     const table = document.createElement('table');
@@ -269,7 +273,7 @@ export function createBleacherGrid(container, plan, options = {}) {
                 }
 
                 // Désactivation si non cliquable
-                const interactive = (mode !== 'readonly') && seatData.exists && (status === 'available' || status === 'pmr');
+                const interactive = seatData.exists && (status === 'available' || status === 'pmr');
                 if (!interactive) {
                     btn.disabled = true;
 
@@ -285,7 +289,7 @@ export function createBleacherGrid(container, plan, options = {}) {
                 }
 
                 // Gestion clic
-                if (interactive && typeof options.onSeatClick === 'function') {
+                if (typeof options.onSeatClick === 'function') {
                     btn.addEventListener('click', () => options.onSeatClick({
                         seatId: seatData.id,
                         code: seatCode,

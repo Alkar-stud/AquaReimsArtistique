@@ -133,6 +133,24 @@ table.zone-plan td.tdplaceTempSession {
 .legende .placeTemp::before { background: var(--ara-color-darkgray); }
 .legende .placeTempSession::before { background: var(--ara-color-gray); }
 
+/* Liste des participants responsive */
+@media (min-width: 768px) {
+    #participants-list.list-group-horizontal-md {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr); /* 2 colonnes sur tablettes */
+        gap: 0.5rem;
+    }
+    #participants-list.list-group-horizontal-md .list-group-item {
+        /* Rétablir la bordure du haut que Bootstrap retire en mode horizontal */
+        border-top-width: var(--bs-list-group-border-width);
+    }
+}
+@media (min-width: 1200px) {
+    #participants-list.list-group-horizontal-md {
+        grid-template-columns: repeat(3, 1fr); /* 3 colonnes sur grands écrans */
+    }
+}
+
 /* Zone card */
 .zone-card.zone-open {
     cursor: pointer;

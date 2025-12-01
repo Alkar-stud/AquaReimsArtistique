@@ -30,10 +30,11 @@
 
         <!-- Conteneur pour la liste des participants à placer -->
         <div id="participants-to-seat-container" class="my-3">
-            <!--
-                Le JavaScript pourra remplir cette zone avec la liste des participants
-                qui n'ont pas encore de siège attribué.
-            -->
+            <h3 class="h5">Participants à placer</h3>
+            <ul class="list-group list-group-horizontal-md" id="participants-list">
+                <!-- Le JavaScript remplira cette liste -->
+                <li class="list-group-item text-muted">Chargement des participants...</li>
+            </ul>
         </div>
 
         <div class="gradins-row align-items-center mb-2">
@@ -59,11 +60,17 @@
                 <a href="/reservation/etape4Display" class="btn btn-secondary w-100 w-md-auto">Modifier mon choix précédent</a>
             </div>
             <div class="col-12 col-md-6 order-1 order-md-2 d-flex justify-content-md-end mb-2 mb-md-0">
-                <button type="submit" class="btn btn-primary w-100 w-md-auto" id="submitButton">Valider et continuer</button>
+                <button type="submit" class="btn btn-primary w-100 w-md-auto" id="submitButton" disabled>Valider et continuer</button>
             </div>
         </div>
     </form>
+
+    <!-- Données pour le JavaScript -->
+    <script type="application/json" id="reservation-details-data">
+        {{! json_encode(array_map(fn($d) => $d->toArray(), $reservation['reservation_details'] ?? [])) !}}
+    </script>
 </div>
+
 <script type="module" src="/assets/js/reservations/etape5.js" defer></script>
 {% if ($_ENV['APP_DEBUG'] == "true") %}
 {% php %}

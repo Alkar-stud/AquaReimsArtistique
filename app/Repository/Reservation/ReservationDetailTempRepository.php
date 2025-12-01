@@ -3,6 +3,7 @@ namespace app\Repository\Reservation;
 
 use app\Repository\AbstractRepository;
 use app\Repository\Tarif\TarifRepository;
+use app\Repository\Piscine\PiscineGradinsPlacesRepository;
 use app\Models\Reservation\ReservationDetailTemp;
 
 class ReservationDetailTempRepository extends AbstractRepository
@@ -19,11 +20,13 @@ class ReservationDetailTempRepository extends AbstractRepository
     ];
 
     private ?TarifRepository $tarifRepository;
+    private ?PiscineGradinsPlacesRepository $piscineGradinsPlacesRepository;
 
-    public function __construct(?TarifRepository $tarifRepository = null)
+    public function __construct(?TarifRepository $tarifRepository = null, ?PiscineGradinsPlacesRepository $piscineGradinsPlacesRepository = null)
     {
         parent::__construct('reservation_detail_temp');
         $this->tarifRepository = $tarifRepository;
+        $this->piscineGradinsPlacesRepository = $piscineGradinsPlacesRepository;
     }
 
     /**
@@ -37,6 +40,19 @@ class ReservationDetailTempRepository extends AbstractRepository
             $this->tarifRepository = new TarifRepository();
         }
         return $this->tarifRepository;
+    }
+
+    /**
+     * Méthode lazy pour instancier le repository des places uniquement si nécessaire.
+     *
+     * @return PiscineGradinsPlacesRepository
+     */
+    private function getPiscineGradinsPlacesRepository(): PiscineGradinsPlacesRepository
+    {
+        if ($this->piscineGradinsPlacesRepository === null) {
+            $this->piscineGradinsPlacesRepository = new PiscineGradinsPlacesRepository();
+        }
+        return $this->piscineGradinsPlacesRepository;
     }
 
     /**
@@ -246,6 +262,21 @@ class ReservationDetailTempRepository extends AbstractRepository
         }
         foreach ($details as $detail) {
             $detail->setTarifObject($tarifsById[$detail->getTarif()] ?? null);
+        }
+
+        // Hydratation de l'objet Place
+        $placeIds = array_values(array_unique(array_filter(array_map(fn($d) => $d->getPlaceNumber(), $details))));
+        if (empty($placeIds)) {
+            return;
+        }
+
+        $places = $this->getPiscineGradinsPlacesRepository()->findByIds($placeIds);
+        $placesById = [];
+        foreach ($places as $place) {
+            $placesById[$place->getId()] = $place;
+        }
+        foreach ($details as $detail) {
+            $detail->setPlaceObject($placesById[$detail->getPlaceNumber()] ?? null);
         }
     }
 }

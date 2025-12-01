@@ -59,6 +59,43 @@ class PiscineGradinsZonesRepository extends AbstractRepository
     }
 
     /**
+     * Récupère plusieurs zones par leurs IDs.
+     *
+     * @param int[] $ids
+     * @param bool $withPiscine
+     * @return PiscineGradinsZones[]
+     */
+    public function findByIds(array $ids, bool $withPiscine = false): array
+    {
+        if (empty($ids)) {
+            return [];
+        }
+
+        $placeholders = implode(',', array_fill(0, count($ids), '?'));
+        $sql = "SELECT * FROM {$this->tableName} WHERE id IN ($placeholders)";
+        $rows = $this->query($sql, $ids);
+
+        if (empty($rows)) {
+            return [];
+        }
+
+        $zones = array_map(fn($row) => $this->hydrate($row), $rows);
+
+        if ($withPiscine) {
+            $piscineIds = array_values(array_unique(array_map(fn(PiscineGradinsZones $z) => $z->getPiscine(), $zones)));
+            if (!empty($piscineIds)) {
+                $piscineRepo = new PiscineRepository();
+                $piscines = $piscineRepo->findByIds($piscineIds); // findByIds doit retourner un tableau indexé par ID
+                foreach ($zones as $zone) {
+                    $zone->setPiscineObject($piscines[$zone->getPiscine()] ?? null);
+                }
+            }
+        }
+
+        return $zones;
+    }
+
+    /**
      * Trouve une zone par son nom et son ID de piscine.
      * @param string $zoneName
      * @param int $piscineId

@@ -109,6 +109,30 @@ class PiscineGradinsPlacesRepository extends AbstractRepository
         return $results;
     }
 
+    /**
+     * Récupère plusieurs places par leurs IDs.
+     *
+     * @param int[] $ids
+     * @param bool $withZone
+     * @return PiscineGradinsPlaces[]
+     */
+    public function findByIds(array $ids, bool $withZone = true): array
+    {
+        if (empty($ids)) {
+            return [];
+        }
+
+        $placeholders = implode(',', array_fill(0, count($ids), '?'));
+        $sql = "SELECT * FROM {$this->tableName} WHERE id IN ($placeholders)";
+
+        $rows = $this->query($sql, $ids);
+        if (empty($rows)) {
+            return [];
+        }
+
+        return $this->hydrateRelations(array_map([$this, 'hydrate'], $rows), $withZone);
+    }
+
 
     /**
      * Ajoute une place.
@@ -188,4 +212,38 @@ class PiscineGradinsPlacesRepository extends AbstractRepository
         }
         return $place;
     }
+
+    /**
+     * Hydrate les relations (ici, l'objet Zone) pour une liste de places.
+     *
+     * @param PiscineGradinsPlaces[] $places
+     * @param bool $withZone
+     * @return PiscineGradinsPlaces[]
+     */
+    private function hydrateRelations(array $places, bool $withZone): array
+    {
+        if (empty($places) || !$withZone) {
+            return $places;
+        }
+
+        $zoneIds = array_values(array_unique(array_map(fn($p) => $p->getZone(), $places)));
+        if (empty($zoneIds)) {
+            return $places;
+        }
+
+        $zonesRepo = new PiscineGradinsZonesRepository();
+        $zones = $zonesRepo->findByIds($zoneIds);
+        $zonesById = [];
+        foreach ($zones as $zone) {
+            $zonesById[$zone->getId()] = $zone;
+        }
+
+        foreach ($places as $place) {
+            $place->setZoneObject($zonesById[$place->getZone()] ?? null);
+        }
+
+        return $places;
+    }
+
+
 }

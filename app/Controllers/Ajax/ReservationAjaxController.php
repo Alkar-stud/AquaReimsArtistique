@@ -6,6 +6,7 @@ use app\Attributes\Route;
 use app\Controllers\AbstractController;
 use app\DTO\ReservationComplementItemDTO;
 use app\DTO\ReservationDetailItemDTO;
+use app\Repository\Reservation\ReservationDetailTempRepository;
 use app\Repository\Tarif\TarifRepository;
 use app\Services\FlashMessageService;
 use app\Services\Reservation\ReservationQueryService;
@@ -22,6 +23,7 @@ class ReservationAjaxController extends AbstractController
     private ReservationDataValidationService $reservationDataValidationService;
     private ReservationQueryService $reservationQueryService;
     private TarifService $tarifService;
+    private ReservationDetailTempRepository $reservationDetailTempRepository;
     //Pour définir les steps existants
     private array $existingStep = [1, 2, 3, 4, 5, 6];
 
@@ -32,6 +34,7 @@ class ReservationAjaxController extends AbstractController
         ReservationDataValidationService $reservationDataValidationService,
         ReservationQueryService $reservationQueryService,
         TarifService $tarifService,
+        ReservationDetailTempRepository $reservationDetailTempRepository,
     )
     {
         // On déclare la route comme publique pour éviter la redirection vers la page de login.
@@ -42,6 +45,7 @@ class ReservationAjaxController extends AbstractController
         $this->reservationDataValidationService = $reservationDataValidationService;
         $this->reservationQueryService = $reservationQueryService;
         $this->tarifService = $tarifService;
+        $this->reservationDetailTempRepository = $reservationDetailTempRepository;
     }
 
 
@@ -324,7 +328,7 @@ if ($step >= 5) {
     public function seatStates(int $eventSessionId): void
     {
         $seatStates = (object)[]; // Pour forcer l'objet tableau dans le JSON si tableau vide reçu du Service
-        $seatStates = [21 => "occupied", 41 => "in_cart_other", 61 => "in_cart_session", 81 => "vip", 101 => "benevole"]; // Exemples
+        //$seatStates = [21 => "occupied", 41 => "in_cart_other", 61 => "in_cart_session", 81 => "vip", 101 => "benevole"]; // Exemples
         //On récupère le tableau
         $seatStates = $this->reservationQueryService->getSeatStates($eventSessionId);
 
@@ -341,8 +345,6 @@ if ($step >= 5) {
         }
         */
 
-
-
         $this->json(
             [
                 'success' => true,
@@ -351,16 +353,83 @@ if ($step >= 5) {
         );
     }
 
-    #[Route('/reservation/etape5AddSeat', name: 'etape5_add_seat', methods: ['POST'])]
-    public function etape5AddSeat(): void
+    #[Route('/reservation/etape5AddSeat/{id}', name: 'etape5_add_seat', methods: ['POST'])]
+    public function etape5AddSeat(int $id): void
     {
+        $session = $this->reservationSessionService->getReservationTempSession();
+        if (!$session['reservation']) {
+            $this->json(['success' => false, 'error' => 'Session expirée.']);
+            return;
+        }
 
+        // Trouver un participant sans place et lui assigner la place {id}
+        $details = $session['reservation_details'] ?? [];
+        $participantToUpdate = null;
+        foreach ($details as $detail) {
+            if (empty($detail->getPlaceNumber())) {
+                $participantToUpdate = $detail;
+                break;
+            }
+        }
+
+        if (!$participantToUpdate) {
+            $this->json(['success' => false, 'error' => 'Tous les participants ont déjà une place attribuée.']);
+            return;
+        }
+
+        // Mettre à jour la place et sauvegarder
+        $participantToUpdate->setPlaceNumber($id);
+        $this->reservationDetailTempRepository->update($participantToUpdate);
+
+        // Récupérer le nouvel état complet des sièges
+        $seatStates = $this->reservationQueryService->getSeatStates($session['reservation']->getEventSession());
+
+        // Récupérer les participants mis à jour et vérifier si tous ont une place
+        $updatedParticipants = $this->reservationDetailTempRepository->findByFields(['reservation_temp' => $session['reservation']->getId()]);
+        $allSeated = empty(array_filter($updatedParticipants, fn($d) => empty($d->getPlaceNumber())));
+
+        // Renvoyer la réponse avec le nouvel état
+        $this->json([
+            'success' => true,
+            'seatStates' => $seatStates,
+            'participants' => array_map(fn($d) => $d->toArray(), $updatedParticipants),
+            'allParticipantsSeated' => $allSeated
+        ]);
     }
 
-    #[Route('/reservation/etape5RemoveSeat', name: 'etape5_remove_seat', methods: ['POST'])]
-    public function etape5RemoveSeat(): void
+    #[Route('/reservation/etape5RemoveSeat/{id}', name: 'etape5_remove_seat', methods: ['POST'])]
+    public function etape5RemoveSeat(int $id): void
     {
+        $session = $this->reservationSessionService->getReservationTempSession();
+        if (!$session['reservation']) {
+            $this->json(['success' => false, 'error' => 'Session expirée.']);
+            return;
+        }
 
+        // Trouver le participant qui a cette place et la retirer
+        $details = $session['reservation_details'] ?? [];
+        foreach ($details as $detail) {
+            if ((int)$detail->getPlaceNumber() === $id) {
+                $detail->setPlaceNumber(null);
+                $this->reservationDetailTempRepository->update($detail);
+                break;
+            }
+        }
+
+        // Récupérer le nouvel état complet des sièges
+        $seatStates = $this->reservationQueryService->getSeatStates($session['reservation']->getEventSession());
+
+        // Récupérer les participants mis à jour et vérifier si tous ont une place
+        $updatedParticipants = $this->reservationDetailTempRepository->findByFields(['reservation_temp' => $session['reservation']->getId()]);
+        $allSeated = empty(array_filter($updatedParticipants, fn($d) => empty($d->getPlaceNumber())));
+
+        // Renvoyer la réponse
+        $this->json([
+            'success' => true,
+            'seatStates' => $seatStates,
+            'participants' => array_map(fn($d) => $d->toArray(), $updatedParticipants),
+            'allParticipantsSeated' => $allSeated
+        ]);
     }
 
 }

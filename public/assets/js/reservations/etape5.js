@@ -1,5 +1,6 @@
-import {apiGet} from "../components/apiClient.js";
+import {apiGet, apiPost} from "../components/apiClient.js";
 import {createBleacherGrid, applySeatStates} from "../components/bleacherGrid.js";
+import {showFlashMessage} from "../components/ui.js";
 
 document.addEventListener('DOMContentLoaded', () => {
     const zonesList = document.querySelector('[data-component="zones-list"]');
@@ -26,23 +27,133 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentPiscineId = null;
     let currentZoneId = null;
     let loading = false;
+    let allParticipantsSeated = false; // Nouvel état pour savoir si toutes les places sont prises
+    let participants = []; // Pour stocker les détails des participants
+
+    /**
+     * Met à jour l'état du bouton "Valider et continuer".
+     */
+    function updateContinueButtonState() {
+        const submitButton = document.getElementById('submitButton');
+        if (submitButton) {
+            submitButton.disabled = !allParticipantsSeated;
+        }
+    }
+
+    /**
+     * Affiche la liste des participants et leur siège attribué.
+     */
+    function renderParticipantsList(participantsData) {
+        const container = document.getElementById('participants-list');
+        if (!container) return;
+
+        // Mettre à jour la variable globale des participants
+        participants = participantsData;
+
+        // Déterminer si tous les participants ont une place et mettre à jour l'état global
+        const unseatedCount = participants.filter(p => !p.placeNumber).length;
+        allParticipantsSeated = (unseatedCount === 0 && participants.length > 0);
+        updateContinueButtonState();
+
+        if (participants.length === 0) {
+            container.innerHTML = '<li class="list-group-item text-muted">Aucun participant avec place assise.</li>';
+            return;
+        }
+
+        container.innerHTML = ''; // On vide la liste
+        participants.forEach(p => {
+            const li = document.createElement('li');
+            li.className = 'list-group-item d-flex justify-content-between align-items-center';
+            li.dataset.participantId = p.id;
+
+            const seatInfo = p.fullPlaceName
+                ? `<span class="badge bg-primary">${p.fullPlaceName}</span>`
+                : `<span class="badge bg-secondary">Place non choisie</span>`;
+
+            li.innerHTML = `
+                 <span>${p.firstname} ${p.name}</span>
+                 ${seatInfo}
+             `;
+            container.appendChild(li);
+        });
+    }
+
 
     /**
      * Gère le clic sur un siège disponible.
-     * Pour l'instant, affiche les informations en console.
-     * C'est ici que sera implémentée la logique d'ajout/retrait de la sélection.
      * @param {object} seat - L'objet représentant le siège cliqué.
      * @param {HTMLButtonElement} btn - Le bouton du siège.
      */
-    function handleSeatClick(seat, btn) {
+    async function handleSeatClick(seat, btn) {
         // Le statut est 'available' pour une place vide, ou 'in_cart_session' pour une place sélectionnée.
         const currentStatus = btn.dataset.status || 'available';
 
-        console.log(`Clic sur une place avec le statut : ${currentStatus}. Prêt pour la sélection/désélection !`, {
+        // Si on essaie de sélectionner une nouvelle place alors que tout le monde est déjà placé, on bloque.
+        if (currentStatus === 'available' && allParticipantsSeated) {
+            showFlashMessage('info', 'Tous les participants ont déjà une place. Vous ne pouvez pas en sélectionner plus.');
+            // Retour en haut de la page
+            window.scrollTo(0, 0);
+            return;
+        }
+
+        console.log(`Statut : ${currentStatus} : `, {
             id: seat.seatId,
             code: seat.code,
             status: currentStatus
         });
+
+        let urlPath;
+        if (currentStatus === 'available') {
+            urlPath = `/reservation/etape5AddSeat/${seat.seatId}`;
+        } else {
+            urlPath = `/reservation/etape5RemoveSeat/${seat.seatId}`;
+        }
+
+        if (loading) return;
+        loading = true;
+        btn.disabled = true; // Désactive le bouton pendant l'appel
+
+        try {
+            // Appel API pour ajouter/retirer la place
+            const response = await apiPost(urlPath, {});
+
+            if (response.success && response.seatStates && response.participants && typeof response.allParticipantsSeated === 'boolean') {
+                // Le backend a renvoyé le nouvel état, on met à jour la vue sans refaire d'appel
+                const gridContainer = bleacher.querySelector('[data-bleacher-seats]');
+                applySeatStates(gridContainer, response.seatStates);
+                // On met à jour la liste des participants et l'état du bouton "Valider"
+                renderParticipantsList(response.participants);
+            } else {
+                // En cas d'échec, on recharge toute la zone pour être sûr de l'état
+                console.warn("L'ajout/retrait a échoué ou n'a pas renvoyé d'état, rechargement complet.");
+                await loadZone(currentPiscineId, currentZoneId);
+            }
+        } catch (err) {
+            console.error("Erreur lors de l'ajout/retrait de la place:", err);
+            // On recharge pour être sûr
+            await loadZone(currentPiscineId, currentZoneId);
+        } finally {
+            loading = false;
+            // L'état du bouton sera géré par applySeatStates
+        }
+    }
+
+    /**
+     * Met à jour la vue des gradins avec les données fournies.
+     * @param {object} structurePlan - Le plan de structure de la zone.
+     * @param {object} seatStates - L'état des sièges.
+     */
+    function updateBleacherView(structurePlan, seatStates) {
+        const z = structurePlan.zone;
+        bleacher.dataset.zoneId = z.id ?? currentZoneId;
+        zoneNameEl.textContent = z.zoneName ?? 'Zone';
+
+        const gridContainer = bleacher.querySelector('[data-bleacher-seats]');
+        gridInstance = createBleacherGrid(gridContainer, structurePlan, {
+            mode: 'reservation',
+            onSeatClick: handleSeatClick
+        });
+        applySeatStates(gridContainer, seatStates);
     }
 
     function showZones() {
@@ -55,45 +166,38 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     let gridInstance = null;
-    async function loadZone(piscineId, zoneId) {
-        if (loading) return;
+    async function loadZone(piscineId, zoneId, preloadedData = null) {
+        if (loading) {
+            return;
+        }
         loading = true;
         refreshBtn?.classList.add('disabled');
 
         try {
-            // --- Appel 1: Récupérer la structure du plan ---
-            const structureResponse = await apiGet(`/piscine/gradins/${piscineId}/${zoneId}`);
-            if (!structureResponse.success || !structureResponse.plan || !structureResponse.plan.zone) {
-                console.warn('Plan de structure invalide', structureResponse);
-                return;
-            }
+            let structurePlan, seatStates;
 
-            // --- Appel 2: Récupérer l'état des sièges ---
-            let seatStates = {};
-console.log('eventSessionId', eventSessionId);
-            try {
-                const stateResponse = await apiGet(`/reservation/seat-states/${eventSessionId}`);
-                if (stateResponse.success && stateResponse.seatStates) {
-                    seatStates = stateResponse.seatStates;
+            if (preloadedData) {
+                structurePlan = preloadedData.structurePlan;
+                seatStates = preloadedData.seatStates;
+            } else {
+                // Exécute les deux appels en parallèle pour plus de rapidité
+                const [structureResponse, stateResponse] = await Promise.all([
+                    apiGet(`/piscine/gradins/${piscineId}/${zoneId}`),
+                    apiGet(`/reservation/seat-states/${eventSessionId}`).catch(err => {
+                        console.warn("Impossible de charger l'état des sièges, affichage du plan vierge.", err);
+                        return { success: false }; // Retourne un objet d'échec pour ne pas bloquer Promise.all
+                    })
+                ]);
+
+                if (!structureResponse.success || !structureResponse.plan) {
+                    console.error('Plan de structure invalide', structureResponse);
+                    return;
                 }
-            } catch (stateErr) {
-                console.warn("Impossible de charger l'état des sièges, affichage du plan vierge.", stateErr);
+                structurePlan = structureResponse.plan;
+                seatStates = (stateResponse.success && stateResponse.seatStates) ? stateResponse.seatStates : {};
             }
 
-            const z = structureResponse.plan.zone;
-            bleacher.dataset.zoneId = z.id ?? zoneId;
-            zoneNameEl.textContent = z.zoneName ?? 'Zone';
-
-            if (structureResponse.plan) {
-                const gridContainer = bleacher.querySelector('[data-bleacher-seats]');
-                // On crée la grille "vierge"
-                gridInstance = createBleacherGrid(gridContainer, structureResponse.plan, {
-                    mode: 'reservation',
-                    onSeatClick: handleSeatClick
-                });
-                // On applique les états dynamiques sur la grille qui vient d'être créée
-                applySeatStates(gridContainer, seatStates);
-            }
+            updateBleacherView(structurePlan, seatStates);
 
             // Mettre à jour état courant et boutons de navigation
             currentPiscineId = piscineId;
@@ -201,6 +305,12 @@ console.log('eventSessionId', eventSessionId);
         await loadZone(piscineId, zoneId);
         showBleacher();
     });
+
+    // Afficher la liste des participants au chargement de la page
+    const initialParticipantsData = JSON.parse(document.getElementById('reservation-details-data')?.textContent || '[]');
+    renderParticipantsList(initialParticipantsData);
+    // On met à jour le bouton une première fois au cas où toutes les places seraient déjà choisies au chargement.
+    updateContinueButtonState();
 
     backBtn.addEventListener('click', (e) => {
         e.preventDefault();

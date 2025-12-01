@@ -160,7 +160,8 @@ abstract class AbstractController
             } else {
                 // Si pas d'utilisateur connecté, on vérifie s'il y a une session de réservation
                 $reservationSession = $this->reservationSessionService->getReservationTempSession();
-                if ($reservationSession && !empty($reservationSession['reservation']->getEvent())) {
+
+                if ($reservationSession['reservation'] && !empty($reservationSession['reservation']->getEvent())) {
 
                     $data['reservation_session_active'] = true;
                     $data['js_data']['debug']['sessionTimeoutDuration'] = $this->reservationSessionService->getReservationTimeoutDuration();

@@ -8,7 +8,6 @@ use app\Repository\Event\EventRepository;
 use app\Repository\Event\EventTarifRepository;
 use app\Services\DataValidation\ReservationDataValidationService;
 use app\Services\Event\EventQueryService;
-use app\Services\FlashMessageService;
 use app\Services\Reservation\ReservationQueryService;
 use app\Services\Reservation\ReservationSessionService;
 use app\Services\Swimmer\SwimmerQueryService;
@@ -255,12 +254,13 @@ class ReservationController extends AbstractController
     public function etape6Display(): void
     {
         //On récupère la session
-        $session = $this->reservationSessionService->getReservationSession();
+        $session = $this->reservationSessionService->getReservationTempSession();
 
         //On vérifie si la session est expirée
-        if (!$session || $this->reservationSessionService->isReservationSessionExpired($session)) {
+        $reservationTemp = $session['reservation'] ?? null;
+        if (!$reservationTemp) {
             $this->flashMessageService->setFlashMessage('warning', 'Votre session a expiré. Merci de recommencer votre réservation.');
-            $this->redirect('/reservation?session_expiree=r6');
+            $this->redirect('/reservation?session_expiree=r2');
         }
 
         //Il faut valider les étapes précédentes
@@ -278,18 +278,20 @@ class ReservationController extends AbstractController
         }
 
         // Récupération des tarifs avec tarif sans place non assise de cet event
-        $allTarifsWithoutSeatForThisEvent = $this->eventTarifRepository->findTarifsByEvent($session['event_id'], false);
+        $allTarifsWithoutSeatForThisEvent = $this->eventTarifRepository->findTarifsByEvent($session['reservation']->getEvent(), false);
 
         // Préparation des données à envoyer à la vue, construit le "pré-remplissage" s'il existe déjà un tarif avec code en session à l'aide du tableau des tarifs de cet event
+/*
         $dataForViewSpecialCode = $this->tarifService->getAllTarifAndPrepareViewWithSpecialCode(
             $allTarifsWithoutSeatForThisEvent,
             $session,
             'reservation_complement'
         );
-
+*/
+        $dataForViewSpecialCode = null;
 
         //On ajoute si les sièges sont numérotées pour le bouton retour dans la vue
-        $event = $this->eventRepository->findById($session['event_id'], true);
+        $event = $this->eventRepository->findById($session['reservation']->getEvent(), true);
 
         //Préparation des données déjà saisie à cette étape, regroupé par id et quantité
         $arrayTarifForForm = $this->reservationSessionService->getComplementQuantities($session['reservation_complement']);

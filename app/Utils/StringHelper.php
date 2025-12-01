@@ -2,6 +2,7 @@
 
 namespace app\Utils;
 
+use DateTimeImmutable;
 use Normalizer;
 
 class StringHelper
@@ -43,5 +44,28 @@ class StringHelper
         return mb_convert_case($raw, MB_CASE_TITLE, 'UTF-8');
     }
 
+    /**
+     * Génère un nom de fichier unique pour un fichier.
+     *
+     * @param string $name
+     * @param string $firstname
+     * @param int $tarifId
+     * @param string $extension
+     * @return string
+     */
+    public static function generateUniqueProofName(string $name, string $firstname, int $tarifId, string $extension): string
+    {
+        // Horodatage au fuseau horaire de l'application (ex : 20251005130632)
+        $now = new DateTimeImmutable('now');
+        $timestamp = $now->format('YmdHis');
+
+        $normalizer = Normalizer::class;
+        $name = $normalizer::normalize($name, Normalizer::FORM_D);
+        $firstname = $normalizer::normalize($firstname, Normalizer::FORM_D);
+        $safeNom = strtolower(preg_replace('/[^a-z0-9]/i', '', $name));
+        $safePrenom = strtolower(preg_replace('/[^a-z0-9]/i', '', $firstname));
+
+        return "{$timestamp}_{$tarifId}_{$safeNom}_$safePrenom.$extension";
+    }
 
 }

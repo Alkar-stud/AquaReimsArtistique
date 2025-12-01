@@ -429,6 +429,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         return;
                     }
                     showFlashMessage('danger', data.error || 'Erreur lors de la validation de l’étape 5.');
+                    submitButtons.forEach(btn => btn.disabled = false);
                 }
             })
             .catch((err) => {

@@ -28,8 +28,6 @@
             </div>
         </div>
 
-
-
     <form id="reservationPlacesForm">
         <!-- Bloc de boutons TOP -->
         <div class="row mb-3">
@@ -66,7 +64,7 @@
 
             <button type="button" class="nav-zone-btn next d-none d-md-inline-flex" data-action="next-zone" aria-label="Zone suivante">&rarr;</button>
         </div>
-    </div>
+
         <!-- Bloc de boutons BOTTOM -->
         <div class="row">
             <div class="col-12 col-md-6 order-2 order-md-1 mb-2 mb-md-0">

@@ -28,6 +28,20 @@
             </div>
         </div>
 
+
+
+    <form id="reservationPlacesForm">
+        <!-- Bloc de boutons TOP -->
+        <div class="row mb-3">
+            <div class="col-12 col-md-6 mb-2 mb-md-0">
+                <a href="/reservation/etape4Display" class="btn btn-secondary w-100 w-md-auto">Modifier mon choix précédent</a>
+            </div>
+            <div class="col-12 col-md-6 d-flex justify-content-md-end">
+                <button type="submit" class="btn btn-primary w-100 w-md-auto" data-role="submit-reservation" disabled>Valider et continuer</button>
+            </div>
+        </div>
+
+
         <!-- Conteneur pour la liste des participants à placer -->
         <div id="participants-to-seat-container" class="my-3">
             <h3 class="h5">Participants à placer</h3>
@@ -53,14 +67,13 @@
             <button type="button" class="nav-zone-btn next d-none d-md-inline-flex" data-action="next-zone" aria-label="Zone suivante">&rarr;</button>
         </div>
     </div>
-
-    <form id="reservationPlacesForm">
+        <!-- Bloc de boutons BOTTOM -->
         <div class="row">
             <div class="col-12 col-md-6 order-2 order-md-1 mb-2 mb-md-0">
                 <a href="/reservation/etape4Display" class="btn btn-secondary w-100 w-md-auto">Modifier mon choix précédent</a>
             </div>
             <div class="col-12 col-md-6 order-1 order-md-2 d-flex justify-content-md-end mb-2 mb-md-0">
-                <button type="submit" class="btn btn-primary w-100 w-md-auto" id="submitButton" disabled>Valider et continuer</button>
+                <button type="submit" class="btn btn-primary w-100 w-md-auto" data-role="submit-reservation" disabled>Valider et continuer</button>
             </div>
         </div>
     </form>

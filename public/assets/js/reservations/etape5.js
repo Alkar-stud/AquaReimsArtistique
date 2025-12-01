@@ -3,11 +3,17 @@ import {createBleacherGrid, applySeatStates} from "../components/bleacherGrid.js
 import {showFlashMessage} from "../components/ui.js";
 
 document.addEventListener('DOMContentLoaded', () => {
+    const form = document.getElementById('reservationPlacesForm');
+    if (!form) return;
     const zonesList = document.querySelector('[data-component="zones-list"]');
     const bleacher = document.querySelector('[data-component="bleacher"]');
     if (!zonesList || !bleacher) {
         return;
     }
+
+    const submitButtons = document.querySelectorAll('[data-role="submit-reservation"]');
+
+    const submitButton = document.getElementById('submitButton');
 
     const zoneNameEl = bleacher.querySelector('[data-bleacher-zone-name]');
     const backBtn = bleacher.querySelector('[data-action="back-zones"]');
@@ -34,10 +40,9 @@ document.addEventListener('DOMContentLoaded', () => {
      * Met à jour l'état du bouton "Valider et continuer".
      */
     function updateContinueButtonState() {
-        const submitButton = document.getElementById('submitButton');
-        if (submitButton) {
-            submitButton.disabled = !allParticipantsSeated;
-        }
+        submitButtons.forEach(btn => {
+            btn.disabled = !allParticipantsSeated;
+        });
     }
 
     /**
@@ -406,4 +411,31 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Initial update
     updateNavButtons();
+
+    //on écoute le bouton Valider
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        submitButtons.forEach(btn => btn.disabled = true);
+
+        apiPost('/reservation/valid/5', {})
+            .then((data) => {
+                if (data.success) {
+                    window.location.href = '/reservation/etape6Display';
+                } else {
+                    if (data.redirect) {
+                        window.location.href = data.redirect;
+                        return;
+                    }
+                    showFlashMessage('danger', data.error || 'Erreur lors de la validation de l’étape 5.');
+                }
+            })
+            .catch((err) => {
+                showFlashMessage('danger', err.userMessage || err.message);
+                submitButtons.forEach(btn => btn.disabled = false);
+            });
+    });
+
+
 });

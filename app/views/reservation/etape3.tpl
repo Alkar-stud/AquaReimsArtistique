@@ -23,7 +23,6 @@
           aria-describedby="step3-hint"
           data-limitation="{{ $swimmerLimit['limit'] ?? 'null' }}"
           data-deja-reservees="{{ $swimmerLimit['currentReservations'] ?? 0 }}"
-          data-special-tarif-session="{{ json_encode($specialTarifSession ?? null) }}"
           data-special-tarif-session="{{ json_encode($specialTarifSession ?? null, $jsonFlags) }}"
           data-all-tarifs-seats="{{ json_encode($allTarifsWithSeatForThisEvent, $jsonFlags) }}"
     >

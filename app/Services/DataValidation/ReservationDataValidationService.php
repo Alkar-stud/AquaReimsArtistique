@@ -117,6 +117,12 @@ class ReservationDataValidationService
             $this->reservationTempRepository->insert($reservationTemp);
         }
 
+        //On récupère l'event pour avoir les tarifs après l'étape 1
+        $event = $this->eventRepository->findById($reservationTemp->getEvent());
+        if (!$event) {
+            return ['success' => false, 'errors' => ['event_id' => 'Événement introuvable.'], 'data' => []];
+        }
+
         if ($step == 2) {
             //On crée un objet temporaire pour cette étape
             $reservationTempForStep2 = clone $reservationTemp;
@@ -139,12 +145,6 @@ class ReservationDataValidationService
         }
 
         if($step == 3) {
-            //On récupère l'event pour avoir les tarifs
-            $event = $this->eventRepository->findById($reservationTemp->getEvent());
-            if (!$event) {
-                return ['success' => false, 'errors' => ['event_id' => 'Événement introuvable.'], 'data' => []];
-            }
-
             // Récupérer les détails existants et les regrouper par tarifId
             $existingDetailsRaw = $this->reservationDetailTempRepository->findByFields(['reservation_temp' => $reservationTemp->getId()]);
             $existingDetailsByTarif = [];
@@ -297,6 +297,19 @@ class ReservationDataValidationService
         }
 
         if($step == 6) {
+            $existingComplementsRaw = $this->reservationComplementTempRepository->findByFields(['reservation_temp' => $reservationTemp->getId()]);
+            $existingComplementsByTarif = [];
+            foreach ($existingComplementsRaw as $complement) {
+                $existingComplementsByTarif[$complement->getTarif()][] = $complement;
+            }
+
+            $finalComplements = [];
+            $complementsToDelete = [];
+            $complementsToInsert = [];
+
+            $allTarifIds = array_unique(array_merge(array_keys($data['tarifs'] ?? []), array_keys($existingComplementsByTarif)));
+
+
 
         }
 

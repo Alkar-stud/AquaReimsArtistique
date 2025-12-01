@@ -1,11 +1,20 @@
 <?php
 namespace app\Repository\Reservation;
 
+use app\Models\Reservation\ReservationDetailTemp;
 use app\Repository\AbstractRepository;
 use app\Models\Reservation\ReservationComplementTemp;
+use app\Repository\Tarif\TarifRepository;
 
 class ReservationComplementTempRepository extends AbstractRepository
 {
+    private array $fieldsAllowed = [
+        'reservation_temp',
+        'tarif',
+        'tarif_access_code',
+        'qty',
+    ];
+
     public function __construct()
     {
         parent::__construct('reservation_complement_temp');
@@ -34,6 +43,49 @@ class ReservationComplementTempRepository extends AbstractRepository
     {
         $rows = $this->query("SELECT * FROM {$this->tableName} WHERE reservation_temp = :rid", ['rid' => $reservationTempId]);
         return array_map(fn($r) => $this->mapRowToModel($r), $rows);
+    }
+
+    /**
+     * Cherche par plusieurs champs/valeurs
+     * @param array $criteria
+     * @return array
+     */
+    public function findByFields(array $criteria): array
+    {
+        if (empty($criteria)) {
+            return [];
+        }
+
+        $params = [];
+        $clauses = [];
+        $i = 0;
+
+        foreach ($criteria as $field => $val) {
+            if (!in_array($field, $this->fieldsAllowed, true)) {
+                continue;
+            }
+
+            if ($val === null) {
+                $clauses[] = "`$field` IS NULL";
+            } else {
+                $p = "p{$i}";
+                $clauses[] = "`$field` = :$p";
+                $params[$p] = $val;
+                $i++;
+            }
+        }
+
+        if (empty($clauses)) {
+            return [];
+        }
+
+        $sql = "SELECT * FROM `{$this->tableName}` WHERE " . implode(' AND ', $clauses);
+        $rows = $this->query($sql, $params);
+
+        $details = array_map(fn($r) => $this->hydrate($r), $rows);
+        $this->hydrateRelations($details);
+
+        return $details;
     }
 
     /**
@@ -96,5 +148,69 @@ class ReservationComplementTempRepository extends AbstractRepository
             $m->setUpdatedAt($row['updated_at']);
         }
         return $m;
+    }
+
+    /**
+     * Convertit une ligne SQL en instance de ReservationComplementTemp.
+     *
+     * Gère les conversions de types et les champs optionnels.
+     *
+     * @param array $row Ligne associatif depuis la base.
+     * @return ReservationComplementTemp Modèle peuplé.
+     */
+    protected function hydrate(array $row): ReservationComplementTemp
+    {
+        $m = new ReservationComplementTemp();
+        $m->setId((int)$row['id']);
+        $m->setReservationTemp((int)$row['reservation_temp']);
+        $m->setTarif((int)$row['tarif']);
+        $m->setTarifAccessCode($row['tarif_access_code']);
+        $m->setQty($row['qty'] !== null ? (int)$row['qty'] : 0);
+        $m->setCreatedAt($row['created_at']);
+        if ($row['updated_at'] !== null) {
+            $m->setUpdatedAt($row['updated_at']);
+        }
+        return $m;
+    }
+
+    /**
+     * Hydrate les relations (ici, l'objet Tarif) pour une liste de détails.
+     *
+     * @param ReservationComplementTemp[] $complements
+     * @return void
+     */
+    private function hydrateRelations(array $complements): void
+    {
+        if (empty($complements)) {
+            return;
+        }
+
+        $tarifIds = array_unique(array_map(fn($d) => $d->getTarif(), $complements));
+        if (empty($tarifIds)) {
+            return;
+        }
+
+        $tarifs = $this->getTarifRepository()->findByIds($tarifIds);
+        $tarifsById = [];
+        foreach ($tarifs as $tarif) {
+            $tarifsById[$tarif->getId()] = $tarif;
+        }
+        foreach ($complements as $complement) {
+            $complement->setTarifObject($tarifsById[$complement->getTarif()] ?? null);
+        }
+
+    }
+
+    /**
+     * Méthode lazy pour instancier le repository Tarif uniquement si nécessaire.
+     *
+     * @return TarifRepository
+     */
+    private function getTarifRepository(): TarifRepository
+    {
+        if ($this->tarifRepository === null) {
+            $this->tarifRepository = new TarifRepository();
+        }
+        return $this->tarifRepository;
     }
 }

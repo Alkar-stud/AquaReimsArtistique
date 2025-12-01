@@ -13,7 +13,7 @@
             Si vous avez un code spécial, entrez‑le puis validez‑le.
         </p>
 
-        <input type="hidden" id="event_id" name="event_id" value="{{ $reservation['event_id'] }}">
+        <input type="hidden" id="event_id" name="event_id" value="{{ $reservation['reservation']->getEvent() }}">
 
         <div id="reservationAlert" role="alert" aria-live="polite" tabindex="-1"></div>
 
@@ -61,7 +61,7 @@
         <hr>
 
         <div class="mb-3">
-            <label for="specialCode" class="form-label">Vous avez un code ?</label>
+            <label for="specialCode" class="form-label">Vous avez un code ?</label>
             <div id="specialCodeHelp" class="visually-hidden">
                 Entrez votre code puis utilisez le bouton pour le valider.
             </div>
@@ -117,7 +117,9 @@
 Ici pour la suite, on a déjà enregistré ça :
 {% php %}
 echo '<pre>';
-print_r($_SESSION['reservation']);
+print_r($reservation);
+echo '<pre>';
+print_r($_SESSION);
 echo '</pre>';
 {% endphp %}
 {% endif %}

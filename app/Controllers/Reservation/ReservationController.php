@@ -294,7 +294,7 @@ class ReservationController extends AbstractController
         $event = $this->eventRepository->findById($session['reservation']->getEvent(), true);
 
         //Préparation des données déjà saisie à cette étape, regroupé par id et quantité
-        $arrayTarifForForm = $this->reservationSessionService->getComplementQuantities($session['reservation_complement']);
+        $arrayTarifForForm = $this->reservationSessionService->getComplementQuantities($session['reservation_complements']);
 
         $this->render('reservation/etape6', [
             'reservation'                       => $session,

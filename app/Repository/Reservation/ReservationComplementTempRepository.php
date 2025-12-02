@@ -1,13 +1,13 @@
 <?php
 namespace app\Repository\Reservation;
 
-use app\Models\Reservation\ReservationDetailTemp;
 use app\Repository\AbstractRepository;
 use app\Models\Reservation\ReservationComplementTemp;
 use app\Repository\Tarif\TarifRepository;
 
 class ReservationComplementTempRepository extends AbstractRepository
 {
+    private TarifRepository $tarifRepository;
     private array $fieldsAllowed = [
         'reservation_temp',
         'tarif',
@@ -15,9 +15,12 @@ class ReservationComplementTempRepository extends AbstractRepository
         'qty',
     ];
 
-    public function __construct()
+    public function __construct(
+        TarifRepository $tarifRepository,
+    )
     {
         parent::__construct('reservation_complement_temp');
+        $this->tarifRepository = $tarifRepository;
     }
 
     /**
@@ -208,9 +211,6 @@ class ReservationComplementTempRepository extends AbstractRepository
      */
     private function getTarifRepository(): TarifRepository
     {
-        if ($this->tarifRepository === null) {
-            $this->tarifRepository = new TarifRepository();
-        }
         return $this->tarifRepository;
     }
 }

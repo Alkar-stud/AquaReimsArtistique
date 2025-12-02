@@ -104,13 +104,6 @@ class ReservationAjaxController extends AbstractController
         }
 
         $result = $this->reservationDataValidationService->validateDataPerStep($session['reservation'], $step, $input, $files);
-if ($step >= 6) {
-    print_r($input);
-    print_r($result);
-    die;
-}
-
-//        $result = $this->reservationDataValidationService->validateAndPersistDataPerStep($step, $input, $files);
 
         if (!$result['success']) {
             $this->json($result, 200);

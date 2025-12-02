@@ -300,16 +300,74 @@ class ReservationDataValidationService
             $existingComplementsRaw = $this->reservationComplementTempRepository->findByFields(['reservation_temp' => $reservationTemp->getId()]);
             $existingComplementsByTarif = [];
             foreach ($existingComplementsRaw as $complement) {
-                $existingComplementsByTarif[$complement->getTarif()][] = $complement;
+                $existingComplementsByTarif[$complement->getTarif()] = $complement;
             }
 
             $finalComplements = [];
             $complementsToDelete = [];
             $complementsToInsert = [];
+            $complementToUpdate = [];
 
             $allTarifIds = array_unique(array_merge(array_keys($data['tarifs'] ?? []), array_keys($existingComplementsByTarif)));
+            //On boucle sur tous les tarifs et on y ajoute les quantités reçues
+            //Si l'ID du tarif existe dans $existingComplementsByTarif et dans $date, on update
+            //Si l'ID du tarif n'existe pas dans $existingComplementsByTarif mais existe dans $data, on insert
+            //Si l'ID du tarif existe dans $existingComplementsByTarif mais pas dans $data, on delete
+            foreach ($allTarifIds as $tarifId) {
+                //Code spécial si fourni
+                $providedSpecial = is_array($data['special'] ?? null) ? ($data['special'][$tarifId] ?? null) : null;
+                //Quantité demandée
+                $providedQty = (int)($data['tarifs'][$tarifId] ?? 0);
+                //Si existe dans les deux tableaux, on update s'il y a des différences
+                if (array_key_exists($tarifId, $existingComplementsByTarif) && array_key_exists($tarifId, $data['tarifs'])) {
+                    //On compare les codes spéciaux et la quantité
+                    $existingComplementTemp = $existingComplementsByTarif[$tarifId];
+                    if ($existingComplementTemp->getQty() !== $data['tarifs'][$tarifId]) {
+                        $existingComplementTemp->setTarifAccessCode($providedSpecial);
+                        $existingComplementTemp->setQty($providedQty);
+                        $complementToUpdate[] = $existingComplementTemp;
+                    }
+                    //On enregistre pour la vérification finale
+                    $finalComplements[] = $existingComplementTemp;
+                }
+                //n'existe pas encore, mais est dans $data, on insert
+                if (!array_key_exists($tarifId, $existingComplementsByTarif) && array_key_exists($tarifId, $data['tarifs'])) {
+                    $newComplement = new ReservationComplementTemp();
+                    $newComplement->setReservationTemp($reservationTemp->getId());
+                    $newComplement->setTarif($tarifId);
+                    $newComplement->setQty($providedQty);
+                    $newComplement->setTarifAccessCode($providedSpecial);
+                    $complementsToInsert[] = $newComplement;
+                    $finalComplements[] = $newComplement;
+                }
+                //existe, mais n'est plus dans $data, on delete
+                if (array_key_exists($tarifId, $existingComplementsByTarif) && !array_key_exists($tarifId, $data['tarifs'])) {
+                    $complementsToDelete[] = $existingComplementsByTarif[$tarifId];
+                }
+            }
 
+            // Validation des données
+            $result = $this->validateDataStep6($finalComplements, $event);
 
+            // Persistance en base de données dans une transaction
+            try {
+                $this->reservationComplementTempRepository->beginTransaction();
+
+                foreach ($complementsToDelete as $complement) {
+                    $this->reservationComplementTempRepository->delete($complement->getId());
+                }
+                foreach ($complementsToInsert as $complement) {
+                    $this->reservationComplementTempRepository->insert($complement);
+                }
+                foreach ($complementToUpdate as $complement) {
+                    $this->reservationComplementTempRepository->update($complement);
+                }
+                $this->reservationComplementTempRepository->commit();
+            } catch (Exception $e) {
+                $this->reservationComplementTempRepository->rollBack();
+                // Log l'erreur $e->getMessage()
+                return ['success' => false, 'errors' => ['global' => 'Une erreur serveur est survenue lors de la mise à jour des complements.'], 'data' => []];
+            }
 
         }
 
@@ -611,12 +669,46 @@ class ReservationDataValidationService
      * Étape 6: vérifie si les compléments choisis sont bien associés ç cet event et ne dépasse aps le quota
      * Retourne tableau ['success' => true/false, 'errors' => $errors[]]
      *
-     * @param ReservationComplementTemp[] $complement
+     * @param ReservationComplementTemp[] $reservationComplementTempTab
+     * @param Event $event
      * @return array
      */
-    public function validateDataStep6(array $complement): array
+    public function validateDataStep6(array $reservationComplementTempTab, Event $event): array
     {
         $errors = [];
+        if (empty($reservationComplementTempTab)) {
+            $errors['tarifs'] = 'Aucun tarif sélectionné.';
+            return ['success' => false, 'errors' => $errors];
+        }
+
+        foreach ($reservationComplementTempTab as $reservationComplementTemp) {
+            // On s'assure que chaque élément est bien du type attendu.
+            if (!$reservationComplementTemp instanceof ReservationComplementTemp) {
+                $errors['global'] = 'Une erreur interne est survenue lors de la validation des tarifs.';
+                // On arrête la validation ici, car la structure de données est incorrecte.
+                return ['success' => false, 'errors' => $errors];
+            }
+            //On vérifie que le tarif existe bien
+            $tarif = $this->tarifRepository->findById($reservationComplementTemp->getTarif());
+            if (!$tarif) {
+                $errors['tarif_id'] = 'Ce tarif n\'existe pas.';
+                return ['success' => false, 'errors' => $errors];
+            }
+            // On vérifie que le tarif fait bien partie de cet événement.
+            if (!$this->tarifService->isTarifAssociatedWithEvent($tarif->getId(), $event->getId())) {
+                $errors['tarif_id_' . $tarif->getId()] = "Le tarif '{$tarif->getName()}' n'est pas disponible pour cet événement.";
+                return ['success' => false, 'errors' => $errors];
+            }
+            //On vérifie si le tarif nécessite un code eet si le bon est saisie
+            if (
+                $tarif->getAccessCode() !== null && // Si un code est requis pour ce tarif...
+                ($reservationComplementTemp->getTarifAccessCode() === null || $reservationComplementTemp->getTarifAccessCode() !== $tarif->getAccessCode()) // ...et que le code fourni est soit manquant, soit incorrect.
+            ) {
+                $errors['tarif_id_' . $tarif->getId()] = "Le code d'accès fourni pour le tarif '{$tarif->getName()}' est invalide ou manquant.";
+                return ['success' => false, 'errors' => $errors];
+            }
+
+        }
 
         if (!empty($errors)) {
             return ['success' => false, 'errors' => $errors];
@@ -643,6 +735,9 @@ class ReservationDataValidationService
             }
         }
 
+        //On récupère l'Event pour les étapes suivantes qui en ont besoin
+        $event = $this->eventRepository->findById($session['reservation']->getEvent());
+
         if ($step > 2) {
             $check = $this->validateDataStep2($session['reservation']);
             if (!$check['success']) {
@@ -651,7 +746,6 @@ class ReservationDataValidationService
         }
 
         if ($step > 3) {
-            $event = $this->eventRepository->findById($session['reservation']->getEvent());
             $check = $this->validateDataStep3($session['reservation_details'], $event);
             if (!$check['success']) {
                 return ['success' => false, 'errors' => $check['errors']];
@@ -659,7 +753,6 @@ class ReservationDataValidationService
         }
 
         if ($step > 4) {
-            $event = $this->eventRepository->findById($session['reservation']->getEvent());
             $check = $this->validateDataStep4($session['reservation_details']);
             if (!$check['success']) {
                 return ['success' => false, 'errors' => $check['errors']];
@@ -668,7 +761,7 @@ class ReservationDataValidationService
 
         if ($step > 5 && $session['reservation']->getEventObject()->getPiscine()->getNumberedSeats() === true) {
 
-            $check = $this->validateDataStep5();
+            $check = $this->validateDataStep5($session['reservation_details']);
             if (!$check['success']) {
                 return ['success' => false, 'errors' => $check['errors']];
             }
@@ -676,7 +769,7 @@ class ReservationDataValidationService
 
         if ($step > 6) {
 
-            $check = $this->validateDataStep6();
+            $check = $this->validateDataStep6($session['reservation_complements'], $event);
             if (!$check['success']) {
                 return ['success' => false, 'errors' => $check['errors']];
             }

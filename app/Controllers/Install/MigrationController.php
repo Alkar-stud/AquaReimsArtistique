@@ -146,21 +146,92 @@ class MigrationController
         // Retire commentaires blocs
         $sql = preg_replace('/\/\*.*?\*\//s', '', $sql) ?? $sql;
 
-        $lines = preg_split('/\R/', $sql) ?: [];
-        $filtered = [];
-        foreach ($lines as $line) {
-            $trim = trim($line);
-            if ($trim === '' || str_starts_with($trim, '--') || str_starts_with($trim, '#')) {
+        $len = strlen($sql);
+        $statements = [];
+        $current = '';
+        $inSingle = false;
+        $inDouble = false;
+
+        for ($i = 0; $i < $len; $i++) {
+            $ch = $sql[$i];
+            $next = $i + 1 < $len ? $sql[$i + 1] : null;
+            $prev = $i > 0 ? $sql[$i - 1] : null;
+
+            // Gère les commentaires de ligne (-- ...\n) et (# ...\n) hors quotes
+            if (!$inSingle && !$inDouble) {
+                if ($ch === '-' && $next === '-') {
+                    // saute jusqu'à fin de ligne
+                    $i += 2;
+                    while ($i < $len && $sql[$i] !== "\n") {
+                        $i++;
+                    }
+                    continue;
+                }
+                if ($ch === '#') {
+                    $i++;
+                    while ($i < $len && $sql[$i] !== "\n") {
+                        $i++;
+                    }
+                    continue;
+                }
+            }
+
+            // Toggle quotes (ignore si précédé par backslash)
+            if ($ch === "'" && !$inDouble) {
+                // si précédent est backslash, il peut être une échappement, mais MySQL utilise souvent '' ; on gère backslash simple
+                if ($prev !== '\\') {
+                    $inSingle = !$inSingle;
+                }
+                $current .= $ch;
                 continue;
             }
-            $filtered[] = $line;
+
+            if ($ch === '"' && !$inSingle) {
+                if ($prev !== '\\') {
+                    $inDouble = !$inDouble;
+                }
+                $current .= $ch;
+                continue;
+            }
+
+            // Si on trouve un ; hors quotes, termine une statement
+            if ($ch === ';' && !$inSingle && !$inDouble) {
+                $trimmed = trim($current);
+                if ($trimmed !== '') {
+                    $statements[] = $trimmed;
+                }
+                $current = '';
+                continue;
+            }
+
+            $current .= $ch;
         }
 
-        $clean = trim(implode("\n", $filtered));
-        // Découpe naïve sur ';'
-        $parts = array_map('trim', explode(';', $clean));
-        // Filtre vide
-        return array_values(array_filter($parts, static fn($p) => $p !== ''));
+        // Ajoute le dernier morceau s'il n'est pas vide
+        $last = trim($current);
+        if ($last !== '') {
+            $statements[] = $last;
+        }
+
+        // Filtre lignes vides et supprime commentaires début de ligne résiduels
+        $out = [];
+        foreach ($statements as $stmt) {
+            $lines = preg_split('/\R/', $stmt) ?: [$stmt];
+            $filtered = [];
+            foreach ($lines as $line) {
+                $t = ltrim($line);
+                if ($t === '' || str_starts_with($t, '--') || str_starts_with($t, '#')) {
+                    continue;
+                }
+                $filtered[] = $line;
+            }
+            $s = trim(implode("\n", $filtered));
+            if ($s !== '') {
+                $out[] = $s;
+            }
+        }
+
+        return array_values($out);
     }
 
     /** Classification minimale. */

@@ -159,7 +159,7 @@ class EventRepository extends AbstractRepository
             $eventTarifRepo = new EventTarifRepository($tarifRepo);
 
             // On récupère tous les tarifs (avec ou sans places selon votre besoin, ici avec places par défaut)
-            $eventsTarifs = $eventTarifRepo->findTarifsByEvents(array_keys($eventsById), true);
+            $eventsTarifs = $eventTarifRepo->findTarifsByEvents(array_keys($eventsById), null);
 
             // On associe les tarifs à leurs Events
             foreach ($eventsById as $eventId => $event) {

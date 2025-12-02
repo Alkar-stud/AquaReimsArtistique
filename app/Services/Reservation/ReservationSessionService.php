@@ -2,6 +2,7 @@
 
 namespace app\Services\Reservation;
 
+use app\Models\Reservation\ReservationComplement;
 use app\Models\Reservation\ReservationComplementTemp;
 use app\Models\Reservation\ReservationDetailTemp;
 use app\Models\Reservation\ReservationTemp;
@@ -314,60 +315,6 @@ class ReservationSessionService
         }
 
         return $details;
-    }
-
-
-    /**
-     * Prépare `reservation_complement` pour la vue:
-     * - groupe par tarif_id
-     * - somme les qty
-     * - liste les codes distincts non vides
-     * - ajoute les infos du tarif (name, description, price)
-     *
-     * @param ReservationComplementTemp[] $reservationComplement
-     * @param array<int,Tarif> $tarifsById
-     * @return array
-     */
-    public function prepareReservationComplementToView(array $reservationComplement, array $tarifsById): array
-    {
-        if (empty($reservationComplement)) {
-            return [];
-        }
-
-        $complements = [];
-        foreach ($reservationComplement as $row) {
-            $tarifId = $row->getTarif() ?? 0;
-            if ($tarifId <= 0 || !isset($tarifsById[$tarifId])) {
-                continue;
-            }
-
-            $qty  = max(0, (int)($row->getTarif() ?? 0));
-            $code = trim((string)($row->getTarifAccessCode() ?? ''));
-
-            if (!isset($complements[$tarifId])) {
-                $tarif = $tarifsById[$tarifId];
-                $complements[$tarifId] = [
-                    'tarif_name'  => $tarif->getName(),
-                    'description' => $tarif->getDescription(),
-                    'price'       => $tarif->getPrice(),
-                    'qty'         => 0,
-                    'codes'       => [],
-                ];
-            }
-
-            $complements[$tarifId]['qty'] += $qty;
-            if ($code !== '') {
-                $complements[$tarifId]['codes'][$code] = true;
-            }
-        }
-
-        // Normalise les codes en liste simple
-        foreach ($complements as &$group) {
-            $group['codes'] = array_keys($group['codes']);
-        }
-        unset($group);
-
-        return $complements;
     }
 
     /**

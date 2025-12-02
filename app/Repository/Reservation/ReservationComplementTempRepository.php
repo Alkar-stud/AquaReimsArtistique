@@ -40,8 +40,16 @@ class ReservationComplementTempRepository extends AbstractRepository
      */
     public function findByReservationTemp(int $reservationTempId): array
     {
-        $rows = $this->query("SELECT * FROM {$this->tableName} WHERE reservation_temp = :rid", ['rid' => $reservationTempId]);
-        return array_map(fn($r) => $this->mapRowToModel($r), $rows);
+        $rows = $this->query(
+            "SELECT * FROM {$this->tableName} WHERE reservation_temp = :rid",
+            ['rid' => $reservationTempId]
+        );
+
+        // On utilise hydrate() pour construire les modèles, puis hydrateRelations() pour remplir tarifObject
+        $complements = array_map(fn($r) => $this->hydrate($r), $rows);
+        $this->hydrateRelations($complements);
+
+        return $complements;
     }
 
     /**

@@ -3,6 +3,7 @@
 namespace app\Services\Reservation;
 
 use app\Models\Reservation\ReservationComplement;
+use app\Models\Reservation\ReservationComplementTemp;
 use app\Models\Reservation\ReservationDetailTemp;
 use app\Models\Tarif\Tarif;
 use app\Repository\Tarif\TarifRepository;
@@ -71,20 +72,47 @@ class ReservationSaveCartService
     }
 
     /**
-     * @param ReservationComplement[] $reservationComplement
+     * @param ReservationComplementTemp[] $reservationComplements
      * @param array $tarifsById
      * @return array
      */
-    public function prepareReservationComplementSummary(array $reservationComplement, array $tarifsById): array
+    public function prepareReservationComplementSummary(array $reservationComplements, array $tarifsById): array
     {
-        $complements = $this->reservationSessionService->prepareReservationComplementToView($reservationComplement, $tarifsById);
 
-        $subtotal = 0;
-        foreach ($complements as $tid => &$group) {
-            $qty = (int)($group['qty'] ?? 0);
+        $complements = [];
+        $subtotal    = 0;
+
+        foreach ($reservationComplements as $row) {
+            if (!$row instanceof ReservationComplementTemp) {
+                continue;
+            }
+
+            $tarifId = $row->getTarif() ?? 0;
+            if ($tarifId <= 0 || !isset($tarifsById[$tarifId])) {
+                continue;
+            }
+
+            /** @var Tarif $tarif */
+            $tarif = $row->getTarifObject();
+
+            $complements[$tarifId] = [
+                'tarif_name'  => $tarif->getName(),
+                'description' => $tarif->getDescription(),
+                'price'       => $tarif->getPrice(),
+                'qty'         => $row->getQty(),
+                'code'       => $row->getTarifAccessCode(),
+                'total'       => $row->getQty() * $tarif->getPrice(),
+            ];
+
+        }
+
+        // Calcul des totaux + normalisation des codes pour la vue
+        foreach ($complements as $tarifId => &$group) {
+            $qty   = (int)($group['qty']   ?? 0);
             $price = (int)($group['price'] ?? 0);
+
             $group['total'] = $this->priceCalculator->computeComplementTotal($qty, $price);
-            $group['codes'] = $group['codes'] ?? [];
+
             $subtotal += $group['total'];
         }
         unset($group);
@@ -95,6 +123,11 @@ class ReservationSaveCartService
         ];
     }
 
+
+    /**
+     * @param $session
+     * @return array
+     */
     public function prepareReservationToSaveTemporarily($session): array
     {
         $tarifs = $this->tarifRepository->findByEventId($session['event_id']);

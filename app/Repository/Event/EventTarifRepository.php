@@ -73,7 +73,7 @@ class EventTarifRepository extends AbstractRepository
      * @param bool $withSeat
      * @return array<int,array<int,Tarif>>
      */
-    public function findTarifsByEvents(array $eventIds, bool $withSeat = true): array
+    public function findTarifsByEvents(array $eventIds, ?bool $withSeat = true): array
     {
         $eventIds = array_values(array_unique(array_map('intval', $eventIds)));
         if (empty($eventIds)) {
@@ -81,9 +81,13 @@ class EventTarifRepository extends AbstractRepository
         }
 
         $placeholders = implode(',', array_fill(0, \count($eventIds), '?'));
-        $sqlWithSeat = $withSeat
-            ? ' AND t.seat_count IS NOT NULL'
-            : ' AND t.seat_count IS NULL';
+        if (!$withSeat) {
+            $sqlWithSeat = '';
+        } else {
+            $sqlWithSeat = $withSeat
+                ? ' AND t.seat_count IS NOT NULL'
+                : ' AND t.seat_count IS NULL';
+        }
 
         $sql = "
             SELECT t.*, et.event AS event_id

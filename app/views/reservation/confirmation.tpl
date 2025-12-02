@@ -82,8 +82,8 @@
                 <small class="text-muted">— {{ $group['description'] }}</small>
                 {% endif %}
                 <div class="mt-1">Qté&nbsp;: {{ $group['qty'] }}</div>
-                {% if (!empty($group['codes'])) %}
-                <div class="text-muted small">(code {{ implode(', ', $group['codes']) }})</div>
+                {% if (!empty($group['code'])) %}
+                <div class="text-muted small">(code {{ $group['code'] }})</div>
                 {% endif %}
             </div>
             <div class="ms-auto text-end">

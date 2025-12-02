@@ -29,6 +29,14 @@
         </div>
 
     <form id="reservationPlacesForm">
+        <!-- Conteneur pour la liste des participants à placer -->
+        <div id="participants-to-seat-container" class="my-3">
+            <h3 class="h5">Participants à placer</h3>
+            <ul class="list-group list-group-horizontal-md" id="participants-list">
+                <!-- Le JavaScript remplira cette liste -->
+                <li class="list-group-item text-muted">Chargement des participants...</li>
+            </ul>
+        </div>
         <!-- Bloc de boutons TOP -->
         <div class="row mb-3">
             <div class="col-12 col-md-6 mb-2 mb-md-0">
@@ -37,16 +45,6 @@
             <div class="col-12 col-md-6 d-flex justify-content-md-end">
                 <button type="submit" class="btn btn-primary w-100 w-md-auto" data-role="submit-reservation" disabled>Valider et continuer</button>
             </div>
-        </div>
-
-
-        <!-- Conteneur pour la liste des participants à placer -->
-        <div id="participants-to-seat-container" class="my-3">
-            <h3 class="h5">Participants à placer</h3>
-            <ul class="list-group list-group-horizontal-md" id="participants-list">
-                <!-- Le JavaScript remplira cette liste -->
-                <li class="list-group-item text-muted">Chargement des participants...</li>
-            </ul>
         </div>
 
         <div class="gradins-row align-items-center mb-2">

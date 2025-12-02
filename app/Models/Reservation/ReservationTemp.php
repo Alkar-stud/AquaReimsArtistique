@@ -22,7 +22,13 @@ class ReservationTemp extends AbstractModel
     private ?string $email = null;
     private ?string $phone = null;
     private ?int $swimmer_if_limitation = null;
+    private ?Swimmer $swimmer = null;
     private ?string $access_code = null;
+    private bool $is_locked;
+    private array $details = [];
+    private array $complements = [];
+    private array $payments = [];
+    private array $mailSent = [];
 
 
     // --- GETTERS ---
@@ -35,7 +41,13 @@ class ReservationTemp extends AbstractModel
     public function getEmail(): ?string { return $this->email; }
     public function getPhone(): ?string { return $this->phone; }
     public function getSwimmerId(): ?int { return $this->swimmer_if_limitation; }
+    public function getSwimmer(): ?Swimmer { return $this->swimmer; }
     public function getAccessCode(): ?string { return $this->access_code; }
+    public function isLocked(): bool { return $this->is_locked; }
+    // Pour compatibilité avec le template des réservations
+    public function getDetails(): array { return $this->details; }
+    public function getComplements(): array { return $this->complements; }
+    public function getPayments(): array { return $this->payments; }
 
     // --- SETTERS ---
     public function setEvent(int $event): self { $this->event = $event; return $this; }
@@ -59,7 +71,15 @@ class ReservationTemp extends AbstractModel
     public function setEmail(?string $email): self { $this->email = ($email === '' ? null : $email); return $this; }
     public function setPhone(?string $phone): self { $this->phone = ($phone === '' ? null : $phone); return $this; }
     public function setSwimmerId(?int $swimmer_if_limitation): self { $this->swimmer_if_limitation = $swimmer_if_limitation; return $this; }
+    public function setSwimmer(?Swimmer $swimmer): self {
+        $this->swimmer = $swimmer;
+        if ($swimmer) { $this->swimmer_if_limitation = $swimmer->getId(); }
+        return $this;
+    }
     public function setAccessCode(?string $access_code): self { $this->access_code = ($access_code === '' ? null : $access_code); return $this; }
+    public function setIsLocked(bool $is_locked): void { $this->is_locked = $is_locked; }
+    public function setDetails(array $details): self { $this->details = $details; return $this; }
+    public function setComplements(array $complements): self { $this->complements = $complements; return $this; }
 
     public function toArray(): array
     {
@@ -71,8 +91,9 @@ class ReservationTemp extends AbstractModel
             'firstName' => $this->getFirstName(),
             'email' => $this->getEmail(),
             'phone' => $this->getPhone(),
-            'createdAt' => $this->getCreatedAt()->format(DateTime::ATOM),
-            'updatedAt' => $this->getUpdatedAt()?->format(DateTime::ATOM),
+            'isLocked' => $this->isLocked(),
+            'details' => array_map(fn($detail) => $detail->toArray(), $this->getDetails()),
+            'complements' => array_map(fn($complement) => $complement->toArray(), $this->getComplements()),
         ];
     }
 }

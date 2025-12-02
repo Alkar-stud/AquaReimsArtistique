@@ -8,6 +8,7 @@ use app\Enums\LogType;
 use app\Models\Reservation\ReservationPayment;
 use app\Repository\Reservation\ReservationPaymentRepository;
 use app\Repository\Reservation\ReservationRepository;
+use app\Repository\Reservation\ReservationTempRepository;
 use app\Services\Event\EventQueryService;
 use app\Services\Log\Logger;
 use app\Services\Mails\MailPrepareService;
@@ -28,6 +29,7 @@ class ReservationsController extends AbstractController
 {
     private EventQueryService $eventQueryService;
     private ReservationRepository $reservationRepository;
+    private ReservationTempRepository $reservationTempRepository;
     private PaginationService $paginationService;
     private ReservationUpdateService $reservationUpdateService;
     private ReservationDeletionService $reservationDeletionService;
@@ -43,6 +45,7 @@ class ReservationsController extends AbstractController
     function __construct(
         EventQueryService $eventQueryService,
         ReservationRepository $reservationRepository,
+        ReservationTempRepository $reservationTempRepository,
         PaginationService $paginationService,
         ReservationUpdateService $reservationUpdateService,
         ReservationDeletionService $reservationDeletionService,
@@ -59,6 +62,7 @@ class ReservationsController extends AbstractController
         parent::__construct(false);
         $this->eventQueryService = $eventQueryService;
         $this->reservationRepository = $reservationRepository;
+        $this->reservationTempRepository = $reservationTempRepository;
         $this->paginationService = $paginationService;
         $this->reservationUpdateService = $reservationUpdateService;
         $this->reservationDeletionService = $reservationDeletionService;
@@ -89,6 +93,9 @@ class ReservationsController extends AbstractController
         if ($tab == 'extract') {
             //On envoie tous les galas
             $events = $this->eventQueryService->getAllEventsWithRelations();
+        } elseif ($tab == 'incoming') {
+            //On envoie les réservations en cours : dans reservation_temp
+            $events = $this->eventQueryService->getAllEventsWithRelations(true);
         } elseif ($tab == 'past') {
             //On envoie les galas passés
             $events = $this->eventQueryService->getAllEventsWithRelations(false);
@@ -100,7 +107,12 @@ class ReservationsController extends AbstractController
         $paginator = null;
         //Si on a une session, on cherche pour la session
         if ($sessionId > 0) {
-            $paginator = $this->reservationRepository->findBySessionPaginated(
+            if ($tab == 'incoming') {
+                $repo = $this->reservationTempRepository;
+            } else {
+                $repo = $this->reservationRepository;
+            }
+            $paginator = $repo->findBySessionPaginated(
                 $sessionId,
                 $paginationConfig->getCurrentPage(),
                 $paginationConfig->getItemsPerPage(),

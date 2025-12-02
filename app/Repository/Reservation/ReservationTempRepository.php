@@ -1,6 +1,8 @@
 <?php
 namespace app\Repository\Reservation;
 
+use app\Core\Paginator;
+use app\Models\Reservation\Reservation;
 use app\Repository\AbstractRepository;
 use app\Repository\Event\EventRepository;
 use app\Models\Reservation\ReservationTemp;
@@ -61,6 +63,102 @@ class ReservationTempRepository extends AbstractRepository
     }
 
     /**
+     * Retourne toutes les réservations actives d'une session
+     * @param int $sessionId
+     * @param int|null $limit
+     * @param int|null $offset
+     * @param bool $withEvent
+     * @param bool $withChildren
+     * @param string|null $sortOrder
+     * @return Reservation[]
+     */
+    /**
+     * Retourne toutes les réservations temporaires d'une session, éventuellement paginées.
+     *
+     * @param int $sessionId
+     * @param int|null $limit
+     * @param int|null $offset
+     * @param bool $withEvent
+     * @param string|null $sortOrder
+     * @return ReservationTemp[]
+     */
+    public function findBySession(
+        int $sessionId,
+        ?int $limit = null,
+        ?int $offset = null,
+        bool $withEvent = false,
+        ?string $sortOrder = null,
+    ): array {
+        $sql = "SELECT * FROM {$this->tableName} WHERE event_session = :sessionId";
+
+        match ($sortOrder) {
+            'IDreservation'   => $sql .= " ORDER BY id",
+            'NomReservation'  => $sql .= " ORDER BY name, firstname",
+            default           => $sql .= " ORDER BY created_at",
+        };
+
+        if ($limit !== null && $offset !== null) {
+            $sql .= " LIMIT $limit OFFSET $offset";
+        }
+
+        $rows = $this->query($sql, ['sessionId' => $sessionId]);
+        if (empty($rows)) {
+            return [];
+        }
+
+        $list = array_map([$this, 'hydrate'], $rows);
+
+        if ($withEvent) {
+            $this->hydrateRelations($list);
+        }
+
+        return $list;
+    }
+
+    /**
+     * Version paginée, même style que ReservationRepository::findBySessionPaginated
+     *
+     * @param int $sessionId
+     * @param int $currentPage
+     * @param int $itemsPerPage
+     * @return Paginator
+     */
+    public function findBySessionPaginated(int $sessionId, int $currentPage, int $itemsPerPage): Paginator
+    {
+        if ($sessionId <= 0) {
+            return new Paginator([], 0, $itemsPerPage, $currentPage);
+        }
+
+        $totalItems = $this->countBySession($sessionId);
+
+        $offset = ($currentPage - 1) * $itemsPerPage;
+
+        // On hydrate systématiquement l'Event pour rester cohérent avec l'affichage
+        $items = $this->findBySession($sessionId, $itemsPerPage, $offset, true);
+
+        return new Paginator($items, $totalItems, $itemsPerPage, $currentPage);
+    }
+
+
+    /**
+     * Compte le nombre total de réservations pour une session donnée.
+     *
+     * @param int $sessionId
+     * @return int
+     */
+    public function countBySession(int $sessionId): int
+    {
+        if ($sessionId <= 0) {
+            return 0;
+        }
+        $sql = "SELECT COUNT(id) as total FROM $this->tableName WHERE event_session = :sessionId";
+
+        $result = $this->query($sql, ['sessionId' => $sessionId]);
+
+        return $result[0]['total'] ?? 0;
+    }
+
+    /**
      * Insère une nouvelle réservation temporaire en base.
      *
      * Le modèle doit contenir les valeurs nécessaires. Les dates sont formatées
@@ -113,6 +211,7 @@ class ReservationTempRepository extends AbstractRepository
             'phone' => $reservationTemp->getPhone(),
             'swimmer_if_limitation' => $reservationTemp->getSwimmerId(),
             'access_code' => $reservationTemp->getAccessCode(),
+            'is_locked' => $reservationTemp->isLocked(),
         ];
         return $this->updateById($reservationTemp->getId(), $params);
     }
@@ -188,6 +287,7 @@ class ReservationTempRepository extends AbstractRepository
         $m->setPhone($row['phone']);
         $m->setSwimmerId($row['swimmer_if_limitation'] !== null ? (int)$row['swimmer_if_limitation'] : null);
         $m->setAccessCode($row['access_code']);
+        $m->setIsLocked($row['is_locked']);
         $m->setCreatedAt($row['created_at']);
         if ($row['updated_at'] !== null) {
             $m->setUpdatedAt($row['updated_at']);
@@ -207,12 +307,16 @@ class ReservationTempRepository extends AbstractRepository
             return;
         }
 
-        $eventIds = array_unique(array_map(fn($r) => $r->getEvent(), $reservations));
+        $eventIds = array_unique(array_map(
+            fn(ReservationTemp $r) => $r->getEvent(),
+            $reservations
+        ));
         if (empty($eventIds)) {
             return;
         }
 
-        $events = $this->getEventRepository()->findByIds($eventIds, true, true, true, true);
+        // On récupère les events une seule fois
+        $events = $this->getEventRepository()->findByIds($eventIds, true, false, false, false);
 
         $eventsById = [];
         foreach ($events as $event) {

@@ -78,7 +78,6 @@ class ReservationSaveCartService
      */
     public function prepareReservationComplementSummary(array $reservationComplements, array $tarifsById): array
     {
-
         $complements = [];
         $subtotal    = 0;
 

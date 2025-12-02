@@ -7,7 +7,6 @@ use app\Repository\Tarif\TarifRepository;
 
 class ReservationComplementTempRepository extends AbstractRepository
 {
-    private TarifRepository $tarifRepository;
     private array $fieldsAllowed = [
         'reservation_temp',
         'tarif',
@@ -15,12 +14,9 @@ class ReservationComplementTempRepository extends AbstractRepository
         'qty',
     ];
 
-    public function __construct(
-        TarifRepository $tarifRepository,
-    )
+    public function __construct()
     {
         parent::__construct('reservation_complement_temp');
-        $this->tarifRepository = $tarifRepository;
     }
 
     /**
@@ -193,7 +189,8 @@ class ReservationComplementTempRepository extends AbstractRepository
             return;
         }
 
-        $tarifs = $this->getTarifRepository()->findByIds($tarifIds);
+        $tarifRepository = new TarifRepository();
+        $tarifs = $tarifRepository->findByIds($tarifIds);
         $tarifsById = [];
         foreach ($tarifs as $tarif) {
             $tarifsById[$tarif->getId()] = $tarif;
@@ -202,15 +199,5 @@ class ReservationComplementTempRepository extends AbstractRepository
             $complement->setTarifObject($tarifsById[$complement->getTarif()] ?? null);
         }
 
-    }
-
-    /**
-     * Méthode lazy pour instancier le repository Tarif uniquement si nécessaire.
-     *
-     * @return TarifRepository
-     */
-    private function getTarifRepository(): TarifRepository
-    {
-        return $this->tarifRepository;
     }
 }

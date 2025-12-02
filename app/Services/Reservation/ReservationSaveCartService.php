@@ -129,14 +129,14 @@ class ReservationSaveCartService
      */
     public function prepareReservationToSaveTemporarily($session): array
     {
-        $tarifs = $this->tarifRepository->findByEventId($session['event_id']);
+        $tarifs = $this->tarifRepository->findByEventId($session['reservation']->getEvent());
         $tarifsById = [];
         foreach ($tarifs as $tarif) {
             $tarifsById[$tarif->getId()] = $tarif;
         }
 
-        $detailReport     = $this->prepareReservationDetailSummary($session['reservation_detail'], $tarifsById);
-        $complementReport = $this->prepareReservationComplementSummary($session['reservation_complement'] ?? [], $tarifsById);
+        $detailReport     = $this->prepareReservationDetailSummary($session['reservation_details'], $tarifsById);
+        $complementReport = $this->prepareReservationComplementSummary($session['reservation_complements'] ?? [], $tarifsById);
 
         $this->reservationSessionService->setReservationSession('totals', [
             'details_subtotal'     => $detailReport['subtotal'],
@@ -145,8 +145,8 @@ class ReservationSaveCartService
         ]);
 
         return [
-            'event_id'               => $session['event_id'],
-            'event_session_id'       => $session['event_session_id'] ?? null,
+            'event_id'               => $session['reservation']->getEvent(),
+            'event_session_id'       => $session['reservation']->getEventSession() ?? null,
             'swimmer_id'             => $session['swimmer_id'] ?? null,
             'access_code_used'       => $session['access_code_used'] ?? null,
             'booker'                 => $session['booker'] ?? [],

@@ -54,17 +54,18 @@ class PaymentService
     public function handlePayment(array $reservation, array $session): array
     {
         //Si le montant total est égal à 0, on redirige directement pour l'enregistrement définitif
-        if($reservation['totals']['total_amount'] == 0) {
+        if($session['totals']['total_amount'] == 0) {
             if ($_SERVER['REQUEST_URI'] == '/reservation/payment') { $context = 'new_reservation'; }
             elseif ($_SERVER['REQUEST_URI'] == '/modifData') { $context = 'balance_payment'; }
             else { $context = 'other'; }
+            //TODO faire la réservation définitive
             $this->reservationDataPersist->persistConfirmReservation((object)$reservation, $reservation, $context, true);
-            $finalReservation = $this->reservationRepository->findByField('reservation_temp_id', $session['primary_id']);
-
+            $finalReservation = $this->reservationRepository->findByField('reservation_temp_id', $session['reservation']->getId());
 
             return ['success' => true, 'token' => $finalReservation->getToken()];
         }
-
+        $reservation['totals'] = $session['totals'];
+        
         //On prépare le panier pour HelloAsso avec le DTO
         $checkoutCart = $this->prepareCheckOutData($reservation);
 
@@ -79,7 +80,11 @@ class PaymentService
             !empty($session['redirectUrl']) &&
             $isIntentValid
         ) {
-            $result = ['success' => true, 'redirectUrl' => $session['redirectUrl'], 'checkoutIntentId' => $session['checkoutIntentId']];
+            $result = [
+                'success' => true,
+                'redirectUrl' => $session['redirectUrl'],
+                'checkoutIntentId' => $session['checkoutIntentId']
+            ];
         } else {
             //On demande un checkoutId avec l'url à donner à la vue
             // On retourne le résultat (succès ou échec) au contrôleur.
@@ -88,7 +93,7 @@ class PaymentService
 
         //On sauvegarde le checkoutIntentId
         if ($result['success']) {
-            $this->reservationWriter->updateReservationByPrimaryId($reservation['primary_id'], ['checkout_intent_id' => $result['checkoutIntentId']]);
+            $this->reservationWriter->updateReservationByPrimaryId($reservation['reservation']->getId(), ['checkout_intent_id' => $result['checkoutIntentId']]);
             //Puis, on ajoute à la session pour les retrouver après
             $this->reservationSessionService->setReservationSession('checkoutIntentId', $result['checkoutIntentId']);
             $this->reservationSessionService->setReservationSession('redirectUrl', $result['redirectUrl']);
@@ -99,7 +104,7 @@ class PaymentService
     }
 
     /**
-     * Reçoit $reservation (ce qu'il y a comme sauvegarde temporaire en noSQL)
+     * Reçoit $reservation (ce qu'il y a comme sauvegarde temporaire en BDD)
      *
      * @param array $reservation
      * @return HelloAssoCartDTO
@@ -107,7 +112,7 @@ class PaymentService
     public function prepareCheckOutData(array $reservation): HelloAssoCartDTO
     {
         // On récupère le nom de l'événement pour un affichage plus clair sur la page de paiement
-        $event = $this->eventRepository->findById($reservation['event_id']);
+        $event = $reservation['reservation']->getEventObject();
         $eventName = $event ? $event->getName() : 'Événement';
 
         // On récupère l'URL de base de l'application
@@ -126,16 +131,16 @@ class PaymentService
 
         // Informations sur l'acheteur
         $this->helloAssoCartDTO->setPayer([
-            'firstName' => $reservation['booker']['firstname'],
-            'lastName'  => $reservation['booker']['name'],
-            'email'     => $reservation['booker']['email'],
+            'firstName' => $reservation['reservation']->getFirstName(),
+            'lastName'  => $reservation['reservation']->getName(),
+            'email'     => $reservation['reservation']->getEmail(),
             'country'   => 'FRA'
         ]);
 
         // Champ très important pour la réconciliation : on stocke notre ID interne.
         // HelloAsso nous le renverra lors de la confirmation du paiement.
         $this->helloAssoCartDTO->setMetaData([
-            'primary_id' => $reservation['primary_id'],
+            'primary_id' => $reservation['reservation']->getId(),
             'context'    => 'new_reservation'
         ]);
 

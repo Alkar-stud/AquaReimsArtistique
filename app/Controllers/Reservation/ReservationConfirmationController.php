@@ -46,7 +46,7 @@ class ReservationConfirmationController extends AbstractController
      * On confirme les données de toutes les étapes
      */
     #[Route('/reservation/confirmation', name: 'app_reservation_confirmation')]
-    public function index(): void
+    public function confirmation(): void
     {
         //On récupère la session
         $session = $this->reservationSessionService->getReservationTempSession();
@@ -127,19 +127,46 @@ class ReservationConfirmationController extends AbstractController
             $this->redirect('/reservation');
         }
 
-        //On prépare le panier pour la sauvegarde
-        $reservation = $this->reservationSaveCartService->prepareReservationToSaveTemporarily($session);
+        //On récupère les infos de l'évent avec les tarifs associés
+        $event = $session['reservation']->getEventObject();
+        //On fait un tableau des tarifs indexés par leur ID
+        $tarifsById = [];
+        foreach ($event->getTarifs() as $tarif) {
+            $tarifsById[$tarif->getId()] = $tarif;
+        }
+        //On récupère la session choisie de l'événement
+        $eventSession = $this->eventSessionRepository->findById($session['reservation']->getEventSession());
+        //On vérifie que la session appartient bien à l'événement courant
+        if ($eventSession && $eventSession->getEventId() !== (int)$session['reservation']->getEvent()) {
+            $eventSession = null;
+        }
 
-        // Sauvegarde le panier
-        $newId = $this->reservationTempWriter->saveReservation($reservation);
-        //Pour retrouver après et envoyer si besoin à HelloAsso
-        $this->reservationSessionService->setReservationSession('primary_id', $newId);
-        //Et on met à jour $session
-        $session = $this->reservationSessionService->getReservationSession();
-        $reservation['primary_id'] = $newId;
+        //On récupère la nageuse
+        $swimmer = null;
+        if ($session['reservation']->getEventObject()->getLimitationPerSwimmer() !== null) {
+            $swimmer = $this->swimmerRepository->findById($session['reservation']->getSwimmerId(), true);
+        }
+
+        // Préparation des détails et compléments pour la vue + calcul du grand total à partir des sous-totaux
+        $detailSummary = $this->reservationSaveCartService->prepareReservationDetailSummary($session['reservation_details'], $tarifsById);
+        $reservationDetails = $detailSummary['details'];
+        $detailsSubtotal = $detailSummary['subtotal'];
+
+        $complementSummary = $this->reservationSaveCartService->prepareReservationComplementSummary($session['reservation_complements'] ?? [], $tarifsById);
+        $reservationComplements = $complementSummary['complements'];
+        $complementsSubtotal = $complementSummary['subtotal'];
+
+        $totalAmount = $detailsSubtotal + $complementsSubtotal;
+        //On sauvegarde en session
+        $this->reservationSessionService->setReservationSession('totals', [
+            'details_subtotal'     => $detailsSubtotal,
+            'complements_subtotal' => $complementsSubtotal,
+            'total_amount'         => $totalAmount
+            ]);
+
 
         // On tente de créer l'intention de paiement
-        $paymentResult = $this->paymentService->handlePayment($reservation, $session);
+        $paymentResult = $this->paymentService->handlePayment($session, $_SESSION['reservation']);
 
         // Si la création échoue...
         if ($paymentResult['success'] === false) {

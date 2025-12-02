@@ -266,8 +266,6 @@ class ReservationDataValidationService
             if (!empty($validationResult['errors'])) {
                 return ['success' => false, 'errors' => $validationResult['errors']];
             }
-
-            return ['success' => true, 'errors' => []];
         }
 
         if($step == 6) {

@@ -212,7 +212,8 @@ class ReservationTempRepository extends AbstractRepository
             return;
         }
 
-        $events = $this->getEventRepository()->findByIds($eventIds, true, false, true);
+        $events = $this->getEventRepository()->findByIds($eventIds, true, true, true, true);
+
         $eventsById = [];
         foreach ($events as $event) {
             $eventsById[$event->getId()] = $event;

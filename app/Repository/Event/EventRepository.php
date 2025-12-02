@@ -3,6 +3,7 @@
 namespace app\Repository\Event;
 
 use app\Models\Event\Event;
+use app\Models\Event\EventSession;
 use app\Models\Piscine\Piscine;
 use app\Repository\AbstractRepository;
 use app\Repository\Piscine\PiscineRepository;
@@ -134,7 +135,39 @@ class EventRepository extends AbstractRepository
         }
 
         if ($withSessions) {
-            // Logique à implémenter si besoin
+            $sessionRepo = new EventSessionRepository();
+            // On récupère toutes les sessions pour cette liste d'événements
+            $eventsSessions = $sessionRepo->findByEventIds(array_keys($eventsById));
+
+            // On groupe les sessions par id d'événement
+            $sessionsByEventId = [];
+            foreach ($eventsSessions as $sessions) {
+                foreach ($sessions as $session) {
+                    /** @var EventSession $session */
+                    $sessionsByEventId[$session->getEventId()][] = $session;
+                }
+            }
+
+            // On attache les sessions à chaque événement
+            foreach ($eventsById as $eventId => $event) {
+                $event->setSessions($sessionsByEventId[$eventId] ?? []);
+            }
+        }
+
+        if ($withTarifs) {
+            $tarifRepo = new TarifRepository();
+            $eventTarifRepo = new EventTarifRepository($tarifRepo);
+
+            // On récupère tous les tarifs (avec ou sans places selon votre besoin, ici avec places par défaut)
+            $eventsTarifs = $eventTarifRepo->findTarifsByEvents(array_keys($eventsById), true);
+
+            // On associe les tarifs à leurs Events
+            foreach ($eventsById as $eventId => $event) {
+                $eventTarifs = $eventsTarifs[$eventId] ?? [];
+
+                // On ne garde que la liste d'objets Tarif (sans les clés id si vous n'en avez pas besoin)
+                $event->setTarifs(array_values($eventTarifs));
+            }
         }
 
         if ($withInscriptionDates) {
@@ -142,6 +175,14 @@ class EventRepository extends AbstractRepository
             $inscDatesByEvent = $inscRepo->findByEventIds($ids);
             foreach ($events as $event) {
                 $event->setInscriptionDates($inscDatesByEvent[$event->getId()] ?? []);
+            }
+        }
+
+        if ($withPresentations) {
+            $presentationRepo = new EventPresentationsRepository();
+            $presentationsByEvent = $presentationRepo->findByEventIds($ids);
+            foreach ($events as $event) {
+                $event->setPresentations($presentationsByEvent[$event->getId()] ?? []);
             }
         }
 

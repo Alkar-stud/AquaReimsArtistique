@@ -56,46 +56,47 @@ class ReservationConfirmationController extends AbstractController
     public function index(): void
     {
         //On récupère la session
-        $session = $this->reservationSessionService->getReservationSession();
-        //Nouvelle méthode :
-        //$session = $this->reservationSessionService->getReservationTempSession();
+        $session = $this->reservationSessionService->getReservationTempSession();
 
-        //On redirige si la session est expirée
-        if (!isset($session['event_id'])) {
-            $this->flashMessageService->setFlashMessage('danger', 'Le panier a expiré, veuillez recommencer');
+        //On vérifie si la session est expirée
+        $sessionTemp = $session['reservation'] ?? null;
+        if (!$sessionTemp) {
+            $this->flashMessageService->setFlashMessage('warning', 'Votre session a expiré. Merci de recommencer votre réservation.');
             $this->redirect('/reservation?session_expiree=rcc');
         }
 
         //On vérifie toutes les étapes.
-        if (!$this->reservationDataValidationService->validateAllPreviousStep($session)) {
+        if (!$this->reservationDataValidationService->validateAllStep($session)) {
+            $this->flashMessageService->setFlashMessage('warning', 'Il y a des erreurs dans le panier. Merci de recommencer votre réservation.');
             $this->redirect('/reservation');
         }
 
         //On récupère les infos de l'évent avec les tarifs associés
-        $event = $this->eventRepository->findById($session['event_id'], true, true, false, true);
+        $event = $session['reservation']->getEventObject();
         //On fait un tableau des tarifs indexés par leur ID
         $tarifsById = [];
         foreach ($event->getTarifs() as $tarif) {
             $tarifsById[$tarif->getId()] = $tarif;
         }
         //On récupère la session choisie de l'événement
-        $eventSession = $this->eventSessionRepository->findById($session['event_session_id']);
+        $eventSession = $this->eventSessionRepository->findById($session['reservation']->getEventSession());
         //On vérifie que la session appartient bien à l'événement courant
-        if ($eventSession && $eventSession->getEventId() !== (int)$session['event_id']) {
+        if ($eventSession && $eventSession->getEventId() !== (int)$session['reservation']->getEvent()) {
             $eventSession = null;
         }
 
+        //On récupère la nageuse
         $swimmer = null;
-        if ($event->getLimitationPerSwimmer() !== null) {
-            $swimmer = $this->swimmerRepository->findById($session['swimmer_id'], true);
+        if ($session['reservation']->getEventObject()->getLimitationPerSwimmer() !== null) {
+            $swimmer = $this->swimmerRepository->findById($session['reservation']->getSwimmerId(), true);
         }
 
         // Préparation des détails et compléments pour la vue + calcul du grand total à partir des sous-totaux
-        $detailSummary = $this->reservationSaveCartService->prepareReservationDetailSummary($session['reservation_detail'], $tarifsById);
+        $detailSummary = $this->reservationSaveCartService->prepareReservationDetailSummary($session['reservation_details'], $tarifsById);
         $reservationDetails = $detailSummary['details'];
         $detailsSubtotal = $detailSummary['subtotal'];
 
-        $complementSummary = $this->reservationSaveCartService->prepareReservationComplementSummary($session['reservation_complement'] ?? [], $tarifsById);
+        $complementSummary = $this->reservationSaveCartService->prepareReservationComplementSummary($session['reservation_complements'] ?? [], $tarifsById);
         $reservationComplements = $complementSummary['complements'];
         $complementsSubtotal = $complementSummary['subtotal'];
 
@@ -125,7 +126,7 @@ class ReservationConfirmationController extends AbstractController
         }
 
         //On vérifie toutes les étapes.
-        if (!$this->reservationDataValidationService->validateAllPreviousStep($session)) {
+        if (!$this->reservationDataValidationService->validateAllStep($session)) {
             $this->redirect('/reservation');
         }
 

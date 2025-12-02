@@ -4,6 +4,7 @@ namespace app\Services\Reservation;
 
 use app\Models\Reservation\ReservationComplementTemp;
 use app\Models\Reservation\ReservationDetailTemp;
+use app\Models\Reservation\ReservationTemp;
 use app\Models\Tarif\Tarif;
 use app\Repository\Piscine\PiscineGradinsPlacesRepository;
 use app\Repository\Reservation\ReservationComplementTempRepository;
@@ -71,9 +72,14 @@ class ReservationSessionService
         ];
     }
 
-    /** Récupère les données de la session de réservation en cours.
+    /**
+     * Récupère les données de la session de réservation en cours.
      *
-     * @return array {reservation: object|null, reservation_details: array|null, reservation_complements: array|null}
+     * @return array{
+     *   reservation: ReservationTemp|null,
+     *   reservation_details: array<int,ReservationDetailTemp>|null,
+     *   reservation_complements: array<int,ReservationComplementTemp>|null
+     * }
      */
     public function getReservationTempSession(): array
     {
@@ -278,7 +284,7 @@ class ReservationSessionService
     /**
      * Pour préparer reservation_detail de $_SESSION en tableau prêt, en regroupant les packs et indexé par tarif_id
      *
-     * @param array $reservationDetails
+     * @param ReservationDetailTemp[] $reservationDetails
      * @param array $tarifsById
      * @return array
      */
@@ -287,7 +293,7 @@ class ReservationSessionService
         $details = [];
 
         foreach ($reservationDetails as $detail) {
-            $tarifId = (int)($detail['tarif_id'] ?? 0);
+            $tarifId = $detail->getTarif() ?? 0;
             if ($tarifId <= 0 || !isset($tarifsById[$tarifId])) {
                 // Incohérence d'entrée : on ignore la ligne invalide pour ne pas générer d'erreur en vue
                 continue;
@@ -318,7 +324,7 @@ class ReservationSessionService
      * - liste les codes distincts non vides
      * - ajoute les infos du tarif (name, description, price)
      *
-     * @param array $reservationComplement
+     * @param ReservationComplementTemp[] $reservationComplement
      * @param array<int,Tarif> $tarifsById
      * @return array
      */
@@ -330,13 +336,13 @@ class ReservationSessionService
 
         $complements = [];
         foreach ($reservationComplement as $row) {
-            $tarifId = (int)($row['tarif_id'] ?? 0);
+            $tarifId = $row->getTarif() ?? 0;
             if ($tarifId <= 0 || !isset($tarifsById[$tarifId])) {
                 continue;
             }
 
-            $qty  = max(0, (int)($row['qty'] ?? 0));
-            $code = trim((string)($row['tarif_access_code'] ?? ''));
+            $qty  = max(0, (int)($row->getTarif() ?? 0));
+            $code = trim((string)($row->getTarifAccessCode() ?? ''));
 
             if (!isset($complements[$tarifId])) {
                 $tarif = $tarifsById[$tarifId];

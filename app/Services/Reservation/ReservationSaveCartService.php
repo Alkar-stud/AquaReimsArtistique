@@ -2,6 +2,8 @@
 
 namespace app\Services\Reservation;
 
+use app\Models\Reservation\ReservationComplement;
+use app\Models\Reservation\ReservationDetailTemp;
 use app\Models\Tarif\Tarif;
 use app\Repository\Tarif\TarifRepository;
 
@@ -22,6 +24,11 @@ class ReservationSaveCartService
         $this->priceCalculator = $priceCalculator;
     }
 
+    /**
+     * @param ReservationDetailTemp[] $reservationDetails
+     * @param array $tarifsById
+     * @return array
+     */
     public function prepareReservationDetailSummary(array $reservationDetails, array $tarifsById): array
     {
         $grouped = $this->reservationSessionService->prepareSessionReservationDetailToView($reservationDetails, $tarifsById);
@@ -30,11 +37,16 @@ class ReservationSaveCartService
         $subtotal = 0;
 
         foreach ($grouped as $tarifId => $group) {
-            $participants = array_values(array_filter($group, 'is_array'));
+
+            // On garde uniquement les valeurs qui sont des objets ReservationDetailTemp
+            $participants = array_values(array_filter(
+                $group,
+                static fn($item) => $item instanceof ReservationDetailTemp
+            ));
             $count = count($participants);
 
             $tarif = $tarifsById[$tarifId] ?? null;
-            $seatCount = $tarif ? (int)($tarif->getSeatCount() ?? 0) : 0;
+            $seatCount = $tarif ? ($tarif->getSeatCount() ?? 0) : 0;
             $price = $tarif ? (int)$tarif->getPrice() : 0;
 
             $calc = $this->priceCalculator->computeDetailTotals($count, $seatCount, $price);
@@ -58,6 +70,11 @@ class ReservationSaveCartService
         return ['details' => $summary, 'subtotal' => $subtotal];
     }
 
+    /**
+     * @param ReservationComplement[] $reservationComplement
+     * @param array $tarifsById
+     * @return array
+     */
     public function prepareReservationComplementSummary(array $reservationComplement, array $tarifsById): array
     {
         $complements = $this->reservationSessionService->prepareReservationComplementToView($reservationComplement, $tarifsById);

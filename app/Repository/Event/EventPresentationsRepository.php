@@ -76,6 +76,33 @@ class EventPresentationsRepository extends AbstractRepository
     }
 
     /**
+     * Retourne toutes les présentations pour une liste d'IDs d'événements, groupées par event
+     * @param int[] $eventIds
+     * @return array<int, EventPresentations[]>
+     */
+    public function findByEventIds(array $eventIds): array
+    {
+        if (empty($eventIds)) {
+            return [];
+        }
+        $placeholders = implode(',', array_fill(0, count($eventIds), '?'));
+
+        $sql = "SELECT * FROM $this->tableName WHERE event IN ($placeholders) ORDER BY event, display_until";
+        $rows = $this->query($sql, $eventIds);
+
+        $result = [];
+        foreach ($rows as $row) {
+            $eventId = (int)$row['event'];
+            if (!isset($result[$eventId])) {
+                $result[$eventId] = [];
+            }
+            $result[$eventId][] = $this->hydrate($row);
+        }
+
+        return $result;
+    }
+
+    /**
      * Ajoute une présentation
      * @param EventPresentations $p
      * @return int

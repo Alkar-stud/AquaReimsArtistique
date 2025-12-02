@@ -4,13 +4,9 @@ namespace app\Controllers\Reservation;
 
 use app\Attributes\Route;
 use app\Controllers\AbstractController;
-use app\Models\Reservation\ReservationPayment;
-use app\Repository\Event\EventRepository;
 use app\Repository\Event\EventSessionRepository;
-use app\Repository\Reservation\ReservationPaymentRepository;
 use app\Repository\Reservation\ReservationRepository;
 use app\Repository\Swimmer\SwimmerRepository;
-use app\Repository\Tarif\TarifRepository;
 use app\Services\DataValidation\ReservationDataValidationService;
 use app\Services\Payment\PaymentService;
 use app\Services\Reservation\ReservationTempWriter;
@@ -19,7 +15,6 @@ use app\Services\Reservation\ReservationSaveCartService;
 class ReservationConfirmationController extends AbstractController
 {
     private ReservationDataValidationService $reservationDataValidationService;
-    private EventRepository $eventRepository;
     private EventSessionRepository $eventSessionRepository;
     private SwimmerRepository $swimmerRepository;
     private ReservationSaveCartService $reservationSaveCartService;
@@ -29,7 +24,6 @@ class ReservationConfirmationController extends AbstractController
 
     public function __construct(
         ReservationDataValidationService $reservationDataValidationService,
-        EventRepository                  $eventRepository,
         EventSessionRepository           $eventSessionRepository,
         SwimmerRepository                $swimmerRepository,
         ReservationSaveCartService       $reservationSaveCartService,
@@ -40,7 +34,6 @@ class ReservationConfirmationController extends AbstractController
     {
         parent::__construct(true); // route publique
         $this->reservationDataValidationService = $reservationDataValidationService;
-        $this->eventRepository = $eventRepository;
         $this->eventSessionRepository = $eventSessionRepository;
         $this->swimmerRepository = $swimmerRepository;
         $this->reservationSaveCartService = $reservationSaveCartService;
@@ -118,15 +111,19 @@ class ReservationConfirmationController extends AbstractController
     #[Route('/reservation/payment', name: 'app_reservation_payment')]
     public function payment(): void
     {
-        $session = $this->reservationSessionService->getReservationSession();
+        //On récupère la session
+        $session = $this->reservationSessionService->getReservationTempSession();
 
-        if (!isset($session['event_id'])) {
-            $this->flashMessageService->setFlashMessage('danger', 'Le panier a expiré, veuillez recommencer');
-            $this->redirect('/reservation?session_expiree=rcp');
+        //On vérifie si la session est expirée
+        $sessionTemp = $session['reservation'] ?? null;
+        if (!$sessionTemp) {
+            $this->flashMessageService->setFlashMessage('warning', 'Votre session a expiré. Merci de recommencer votre réservation.');
+            $this->redirect('/reservation?session_expiree=rcc');
         }
 
         //On vérifie toutes les étapes.
         if (!$this->reservationDataValidationService->validateAllStep($session)) {
+            $this->flashMessageService->setFlashMessage('warning', 'Il y a des erreurs dans le panier. Merci de recommencer votre réservation.');
             $this->redirect('/reservation');
         }
 

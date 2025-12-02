@@ -137,7 +137,7 @@ class ReservationTempRepository extends AbstractRepository
      */
     public function findExpired(int $timeoutSeconds): array
     {
-        $sql = "SELECT * FROM {$this->tableName} WHERE created_at < NOW() - INTERVAL :seconds SECOND";
+        $sql = "SELECT * FROM {$this->tableName} WHERE created_at < NOW() - INTERVAL :seconds SECOND AND is_locked = 0";
         $rows = $this->query($sql, ['seconds' => $timeoutSeconds]);
 
         if (empty($rows)) {

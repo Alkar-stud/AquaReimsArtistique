@@ -9,7 +9,6 @@ use app\Repository\Reservation\ReservationRepository;
 use app\Repository\Swimmer\SwimmerRepository;
 use app\Services\DataValidation\ReservationDataValidationService;
 use app\Services\Payment\PaymentService;
-use app\Services\Reservation\ReservationTempWriter;
 use app\Services\Reservation\ReservationSaveCartService;
 
 class ReservationConfirmationController extends AbstractController
@@ -18,7 +17,6 @@ class ReservationConfirmationController extends AbstractController
     private EventSessionRepository $eventSessionRepository;
     private SwimmerRepository $swimmerRepository;
     private ReservationSaveCartService $reservationSaveCartService;
-    private ReservationTempWriter $reservationTempWriter;
     private PaymentService $paymentService;
     private ReservationRepository $reservationRepository;
 
@@ -27,7 +25,6 @@ class ReservationConfirmationController extends AbstractController
         EventSessionRepository           $eventSessionRepository,
         SwimmerRepository                $swimmerRepository,
         ReservationSaveCartService       $reservationSaveCartService,
-        ReservationTempWriter            $reservationTempWriter,
         PaymentService                   $paymentService,
         ReservationRepository            $reservationRepository,
     )
@@ -37,7 +34,6 @@ class ReservationConfirmationController extends AbstractController
         $this->eventSessionRepository = $eventSessionRepository;
         $this->swimmerRepository = $swimmerRepository;
         $this->reservationSaveCartService = $reservationSaveCartService;
-        $this->reservationTempWriter = $reservationTempWriter;
         $this->paymentService =  $paymentService;
         $this->reservationRepository = $reservationRepository;
     }

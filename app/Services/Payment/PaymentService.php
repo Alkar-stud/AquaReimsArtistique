@@ -4,7 +4,6 @@ namespace app\Services\Payment;
 
 use app\DTO\HelloAssoCartDTO;
 use app\Models\Reservation\Reservation;
-use app\Repository\Event\EventRepository;
 use app\Repository\Reservation\ReservationRepository;
 use app\Services\Reservation\ReservationDataPersist;
 use app\Services\Reservation\ReservationSessionService;
@@ -15,7 +14,6 @@ use Exception;
 class PaymentService
 {
     private HelloAssoCartDTO $helloAssoCartDTO;
-    private EventRepository $eventRepository;
     private HelloAssoService $helloAssoService;
     private ReservationTempWriter $reservationWriter;
     private ReservationSessionService $reservationSessionService;
@@ -25,7 +23,6 @@ class PaymentService
 
     public function __construct(
         HelloAssoCartDTO          $helloAssoCartDTO,
-        EventRepository           $eventRepository,
         HelloAssoService          $helloAssoService,
         ReservationTempWriter     $reservationWriter,
         ReservationSessionService $reservationSessionService,
@@ -35,7 +32,6 @@ class PaymentService
     )
     {
         $this->helloAssoCartDTO = $helloAssoCartDTO;
-        $this->eventRepository = $eventRepository;
         $this->helloAssoService = $helloAssoService;
         $this->reservationWriter = $reservationWriter;
         $this->reservationSessionService = $reservationSessionService;

@@ -15,6 +15,7 @@ use app\Repository\Reservation\ReservationDetailRepository;
 use app\Repository\Reservation\ReservationDetailTempRepository;
 use app\Repository\Reservation\ReservationMailSentRepository;
 use app\Repository\Reservation\ReservationRepository;
+use app\Repository\Reservation\ReservationTempRepository;
 use app\Services\Mails\MailPrepareService;
 use DateTime;
 
@@ -309,9 +310,10 @@ class ReservationQueryService
      * @param string $searchQuery
      * @param int $currentPage
      * @param int $itemsPerPage
+     * @param ReservationRepository|ReservationTempRepository $repo
      * @return Paginator|array
      */
-    public function searchReservationsWithParam(string $searchQuery, int $currentPage, int $itemsPerPage): Paginator|array
+    public function searchReservationsWithParam(string $searchQuery, int $currentPage, int $itemsPerPage, ReservationRepository|ReservationTempRepository $repo): Paginator|array
     {
         $q = trim($searchQuery);
         if ($q === '') {
@@ -319,7 +321,7 @@ class ReservationQueryService
         }
 
         // Limiter par défaut pour éviter de gros résultats si non paginé côté appelant
-        return $this->reservationRepository->findBySearchPaginated($q, $currentPage, $itemsPerPage, false, null);
+        return $repo->findBySearchPaginated($q, $currentPage, $itemsPerPage, false, null);
     }
 
     /**

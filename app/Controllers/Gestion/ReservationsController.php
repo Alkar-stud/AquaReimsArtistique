@@ -105,13 +105,14 @@ class ReservationsController extends AbstractController
         }
 
         $paginator = null;
+        if ($tab == 'incoming') {
+            $repo = $this->reservationTempRepository;
+        } else {
+            $repo = $this->reservationRepository;
+        }
+
         //Si on a une session, on cherche pour la session
         if ($sessionId > 0) {
-            if ($tab == 'incoming') {
-                $repo = $this->reservationTempRepository;
-            } else {
-                $repo = $this->reservationRepository;
-            }
             $paginator = $repo->findBySessionPaginated(
                 $sessionId,
                 $paginationConfig->getCurrentPage(),
@@ -126,6 +127,7 @@ class ReservationsController extends AbstractController
                 $searchQuery,
                 $paginationConfig->getCurrentPage(),
                 $paginationConfig->getItemsPerPage(),
+                $repo
             );
         }
 

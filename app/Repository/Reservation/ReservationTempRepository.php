@@ -158,6 +158,103 @@ class ReservationTempRepository extends AbstractRepository
         return $result[0]['total'] ?? 0;
     }
 
+
+    /**
+     * Compte les résultats d’une recherche par texte.
+     */
+    public function countBySearch(string $searchQuery): int
+    {
+        $params = [];
+        $where = $this->buildSearchWhere($searchQuery, $params);
+
+        $sql = "SELECT COUNT(id) AS total FROM $this->tableName WHERE $where";
+        $result = $this->query($sql, $params);
+
+        return (int)($result[0]['total'] ?? 0);
+    }
+
+    /** Helper privé pour construire le WHERE et les paramètres de la recherche texte
+     *
+     * @param string $searchQuery
+     * @param array $params
+     * @return string
+     */
+    private function buildSearchWhere(string $searchQuery, array &$params): string
+    {
+        $clauses = [];
+
+        $q = '%' . trim($searchQuery) . '%';
+        $params['q_id'] = $q;
+        $params['q_name'] = $q;
+        $params['q_firstname'] = $q;
+        $params['q_email'] = $q;
+
+        // CAST(id AS CHAR) pour permettre le LIKE sur l'id numérique
+        $clauses[] = '(CAST(id AS CHAR) LIKE :q_id OR name LIKE :q_name OR firstname LIKE :q_firstname OR email LIKE :q_email)';
+
+        return implode(' AND ', $clauses);
+    }
+
+    /**
+     * Version paginée, même style que findBySessionPaginated.
+     */
+    public function findBySearchPaginated(
+        string $searchQuery,
+        int $currentPage,
+        int $itemsPerPage,
+        ?bool $isCanceled = null,
+        ?bool $isChecked = null
+    ): Paginator {
+        $searchQuery = trim($searchQuery);
+        if ($searchQuery === '') {
+            return new Paginator([], 0, $itemsPerPage, $currentPage);
+        }
+
+        $totalItems = $this->countBySearch($searchQuery);
+        $offset = ($currentPage - 1) * $itemsPerPage;
+        $items = $this->findBySearch($searchQuery, $itemsPerPage, $offset, false, true);
+
+        return new Paginator($items, $totalItems, $itemsPerPage, $currentPage);
+    }
+
+
+    /**
+     * Recherche par texte (LIKE) sur id, name, firstname, email, avec filtres facultatifs.
+     * Retourne une liste (non paginée).
+     */
+    public function findBySearch(
+        string $searchQuery,
+        ?int $limit = null,
+        ?int $offset = null,
+        bool $withEvent = false,
+        bool $withChildren = true,
+        ?string $sortOrder = null
+    ): array {
+        $params = [];
+        $where = $this->buildSearchWhere($searchQuery, $params);
+
+        $sql = "SELECT * FROM $this->tableName WHERE $where";
+        match ($sortOrder) {
+            'IDreservation' => $sql .= " ORDER BY id",
+            'NomReservation' => $sql .= " ORDER BY name, firstname",
+            default => $sql .= " ORDER BY created_at DESC",
+        };
+
+        if ($limit !== null && $offset !== null) {
+            $sql .= " LIMIT $limit OFFSET $offset";
+        }
+
+        $rows = $this->query($sql, $params);
+        if (empty($rows)) return [];
+
+        $list = array_map([$this, 'hydrate'], $rows);
+        foreach ($list as $r) {
+            $this->hydrateRelations($r, $withEvent, true, false, true);
+        }
+
+        return $withChildren ? $this->hydrateRelations($list) : $list;
+    }
+
     /**
      * Insère une nouvelle réservation temporaire en base.
      *
@@ -296,13 +393,20 @@ class ReservationTempRepository extends AbstractRepository
     }
 
     /**
-     * Hydrate les relations (ici, l'objet Event) pour une liste de réservations temporaires.
+     * Hydrate les relations pour une ou plusieurs réservations temporaires.
      *
-     * @param ReservationTemp[] $reservations
+     * @param array|ReservationTemp $reservations
      * @return void
      */
-    private function hydrateRelations(array $reservations): void
+    public function hydrateRelations(array|ReservationTemp $reservations)
     {
+        $isSingle = false;
+
+        // Normalise en tableau
+        if ($reservations instanceof ReservationTemp) {
+            $isSingle = true;
+            $reservations = [$reservations];
+        }
         if (empty($reservations)) {
             return;
         }
@@ -326,5 +430,7 @@ class ReservationTempRepository extends AbstractRepository
         foreach ($reservations as $reservation) {
             $reservation->setEventObject($eventsById[$reservation->getEvent()] ?? null);
         }
+
+        return $isSingle ? $reservations[0] : $reservations;
     }
 }

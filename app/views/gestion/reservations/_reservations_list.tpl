@@ -1,4 +1,4 @@
-<form method="POST" id="export-form" action="/gestion/reservations/search">
+<form id="export-form">
     <div class="row g-2 align-items-end mb-3">
         <div class="col-md-5">
             <label for="search-input" class="form-label">Rechercher une réservation :</label>

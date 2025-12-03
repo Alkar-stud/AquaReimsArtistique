@@ -64,7 +64,7 @@ class ReservationDetailTemp extends AbstractModel
             'name' => $this->getName(),
             'firstname' => $this->getFirstName(),
             'tarifId' => $this->getTarif(),
-            'tarifObject' => $this->getTarifObject(),
+            'tarifObject' => $this->getTarifObject()->toArray(),
             'tarifAccessCode' => $this->getTarifAccessCode(),
             'justificatifName' => $this->getJustificatifName(),
             'justificatifOriginalName' => $this->getJustificatifOriginalName(),

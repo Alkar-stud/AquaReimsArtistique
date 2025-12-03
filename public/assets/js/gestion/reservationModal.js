@@ -45,7 +45,7 @@ async function refreshModalContent(modal, reservationId) {
             throw new Error(`Erreur serveur : ${response.statusText}`);
         }
         const reservation = await response.json();
-console.log('reservation : ', reservation);
+
         // Restaurer le HTML et remplir la modale
         modalBody.innerHTML = originalModalBodyHtml;
 

@@ -46,9 +46,9 @@ console.log('data : ', data);
                 name: `${data.name} ${data.firstName}`,
                 email: data.email,
                 phone: data.phone,
-                amount: `${(data.totalAmount ?? 0).toFixed(2)} €`, // Vérification défensive pour totalAmount
-                details: data.details.map(d => `<li>${d.quantity} x ${d.label} (${(d.price ?? 0).toFixed(2)} €)</li>`).join(''), // Vérification défensive pour d.price
-                complements: data.complements.map(c => `<li>${c.name} : ${c.value ?? ''}</li>`).join('') // Vérification défensive pour c.value
+                amount: `${(data.totalAmount ?? 0).toFixed(2)} €`,
+                details: data.details.map(d => `<li>${d.name} ${d.firstname} <div class="text-muted small">${d.tarifObject.name} (${(d.tarifObject.price /100).toFixed(2)} €)</div></li>`).join(''),
+                complements: data.complements.map(c => `<li>${c.name} : ${c.value ?? ''}</li>`).join('')
             });
         } else {
             throw new Error(data.error || 'Données de réservation non trouvées.');

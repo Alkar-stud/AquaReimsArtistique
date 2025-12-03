@@ -44,4 +44,24 @@ class Tarif extends AbstractModel
     public function setAccessCode(?string $access_code): self { $this->access_code = empty($access_code) ? null : $access_code; return $this; }
     public function setIsActive(bool $is_active): self { $this->is_active = $is_active; return $this; }
 
+    /**
+     * @return array
+     */
+    public function toArray(): array
+    {
+        return [
+            'id' => method_exists($this, 'getId') ? $this->getId() : null,
+            'name' => $this->name,
+            'description' => $this->description,
+            'seat_count' => $this->seat_count,
+            'min_age' => $this->min_age,
+            'max_age' => $this->max_age,
+            'max_tickets' => $this->max_tickets,
+            'price' => $this->price,
+            'includes_program' => $this->includes_program,
+            'requires_proof' => $this->requires_proof,
+            'access_code' => $this->access_code,
+            'is_active' => $this->is_active,
+        ];
+    }
 }

@@ -71,9 +71,10 @@
         </td>
 
         <td>
-            <!-- Boutons d\'action adaptés aux réservations temporaires -->
-            <button class="btn btn-sm btn-primary js-open-reservation-temp"
-                    data-id="{{ $reservation->getId() }}">
+            <!-- Boutons d'action adaptés aux réservations temporaires -->
+            <button type="button" class="btn btn-sm btn-primary js-open-reservation-temp"
+                    data-id="{{ $reservation->getId() }}"
+                    data-bs-toggle="modal" data-bs-target="#reservation-incoming-modal">
                 Voir
             </button>
             <button class="btn btn-sm btn-danger js-delete-reservation-temp"
@@ -86,3 +87,7 @@
     {% endif %}
     </tbody>
 </table>
+
+
+<!-- Modal Détails Réservation -->
+{% if !empty($reservations) %}{% include '/gestion/reservations/_modal_incoming.tpl' with {'emailsTemplatesToSendManually' => $emailsTemplatesToSendManually} %}{% endif %}

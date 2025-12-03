@@ -170,6 +170,22 @@ class ReservationsController extends AbstractController
         $this->json($reservation->toArray());
     }
 
+    #[Route('/gestion/reservations-temp/details/{id}', name: 'app_gestion_reservation_temp_details', methods: ['GET'])]
+    public function getReservationTempDetails(int $id): void
+    {
+        // Vérifier les permissions de l'utilisateur connecté
+        $this->checkUserPermission('R');
+
+        $reservation = $this->reservationTempRepository->findById($id);
+
+        if (!$reservation) {
+            $this->json(['error' => 'Réservation temporaire non trouvée'], 404);
+            return;
+        }
+
+        $this->json($reservation->toArray());
+    }
+
     #[Route('/gestion/reservations/update', name: 'app_gestion_reservations_update', methods: ['POST'])]
     public function update(): void
     {

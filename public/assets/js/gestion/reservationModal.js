@@ -634,3 +634,69 @@ function updateMailSentSection(modal, reservation) {
         toggleMailSentLink.textContent = 'Voir le détail des mails envoyés';
     }
 }
+
+export function openReservationModal(reservation) {
+    const isPaid = (reservation.total_amount_paid || 0) >= (reservation.total_amount || 0);
+
+    if (isPaid) {
+        // Modale standard déjà existante
+        const modalEl = document.getElementById('reservation-modal');
+        if (!modalEl) {
+            showFlashMessage('danger', 'Modale de réservation introuvable', 'ajax_flash_container');
+            return;
+        }
+        const modal = new bootstrap.Modal(modalEl);
+        // Hydratez ici les champs de la modale standard...
+        modal.show();
+        return;
+    }
+
+    // Modale en cours (non réglée)
+    const incomingEl = document.getElementById('reservation-incoming-modal');
+    if (!incomingEl) {
+        showFlashMessage('danger', 'Modale en cours introuvable', 'ajax_flash_container');
+        return;
+    }
+
+    // Hydratation minimale
+    incomingEl.querySelector('#incoming-name').textContent = `${reservation.name} ${reservation.firstname}`;
+    incomingEl.querySelector('#incoming-email').textContent = reservation.email || '';
+    incomingEl.querySelector('#incoming-phone').textContent = reservation.phone || '';
+
+    const amount = reservation.total_amount ?? 0;
+    const paid = reservation.total_amount_paid ?? 0;
+    incomingEl.querySelector('#incoming-amount').textContent = `À régler: ${(amount - paid)} / Total: ${amount}`;
+
+    // Détails & compléments (attendu depuis vos services contrôleur)
+    const details = reservation.details || [];
+    const complements = reservation.complements || [];
+
+    incomingEl.querySelector('#incoming-details').innerHTML =
+        details.length
+            ? details.map(d => `• ${d.tarif_name ?? 'Tarif'} x${d.count ?? 1}`).join('<br>')
+            : '<span class="text-muted">Aucun participant</span>';
+
+    incomingEl.querySelector('#incoming-complements').innerHTML =
+        complements.length
+            ? complements.map(c => `• ${c.tarif_name ?? 'Complément'} x${c.qty ?? 1}`).join('<br>')
+            : '<span class="text-muted">Aucun complément</span>';
+
+    // Actions mails
+    incomingEl.querySelector('#send-reminder-email').onclick = async () => {
+        try {
+            const resp = await fetch(`/gestion/reservations/${reservation.id}/mail/reminder`, { method: 'POST' });
+            if (!resp.ok) throw new Error('Erreur envoi de mail');
+            showFlashMessage('success', 'Mail de relance envoyé', 'ajax_flash_container');
+        } catch (e) {
+            showFlashMessage('danger', 'Échec envoi de mail', 'ajax_flash_container');
+        }
+    };
+
+    incomingEl.querySelector('#send-custom-email').onclick = async () => {
+        // Ouvrir une autre modale / formulaire personnalisé si besoin
+        showFlashMessage('info', 'Ouverture du mail personnalisé', 'ajax_flash_container');
+    };
+
+    const modal = new bootstrap.Modal(incomingEl);
+    modal.show();
+}

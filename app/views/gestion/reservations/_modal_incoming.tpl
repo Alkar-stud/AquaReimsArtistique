@@ -1,67 +1,100 @@
-<div id="reservation-incoming-modal" class="modal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
+<!-- language: html -->
+<div class="modal fade"
+     id="reservation-incoming-modal"
+     tabindex="-1"
+     aria-labelledby="reservationIncomingModalLabel"
+     aria-hidden="true"
+     data-is-readonly="{{ $isReadOnly ? 'true' : 'false' }}"
+     data-can-update="{{ str_contains($userPermissions, 'U') ? 'true' : 'false' }}">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Réservation en cours</h5>
+                <h5 class="modal-title" id="reservationIncomingModalLabel">Détails de la réservation (à venir)</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
             </div>
 
             <div class="modal-body">
-                <!-- Identité -->
-                <div class="mb-3">
-                    <div class="fw-bold small text-uppercase">Réservant</div>
-                    <div id="incoming-name"></div>
-                    <div id="incoming-email" class="text-muted small"></div>
-                    <div id="incoming-phone" class="text-muted small"></div>
-                </div>
+                <div class="text-center">
+                    <form id="reservationIncomingForm">
+                        <div id="contact-fields-container">
+                            <input type="hidden" id="incoming_reservation_id" name="reservation_id" value="">
+                            <input type="hidden" id="incoming_reservation_token" name="reservation_token" value="">
+                            <h4>Réservant</h4>
 
-                <!-- Détails (participants / compléments) -->
-                <div class="mb-3">
-                    <div class="fw-bold small text-uppercase">Contenu du panier</div>
-                    <div id="incoming-details"></div>
-                    <div id="incoming-complements"></div>
-                </div>
-
-                <!-- Montants -->
-                <div class="mb-3">
-                    <div class="fw-bold small text-uppercase">Montant</div>
-                    <div id="incoming-amount" class="h6"></div>
-                </div>
-
-                <!-- Mails (inclut relance paiement) -->
-                <hr class="my-4">
-                <!-- section pour les mails -->
-                <div id="modal-mail_sent-section">
-                    <h4>Mails</h4>
-                    {% if !empty($emailsTemplatesToSendManually) %}
-                    <div id="modal-mail-manual-send" class="mt-3">
-                        <div class="input-group">
-                            <label class="input-group-text" for="modal-mail-template-selector">Modèle</label>
-                            <select id="modal-mail-template-selector" class="form-select" {{ $isReadOnly ? 'disabled' : '' }}>
-                                <option value="" selected disabled>— Choisir un modèle de mail à envoyer —</option>
-                                {% foreach $emailsTemplatesToSendManually as $tpl %}
-                                <option value="{{ $tpl->getCode() }}">{{ $tpl->getCode() }} — {{ $tpl->getSubject() }}</option>
-                                {% endforeach %}
-                            </select>
-                            <button class="btn btn-primary" id="modal-send-mail-template-btn" {{ $isReadOnly ? 'disabled' : '' }}>
-                                <i class="bi bi-envelope"></i>&nbsp;Envoyer
-                            </button>
+                            <!-- Champs attendus par reservationTemp.js -->
+                            <div class="row mb-3 text-start">
+                                <div class="col-12">
+                                    <strong>Nom / Prénom :</strong>
+                                    <div id="incoming-name"></div>
+                                </div>
+                            </div>
+                            <div class="row mb-2 text-start">
+                                <div class="col-md-6">
+                                    <strong>Email :</strong>
+                                    <div id="incoming-email"></div>
+                                </div>
+                                <div class="col-md-6">
+                                    <strong>Téléphone :</strong>
+                                    <div id="incoming-phone"></div>
+                                </div>
+                            </div>
                         </div>
-                        <div class="form-text" id="send-email-dialog">Le mail sera envoyé au réservant.</div>
-                    </div>
-                    {% else %}
-                    <div class="alert alert-warning mt-3">Aucun modèle de mail manuel disponible.</div>
-                    {% endif %}
-                    <div id="modal-mail_sent-details-container" class="mt-2" style="display: none;">
-                        <!-- Les détails des mails seront injectés ici par JavaScript -->
-                    </div>
-                </div>
 
+                        <hr class="my-4">
+
+                        <!-- Montant total -->
+                        <div id="incoming-amount-section" class="text-start">
+                            <h4>Montant</h4>
+                            <div id="incoming-amount" class="fw-bold"></div>
+                        </div>
+
+                        <hr class="my-4">
+
+                        <!-- Participants -->
+                        <div id="incoming-participants-section" class="text-start">
+                            <h4>Participants</h4>
+                            <div id="incoming-details"></div>
+                        </div>
+
+                        <!-- Compléments -->
+                        <div id="incoming-complements-section" class="text-start" style="display: none;">
+                            <h4>Compléments</h4>
+                            <div id="incoming-complements"></div>
+                        </div>
+                    </form>
+                </div>
             </div>
 
             <div class="modal-footer">
-                <button class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+                <div class="row g-2 w-100 align-items-md-center">
+                    <div class="col-12 col-md-auto">
+                        <div class="d-grid gap-2 d-sm-flex">
+                            {% if str_contains($userPermissions, 'D') %}
+                            <button type="button" id="incoming-reservation-delete-btn" class="btn btn-danger">
+                                <i class="bi bi-trash"></i>&nbsp;Supprimer la réservation
+                            </button>
+                            {% endif %}
+                            {% if str_contains($userPermissions, 'U') %}
+                            <button type="button" id="incoming-reservation-cancel-btn" class="btn btn-warning" data-bs-dismiss="modal">
+                                <i class="bi bi-x-circle"></i>&nbsp;Annuler la réservation
+                            </button>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="col-12 col-md-auto ms-md-auto">
+                        <div class="d-grid gap-2 d-sm-flex justify-content-md-end">
+                            {% if str_contains($userPermissions, 'U') %}
+                            <button type="submit" class="btn btn-info" id="incoming-save-and-toggle-checked-btn">
+                                <i class="bi bi-check"></i>&nbsp;Enregistrer et marquer comme vérifié
+                            </button>
+                            {% endif %}
+                            <button type="button" id="incoming-close-btn" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+                        </div>
+                    </div>
+                </div>
             </div>
+
         </div>
     </div>
 </div>

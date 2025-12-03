@@ -151,37 +151,3 @@ export function extractErrorMessages(errorData) {
     // Déduplique et joint (à adapter: '\n' ou ' • ')
     return [...new Set(messages)].join('\n');
 }
-
-/**
- * Effectue une requête fetch et retourne la réponse en JSON.
- * Gère les erreurs réseau et les réponses HTTP qui ne sont pas "OK".
- * @param {string} url - L'URL de l'API.
- * @param {object} [options={}] - Les options pour la requête fetch (method, headers, body, etc.).
- * @returns {Promise<any>} Une promesse qui se résout avec les données JSON.
- * @throws {Error} Lance une erreur si la réponse réseau n'est pas OK.
- */
-export async function fetchJson(url, options = {}) {
-    const defaultHeaders = {
-        'Accept': 'application/json',
-        'X-Requested-With': 'XMLHttpRequest'
-    };
-
-    const config = { ...options, headers: { ...defaultHeaders, ...options.headers } };
-    const response = await fetch(url, config);
-
-    if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ message: response.statusText }));
-        throw new Error(errorData.message || `Erreur HTTP ${response.status}`);
-    }
-
-    return response.json();
-}
-
-/**
- * Raccourci pour effectuer une requête GET avec fetchJson.
- * @param {string} url - L'URL de l'API.
- * @returns {Promise<any>} Une promesse qui se résout avec les données JSON.
- */
-export function getJson(url) {
-    return fetchJson(url, { method: 'GET' });
-}

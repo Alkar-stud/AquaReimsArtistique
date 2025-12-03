@@ -1,4 +1,4 @@
-import { getJson } from '../components/utils.js';
+import {apiGet} from "../components/apiClient.js";
 
 let reservationTempModal = null;
 
@@ -38,9 +38,10 @@ async function loadReservationTempDetails(reservationId) {
     setModalContent(modal, { loading: true });
 
     try {
-        const data = await getJson(`/gestion/reservations-temp/details/${reservationId}`);
+        const data = await apiGet(`/gestion/reservations-temp/details/${reservationId}`);
 
         if (data && !data.error) {
+console.log('data : ', data);
             setModalContent(modal, {
                 name: `${data.name} ${data.firstName}`,
                 email: data.email,
@@ -70,7 +71,7 @@ function setModalContent(modal, content) {
     const amountEl = modal.querySelector('#incoming-amount');
     const detailsEl = modal.querySelector('#incoming-details');
     const complementsEl = modal.querySelector('#incoming-complements');
-
+console.log('content : ', content);
     if (content.loading) {
         nameEl.textContent = 'Chargement...';
         // ... vider les autres champs

@@ -36,6 +36,7 @@ class ReservationComplementTemp extends AbstractModel
             'id' => $this->getId(),
             'reservationTempId' => $this->getReservationTemp(),
             'tarifId' => $this->getTarif(),
+            'tarifObject' => $this->getTarifObject(),
             'tarifAccessCode' => $this->getTarifAccessCode(),
             'quantity' => $this->getQty(),
             'createdAt' => $this->getCreatedAt()->format(DateTime::ATOM),

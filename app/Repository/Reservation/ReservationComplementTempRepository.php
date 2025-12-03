@@ -94,6 +94,44 @@ class ReservationComplementTempRepository extends AbstractRepository
 
         return $details;
     }
+    /**
+     * Compléments pour une liste d'IDs de réservations.
+     * @param int[] $reservationIds
+     * @param bool $withReservation
+     * @param bool $withTarif
+     * @return ReservationComplementTemp[]
+     */
+    public function findByReservationIds(array $reservationIds, bool $withReservation = false, bool $withChildren = false): array
+    {
+        if (empty($reservationIds)) {
+            return [];
+        }
+
+        $placeholders = implode(',', array_fill(0, count($reservationIds), '?'));
+        $sql = "SELECT * FROM {$this->tableName} WHERE reservation_temp IN ($placeholders) ORDER BY created_at";
+
+        $rows = $this->query($sql, $reservationIds);
+        if (empty($rows)) {
+            return [];
+        }
+
+        $list = array_map([$this, 'hydrate'], $rows);
+
+        // Si la classe possède une méthode hydrateRelations qui accepte les enfants, on l'appelle.
+        // On l'appelle en mode non bloquant et on normalise le résultat pour toujours renvoyer un tableau.
+        if ($withChildren && method_exists($this, 'hydrateRelations')) {
+            $hydrated = $this->hydrateRelations($list);
+            if (is_array($hydrated)) {
+                return $hydrated;
+            }
+            // Si hydrateRelations retourne un objet unique, on le remet dans un tableau.
+            if ($hydrated !== null) {
+                return is_array($hydrated) ? $hydrated : [$hydrated];
+            }
+        }
+
+        return $list;
+    }
 
     /**
      * Insère un complément de réservation temporaire en base.

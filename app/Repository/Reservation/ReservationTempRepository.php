@@ -6,6 +6,7 @@ use app\Models\Reservation\Reservation;
 use app\Repository\AbstractRepository;
 use app\Repository\Event\EventRepository;
 use app\Models\Reservation\ReservationTemp;
+use app\Repository\Swimmer\SwimmerRepository;
 use DateTime;
 
 class ReservationTempRepository extends AbstractRepository
@@ -396,41 +397,60 @@ class ReservationTempRepository extends AbstractRepository
      * Hydrate les relations pour une ou plusieurs réservations temporaires.
      *
      * @param array|ReservationTemp $reservations
-     * @return void
+     * @return array|ReservationTemp
      */
-    public function hydrateRelations(array|ReservationTemp $reservations)
+    public function hydrateRelations(array|ReservationTemp $reservations): array|ReservationTemp
     {
-        $isSingle = false;
+        $single = $reservations instanceof ReservationTemp;
+        $list = $single ? [$reservations] : $reservations;
 
-        // Normalise en tableau
-        if ($reservations instanceof ReservationTemp) {
-            $isSingle = true;
-            $reservations = [$reservations];
-        }
-        if (empty($reservations)) {
-            return;
+        if (empty($list)) {
+            return $single ? $reservations : [];
         }
 
-        $eventIds = array_unique(array_map(
-            fn(ReservationTemp $r) => $r->getEvent(),
-            $reservations
-        ));
-        if (empty($eventIds)) {
-            return;
+        // Récupération des ids
+        $reservationIds = array_map(fn(ReservationTemp $r) => $r->getId(), $list);
+
+        // Détails
+        $detailsRepo = new ReservationDetailTempRepository();
+        $allDetails = $detailsRepo->findByReservations($reservationIds, true, true, true);
+        $detailsByReservationId = [];
+        foreach ($allDetails as $detail) {
+            // Si un élément inattendu est null, on l'ignore
+            if ($detail === null) {
+                continue;
+            }
+
+            $reservationTempId = $detail->getReservationTemp();
+            if ($reservationTempId === null) {
+                continue;
+            }
+
+            $detailsByReservationId[$reservationTempId][] = $detail;
         }
 
-        // On récupère les events une seule fois
-        $events = $this->getEventRepository()->findByIds($eventIds, true, false, false, false);
-
-        $eventsById = [];
-        foreach ($events as $event) {
-            $eventsById[$event->getId()] = $event;
+        // Compléments
+        $complementsRepo = new ReservationComplementTempRepository();
+        $allComplements = $complementsRepo->findByReservationIds($reservationIds, false, true);
+        $complementsByReservationId = [];
+        foreach ($allComplements as $complement) {
+            $complementsByReservationId[$complement->getReservationTemp()][] = $complement;
         }
 
-        foreach ($reservations as $reservation) {
-            $reservation->setEventObject($eventsById[$reservation->getEvent()] ?? null);
+        // Hydratation du Swimmer
+        $swimmerRepo = new SwimmerRepository();
+        foreach ($list as $reservation) {
+            $reservation->setDetails($detailsByReservationId[$reservation->getId()] ?? []);
+            $reservation->setComplements($complementsByReservationId[$reservation->getId()] ?? []);
+
+            $swimmerId = $reservation->getSwimmerId();
+            if ($swimmerId !== null) {
+                $reservation->setSwimmer($swimmerRepo->findById((int)$swimmerId));
+            } else {
+                $reservation->setSwimmer(null);
+            }
         }
 
-        return $isSingle ? $reservations[0] : $reservations;
+        return $single ? $list[0] : $list;
     }
 }

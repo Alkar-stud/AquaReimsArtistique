@@ -158,6 +158,34 @@ class ReservationDetailTempRepository extends AbstractRepository
     }
 
     /**
+     * Détails pour une liste d'IDs de réservation.
+     * @param int[] $reservationIds
+     * @param bool $withReservation
+     * @param bool $withTarif
+     * @param bool $withPlace
+     * @return array
+     */
+    public function findByReservations(array $reservationIds, bool $withTarif = false, bool $withChildren = false, bool $withSwimmer = false): array
+    {
+        if (empty($reservationIds)) return [];
+
+        $placeholders = implode(',', array_fill(0, count($reservationIds), '?'));
+        $sql = "SELECT * FROM {$this->tableName} WHERE reservation_temp IN ($placeholders) ORDER BY id";
+
+        $rows = $this->query($sql, $reservationIds);
+        if (empty($rows)) return [];
+
+        // Hydrater les entités
+        $list = array_map([$this, 'hydrate'], $rows);
+
+        // Hydrater les relations — la méthode modifie $list en place et ne retourne rien
+        $this->hydrateRelations($list);
+
+        // Retourner la liste hydratée
+        return $list;
+    }
+
+    /**
      * Insère un détail de réservation temporaire en base.
      *
      * Les champs optionnels (par ex. justificatif, place_number) peuvent être null.

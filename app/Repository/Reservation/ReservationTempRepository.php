@@ -269,8 +269,8 @@ class ReservationTempRepository extends AbstractRepository
     public function insert(ReservationTemp $m): bool
     {
         $sql = "INSERT INTO {$this->tableName}
-            (event, event_session, session_id, name, firstname, email, phone, swimmer_if_limitation, access_code, created_at)
-            VALUES (:event, :event_session, :session_id, :name, :firstname, :email, :phone, :swimmer_if_limitation, :access_code, :created_at)";
+            (event, event_session, session_id, name, firstname, email, phone, swimmer_if_limitation, access_code, total_amount, created_at)
+            VALUES (:event, :event_session, :session_id, :name, :firstname, :email, :phone, :swimmer_if_limitation, :access_code, :total_amount, :created_at)";
         $params = [
             'event' => $m->getEvent(),
             'event_session' => $m->getEventSession(),

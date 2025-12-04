@@ -104,11 +104,17 @@ function updateUI(containerEl, reservationData, isReadOnly = false) {
         let participantsHtml = '';
 
         group.participants.forEach(p => {
-console.log(p);
             const placeCol = p.placeNumber ? `
                 <div class="col-12 col-md-3 d-flex align-items-center">
                     <div class="input-group input-group-sm w-100">
-                        Place :&nbsp;<span id="PlaceNameDisplay">${esc(p.fullPlaceName)}</span>
+                        Place :&nbsp;
+                        <span class="PlaceNameDisplay"
+                            data-place-id="${esc(p.placeId ?? p.place_id ?? p.placeNumber ?? '')}"
+                            aria-label="Numéro de place ${esc(p.fullPlaceName)}"
+                            role="button"
+                            tabindex="0">
+                            ${esc(p.fullPlaceName)}
+                        </span>
                     </div>
                 </div>
             ` : '';

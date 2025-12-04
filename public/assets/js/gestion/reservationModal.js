@@ -80,6 +80,17 @@ async function refreshModalContent(modal, reservationId) {
                 reservationIdentifier: reservation.id,
                 identifierType: 'reservationId'
             });
+
+            // Ajoute un écouteur global (délégation) pour capter les clics sur `.PlaceNameDisplay`
+            document.addEventListener('click', (event) => {
+                const el = event.target.closest('.PlaceNameDisplay');
+                if (!el) {
+                    return;
+                }
+                const placeId = el.dataset.placeId;
+                console.log(placeId);
+                //TODO Afficher le place global pour cliquer sur une place afin de changer
+            });
         }
 
         /*---------------------------------
@@ -158,7 +169,9 @@ async function refreshModalContent(modal, reservationId) {
                             await refreshModalContent(modal, reservationId);
                         } else {
                             // Si l'API retourne une erreur contrôlée
-                            throw new Error(result.message || 'Une erreur est survenue.');
+                            alert(result.message || 'Une erreur est survenue.');
+                            button.style.pointerEvents = 'auto';
+                            button.innerHTML = originalIcon;
                         }
                     } catch (error) {
                         alert(`Erreur : ${error.message}`);
@@ -349,7 +362,7 @@ async function refreshModalContent(modal, reservationId) {
                         // Met à jour la section "mails envoyés" et l’ouvre
                         updateMailSentSection(modal, result.reservation);
                     } else {
-                        throw new Error(result.message || 'Erreur lors de l’envoi du mail.');
+                        showFlashMessage('danger', result.message || 'Erreur lors de l’envoi du mail.', 'send-email-dialog');
                     }
                 } catch (e) {
                     alert(`Erreur: ${e.userMessage || e.message}`);
@@ -428,7 +441,9 @@ async function refreshModalContent(modal, reservationId) {
                     if (result.success) {
                         feedbackSpan.innerHTML = '<i class="bi bi-check-lg text-success"></i>';
                     } else {
-                        throw new Error(result.message || 'Erreur inconnue');
+                        // Afficher le message d'erreur dans le feedback
+                        const msg = result && result.message ? result.message : 'Erreur inconnue';
+                        feedbackSpan.innerHTML = `<i class="bi bi-x-lg text-danger" title="${msg}"></i>`;
                     }
                 } catch (error) {
                     feedbackSpan.innerHTML = `<i class="bi bi-x-lg text-danger" title="${error.message}"></i>`;
@@ -441,7 +456,7 @@ async function refreshModalContent(modal, reservationId) {
         if (resetTokenButton) {
             resetTokenButton.addEventListener('click', async () => {
                 const reservationId = modal.querySelector('#modal_reservation_id').value;
-                //On récupère la valeur (si coché ou non)
+                //On récupère la valeur (si coché ou non).
                 const sendEmail = modal.querySelector('#modal-resend-token-email').checked;
                 //On remet décoché
                 modal.querySelector('#modal-resend-token-email').checked = false;
@@ -586,12 +601,16 @@ function updateMailSentSection(modal, reservation) {
     const toggleMailSentLink = modal.querySelector('#toggle-mail_sent-details');
     const nbMailSent = modal.querySelector('#modal-nb-mail-sent');
 
-    if (!mailSentContainer || !toggleMailSentLink) return;
+    if (!mailSentContainer || !toggleMailSentLink) {
+        return;
+    }
 
     const list = Array.isArray(reservation?.mailSent) ? reservation.mailSent : [];
 
     // Met à jour le compteur
-    if (nbMailSent) nbMailSent.textContent = String(list.length);
+    if (nbMailSent) {
+        nbMailSent.textContent = String(list.length);
+    }
 
     // Affiche le lien si des mails existent
     toggleMailSentLink.style.display = list.length > 0 ? 'inline' : 'none';
@@ -680,7 +699,11 @@ export function openReservationModal(reservation) {
     incomingEl.querySelector('#send-reminder-email').onclick = async () => {
         try {
             const resp = await fetch(`/gestion/reservations/${reservation.id}/mail/reminder`, { method: 'POST' });
-            if (!resp.ok) throw new Error('Erreur envoi de mail');
+            if (!resp.ok) {
+                // Gestion explicite sans throw
+                showFlashMessage('danger', 'Erreur envoi de mail', 'ajax_flash_container');
+                return;
+            }
             showFlashMessage('success', 'Mail de relance envoyé', 'ajax_flash_container');
         } catch (e) {
             showFlashMessage('danger', 'Échec envoi de mail', 'ajax_flash_container');

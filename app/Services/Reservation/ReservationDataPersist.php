@@ -71,13 +71,13 @@ readonly class ReservationDataPersist
     /**
      * Persiste une réservation complète en base de données MySQL à partir des données de paiement et de la réservation temporaire.
      *
-     * @param object $paymentData Les données de la commande/paiement reçues de HelloAsso (le contenu de $result→data).
+     * @param ?object $paymentData Les données de la commande/paiement reçues de HelloAsso (le contenu de $result→data), null si pas de paiement TotalAMout ==0)
      * @param ReservationTemp $reservationTemp La réservation temporaire récupérée depuis MySQL.
      * @param string $context
      * @param bool $freeReservation
      * @return Reservation|null L'objet Reservation persistant ou null en cas d'erreur.
      */
-    public function persistConfirmReservation(object $paymentData, ReservationTemp $reservationTemp, string $context, bool $freeReservation = false): ?Reservation
+    public function persistConfirmReservation(?object $paymentData, ReservationTemp $reservationTemp, string $context, bool $freeReservation = false): ?Reservation
     {
         $pdo = Database::getInstance();
 

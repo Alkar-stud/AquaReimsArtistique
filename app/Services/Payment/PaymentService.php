@@ -43,27 +43,26 @@ class PaymentService
     /**
      * On organise le paiement, préparation, demande de token, puis de checkoutId
      *
-     * @param array $reservation
+     * @param array $reservationTemp
      * @param array $session
      * @return array
      */
-    public function handlePayment(array $reservation, array $session): array
+    public function handlePayment(array $reservationTemp, array $session): array
     {
         //Si le montant total est égal à 0, on redirige directement pour l'enregistrement définitif
         if($session['totals']['total_amount'] == 0) {
             if ($_SERVER['REQUEST_URI'] == '/reservation/payment') { $context = 'new_reservation'; }
             elseif ($_SERVER['REQUEST_URI'] == '/modifData') { $context = 'balance_payment'; }
             else { $context = 'other'; }
-            //TODO faire la réservation définitive
-            $this->reservationDataPersist->persistConfirmReservation((object)$reservation, $reservation, $context, true);
-            $finalReservation = $this->reservationRepository->findByField('reservation_temp_id', $session['reservation']->getId());
+            $this->reservationDataPersist->persistConfirmReservation(null, $reservationTemp['reservation'], $context, true);
+            $finalReservation = $this->reservationRepository->findByField('reservation_temp_id', $reservationTemp['reservation']->getId());
 
             return ['success' => true, 'token' => $finalReservation->getToken()];
         }
-        $reservation['totals'] = $session['totals'];
+        $reservationTemp['totals'] = $session['totals'];
         
         //On prépare le panier pour HelloAsso avec le DTO
-        $checkoutCart = $this->prepareCheckOutData($reservation);
+        $checkoutCart = $this->prepareCheckOutData($reservationTemp);
 
         $now = time();
         $intentTimestamp = $session['paymentIntentTimestamp'] ?? 0;
@@ -89,7 +88,7 @@ class PaymentService
 
         //On sauvegarde le checkoutIntentId
         if ($result['success']) {
-            $this->reservationWriter->updateReservationByPrimaryId($reservation['reservation']->getId(), ['checkout_intent_id' => $result['checkoutIntentId']]);
+            $this->reservationWriter->updateReservationByPrimaryId($reservationTemp['reservation']->getId(), ['checkout_intent_id' => $result['checkoutIntentId']]);
             //Puis, on ajoute à la session pour les retrouver après
             $this->reservationSessionService->setReservationSession('checkoutIntentId', $result['checkoutIntentId']);
             $this->reservationSessionService->setReservationSession('redirectUrl', $result['redirectUrl']);

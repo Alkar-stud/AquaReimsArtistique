@@ -5,6 +5,7 @@ namespace app\Services\Reservation;
 use app\Core\Paginator;
 use app\Models\Piscine\Piscine;
 use app\Models\Reservation\Reservation;
+use app\Models\Reservation\ReservationDetail;
 use app\Models\Reservation\ReservationMailSent;
 use app\Repository\Event\EventRepository;
 use app\Repository\Mail\MailTemplateRepository;
@@ -199,6 +200,7 @@ class ReservationQueryService
         $readyForView = ['details' => [], 'complements' => []];
 
         // Grouper participants par tarif
+        /** @var ReservationDetail $detail */
         foreach ($reservation->getDetails() as $detail) {
             $tarif = $detail->getTarifObject();
             $tarifId = $tarif->getId();
@@ -214,11 +216,7 @@ class ReservationQueryService
                 'id' => $detail->getId(),
                 'name' => $detail->getName(),
                 'firstname' => $detail->getFirstName(),
-                'place_number' => method_exists($detail, 'getPlaceNumber')
-                    ? $detail->getPlaceNumber()
-                    : (method_exists($detail->getPlaceObject() ?: null, 'getId')
-                        ? $detail->getPlaceObject()->getId()
-                        : null),
+                'place_number' => $detail->getPlaceObject()->getFullPlaceName(),
                 'tarif_access_code' => method_exists($detail, 'getTarifAccessCode')
                     ? $detail->getTarifAccessCode()
                     : null,
@@ -509,6 +507,5 @@ class ReservationQueryService
 
         return $seatStates;
     }
-
 
 }

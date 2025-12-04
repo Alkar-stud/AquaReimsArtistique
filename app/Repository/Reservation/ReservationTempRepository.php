@@ -309,7 +309,7 @@ class ReservationTempRepository extends AbstractRepository
             'phone' => $reservationTemp->getPhone(),
             'swimmer_if_limitation' => $reservationTemp->getSwimmerId(),
             'access_code' => $reservationTemp->getAccessCode(),
-            'is_locked' => $reservationTemp->isLocked(),
+            'is_locked' => $reservationTemp->isLocked() === true ? 1 : 0,
         ];
         return $this->updateById($reservationTemp->getId(), $params);
     }

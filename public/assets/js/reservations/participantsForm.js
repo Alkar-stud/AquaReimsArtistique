@@ -103,7 +103,7 @@ function updateUI(containerEl, reservationData, isReadOnly = false) {
         group.participants.forEach(p => {
             // Préparer le champ place_number
             const placeNumberInput = p.placeNumber ?
-                `<div class="col-md-6"><div class="input-group input-group-sm"><span class="input-group-text">Place</span><input type="text" class="form-control editable-detail" value="${esc(p.placeNumber)}" ${isReadOnly ? 'readonly' : ''} data-detail-id="${p.id}" data-field="place_number"><span class="input-group-text feedback-span"></span></div></div>` :
+                `<div class="col-md-6"><div class="input-group input-group-sm"><span class="input-group-text">Place</span><input type="text" class="form-control editable-detail" value="${esc(p.fullPlaceName)}" ${isReadOnly ? 'readonly' : ''} data-detail-id="${p.id}" data-field="place_number"><span class="input-group-text feedback-span"></span></div></div>` :
                 ''; // Si pas de place_number, on n'affiche pas le champ
 
             participantsHtml += `

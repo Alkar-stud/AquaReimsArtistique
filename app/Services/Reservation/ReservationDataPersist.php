@@ -8,7 +8,10 @@ use app\DTO\ReservationDetailItemDTO;
 use app\DTO\ReservationComplementItemDTO;
 use app\Models\Reservation\Reservation;
 use app\Models\Reservation\ReservationComplement;
+use app\Models\Reservation\ReservationComplementTemp;
 use app\Models\Reservation\ReservationDetail;
+use app\Models\Reservation\ReservationDetailTemp;
+use app\Models\Reservation\ReservationTemp;
 use app\Repository\Event\EventRepository;
 use app\Repository\Event\EventSessionRepository;
 use app\Repository\Reservation\ReservationComplementRepository;
@@ -16,6 +19,7 @@ use app\Repository\Reservation\ReservationDetailRepository;
 use app\Repository\Reservation\ReservationPaymentRepository;
 use app\Repository\Reservation\ReservationPlaceTempRepository;
 use app\Repository\Reservation\ReservationRepository;
+use app\Repository\Reservation\ReservationTempRepository;
 use app\Services\Log\Logger;
 use app\Services\Mails\MailPrepareService;
 use app\Services\Mails\MailService;
@@ -41,6 +45,7 @@ readonly class ReservationDataPersist
     private UploadService $uploadService;
     private MailService $mailService;
     private MailPrepareService $mailPrepareService;
+    private ReservationTempRepository $reservationTempRepository;
 
     public function __construct(
         ReservationSessionService $reservationSessionService,
@@ -57,6 +62,7 @@ readonly class ReservationDataPersist
         UploadService $uploadService,
         MailService $mailService,
         MailPrepareService $mailPrepareService,
+        ReservationTempRepository $reservationTempRepository,
     ) {
         $this->reservationSessionService = $reservationSessionService;
         $this->tokenGenerateService = $tokenGenerateService;
@@ -71,70 +77,19 @@ readonly class ReservationDataPersist
         $this->uploadService = $uploadService;
         $this->mailService = $mailService;
         $this->mailPrepareService = $mailPrepareService;
-    }
-
-    /**
-     * Persiste un DTO "unique" (étapes 1, 2, ou un complément) en session.
-     * $key pour les clés de tableau
-     *
-     * @param ReservationSelectionSessionDTO|ReservationUserDTO|ReservationDetailItemDTO|ReservationComplementItemDTO $dto
-     * @param int|null $key
-     * @return void
-     */
-    public function persistDataInSession(
-        ReservationSelectionSessionDTO|ReservationUserDTO|ReservationDetailItemDTO|ReservationComplementItemDTO $dto,
-        ?int $key = null
-    ): void {
-        if ($dto instanceof ReservationSelectionSessionDTO) {
-            // Étape 1
-            $this->reservationSessionService->setReservationSession('event_id', $dto->eventId);
-            $this->reservationSessionService->setReservationSession('event_session_id', $dto->eventSessionId);
-            $this->reservationSessionService->setReservationSession('swimmer_id', $dto->swimmerId);
-            $this->reservationSessionService->setReservationSession('access_code_used', $dto->access_code);
-            $this->reservationSessionService->setReservationSession('limit_per_swimmer', $dto->limitPerSwimmer);
-            return;
-        }
-
-        if ($dto instanceof ReservationUserDTO) {
-            // Étape 2
-            $this->reservationSessionService->setReservationSession(['booker', 'name'], $dto->name);
-            $this->reservationSessionService->setReservationSession(['booker', 'firstname'], $dto->firstname);
-            $this->reservationSessionService->setReservationSession(['booker', 'email'], $dto->email);
-            $this->reservationSessionService->setReservationSession(['booker', 'phone'], $dto->phone);
-            return;
-        }
-
-        if ($dto instanceof ReservationDetailItemDTO) {
-            // Empile les détails
-            $this->reservationSessionService->setReservationSession(['reservation_detail', $key, 'tarif_id'], $dto->tarif_id);
-            $this->reservationSessionService->setReservationSession(['reservation_detail', $key, 'name'], $dto->name);
-            $this->reservationSessionService->setReservationSession(['reservation_detail', $key, 'firstname'], $dto->firstname);
-            $this->reservationSessionService->setReservationSession(['reservation_detail', $key, 'justificatif_name'], $dto->justificatif_name);
-            $this->reservationSessionService->setReservationSession(['reservation_detail', $key, 'justificatif_original_name'], $dto->justificatif_original_name);
-            $this->reservationSessionService->setReservationSession(['reservation_detail', $key, 'tarif_access_code'], $dto->tarif_access_code);
-            $this->reservationSessionService->setReservationSession(['reservation_detail', $key, 'place_id'], $dto->place_id);
-            return;
-        }
-
-        if ($dto instanceof ReservationComplementItemDTO) {
-            // Empile les compléments sélectionnés
-            $this->reservationSessionService->setReservationSession(['reservation_complement', $key, 'tarif_id'], $dto->tarif_id);
-            $this->reservationSessionService->setReservationSession(['reservation_complement', $key, 'qty'], $dto->qty);
-            $this->reservationSessionService->setReservationSession(['reservation_complement', $key, 'tarif_access_code'], $dto->tarif_access_code);
-        }
-
+        $this->reservationTempRepository = $reservationTempRepository;
     }
 
     /**
      * Persiste une réservation complète en base de données MySQL à partir des données de paiement et de la réservation temporaire.
      *
      * @param object $paymentData Les données de la commande/paiement reçues de HelloAsso (le contenu de $result→data).
-     * @param array $tempReservation La réservation temporaire récupérée depuis NoSQL.
+     * @param ReservationTemp $reservationTemp La réservation temporaire récupérée depuis MySQL.
      * @param string $context
      * @param bool $freeReservation
      * @return Reservation|null L'objet Reservation persistant ou null en cas d'erreur.
      */
-    public function persistConfirmReservation(object $paymentData, array $tempReservation, string $context, bool $freeReservation = false): ?Reservation
+    public function persistConfirmReservation(object $paymentData, ReservationTemp $reservationTemp, string $context, bool $freeReservation = false): ?Reservation
     {
         $pdo = Database::getInstance();
 
@@ -144,7 +99,7 @@ readonly class ReservationDataPersist
             }
 
             // Réservation principale
-            $reservation = $this->createMainReservationObject($tempReservation, $paymentData);
+            $reservation = $this->createMainReservationObject($reservationTemp, $paymentData);
             if (!$reservation) {
                 throw new RuntimeException('Réservation invalide.');
             }
@@ -155,7 +110,8 @@ readonly class ReservationDataPersist
             }
 
             // Détails + compléments (échec ⇛ exception ⇛ rollback)
-            $this->persistDetailsAndComplements($newReservationId, $tempReservation);
+            $this->persistDetails($newReservationId, $reservationTemp->getDetails());
+            $this->persistComplements($newReservationId, $reservationTemp->getComplements());
             //On hydrate les 2 objets dans Reservation
             $reservation->setDetails($this->reservationDetailRepository->findByReservation($newReservationId, false, true, true));
             $reservation->setComplements($this->reservationsComplementsRepository->findByReservation($newReservationId, false, true));
@@ -176,7 +132,7 @@ readonly class ReservationDataPersist
             $this->mailService->recordMailSent($reservation, 'paiement_confirme');
 
             // Nettoyer les données temporaires
-            $this->cleanupTemporaryData($tempReservation);
+            $this->cleanupTemporaryData($reservationTemp);
 
             // Commit si tout est OK
             $pdo->commit();
@@ -197,14 +153,14 @@ readonly class ReservationDataPersist
     /**
      * Crée et insère l'enregistrement principal de la réservation.
      *
-     * @param array $tempReservation
+     * @param ReservationTemp $tempReservation
      * @param object|null $paymentData
      * @return Reservation|null
      */
-    private function createMainReservationObject(array $tempReservation, ?object $paymentData = null): ?Reservation
+    private function createMainReservationObject(ReservationTemp $tempReservation, ?object $paymentData = null): ?Reservation
     {
         $eventRepository = new EventRepository();
-        $event = $eventRepository->findById($tempReservation['event_id'], true, true, true, true);
+        $event = $eventRepository->findById($tempReservation->getEvent(), true, true, true, true);
         if (!$event) {
             error_log("Événement non trouvé pour la persistance de la réservation.");
             return null;
@@ -212,7 +168,7 @@ readonly class ReservationDataPersist
 
         $sessionObj = null;
         foreach ($event->getSessions() as $s) {
-            if ($s->getId() == $tempReservation['event_session_id']) {
+            if ($s->getId() == $tempReservation->getEventSession()) {
                 $sessionObj = $s;
                 break;
             }
@@ -223,7 +179,7 @@ readonly class ReservationDataPersist
         }
 
         $inscriptionDateToUse = null;
-        $accessCode = $tempReservation['access_code'] ?? null;
+        $accessCode = $tempReservation->getAccessCode()?? null;
         if ($accessCode) {
             foreach ($event->getInscriptionDates() as $inscriptionDate) {
                 if ($inscriptionDate->getAccessCode() === $accessCode) { $inscriptionDateToUse = $inscriptionDate; break; }
@@ -238,19 +194,18 @@ readonly class ReservationDataPersist
         $closeRegistrationDate = $inscriptionDateToUse ? $inscriptionDateToUse->getCloseRegistrationAt() : $sessionObj->getEventStartAt();
         $tokenGenerated = $this->tokenGenerateService->generateToken(32, null, $closeRegistrationDate);
 
-        $this->reservation->setEvent($tempReservation['event_id'])
-            ->setEventSession($tempReservation['event_session_id'])
-            ->setReservationTempId((string) ($tempReservation['_id'] ?? $tempReservation['primary_id']))
-            ->setName($tempReservation['booker']['name'])
-            ->setFirstName($tempReservation['booker']['firstname'])
-            ->setEmail($tempReservation['booker']['email'])
-            ->setPhone($tempReservation['booker']['phone'])
-            ->setSwimmerId($tempReservation['swimmer_id'] ?? null)
-            ->setTotalAmount($tempReservation['totals']['total_amount'] ?? 0)
+        $this->reservation->setEvent($tempReservation->getEvent())
+            ->setEventSession($tempReservation->getEventSession())
+            ->setReservationTempId($tempReservation->getId())
+            ->setName($tempReservation->getName())
+            ->setFirstName($tempReservation->getFirstName())
+            ->setEmail($tempReservation->getEmail())
+            ->setPhone($tempReservation->getPhone())
+            ->setSwimmerId($tempReservation->getSwimmerId())
+            ->setTotalAmount($tempReservation->getTotalAmount())
             ->setTotalAmountPaid($paymentData->amount->total ?? 0)
             ->setToken($tokenGenerated['token'])
             ->setTokenExpireAt($tokenGenerated['expires_at_str'])
-            ->setComments($tempReservation['comments'] ?? null)
             ->setCreatedAt((new DateTime())->format('Y-m-d H:i:s'));
 
         // Hydrate les objets nécessaires pour l'envoi d'email plus tard
@@ -264,38 +219,44 @@ readonly class ReservationDataPersist
     }
 
     /**
-     * Insère détails et compléments.
+     * Insère détails
      *
      * @param int $newReservationId
-     * @param array $tempReservation
+     * @param ReservationDetailTemp[] $reservationDetailTemp
      */
-    private function persistDetailsAndComplements(int $newReservationId, array $tempReservation): void
+    private function persistDetails(int $newReservationId, array $reservationDetailTemp): void
     {
-        foreach ($tempReservation['reservation_detail'] ?? [] as $tarifId => $detailData) {
-            foreach ($detailData['participants'] as $participant) {
-                $detail = (new ReservationDetail())
-                    ->setReservation($newReservationId)
-                    ->setName($participant['name'] ?? null)
-                    ->setFirstName($participant['firstname'] ?? null)
-                    ->setTarif((int)$tarifId)
-                    ->setTarifAccessCode($participant['tarif_access_code'] ?? null)
-                    ->setJustificatifName($participant['justificatif_name'] ?? null)
-                    ->setPlaceNumber($participant['place_number'] ?? null);
+        foreach ($reservationDetailTemp as $detailData) {
+            $detail = (new ReservationDetail())
+                ->setReservation($newReservationId)
+                ->setName($detailData->getName())
+                ->setFirstName($detailData->getFirstName())
+                ->setTarif($detailData->getTarif())
+                ->setTarifAccessCode($detailData->getTarifAccessCode())
+                ->setJustificatifName($detailData->getJustificatifName())
+                ->setPlaceNumber($detailData->getPlaceNumber());
 
-                $id = $this->reservationDetailRepository->insert($detail);
-                if ($id <= 0) {
-                    throw new RuntimeException('Échec insertion détail.');
-                }
+            $id = $this->reservationDetailRepository->insert($detail);
+            if ($id <= 0) {
+                throw new RuntimeException('Échec insertion détail.');
             }
         }
+    }
 
-        foreach ($tempReservation['reservation_complement'] ?? [] as $tarifId => $complementData) {
+    /**
+     * Insère compléments.
+     *
+     * @param int $newReservationId
+     * @param ReservationComplementTemp[] $reservationComplementTemp
+     */
+    private function persistComplements(int $newReservationId, array $reservationComplementTemp): void
+    {
+        foreach ($reservationComplementTemp as $complementData) {
             $complement = (new ReservationComplement())
                 ->setReservation($newReservationId)
-                ->setTarif((int)$tarifId)
-                ->setTarifAccessCode($complementData['codes'][0] ?? null)
-                ->setQty((int)$complementData['qty']);
-
+                ->setTarif($complementData->getTarif())
+                ->setTarifAccessCode($complementData->getTarifAccessCode())
+                ->setQty($complementData->getQty());
             $id = $this->reservationsComplementsRepository->insert($complement);
             if ($id <= 0) {
                 throw new RuntimeException('Échec insertion complément.');
@@ -306,28 +267,17 @@ readonly class ReservationDataPersist
     /**
      * Nettoie les données temporaires (NoSQL et MySQL).
      * Déplace les fichiers justificatifs de proofs/temp vers proofs
-     * @param array $tempReservation
+     * @param ReservationTemp $tempReservation
      */
-    private function cleanupTemporaryData(array $tempReservation): void
+    private function cleanupTemporaryData(ReservationTemp $tempReservation): void
     {
         //On déplace les fichiers justificatifs hors du dossier temp
-        foreach ($tempReservation['reservation_detail'] ?? [] as $tarifId => $detailGroup) {
-            foreach ($detailGroup['participants'] ?? [] as $participant) {
-                // On utilise le nom de fichier unique généré lors de l'upload
-                $this->uploadService->moveProofFile($participant['justificatif_name'] ?? null);
-            }
+        foreach ($tempReservation->getDetails() as $detailGroup) {
+            // On utilise le nom de fichier unique généré lors de l'upload
+            $this->uploadService->moveProofFile($detailGroup->getJustificatifName());
         }
 
-        $primaryId = (string) $tempReservation['primary_id'];
-
-        //Tant qu'on utilise SleekDB, on ne supprime pas, car l'ID dépend du nombre de documents dans le dossier
-        //$this->reservationTempWriter->deleteReservation($primaryId);
-        $userSessionId = $tempReservation['php_session_id'] ?? session_id();
-        if ($userSessionId) {
-            $this->reservationPlaceTempRepository->deleteBySession($userSessionId);
-        } else {
-            error_log("Impossible de nettoyer les places temporaires pour la réservation " . $tempReservation['_id'] . ": php_session_id manquant.");
-        }
+        $this->reservationTempRepository->delete($tempReservation->getId());
     }
 
 }

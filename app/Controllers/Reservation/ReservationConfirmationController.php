@@ -6,6 +6,7 @@ use app\Attributes\Route;
 use app\Controllers\AbstractController;
 use app\Repository\Event\EventSessionRepository;
 use app\Repository\Reservation\ReservationRepository;
+use app\Repository\Reservation\ReservationTempRepository;
 use app\Repository\Swimmer\SwimmerRepository;
 use app\Services\DataValidation\ReservationDataValidationService;
 use app\Services\Payment\PaymentService;
@@ -19,6 +20,7 @@ class ReservationConfirmationController extends AbstractController
     private ReservationSaveCartService $reservationSaveCartService;
     private PaymentService $paymentService;
     private ReservationRepository $reservationRepository;
+    private ReservationTempRepository $reservationTempRepository;
 
     public function __construct(
         ReservationDataValidationService $reservationDataValidationService,
@@ -27,6 +29,7 @@ class ReservationConfirmationController extends AbstractController
         ReservationSaveCartService       $reservationSaveCartService,
         PaymentService                   $paymentService,
         ReservationRepository            $reservationRepository,
+        ReservationTempRepository        $reservationTempRepository,
     )
     {
         parent::__construct(true); // route publique
@@ -36,6 +39,7 @@ class ReservationConfirmationController extends AbstractController
         $this->reservationSaveCartService = $reservationSaveCartService;
         $this->paymentService =  $paymentService;
         $this->reservationRepository = $reservationRepository;
+        $this->reservationTempRepository = $reservationTempRepository;
     }
 
     /**
@@ -90,6 +94,10 @@ class ReservationConfirmationController extends AbstractController
         $complementsSubtotal = $complementSummary['subtotal'];
 
         $totalAmount = $detailsSubtotal + $complementsSubtotal;
+        //On met à jour en base
+        $session['reservation']->setTotalAmount($totalAmount);
+        $this->reservationTempRepository->update($session['reservation']);
+
 
         $this->render('reservation/confirmation', [
             'reservation'   => $session,

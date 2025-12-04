@@ -437,7 +437,19 @@ class ReservationTempRepository extends AbstractRepository
             $complementsByReservationId[$complement->getReservationTemp()][] = $complement;
         }
 
-        // Hydratation du Swimmer
+        // Récupérer et mapper les Events associés aux réservations
+        $eventIds = array_unique(array_map(fn(ReservationTemp $r) => (int)$r->getEvent(), $list));
+        $eventsById = [];
+        foreach ($eventIds as $eventId) {
+            if ($eventId <= 0) {
+                continue;
+            }
+            // Récupérer l'Event avec ses relations si nécessaire
+            $event = $this->getEventRepository()->findById($eventId, true, true, true);
+            $eventsById[$eventId] = $event;
+        }
+
+        // Hydratation du Swimmer et de l'Event
         $swimmerRepo = new SwimmerRepository();
         foreach ($list as $reservation) {
             $reservation->setDetails($detailsByReservationId[$reservation->getId()] ?? []);
@@ -449,6 +461,10 @@ class ReservationTempRepository extends AbstractRepository
             } else {
                 $reservation->setSwimmer(null);
             }
+
+            // Assigner l'objet Event si disponible
+            $eventId = (int)$reservation->getEvent();
+            $reservation->setEventObject($eventsById[$eventId] ?? null);
         }
 
         return $single ? $list[0] : $list;

@@ -63,8 +63,6 @@ class ReservationAjaxController extends AbstractController
             $this->json(['success' => false, 400, 'error' => 'Cette étape n\'existe pas']);
         }
 
-        //On récupère la session dans $_SESSION
-        //$session = $this->reservationSessionService->getReservationSession();
         //On récupère la réservation en cours.
         $session = $this->reservationSessionService->getReservationTempSession();
 

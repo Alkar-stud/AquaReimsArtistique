@@ -69,6 +69,7 @@ class ReservationDataValidationService
     public function validateDataPerStep(?ReservationTemp $reservationTemp, int $step, array $data, ?array $file = null): array
     {
         $sessionId = session_id();
+
         if ($step == 1) {
             //On construit l'objet et on valide les données dedans avec un retour success = true/false et errors
             $reservationTemp = new ReservationTemp();

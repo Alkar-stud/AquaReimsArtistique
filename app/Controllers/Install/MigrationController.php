@@ -19,7 +19,7 @@ class MigrationController
     use HasPdoConnection;
     private BuildLink $buildLink;
 
-    private const MIGRATIONS_TABLE = 'migrations';
+    private const string MIGRATIONS_TABLE = 'migrations';
     private string $migrationPath = __DIR__ . '/../../../database/migrations/';
 
     public function __construct()
@@ -64,34 +64,35 @@ class MigrationController
         }
         // Doit-on afficher le formulaire email admin ?
         $needEmail = $userMigrationApplied
-            || isset($_SESSION['applied_migrations'])
-            || $this->shouldPromptForAdminEmail();
+                || isset($_SESSION['applied_migrations'])
+                || $this->shouldPromptForAdminEmail();
+
 
         if ($needEmail) {
             $error = '';
 
-            if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST' && isset($_POST['email'])) {
-                $email = trim((string)($_POST['email']));
-                $error = $this->processAdminEmail($email);
-                if ($error === '') {
-                    echo "Email du user id=1 mis à jour avec succès.<br>";
-                    echo "Un email de réinitialisation de mot de passe a été envoyé à l'adresse fournie.<br>";
-
-                    if (!empty($_SESSION['applied_migrations'])) {
-                        echo "Fichiers de migration traités :<ul>";
-                        foreach ($_SESSION['applied_migrations'] as $file) {
-                            echo "<li>" . htmlspecialchars((string)$file) . "</li>";
-                        }
-                        echo "</ul>";
-                        unset($_SESSION['applied_migrations']);
-                    }
-                    echo '<a href="/">Retour à l\'accueil</a>';
-                    return;
-                }
-            }
-
             $this->renderAdminEmailForm($error);
             return;
+        }
+
+        if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST' && isset($_POST['email'])) {
+            $email = trim((string)($_POST['email']));
+            $error = $this->processAdminEmail($email);
+            if ($error === '') {
+                echo "Email du user id=1 mis à jour avec succès.<br>";
+                echo "Un email de réinitialisation de mot de passe a été envoyé à l'adresse fournie.<br>";
+
+                if (!empty($_SESSION['applied_migrations'])) {
+                    echo "Fichiers de migration traités :<ul>";
+                    foreach ($_SESSION['applied_migrations'] as $file) {
+                        echo "<li>" . htmlspecialchars((string)$file) . "</li>";
+                    }
+                    echo "</ul>";
+                    unset($_SESSION['applied_migrations']);
+                }
+                echo '<a href="/">Retour à l\'accueil</a>';
+                return;
+            }
         }
 
         if (empty($toApply)) {
@@ -112,8 +113,8 @@ class MigrationController
     private function getAppliedMigrations(): array
     {
         $this->pdo->query(
-            "CREATE TABLE IF NOT EXISTS " . self::MIGRATIONS_TABLE .
-            " (name VARCHAR(255) PRIMARY KEY, executed_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP)"
+                "CREATE TABLE IF NOT EXISTS " . self::MIGRATIONS_TABLE .
+                " (name VARCHAR(255) PRIMARY KEY, executed_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP)"
         );
         $stmt = $this->pdo->query("SELECT name FROM " . self::MIGRATIONS_TABLE);
         return $stmt->fetchAll(PDO::FETCH_COLUMN) ?: [];

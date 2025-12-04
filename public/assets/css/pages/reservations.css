@@ -3,3 +3,12 @@
     font-weight: 600;
     margin-bottom: 0.5rem;
 }
+
+
+/* Élargit la modal reservationDetailModal sur écrans XL+ */
+@media (min-width: 1200px) {
+    #reservationDetailModal .modal-dialog.modal-xl {
+        max-width: 1800px; /* ajuster selon besoin (ex : 1400px, 1600px...) */
+        width: calc(100% - 4rem); /* conserve un espace latéral */
+    }
+}

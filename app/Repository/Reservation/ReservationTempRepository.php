@@ -281,6 +281,7 @@ class ReservationTempRepository extends AbstractRepository
             'phone' => $m->getPhone(),
             'swimmer_if_limitation' => $m->getSwimmerId(),
             'access_code' => $m->getAccessCode(),
+            'total_amount' => $m->getTotalAmount(),
             'created_at' => $m->getCreatedAt()->format('Y-m-d H:i:s'),
         ];
         $ok = $this->execute($sql, $params);
@@ -309,6 +310,7 @@ class ReservationTempRepository extends AbstractRepository
             'phone' => $reservationTemp->getPhone(),
             'swimmer_if_limitation' => $reservationTemp->getSwimmerId(),
             'access_code' => $reservationTemp->getAccessCode(),
+            'total_amount' => $reservationTemp->getTotalAmount(),
             'is_locked' => $reservationTemp->isLocked() === true ? 1 : 0,
         ];
         return $this->updateById($reservationTemp->getId(), $params);
@@ -385,6 +387,7 @@ class ReservationTempRepository extends AbstractRepository
         $m->setPhone($row['phone']);
         $m->setSwimmerId($row['swimmer_if_limitation'] !== null ? (int)$row['swimmer_if_limitation'] : null);
         $m->setAccessCode($row['access_code']);
+        $m->setTotalAmount($row['total_amount']);
         $m->setIsLocked($row['is_locked']);
         $m->setCreatedAt($row['created_at']);
         if ($row['updated_at'] !== null) {

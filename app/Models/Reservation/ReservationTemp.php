@@ -24,6 +24,7 @@ class ReservationTemp extends AbstractModel
     private ?int $swimmer_if_limitation = null;
     private ?Swimmer $swimmer = null;
     private ?string $access_code = null;
+    private int $total_amount = 0;
     private bool $is_locked;
     private array $details = [];
     private array $complements = [];
@@ -43,6 +44,7 @@ class ReservationTemp extends AbstractModel
     public function getSwimmerId(): ?int { return $this->swimmer_if_limitation; }
     public function getSwimmer(): ?Swimmer { return $this->swimmer; }
     public function getAccessCode(): ?string { return $this->access_code; }
+    public function getTotalAmount(): int { return $this->total_amount; }
     public function isLocked(): bool { return $this->is_locked; }
     // Pour compatibilité avec le template des réservations
     public function getDetails(): array { return $this->details; }
@@ -77,6 +79,7 @@ class ReservationTemp extends AbstractModel
         return $this;
     }
     public function setAccessCode(?string $access_code): self { $this->access_code = ($access_code === '' ? null : $access_code); return $this; }
+    public function setTotalAmount(int $total_amount): self { $this->total_amount = $total_amount; return $this; }
     public function setIsLocked(bool $is_locked): void { $this->is_locked = $is_locked; }
     public function setDetails(array $details): self { $this->details = $details; return $this; }
     public function setComplements(array $complements): self { $this->complements = $complements; return $this; }
@@ -91,6 +94,7 @@ class ReservationTemp extends AbstractModel
             'firstName' => $this->getFirstName(),
             'email' => $this->getEmail(),
             'phone' => $this->getPhone(),
+            'totalAmount' => $this->getTotalAmount(),
             'isLocked' => $this->isLocked(),
             'details' => array_map(fn($detail) => $detail->toArray(), $this->getDetails()),
             'complements' => array_map(fn($complement) => $complement->toArray(), $this->getComplements()),

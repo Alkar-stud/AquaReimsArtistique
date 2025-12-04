@@ -122,6 +122,7 @@ class ReservationDetail extends AbstractModel
             'tarifDescription' => $tarifObject?->getDescription(),
             'tarifPrice' => $tarifObject?->getPrice(),
             'placeNumber' => $this->getPlaceNumber(),
+            'placeId' => $this->getPlaceObject()?->getId(),
             'fullPlaceName' => $placeObject?->getFullPlaceName(),
             'enteredAt' => $this->getEnteredAt()?->format(DateTimeInterface::ATOM), // ISO 8601
         ];

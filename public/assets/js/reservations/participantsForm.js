@@ -104,21 +104,11 @@ function updateUI(containerEl, reservationData, isReadOnly = false) {
         let participantsHtml = '';
 
         group.participants.forEach(p => {
-            // colonne "Place" seulement si présente
+console.log(p);
             const placeCol = p.placeNumber ? `
                 <div class="col-12 col-md-3 d-flex align-items-center">
                     <div class="input-group input-group-sm w-100">
-                        <span class="input-group-text">Place</span>
-                        <input type="text"
-                               class="form-control editable-detail place-input"
-                               value="${esc(p.placeNumber)}"
-                               ${isReadOnly ? 'readonly' : ''}
-                               data-detail-id="${p.id}"
-                               data-field="place_number"
-                               maxlength="4"
-                               inputmode="numeric"
-                               pattern="[A-Za-z0-9]{1,4}">
-                        <span class="input-group-text feedback-span"></span>
+                        Place :&nbsp;<span id="PlaceNameDisplay">${esc(p.fullPlaceName)}</span>
                     </div>
                 </div>
             ` : '';

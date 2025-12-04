@@ -3,7 +3,7 @@ import { initContactForm } from '../reservations/contactForm.js';
 import { initParticipantsForm, updateParticipantsUI } from '../reservations/participantsForm.js';
 import { initComplementsForm, updateComplementsUI } from '../reservations/complementsForm.js';
 import ScrollManager from '../components/scrollManager.js';
-import { apiDelete, apiPost } from '../components/apiClient.js';
+import { apiDelete, apiPost, apiGet } from '../components/apiClient.js';
 import { toggleReservationStatus } from './statusToggle.js';
 import { toggleCancelStatus } from '../reservations/cancelReservation.js';
 import { showFlashMessage } from "../components/ui.js";
@@ -40,12 +40,7 @@ async function refreshModalContent(modal, reservationId) {
 
     try {
         // Aller chercher les données de la réservation
-        const response = await fetch(`/gestion/reservations/details/${reservationId}`);
-        if (!response.ok) {
-            throw new Error(`Erreur serveur : ${response.statusText}`);
-        }
-        const reservation = await response.json();
-
+        const reservation = await apiGet(`/gestion/reservations/details/${reservationId}`);
         // Restaurer le HTML et remplir la modale
         modalBody.innerHTML = originalModalBodyHtml;
 
@@ -349,7 +344,7 @@ async function refreshModalContent(modal, reservationId) {
                     });
 
                     if (result.success) {
-console.log('retour : ', result);
+
                         showFlashMessage('success', result.message, 'send-email-dialog');
                         // Met à jour la section "mails envoyés" et l’ouvre
                         updateMailSentSection(modal, result.reservation);

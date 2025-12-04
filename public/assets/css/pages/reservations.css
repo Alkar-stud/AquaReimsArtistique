@@ -5,10 +5,35 @@
 }
 
 
-/* Élargit la modal reservationDetailModal sur écrans XL+ */
+/* Élargit la modal reservationDetailModal sur écrans XL */
 @media (min-width: 1200px) {
     #reservationDetailModal .modal-dialog.modal-xl {
-        max-width: 1800px; /* ajuster selon besoin (ex : 1400px, 1600px...) */
+        max-width: 1400px; /* ajuster selon besoin (ex : 1400px, 1600px...) */
         width: calc(100% - 4rem); /* conserve un espace latéral */
     }
+    #participants-container .input-group.input-group-sm .form-control {
+        padding: .25rem .5rem;
+    }
+    /* garantir que la colonne "Prénom" n'écrase pas la place */
+    #participants-container .col-md-5 {
+        max-width: calc(100% - 4rem - 250px); /* fallback ; la grille Bootstrap gère la majorité */
+    }
+}
+
+#participants-container .participant-row {
+    /* permet d'aligner verticalement les input-groups */
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+#participants-container .participant-row .input-group {
+    width: 100%;
+}
+
+/* Champ "place" très compact */
+#participants-container .place-input {
+    width: auto;
+    max-width: 6ch; /* réduit la largeur du champ place */
+    text-align: center;
 }

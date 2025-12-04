@@ -2,10 +2,6 @@
 namespace app\Services\Reservation;
 
 use app\Core\Database;
-use app\DTO\ReservationSelectionSessionDTO;
-use app\DTO\ReservationUserDTO;
-use app\DTO\ReservationDetailItemDTO;
-use app\DTO\ReservationComplementItemDTO;
 use app\Models\Reservation\Reservation;
 use app\Models\Reservation\ReservationComplement;
 use app\Models\Reservation\ReservationComplementTemp;
@@ -17,7 +13,6 @@ use app\Repository\Event\EventSessionRepository;
 use app\Repository\Reservation\ReservationComplementRepository;
 use app\Repository\Reservation\ReservationDetailRepository;
 use app\Repository\Reservation\ReservationPaymentRepository;
-use app\Repository\Reservation\ReservationPlaceTempRepository;
 use app\Repository\Reservation\ReservationRepository;
 use app\Repository\Reservation\ReservationTempRepository;
 use app\Services\Log\Logger;
@@ -32,7 +27,6 @@ use Throwable;
 
 readonly class ReservationDataPersist
 {
-    private ReservationSessionService $reservationSessionService;
     private TokenGenerateService $tokenGenerateService;
     private ReservationComplementRepository $reservationsComplementsRepository;
     private ReservationRepository $reservationRepository;
@@ -41,14 +35,12 @@ readonly class ReservationDataPersist
     private PaymentRecordService $paymentRecordService;
     private EventSessionRepository $eventSessionRepository;
     private ReservationPaymentRepository $reservationPaymentRepository;
-    private ReservationPlaceTempRepository $reservationPlaceTempRepository;
     private UploadService $uploadService;
     private MailService $mailService;
     private MailPrepareService $mailPrepareService;
     private ReservationTempRepository $reservationTempRepository;
 
     public function __construct(
-        ReservationSessionService $reservationSessionService,
         TokenGenerateService $tokenGenerateService,
         ReservationComplementRepository $reservationsComplementsRepository,
         ReservationRepository $reservationRepository,
@@ -57,14 +49,11 @@ readonly class ReservationDataPersist
         PaymentRecordService $paymentRecordService,
         EventSessionRepository $eventSessionRepository,
         ReservationPaymentRepository $reservationPaymentRepository,
-        ReservationPlaceTempRepository $reservationPlaceTempRepository,
-        ReservationTempWriter $reservationTempWriter,
         UploadService $uploadService,
         MailService $mailService,
         MailPrepareService $mailPrepareService,
         ReservationTempRepository $reservationTempRepository,
     ) {
-        $this->reservationSessionService = $reservationSessionService;
         $this->tokenGenerateService = $tokenGenerateService;
         $this->reservationsComplementsRepository = $reservationsComplementsRepository;
         $this->reservationRepository = $reservationRepository;
@@ -73,7 +62,6 @@ readonly class ReservationDataPersist
         $this->paymentRecordService = $paymentRecordService;
         $this->eventSessionRepository = $eventSessionRepository;
         $this->reservationPaymentRepository = $reservationPaymentRepository;
-        $this->reservationPlaceTempRepository = $reservationPlaceTempRepository;
         $this->uploadService = $uploadService;
         $this->mailService = $mailService;
         $this->mailPrepareService = $mailPrepareService;

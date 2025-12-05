@@ -36,9 +36,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function updateSubmitState() {
         if (!submitButton) return;
-        const totalDemanded = tarifInputHandler.totalDemanded();
-        const hasSpecial = specialTarifHandler ? specialTarifHandler.hasSpecialSelection() : false;
-        submitButton.disabled = !(totalDemanded > 0 || hasSpecial);
+        submitButton.disabled = false;
     }
 
     // Pour l'étape 6, il n'y a pas de limitation par nageuse, donc on passe null
@@ -121,6 +119,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     return;
                 }
                 showFlashMessage('danger', data.error || 'Erreur lors de la validation de l’étape 6.');
+                submitButton && (submitButton.disabled = false);
             }
         } catch (err) {
             showFlashMessage('danger', err.userMessage || err.message);

@@ -652,10 +652,6 @@ class ReservationDataValidationService
     public function validateDataStep6(array $reservationComplementTempTab, Event $event): array
     {
         $errors = [];
-        if (empty($reservationComplementTempTab)) {
-            $errors['tarifs'] = 'Aucun tarif sélectionné.';
-            return ['success' => false, 'errors' => $errors];
-        }
 
         foreach ($reservationComplementTempTab as $reservationComplementTemp) {
             // On s'assure que chaque élément est bien du type attendu.

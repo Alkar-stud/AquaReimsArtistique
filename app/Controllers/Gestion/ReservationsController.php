@@ -22,6 +22,7 @@ use app\Services\Reservation\ReservationDeletionService;
 use app\Services\Reservation\ReservationTokenService;
 use app\Services\Reservation\ReservationUpdateService;
 use app\Utils\DataHelper;
+use app\Utils\DurationHelper;
 use Exception;
 use Throwable;
 
@@ -136,6 +137,9 @@ class ReservationsController extends AbstractController
         // Filtrer RecapFinal avant de passer au template
         $pdfTypesFiltered = array_filter(PdfGenerationService::PDF_TYPES, fn($key) => $key !== 'RecapFinal', ARRAY_FILTER_USE_KEY);
 
+        // Données pour le timeout de la session utilisateur
+        $durationInSeconds = DurationHelper::iso8601ToSeconds(TIMEOUT_PLACE_RESERV);
+
         $this->render('/gestion/reservations', [
             'events' => $events,
             'selectedSessionId' => $sessionId,
@@ -151,6 +155,7 @@ class ReservationsController extends AbstractController
             'isCancel' => $isCancel,                    //Pour les boutons de filtre
             'isChecked' => $isChecked,                  //Pour les boutons de filtre
             'searchQuery' => $searchQuery,              //Pour afficher la recherche en cours
+            'timeout_session_reservation' => $durationInSeconds,
         ], "Gestion des réservations");
     }
 

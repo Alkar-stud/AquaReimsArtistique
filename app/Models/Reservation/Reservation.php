@@ -160,7 +160,11 @@ class Reservation extends AbstractModel
             'comments' => $this->getComments(),
             'token' => $this->getToken(),
             'tokenExpireAt' => $this->getTokenExpireAt()?->format(DateTime::ATOM),
-            'event' => $eventObject ? ['id' => $eventObject->getId(), 'name' => $eventObject->getName()] : null,
+            'event' => $eventObject ? [
+                'id' => $eventObject->getId(),
+                'name' => $eventObject->getName(),
+                'piscineId' => $eventObject->getPlace() // Ajout de l'ID de la piscine
+            ] : null,
             'eventSession' => $eventSessionObject ? ['id' => $eventSessionObject->getId(), 'name' => $eventSessionObject->getSessionName()] : null,
             'swimmer' => $this->getSwimmer() ? [
                 'id' => $this->getSwimmer()->getId(),

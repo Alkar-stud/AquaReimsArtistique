@@ -59,6 +59,20 @@ class PiscineGradinsZonesRepository extends AbstractRepository
     }
 
     /**
+     * Retourne les zones d'une piscine par son ID, ordonnées par nom.
+     * @param int $piscineId
+     * @return PiscineGradinsZones[]
+     */
+    public function findByPiscineId(int $piscineId): array
+    {
+        $sql = "SELECT * FROM $this->tableName WHERE piscine = :piscineId ORDER BY zone_name";
+        $rows = $this->query($sql, ['piscineId' => $piscineId]);
+
+        // On hydrate sans l'objet Piscine, car non nécessaire pour ce cas d'usage.
+        return array_map(fn($row) => $this->hydrate($row), $rows);
+    }
+
+    /**
      * Récupère plusieurs zones par leurs IDs.
      *
      * @param int[] $ids

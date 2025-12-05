@@ -7,6 +7,7 @@ import { apiDelete, apiPost, apiGet } from '../components/apiClient.js';
 import { toggleReservationStatus } from './statusToggle.js';
 import { toggleCancelStatus } from '../reservations/cancelReservation.js';
 import { showFlashMessage } from "../components/ui.js";
+import { openSeatPickerModal, initSeatPicker } from '../components/seatPickerModal.js';
 
 
 // Dictionnaire des explications pour les statuts de paiement HelloAsso
@@ -43,6 +44,10 @@ async function refreshModalContent(modal, reservationId) {
         const reservation = await apiGet(`/gestion/reservations/details/${reservationId}`);
         // Restaurer le HTML et remplir la modale
         modalBody.innerHTML = originalModalBodyHtml;
+
+        // Stocker les IDs importants sur la modale pour un accès facile
+        modal.dataset.eventSessionId = reservation.eventSession.id;
+        modal.dataset.piscineId = reservation.event.piscineId;
 
         /*---------------------------------
 
@@ -84,13 +89,24 @@ async function refreshModalContent(modal, reservationId) {
             // Ajoute un écouteur global (délégation) pour capter les clics sur `.PlaceNameDisplay`
             document.addEventListener('click', (event) => {
                 const el = event.target.closest('.PlaceNameDisplay');
-                if (!el) {
-                    return;
-                }
+                if (!el) return;
+
                 const placeId = el.dataset.placeId;
                 const detailId = el.dataset.detailId;
-                console.log('DetailId : ', detailId, 'PlaceId : ', placeId);
-                //TODO Afficher le place global pour cliquer sur une place afin de changer
+                const modalEl = el.closest('.modal');
+                const eventSessionId = modalEl?.dataset.eventSessionId;
+                const piscineId = modalEl?.dataset.piscineId;
+
+                openSeatPickerModal({
+                    piscineId: Number(piscineId),
+                    eventSessionId: Number(eventSessionId),
+                    detailId: Number(detailId),
+                    placeId: Number(placeId),
+                    onSuccess: () => {
+                        const reservationId = modalEl.querySelector('#modal_reservation_id').value;
+                        refreshModalContent(modalEl, reservationId);
+                    }
+                });
             });
         }
 
@@ -527,6 +543,9 @@ export function initReservationModal() {
     if (modal) {
         // On attache l'écouteur qui se déclenchera à chaque ouverture
         modal.addEventListener('show.bs.modal', onModalOpen);
+
+        // On initialise notre nouveau composant de sélection de place
+        initSeatPicker();
 
         // On gère le clic sur le bouton "Fermer" du footer
         const closeButton = modal.querySelector('#modal-close-btn');

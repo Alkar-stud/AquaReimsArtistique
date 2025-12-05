@@ -3,6 +3,7 @@
      tabindex="-1"
      aria-labelledby="reservationDetailModalLabel"
      aria-hidden="true"
+     data-event-session-id="{{ $reservation->getEventSessionObject()->getId() }}"
      data-is-readonly="{{ $isReadOnly ? 'true' : 'false' }}"
      data-can-update="{{ str_contains($userPermissions, 'U') ? 'true' : 'false' }}">
     <div class="modal-dialog modal-xl modal-dialog-scrollable">

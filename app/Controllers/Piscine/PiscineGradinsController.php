@@ -63,4 +63,29 @@ class PiscineGradinsController extends AbstractController
             'seatState' => [],
         ]);
     }
+
+    /**
+     * Pour récupérer la liste de toutes les zones d'une piscine.
+     * GET /piscine/123/zones
+     *
+     * @param int $piscineId
+     */
+    #[Route('/piscine/{piscineId}/zones', name: 'get_piscine_zones', methods: ['GET'])]
+    public function getZonesForPiscine(int $piscineId): void
+    {
+        if ($piscineId <= 0) {
+            $this->json(['success' => false, 'error' => 'ID de piscine invalide.']);
+            return;
+        }
+
+        $zones = $this->piscineGradinsZoneRepository->findByPiscineId($piscineId);
+
+        // On transforme les objets en tableaux simples pour le JSON
+        $zonesArray = array_map(fn($zone) => [
+            'id' => $zone->getId(),
+            'zoneName' => $zone->getZoneName(),
+        ], $zones);
+
+        $this->json(['success' => true, 'zones' => $zonesArray]);
+    }
 }

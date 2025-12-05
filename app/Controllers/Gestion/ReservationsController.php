@@ -212,6 +212,31 @@ class ReservationsController extends AbstractController
         $this->json($return);
     }
 
+    #[Route('/gestion/reservations/update-seat', name: 'app_gestion_reservations_update_seat', methods: ['POST'])]
+    public function updateSeat(): void
+    {
+        // Vérifier les permissions de l'utilisateur connecté
+        $this->checkUserPermission('U');
+
+        $data = $this->dataHelper->getAndCheckPostData(['detailId', 'newPlaceId']);
+
+        $detailId = (int)($data['detailId'] ?? 0);
+        // newPlaceId peut être null si on libère la place
+        $newPlaceId = isset($data['newPlaceId']) ? (int)$data['newPlaceId'] : null;
+
+        try {
+            $success = $this->reservationUpdateService->updateSeatForDetail($detailId, $newPlaceId);
+            if ($success) {
+                $this->json(['success' => true, 'message' => 'La place a été mise à jour avec succès.']);
+            } else {
+                $this->json(['success' => false, 'message' => 'La mise à jour de la place a échoué.'], 500);
+            }
+        } catch (\InvalidArgumentException $e) {
+            $this->json(['success' => false, 'message' => $e->getMessage()], 404);
+        }
+    }
+
+
     #[Route('/gestion/reservations/toggle-status', name: 'app_gestion_reservations_toggle_status', methods: ['POST'])]
     public function toggleStatus(): void
     {

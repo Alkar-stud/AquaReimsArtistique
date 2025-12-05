@@ -95,6 +95,12 @@ table.zone-plan td.tdplaceTempSession {
     color: var(--ara-color-black);
 }
 
+table.zone-plan td.tdplaceOriginal {
+    background-color: var(--ara-color-blue);
+    color: var(--ara-color-white);
+    box-shadow: 0 0 0 2px var(--ara-color-white), 0 0 0 8px var(--ara-color-darkpink); /* Effet de contour pour visibilité */
+}
+
 /* Header du gradin */
 .bleacher-header {
     display: flex;

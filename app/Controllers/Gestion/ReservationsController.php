@@ -191,6 +191,60 @@ class ReservationsController extends AbstractController
         $this->json($reservation->toArray());
     }
 
+    #[Route('/gestion/reservations-temp/delete/{id}', name: 'app_gestion_reservation_temp_delete', methods: ['DELETE'])]
+    public function deleteTempReservation(int $id): void
+    {
+        // Vérifier les permissions de l'utilisateur connecté
+        $this->checkUserPermission('D');
+
+        $reservation = $this->reservationTempRepository->findById($id);
+        if (!$reservation) {
+            $this->json(['success' => false, 'message' => 'Réservation temporaire non trouvée.'], 404);
+            return;
+        }
+
+        // Ajout de la vérification du statut de verrouillage
+        if ($reservation->isLocked()) {
+            $this->json(['success' => false, 'message' => 'Impossible de supprimer une réservation temporaire qui est verrouillée.'], 403);
+            return;
+        }
+
+        try {
+            // Utilise la méthode existante deleteByIds du repository
+            $this->reservationTempRepository->deleteByIds([$id]);
+            $this->flashMessageService->setFlashMessage('success', "La réservation temporaire a été supprimée avec succès.");
+
+            $this->json(['success' => true]);
+        } catch (Exception $e) {
+            // Log de l'erreur pour le débogage
+            error_log("Erreur lors de la suppression de la réservation temporaire ID $id : " . $e->getMessage());
+            // Message d'erreur générique pour l'utilisateur
+            $this->json(['success' => false, 'message' => 'Une erreur serveur est survenue lors de la suppression de la réservation temporaire.'], 500);
+        } catch (Throwable $e) {
+            $this->json(['success' => false, 'message' => 'Une erreur serveur est survenue lors de la suppression de la réservation temporaire.'], 500);
+        }
+    }
+
+    #[Route('/gestion/reservations-temp/toggle-lock', name: 'app_gestion_reservation_temp_toggle_lock', methods: ['POST'])]
+    public function toggleTempLock(): void
+    {
+        // Vérifier les permissions de l'utilisateur connecté
+        $this->checkUserPermission('U');
+
+        $data = $this->dataHelper->getAndCheckPostData(['id', 'isLocked']);
+
+        try {
+            $this->reservationTempRepository->updateSingleField((int)$data['id'], 'is_locked', (bool)$data['isLocked']);
+            // On génère et renvoie un nouveau token pour maintenir la session sécurisée
+            $newCsrfToken = $this->csrfService->getToken($this->getCsrfContext());
+
+            parent::json(['success' => true, 'csrfToken' => $newCsrfToken]);
+        } catch (Exception $e) {
+            error_log("Erreur lors de la mise à jour du verrouillage : " . $e->getMessage());
+            $this->json(['success' => false, 'message' => 'Erreur serveur.'], 500);
+        }
+    }
+
     #[Route('/gestion/reservations/update', name: 'app_gestion_reservations_update', methods: ['POST'])]
     public function update(): void
     {

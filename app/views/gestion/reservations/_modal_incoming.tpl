@@ -18,6 +18,7 @@
                     <form id="reservationIncomingForm">
                         <div id="contact-fields-container">
                             <input type="hidden" id="incoming_reservation_id" name="reservation_id" value="">
+                            <input type="hidden" id="incoming_is_locked" name="is_locked" value="">
                             <input type="hidden" id="incoming_reservation_token" name="reservation_token" value="">
                             <h4>Réservant</h4>
 
@@ -66,13 +67,8 @@
             </div>
 
             <div class="modal-footer">
-                <div class="row g-2 w-100 align-items-md-center">
-
-                    <div class="col-12 col-md-auto ms-md-auto">
-                        <div class="d-grid gap-2 d-sm-flex justify-content-md-end">
-                            <button type="button" id="incoming-close-btn" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
-                        </div>
-                    </div>
+                <div class="d-grid gap-2 d-sm-flex justify-content-md-end w-100">
+                    <button type="button" id="incoming-close-btn" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
                 </div>
             </div>
 

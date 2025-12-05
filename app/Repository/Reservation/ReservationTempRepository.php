@@ -329,6 +329,23 @@ class ReservationTempRepository extends AbstractRepository
     }
 
     /**
+     * Met à jour un seul champ pour une réservation temporaire donnée.
+     *
+     * @param int $id ID de la réservation
+     * @param string $field Nom du champ à mettre à jour
+     * @param mixed $value Nouvelle valeur
+     * @return bool
+     */
+    public function updateSingleField(int $id, string $field, mixed $value): bool
+    {
+        // Pour les champs booléens, on s'assure de convertir la valeur en 0 ou 1
+        if ($field === 'is_locked') {
+            $value = $value ? 1 : 0;
+        }
+        return $this->updateById($id, [$field => $value]);
+    }
+
+    /**
      * Trouve les réservations temporaires expirées.
      *
      * @param int $timeoutSeconds Le timeout en secondes.

@@ -58,11 +58,17 @@
         <td>{{ $reservation->getEmail() }}</td>
 
         <td>
-            {% if $reservation->isLocked() %}
-            <span class="badge bg-warning">Verrouillée</span>
-            {% else %}
-            <span class="badge bg-success">Ouverte</span>
-            {% endif %}
+            <div class="d-flex flex-column align-items-start">
+                <span class="badge {{ $reservation->isLocked() ? 'bg-warning' : 'bg-success' }} mb-1">
+                    {{ $reservation->isLocked() ? 'Verrouillée' : 'Ouverte' }}
+                </span>
+                <div class="form-check form-switch" data-bs-toggle="tooltip" data-bs-placement="top" title="Une réservation verrouillée n'expirera pas automatiquement.">
+                    <input class="form-check-input js-toggle-lock" type="checkbox" role="switch"
+                           id="lock-switch-{{ $reservation->getId() }}"
+                           data-id="{{ $reservation->getId() }}"
+                            {{ $reservation->isLocked() ? 'checked' : '' }}>
+                </div>
+            </div>
         </td>
         <td>
             <span class="countdown"
@@ -83,7 +89,8 @@
                 Voir
             </button>
             <button class="btn btn-sm btn-danger js-delete-reservation-temp"
-                    data-id="{{ $reservation->getId() }}">
+                    data-id="{{ $reservation->getId() }}"
+                    {{ $reservation->isLocked() ? 'disabled' : '' }}>
                 Supprimer
             </button>
         </td>

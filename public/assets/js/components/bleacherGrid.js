@@ -1,7 +1,9 @@
 //gestion du mouse hover et touch start et end
 let __bleacherTooltipEl = null;
 function ensureBleacherTooltip() {
-    if (__bleacherTooltipEl) return __bleacherTooltipEl;
+    if (__bleacherTooltipEl) {
+        return __bleacherTooltipEl;
+    }
     const el = document.createElement('div');
     el.className = 'bleacher-tooltip';
     el.style.opacity = '0';
@@ -12,8 +14,10 @@ function ensureBleacherTooltip() {
     __bleacherTooltipEl = el;
     return el;
 }
-function showBleacherTooltip(target, text, touchPoint = null) {
-    if (!text) return;
+export function showBleacherTooltip(target, text, touchPoint = null) {
+    if (!text) {
+        return;
+    }
     const el = ensureBleacherTooltip();
     el.textContent = text;
     el.setAttribute('aria-hidden', 'false');
@@ -42,7 +46,9 @@ function showBleacherTooltip(target, text, touchPoint = null) {
 }
 function hideBleacherTooltip() {
     const el = __bleacherTooltipEl;
-    if (!el) return;
+    if (!el) {
+        return;
+    }
     el.style.opacity = '0';
     el.setAttribute('aria-hidden', 'true');
     clearTimeout(el.__hideTimeout);
@@ -55,7 +61,9 @@ function hideBleacherTooltip() {
  * @param {string} tooltipText Le texte à afficher.
  */
 function attachTooltipEvents(td, btn, tooltipText) {
-    if (!td || !btn || !tooltipText) return;
+    if (!td || !btn || !tooltipText) {
+        return;
+    }
 
     // Assigner le texte pour l'accessibilité et comme fallback
     btn.title = tooltipText;
@@ -78,8 +86,9 @@ function attachTooltipEvents(td, btn, tooltipText) {
  * Applique les états dynamiques (réservé, en cours...) à une grille de gradin déjà construite.
  * @param {HTMLElement} container - Le conteneur de la grille (ex: l'élément avec `data-bleacher-seats`).
  * @param {Object} seatStates - Un objet où les clés sont les ID des sièges et les valeurs leur statut.
+ * @param {string} mode - 'reservation' (par défaut) ou 'occupation_plan'.
  */
-export function applySeatStates(container, seatStates) {
+export function applySeatStates(container, seatStates, mode = 'reservation') {
     if (!container || !seatStates) {
         return; // Ne rien faire si pas de conteneur ou d'états
     }
@@ -119,15 +128,30 @@ export function applySeatStates(container, seatStates) {
             if (td) {
                 // On ajoute la classe de statut dynamique
                 td.classList.add(cssClass);
-                // On met à jour le statut et on désactive le bouton (sauf pour la session en cours)
-                seatButton.disabled = (status !== 'in_cart_session');
+
+                // En mode 'plan d'occupation', on ne désactive pas les places occupées pour garder le clic.
+                if (mode === 'occupation_plan' && status === 'occupied') {
+                    seatButton.disabled = false;
+                } else {
+                    // Comportement standard : on désactive le bouton (sauf pour la session en cours)
+                    seatButton.disabled = (status !== 'in_cart_session');
+                }
                 seatButton.dataset.status = status;
 
                 // Déterminer le texte de l'infobulle et l'attacher
                 let tooltipText = 'Non disponible';
-                if (status === 'occupied') tooltipText = 'Déjà réservée';
-                else if (status === 'in_cart_other') tooltipText = 'En cours de réservation';
-                else if (status === 'in_cart_session') tooltipText = 'Dans votre sélection';
+                if (status === 'occupied') {
+                    tooltipText = 'Déjà réservée';
+                }
+                else {
+                    if (status === 'in_cart_other') {
+                        tooltipText = 'En cours de réservation';
+                    } else {
+                        if (status === 'in_cart_session') {
+                            tooltipText = 'Dans votre sélection';
+                        }
+                    }
+                }
 
                 attachTooltipEvents(td, seatButton, tooltipText);
             }
@@ -279,11 +303,26 @@ export function createBleacherGrid(container, plan, options = {}) {
 
                     // Déterminer texte tooltip succinct
                     let tooltipText = 'Non disponible';
-                    if (!seatData.exists) tooltipText = 'Aucune place';
-                    else if (!seatData.open) tooltipText = 'Fermée';
-                    else if (seatData.pmr) tooltipText = 'Réservée aux PMR';
-                    else if (seatData.vip) tooltipText = 'Place VIP';
-                    else if (seatData.volunteer) tooltipText = 'Réservée aux bénévoles';
+                    if (!seatData.exists) {
+                        tooltipText = 'Aucune place';
+                    }
+                    else {
+                        if (!seatData.open) {
+                            tooltipText = 'Fermée';
+                        } else {
+                            if (seatData.pmr) {
+                                tooltipText = 'Réservée aux PMR';
+                            } else {
+                                if (seatData.vip) {
+                                    tooltipText = 'Place VIP';
+                                } else {
+                                    if (seatData.volunteer) {
+                                        tooltipText = 'Réservée aux bénévoles';
+                                    }
+                                }
+                            }
+                        }
+                    }
 
                     attachTooltipEvents(td, btn, tooltipText);
                 }

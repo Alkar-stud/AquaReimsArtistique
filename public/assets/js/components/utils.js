@@ -197,8 +197,6 @@ export function initCountdown(element, expiresAtMs = null) {
         const createdAt = Number(element.dataset.createdAtTimestamp);
         const timeout = Number(element.dataset.timeoutSeconds);
 
-        console.log('Countdown data:', { createdAt, timeout, element }); // LIGNE À AJOUTER POUR LE DÉBOGAGE
-
         if (createdAt > 0 && timeout > 0) {
             expiresAt = (createdAt + timeout) * 1000;
         } else {

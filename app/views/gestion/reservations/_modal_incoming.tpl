@@ -67,20 +67,6 @@
 
             <div class="modal-footer">
                 <div class="row g-2 w-100 align-items-md-center">
-                    <div class="col-12 col-md-auto">
-                        <div class="d-grid gap-2 d-sm-flex">
-                            {% if str_contains($userPermissions, 'D') %}
-                            <button type="button" id="incoming-reservation-delete-btn" class="btn btn-danger">
-                                <i class="bi bi-trash"></i>&nbsp;Supprimer la réservation
-                            </button>
-                            {% endif %}
-                            {% if str_contains($userPermissions, 'U') %}
-                            <button type="button" id="incoming-reservation-cancel-btn" class="btn btn-warning" data-bs-dismiss="modal">
-                                <i class="bi bi-x-circle"></i>&nbsp;Annuler la réservation
-                            </button>
-                            {% endif %}
-                        </div>
-                    </div>
 
                     <div class="col-12 col-md-auto ms-md-auto">
                         <div class="d-grid gap-2 d-sm-flex justify-content-md-end">

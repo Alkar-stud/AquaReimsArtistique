@@ -46,7 +46,7 @@ console.log('data : ', data);
                 name: `${data.name} ${data.firstName}`,
                 email: data.email,
                 phone: data.phone,
-                amount: `${(data.totalAmount ?? 0).toFixed(2)} €`,
+                amount: `${((data.totalAmount ?? 0) / 100).toFixed(2).replace('.', ',')} €`,
                 details: data.details.map(d => `<li>${d.name} ${d.firstname} <div class="text-muted small">${d.tarifObject.name} (${(d.tarifObject.price /100).toFixed(2)} €)</div></li>`).join(''),
                 complements: data.complements.map(c => `<li>${c.name} : ${c.value ?? ''}</li>`).join('')
             });

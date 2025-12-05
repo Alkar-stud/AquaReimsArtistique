@@ -1,5 +1,5 @@
 //On importe les fonctions d'initialisation des modules.
-import { initReservationModal, openReservationModal } from './gestion/reservationModal.js';
+import { initReservationModal } from './gestion/reservationModal.js';
 import { initReservationList } from './gestion/reservationList.js';
 import { initStatusToggles } from './gestion/statusToggle.js';
 import { initReservationExtracts } from './gestion/reservationsExports.js';

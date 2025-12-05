@@ -1,3 +1,5 @@
+import { initCountdown } from './utils.js';
+
 document.addEventListener('DOMContentLoaded', function() {
     // Lecture et normalisation des données debug
     let debugData = {};
@@ -23,25 +25,14 @@ document.addEventListener('DOMContentLoaded', function() {
         window.addEventListener('resize', updateDimensions);
     }
 
-    // --- Compte à rebours de la session ---
+    // --- Compte à rebours de la session (réutilise initCountdown) ---
     const timeoutDisplay = document.getElementById('session-timeout-display');
     const timeoutDuration = Number(debugData.sessionTimeoutDuration ?? 0); // secondes
     const lastActivity = Number(debugData.sessionLastActivity ?? 0);       // timestamp (s)
     if (timeoutDisplay && timeoutDuration > 0 && lastActivity > 0) {
         const expirationTime = (lastActivity + timeoutDuration) * 1000;
-        const intervalId = setInterval(() => {
-            const remaining = expirationTime - Date.now();
-            if (remaining <= 0) {
-                timeoutDisplay.textContent = 'Session: Expirée';
-                timeoutDisplay.style.color = '#ffc107';
-                clearInterval(intervalId);
-            } else {
-                const minutes = Math.floor(remaining / 60000);
-                const seconds = Math.floor((remaining % 60000) / 1000);
-                timeoutDisplay.textContent =
-                    `Session: ${String(minutes).padStart(2,'0')}:${String(seconds).padStart(2,'0')}`;
-            }
-        }, 1000);
+        // réutilise la même implémentation que les autres countdowns
+        initCountdown(timeoutDisplay, expirationTime);
     }
 
     // --- Masquer / Afficher le bandeau ---

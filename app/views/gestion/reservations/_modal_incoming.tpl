@@ -84,11 +84,6 @@
 
                     <div class="col-12 col-md-auto ms-md-auto">
                         <div class="d-grid gap-2 d-sm-flex justify-content-md-end">
-                            {% if str_contains($userPermissions, 'U') %}
-                            <button type="submit" class="btn btn-info" id="incoming-save-and-toggle-checked-btn">
-                                <i class="bi bi-check"></i>&nbsp;Enregistrer et marquer comme vérifié
-                            </button>
-                            {% endif %}
                             <button type="button" id="incoming-close-btn" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
                         </div>
                     </div>

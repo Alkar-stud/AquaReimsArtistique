@@ -183,9 +183,8 @@ export function computeExpiryIsoFromCreatedAndSpec(createdIso, spec) {
 }
 
 export function initCountdown(element, expiresAtMs = null) {
-console.log('début initCountdown');
     if (!element) return;
-console.log('element : ', element, 'expiresat : ', expiresAtMs)
+
     let expiresAt = null;
     if (typeof expiresAtMs === 'number' && !Number.isNaN(expiresAtMs)) {
         expiresAt = Number(expiresAtMs);

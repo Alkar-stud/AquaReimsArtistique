@@ -183,8 +183,9 @@ export function computeExpiryIsoFromCreatedAndSpec(createdIso, spec) {
 }
 
 export function initCountdown(element, expiresAtMs = null) {
-    if (!element) return;    
-
+console.log('début initCountdown');
+    if (!element) return;
+console.log('element : ', element, 'expiresat : ', expiresAtMs)
     let expiresAt = null;
     if (typeof expiresAtMs === 'number' && !Number.isNaN(expiresAtMs)) {
         expiresAt = Number(expiresAtMs);
@@ -192,17 +193,17 @@ export function initCountdown(element, expiresAtMs = null) {
         // Support du timestamp (ancien fonctionnement)
         const timestamp = Number(element.dataset.expiresAt);
         if (!Number.isNaN(timestamp) && timestamp > 0) expiresAt = timestamp * 1000; // Convert seconds to milliseconds
-    } else if (element.dataset.createdAt && element.dataset.timeoutSpec) {
+    } else if (element.dataset.createdAtTimestamp && element.dataset.timeoutSeconds) {
         // NOUVELLE LOGIQUE (inspirée de la debug-bar)
-        // data-created-at est un timestamp UNIX en secondes.
-        const createdAtTimestampSeconds = Number(element.dataset.createdAt);
-        const durationSeconds = parseIsoDurationToSeconds(element.dataset.timeoutSpec);
+        const createdAt = Number(element.dataset.createdAtTimestamp);
+        const timeout = Number(element.dataset.timeoutSeconds);
 
-        if (!Number.isNaN(createdAtTimestampSeconds) && createdAtTimestampSeconds > 0 && durationSeconds > 0) {
-            // Calcul de l'expiration en millisecondes, comme la debug-bar
-            expiresAt = (createdAtTimestampSeconds + durationSeconds) * 1000;
+        console.log('Countdown data:', { createdAt, timeout, element }); // LIGNE À AJOUTER POUR LE DÉBOGAGE
+
+        if (createdAt > 0 && timeout > 0) {
+            expiresAt = (createdAt + timeout) * 1000;
         } else {
-            console.warn('Invalid data for countdown:', element.dataset.createdAt, element.dataset.timeoutSpec);
+            console.warn('Invalid data for countdown:', { createdAt, timeout });
         }
     }
 

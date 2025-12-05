@@ -34,8 +34,8 @@
         <th>Nom</th>
         <th>Prénom</th>
         <th>Email</th>
-        <th>Téléphone</th>
         <th>Verrouillée</th>
+        <th>Encore</th>
         <th>Nombre de places</th>
         <th>Actions</th>
     </tr>
@@ -56,7 +56,6 @@
         <td>{{ $reservation->getName() }}</td>
         <td>{{ $reservation->getFirstName() }}</td>
         <td>{{ $reservation->getEmail() }}</td>
-        <td>{{ $reservation->getPhone() }}</td>
 
         <td>
             {% if $reservation->isLocked() %}
@@ -65,6 +64,12 @@
             <span class="badge bg-success">Ouverte</span>
             {% endif %}
         </td>
+        <td>
+            <span class="countdown"
+                  data-created-at-timestamp="{{ $reservation->getCreatedAt()->getTimestamp() }}"
+                  data-timeout-seconds="{{ $timeout_session_reservation }}"></span>
+        </td>
+
 
         <td>
             {{ count($reservation->getDetails()) }}

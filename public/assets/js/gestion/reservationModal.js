@@ -88,7 +88,8 @@ async function refreshModalContent(modal, reservationId) {
                     return;
                 }
                 const placeId = el.dataset.placeId;
-                console.log(placeId);
+                const detailId = el.dataset.detailId;
+                console.log('DetailId : ', detailId, 'PlaceId : ', placeId);
                 //TODO Afficher le place global pour cliquer sur une place afin de changer
             });
         }

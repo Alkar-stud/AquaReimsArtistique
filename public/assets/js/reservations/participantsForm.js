@@ -110,6 +110,7 @@ function updateUI(containerEl, reservationData, isReadOnly = false) {
                         Place :&nbsp;
                         <span class="PlaceNameDisplay"
                             data-place-id="${esc(p.placeId ?? p.place_id ?? p.placeNumber ?? '')}"
+                            data-detail-id="${p.id}"
                             aria-label="Numéro de place ${esc(p.fullPlaceName)}"
                             role="button"
                             tabindex="0">

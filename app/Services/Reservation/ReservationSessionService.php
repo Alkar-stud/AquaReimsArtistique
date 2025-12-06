@@ -195,6 +195,19 @@ class ReservationSessionService
     }
 
     /**
+     * @return void
+     */
+    public static function clearExpiredSessions(): void
+    {
+        /*
+         * Pour appeler une méthode non statique depuis une méthode statique,
+         * instancier la classe et appeler la méthode d’instance.
+         */
+        (new self())->clearExpiredReservations();
+    }
+
+
+    /**
      * Supprime toutes les réservations temporaires expirées de la base de données.
      * Le timeout est défini par la constante TIMEOUT_PLACE_RESERV.
      */

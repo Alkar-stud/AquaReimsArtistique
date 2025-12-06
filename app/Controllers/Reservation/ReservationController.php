@@ -52,7 +52,9 @@ class ReservationController extends AbstractController
     #[Route('/reservation', name: 'app_reservation')]
     public function etape1Display(): void
     {
-        // On commence une nouvelle session de réservation, on nettoie les anciennes données de $_SESSION.
+        // Avant de récupérer la session en cours, on nettoie toutes les réservations temporaires expirées
+        ReservationSessionService::clearExpiredSessions();
+        // On commence une nouvelle session de réservation, on nettoie les anciennes données.
         $this->reservationSessionService->clearReservationSession();
         // On récupère toutes les données nécessaires pour l'affichage des événements
         $events = $this->eventQueryService->getAllEventsWithRelations(true);

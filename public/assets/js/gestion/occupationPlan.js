@@ -48,11 +48,22 @@ export function initOccupationPlan()
  * @param {HTMLButtonElement} btn - Le bouton du siège.
  */
 function handleSeatClick(seat, btn) {
-    if (seat.status === 'occupied') {
-        // TODO: Pour afficher les vraies infos, le backend (endpoint /reservation/seat-states/)
-        // devra renvoyer, pour chaque place 'occupied', un objet contenant:
-        // { status: 'occupied', reservationId: '123', reserverName: 'Dupont Jean' }
-        const tooltipText = "infos à venir";
+    const td = btn.closest('td');
+    if (!td) return;
+
+    if (seat.status === 'occupied' && td.dataset.reservationId) {
+        const reservationId = td.dataset.reservationId;
+        const reserverName = td.dataset.reserverName;
+        const seatCount = td.dataset.reservationSeatCount;
+
+        // On crée un contenu HTML pour l'infobulle
+        const tooltipContent = document.createElement('div');
+        tooltipContent.innerHTML = `
+            <strong>Résa: ${reservationId}</strong><br>
+            ${reserverName}<br>
+            ${seatCount} place${seatCount > 1 ? 's' : ''}
+        `;
+        const tooltipText = tooltipContent.innerHTML;
         showBleacherTooltip(btn, tooltipText);
     }
     // Ne rien faire pour les autres types de places (libres, etc.)

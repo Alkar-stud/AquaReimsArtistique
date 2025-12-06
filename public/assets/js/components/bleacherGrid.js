@@ -19,7 +19,7 @@ export function showBleacherTooltip(target, text, touchPoint = null) {
         return;
     }
     const el = ensureBleacherTooltip();
-    el.textContent = text;
+    el.innerHTML = text; // Utiliser innerHTML pour permettre le formatage HTML
     el.setAttribute('aria-hidden', 'false');
     el.style.opacity = '1';
 
@@ -31,7 +31,7 @@ export function showBleacherTooltip(target, text, touchPoint = null) {
         top = Math.round(touchPoint.clientY - 10);
     } else {
         left = Math.round(rect.left + rect.width / 2);
-        top = Math.round(rect.top - 8);
+        top = Math.round(rect.top + 50); // Rapproche l'infobulle de la case
     }
     // Apply with offset and keep on-screen
     const margin = 8;
@@ -66,7 +66,6 @@ function attachTooltipEvents(td, btn, tooltipText) {
     }
 
     // Assigner le texte pour l'accessibilité et comme fallback
-    btn.title = tooltipText;
     td.dataset.tooltip = tooltipText;
 
     // Événements pour la souris
@@ -119,7 +118,8 @@ export function applySeatStates(container, seatStates, mode = 'reservation') {
 
     // --- Étape 2: Appliquer les nouveaux états dynamiques ---
     for (const seatId in seatStates) {
-        const status = seatStates[seatId];
+        const seatInfo = seatStates[seatId];
+        const status = typeof seatInfo === 'object' && seatInfo !== null ? seatInfo.status : seatInfo;
         const cssClass = statusToClassMap[status];
         const seatButton = container.querySelector(`button[data-seat-id="${seatId}"]`);
 
@@ -129,29 +129,31 @@ export function applySeatStates(container, seatStates, mode = 'reservation') {
                 // On ajoute la classe de statut dynamique
                 td.classList.add(cssClass);
 
+                let tooltipText = 'Non disponible'; // Valeur par défaut
+
                 // En mode 'plan d'occupation', on ne désactive pas les places occupées pour garder le clic.
                 if (mode === 'occupation_plan' && status === 'occupied') {
                     seatButton.disabled = false;
+
+                    // Si on a des infos détaillées, on construit l'infobulle directement.
+                    if (seatInfo.reservationNumber) {
+                        const seatCount = seatInfo.reservationSeatCount;
+                        tooltipText = `
+                            <strong>${seatInfo.reservationNumber}</strong><br>
+                            ${seatInfo.reserverName}<br>
+                            ${seatCount} place${seatCount > 1 ? 's' : ''}
+                        `;
+                    }
                 } else {
                     // Comportement standard : on désactive le bouton (sauf pour la session en cours)
                     seatButton.disabled = (status !== 'in_cart_session');
+
+                    // On définit le texte de l'infobulle pour les autres statuts
+                    if (status === 'occupied') tooltipText = 'Déjà réservée';
+                    if (status === 'in_cart_other') tooltipText = 'En cours de réservation';
+                    if (status === 'in_cart_session') tooltipText = 'Dans votre sélection';
                 }
                 seatButton.dataset.status = status;
-
-                // Déterminer le texte de l'infobulle et l'attacher
-                let tooltipText = 'Non disponible';
-                if (status === 'occupied') {
-                    tooltipText = 'Déjà réservée';
-                }
-                else {
-                    if (status === 'in_cart_other') {
-                        tooltipText = 'En cours de réservation';
-                    } else {
-                        if (status === 'in_cart_session') {
-                            tooltipText = 'Dans votre sélection';
-                        }
-                    }
-                }
 
                 attachTooltipEvents(td, seatButton, tooltipText);
             }

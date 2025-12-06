@@ -18,6 +18,7 @@ use app\Repository\Reservation\ReservationMailSentRepository;
 use app\Repository\Reservation\ReservationRepository;
 use app\Repository\Reservation\ReservationTempRepository;
 use app\Services\Mails\MailPrepareService;
+use app\Utils\StringHelper;
 use DateTime;
 
 class ReservationQueryService
@@ -477,35 +478,61 @@ class ReservationQueryService
      * Pour récupérer toutes les places assises enregistrées et payées pour une session donnée.
      *
      * @param int $eventSessionId
+     * @param bool $isForAdminView Si true, enrichit les données des places occupées.
      * @return array
      */
-    public function getSeatStates(int $eventSessionId): array
+    public function getSeatStates(int $eventSessionId, bool $isForAdminView = false): array
     {
         $seatStates = [];
         $currentUserSessionId = session_id();
 
         // Places déjà payées (statut le plus prioritaire)
         $occupiedSeats = $this->reservationDetailRepository->findReservedSeatsForSession($eventSessionId);
-        foreach ($occupiedSeats as $seatId => $reservationId) {
-            if ($seatId) {
-                $seatStates[$seatId] = 'occupied';
+        if (!empty($occupiedSeats)) {
+            if ($isForAdminView) {
+                // Pour l'admin, on charge les objets Reservation pour avoir les détails
+                $reservationIds = array_unique(array_values($occupiedSeats));
+                $reservations = $this->reservationRepository->findByIds($reservationIds, true, false, false, true);
+                $reservationsById = [];
+                foreach ($reservations as $r) {
+                    $reservationsById[$r->getId()] = $r;
+                }
+
+                foreach ($occupiedSeats as $seatId => $reservationId) {
+                    if ($seatId && isset($reservationsById[$reservationId])) {
+                        /** @var Reservation $reservation */
+                        $reservation = $reservationsById[$reservationId];
+                        $seatStates[$seatId] = [
+                            'status' => 'occupied',
+                            'reservationId' => $reservation->getId(),
+                            'reservationNumber' => StringHelper::generateReservationNumber($reservation->getId()),
+                            'reserverName' => $reservation->getFirstName() . ' ' . $reservation->getName(),
+                            'reservationSeatCount' => count($reservation->getDetails()),
+                        ];
+                    }
+                }
+            } else {
+                // Pour le public, on met juste le statut
+                foreach ($occupiedSeats as $seatId => $reservationId) {
+                    if ($seatId) {
+                        $seatStates[$seatId] = ['status' => 'occupied'];
+                    }
+                }
             }
         }
 
         // Places en cours de réservation dans les paniers
         $inCartSeats = $this->reservationDetailTempRepository->findSeatStatesForSession($eventSessionId);
         foreach ($inCartSeats as $seatId => $seatSessionId) {
-            // On ne met à jour que si la place n'est pas déjà marquée comme payée
             if (!isset($seatStates[$seatId])) {
                 if ($seatSessionId === $currentUserSessionId) {
-                    $seatStates[$seatId] = 'in_cart_session';
+                    $seatStates[$seatId] = ['status' => 'in_cart_session'];
                 } else {
-                    $seatStates[$seatId] = 'in_cart_other';
+                    $seatStates[$seatId] = ['status' => 'in_cart_other'];
                 }
             }
         }
 
         return $seatStates;
     }
-
 }

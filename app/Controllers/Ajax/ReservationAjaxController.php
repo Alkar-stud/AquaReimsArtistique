@@ -8,6 +8,7 @@ use app\DTO\ReservationComplementItemDTO;
 use app\DTO\ReservationDetailItemDTO;
 use app\Repository\Reservation\ReservationDetailTempRepository;
 use app\Repository\Tarif\TarifRepository;
+use app\Repository\User\UserRepository;
 use app\Services\FlashMessageService;
 use app\Services\Reservation\ReservationQueryService;
 use app\Services\Reservation\ReservationSessionService;
@@ -294,28 +295,37 @@ class ReservationAjaxController extends AbstractController
     #[Route('/reservation/seat-states/{eventSessionId}', name: 'seat_states', methods: ['GET'])]
     public function seatStates(int $eventSessionId): void
     {
-        $seatStates = (object)[]; // Pour forcer l'objet tableau dans le JSON si tableau vide reçu du Service
-        //$seatStates = [21 => "occupied", 41 => "in_cart_other", 61 => "in_cart_session", 81 => "vip", 101 => "benevole"]; // Exemples
-        //On récupère le tableau
-        $seatStates = $this->reservationQueryService->getSeatStates($eventSessionId);
+        $isAdmin = false;
+        if (isset($_SESSION['user']['id'])) {
+            try {
+                $userRepo = new UserRepository();
+                $user = $userRepo->findById((int)$_SESSION['user']['id']);
+                if ($user) {
+                    $this->currentUser = $user;
+                    $isAdmin = $this->authorizationService->hasPermission($this->currentUser, 'U');
+                }
+            } catch (\Throwable $e) {
+                // Ignorer l'erreur si l'utilisateur ne peut être chargé, $isAdmin reste false
+            }
+        }
 
         /* Doit renvoyer quelque chose du style :
         {
           "success": true,
           "seatStates": {
-            123: "occupied",
-            250: "in_cart_other",
-            251: "in_cart_session",
-            310: "vip",
-            311: "benevole"
+            123: {"status" : "occupied"},
+            250: {"status" : "in_cart_other"},
+            251: {"status" : "in_cart_session"}
           }
         }
         */
 
+        $seatStates = $this->reservationQueryService->getSeatStates($eventSessionId, $isAdmin);
+
         $this->json(
             [
                 'success' => true,
-                'seatStates' => $seatStates
+                'seatStates' => (object)$seatStates // Forcer un objet JSON {} si le tableau est vide
             ]
         );
     }

@@ -72,6 +72,42 @@ class ReservationRepository extends AbstractRepository
     }
 
     /**
+     * Recherche et retourne des réservations par leurs IDs.
+     *
+     * @param int[] $ids Les IDs des réservations.
+     * @param bool $withEvent Si true, hydrate l'objet Event associé.
+     * @param bool $withEventSession Si true, hydrate l'objet EventSession associé.
+     * @param bool $withEventInscriptionDates Si true, hydrate les dates d'inscription de l'événement.
+     * @param bool $withChildren Si true, hydrate les relations enfants (détails, compléments, paiements, mails envoyés).
+     * @return Reservation[] Les réservations trouvées.
+     */
+    public function findByIds(
+        array $ids,
+        bool $withEvent = false,
+        bool $withEventSession = false,
+        bool $withEventInscriptionDates = false,
+        bool $withChildren = true
+    ): array {
+        if (empty($ids)) {
+            return [];
+        }
+
+        $ids = array_values(array_unique(array_map('intval', $ids)));
+        $placeholders = implode(',', array_fill(0, count($ids), '?'));
+
+        $sql = "SELECT * FROM $this->tableName WHERE id IN ($placeholders)";
+        $rows = $this->query($sql, $ids);
+        if (!$rows) return [];
+
+        $reservations = array_map([$this, 'hydrate'], $rows);
+        foreach ($reservations as $r) {
+            $this->hydrateOptionalRelations($r, $withEvent, $withEventSession, $withEventInscriptionDates);
+        }
+
+        return $withChildren ? $this->hydrateRelations($reservations) : $reservations;
+    }
+
+    /**
      * Retourne toutes les réservations actives pour un événement.
      *
      * @param int $eventId L'ID de l'événement.

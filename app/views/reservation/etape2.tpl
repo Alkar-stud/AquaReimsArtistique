@@ -75,6 +75,26 @@
             <div id="phone_error" class="invalid-feedback" role="alert" aria-live="polite"></div>
         </div>
 
+        <!-- Consentement RGPD -->
+        <div class="mb-3 form-check">
+            <input
+                    class="form-check-input"
+                    type="checkbox"
+                    id="rgpd_consent"
+                    name="rgpd_consent"
+                    value="1"
+                    required
+                    aria-describedby="rgpd_consent_help"
+            >
+            <label class="form-check-label" for="rgpd_consent">
+                J’accepte que Aqua Reims Artistique utilise mes données personnelles uniquement dans le cadre des galas : envoi d’e‑mails liés à ma réservation et informations sur les prochains galas.
+            </label>
+            <div id="rgpd_consent_help" class="form-text">
+                Vous pouvez retirer votre consentement et demander la modification/suppression de vos données en écrivant à {{ defined('EMAIL_CLUB') ? EMAIL_CLUB : 'contact@aquareimsartistique.fr' }}.
+                Politique de confidentialité : <a href="https://aquareimsartistique.fr/politique-confidentialite/" target="_blank" rel="noopener noreferrer">https://aquareimsartistique.fr/politique-confidentialite/</a>.
+            </div>
+        </div>
+
         <div class="row">
             <!-- order-x pour position x en mobile et order-mg-x pour desktop -->
             <!-- afin que le bouton principal soit à droite en desktop -->

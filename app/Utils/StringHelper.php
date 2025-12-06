@@ -7,6 +7,10 @@ use Normalizer;
 
 class StringHelper
 {
+    /**
+     * @param string $text
+     * @return string
+     */
     public static function slugify(string $text): string
     {
         // Normalisation Unicode (NFD) pour séparer les accents
@@ -22,6 +26,10 @@ class StringHelper
         return strtolower($text);
     }
 
+    /**
+     * @param string $str
+     * @return string
+     */
     public static function toUpperCase(string $str): string {
         $raw = trim($str);
 
@@ -33,6 +41,10 @@ class StringHelper
         return mb_strtoupper($raw, 'UTF-8');
     }
 
+    /**
+     * @param string $str
+     * @return string
+     */
     public static function toTitleCase(string $str): string {
         $raw = trim($str);
 
@@ -68,4 +80,15 @@ class StringHelper
         return "{$timestamp}_{$tarifId}_{$safeNom}_$safePrenom.$extension";
     }
 
+    /**
+     * Génère un numéro de réservation formaté
+     *
+     * @param int $number
+     * @return string
+     */
+
+    public static function generateReservationNumber(int $number): string
+    {
+        return 'ARA-' . str_pad($number, 5, '0', STR_PAD_LEFT);
+    }
 }

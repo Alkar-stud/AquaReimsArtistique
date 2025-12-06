@@ -7,6 +7,7 @@ use app\Services\Reservation\PaymentStatusCalculator;
 use app\Services\Reservation\ReservationSummaryBuilder;
 use app\Utils\BuildLink;
 use app\Utils\QRCode;
+use app\Utils\StringHelper;
 
 readonly class MailPrepareService
 {
@@ -55,7 +56,7 @@ readonly class MailPrepareService
         }
 
         // Nom du PDF pour la PJ
-        $pdfName = 'Recapitulatif_ARA-' . str_pad($reservation->getId(), 5, '0', STR_PAD_LEFT) . '.pdf';
+        $pdfName = 'Recapitulatif_' . StringHelper::generateReservationNumber($reservation->getId()) . '.pdf';
 
         // Préparer le chemin du QR code inline
         $inlineImagePath = $params['qrcodeEntrance'] ?? null;
@@ -162,7 +163,7 @@ readonly class MailPrepareService
             'qrcodeModif' => $qrcodeModifPath,
             'qrcodeEntrance' => $qrcodeEntrancePath, // chemin du PNG
             'qrcodeEntranceInMail' => '<img src="cid:qrcode_entrance" alt="QR Code d\'entrée" style="max-width: 250px; height: auto; display: block; margin: 20px auto;" />Montrez ce QR code pour faciliter votre entrée',
-            'IDreservation' => 'ARA-' . str_pad($reservation->getId(), 5, '0', STR_PAD_LEFT),
+            'IDreservation' => StringHelper::generateReservationNumber($reservation->getId()),
             'EventName' => $reservation->getEventObject()->getName(),
             'DateEvent' => $reservation->getEventSessionObject()->getEventStartAt()->format('d/m/Y \à H\hi'),
             'DoorsOpen' => $reservation->getEventSessionObject()->getOpeningDoorsAt()->format('d/m/Y \à \p\a\r\t\i\r \d\e H\hi'),
@@ -189,7 +190,7 @@ readonly class MailPrepareService
     private function buildCancelReservationParams(Reservation $reservation): array
     {
         return [
-            'IDreservation' => str_pad($reservation->getId(), 5, '0', STR_PAD_LEFT),
+            'IDreservation' => StringHelper::generateReservationNumber($reservation->getId()),
             'SIGNATURE' => SIGNATURE,
             'email_club' => defined('EMAIL_CLUB') ? EMAIL_CLUB : '',
         ];

@@ -1,3 +1,4 @@
+// javascript
 'use strict';
 
 import { apiPost } from '../components/apiClient.js';
@@ -29,13 +30,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const phoneInput = document.getElementById('phone');
     const eventIdInput = document.getElementById('event_id');
     const eventSessionIdInput = document.getElementById('event_session_id');
+    const rgpdConsentInput = document.getElementById('rgpd_consent');
 
     const nameErr = document.getElementById('name_error');
     const firstnameErr = document.getElementById('firstname_error');
     const emailErr = document.getElementById('email_error');
     const phoneErr = document.getElementById('phone_error');
 
-    if (!nameInput || !firstnameInput || !emailInput || !phoneInput || !eventIdInput || !eventSessionIdInput) {
+    if (!nameInput || !firstnameInput || !emailInput || !phoneInput || !eventIdInput || !eventSessionIdInput || !rgpdConsentInput) {
         console.error("Un ou plusieurs champs du formulaire de l'étape 2 sont manquants.");
         return;
     }
@@ -91,12 +93,13 @@ document.addEventListener('DOMContentLoaded', () => {
             emailInput.value.trim(),
             phoneInput.value.trim(),
             eventIdInput.value,
-            eventSessionIdInput.value
+            eventSessionIdInput.value,
+            rgpdConsentInput.checked ? 1 : 0
         );
     });
 });
 
-function step2Valid(name, firstname, email, phone, eventId, eventSessionId) {
+function step2Valid(name, firstname, email, phone, eventId, eventSessionId, rgpdConsent) {
     const alertDiv = document.getElementById('reservationAlert');
     apiPost('/reservation/check-duplicate-email', {
         event_id: eventId,
@@ -118,7 +121,7 @@ function step2Valid(name, firstname, email, phone, eventId, eventSessionId) {
                 alertDiv.innerHTML = html;
                 alertDiv.focus();
 
-                document.getElementById('continueBtn').onclick = () => submitEtape2(name, firstname, email, phone, eventId, eventSessionId);
+                document.getElementById('continueBtn').onclick = () => submitEtape2(name, firstname, email, phone, eventId, eventSessionId, rgpdConsent);
                 document.getElementById('cancelBtn').onclick = () => alertDiv.innerHTML = '';
                 document.getElementById('resendBtn').onclick = () => {
                     apiPost('/reservation/resend-confirmation', { email, event_id: eventId, event_session_id: eventSessionId })
@@ -132,7 +135,7 @@ function step2Valid(name, firstname, email, phone, eventId, eventSessionId) {
                         });
                 };
             } else {
-                submitEtape2(name, firstname, email, phone, eventId, eventSessionId);
+                submitEtape2(name, firstname, email, phone, eventId, eventSessionId, rgpdConsent);
             }
         })
         .catch((err) => {
@@ -142,8 +145,16 @@ function step2Valid(name, firstname, email, phone, eventId, eventSessionId) {
         });
 }
 
-function submitEtape2(name, firstname, email, phone, eventId, eventSessionId) {
-    apiPost('/reservation/valid/2', { name, firstname, email, phone, event_id: eventId , event_session_id: eventSessionId })
+function submitEtape2(name, firstname, email, phone, eventId, eventSessionId, rgpdConsent) {
+    apiPost('/reservation/valid/2', {
+        name,
+        firstname,
+        email,
+        phone,
+        event_id: eventId,
+        event_session_id: eventSessionId,
+        rgpd_consent: rgpdConsent
+    })
         .then((data) => {
             if (data.success) {
                 window.location.href = '/reservation/etape3Display';

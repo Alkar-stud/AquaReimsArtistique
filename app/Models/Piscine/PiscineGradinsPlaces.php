@@ -58,4 +58,17 @@ class PiscineGradinsPlaces extends AbstractModel
     public function setIsVolunteer(bool $is_volunteer): self { $this->is_volunteer = $is_volunteer; return $this; }
     public function setIsOpen(bool $is_open): self { $this->is_open = $is_open; return $this; }
 
+    public function toArray(): array
+    {
+        return [
+            'id' => $this->getId(),
+            'zone' => $this->getZone(),
+            'rank_in_zone' => $this->getRankInZone(),
+            'place_number' => $this->getPlaceNumber(),
+            'is_pmr' => $this->isPmr(),
+            'is_vip' => $this->isVip(),
+            'is_volunteer' => $this->isVolunteer(),
+            'is_open' => $this->isOpen(),
+        ];
+    }
 }

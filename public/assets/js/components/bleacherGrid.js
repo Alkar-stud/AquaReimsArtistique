@@ -85,7 +85,7 @@ function attachTooltipEvents(td, btn, tooltipText) {
  * Applique les états dynamiques (réservé, en cours...) à une grille de gradin déjà construite.
  * @param {HTMLElement} container - Le conteneur de la grille (ex: l'élément avec `data-bleacher-seats`).
  * @param {Object} seatStates - Un objet où les clés sont les ID des sièges et les valeurs leur statut.
- * @param {string} mode - 'reservation' (par défaut) ou 'occupation_plan'.
+ * @param {string} mode - 'reservation' (par défaut), 'occupation_plan', 'management', 'readonly'.
  */
 export function applySeatStates(container, seatStates, mode = 'reservation') {
     if (!container || !seatStates) {
@@ -169,6 +169,7 @@ export function createBleacherGrid(container, plan, options = {}) {
     const zone = plan.zone;
     const rows = Array.isArray(plan.rows) ? plan.rows : [];
     const cols = plan.cols || 0;
+    const mode = options.mode || 'reservation'; // 'reservation', 'occupation_plan', 'management', 'readonly'
 
     // Injecte un style minimal pour la colonne mobile
     if (!document.getElementById('bleacher-mobile-style')) {
@@ -265,6 +266,52 @@ export function createBleacherGrid(container, plan, options = {}) {
                 placeholder.className = 'seat-placeholder';
                 placeholder.innerHTML = '&nbsp;';
                 td.appendChild(placeholder);
+            } else if (mode === 'management') {
+                td.dataset.seatId = seatData.id;
+                const content = document.createElement('div');
+                content.className = 'seat-management-content';
+
+                const name = document.createElement('div');
+                name.className = 'seat-name';
+                name.textContent = seatCode;
+                content.appendChild(name);
+
+                const controls = document.createElement('div');
+                controls.className = 'seat-controls';
+
+                const createCheckbox = (label, property, checked) => {
+                    const wrapper = document.createElement('div');
+                    wrapper.className = 'form-check';
+                    const input = document.createElement('input');
+                    input.type = 'checkbox';
+                    input.className = 'form-check-input';
+                    input.id = `seat-${seatData.id}-${property}`;
+                    input.dataset.seatId = seatData.id;
+                    input.dataset.property = property;
+                    input.checked = checked;
+
+                    const lbl = document.createElement('label');
+                    lbl.className = 'form-check-label';
+                    lbl.setAttribute('for', input.id);
+                    lbl.textContent = label;
+
+                    wrapper.appendChild(input);
+                    wrapper.appendChild(lbl);
+
+                    if (typeof options.onAttributeChange === 'function') {
+                        input.addEventListener('change', (e) => {
+                            options.onAttributeChange(seatData.id, property, e.target.checked);
+                        });
+                    }
+                    return wrapper;
+                };
+
+                controls.appendChild(createCheckbox('Fermé', 'is_open', !seatData.open)); // Inversé : coché = fermé
+                controls.appendChild(createCheckbox('PMR', 'is_pmr', seatData.pmr));
+                controls.appendChild(createCheckbox('VIP', 'is_vip', seatData.vip));
+                controls.appendChild(createCheckbox('Bénévole', 'is_volunteer', seatData.volunteer));
+                content.appendChild(controls);
+                td.appendChild(content);
             } else {
                 // Bouton (même en readonly pour uniformiser DOM)
                 const btn = document.createElement('button');

@@ -49,7 +49,8 @@ table.zone-plan .seat.btn {
 
 /* Hover pour places interactives (ne pas appliquer aux états non-interactifs) */
 table.zone-plan td:not(.tdplaceClosed):not(.tdplacePris):not(.tdplaceVIP):not(.tdplaceBenevole):not(.tdplaceTemp):not(.tdplaceNone):hover {
-    background: var(--ara-color-pink);
+    /* Désactivé en mode gestion via la classe sur le conteneur */
+    background: var(--ara-color-pink); 
     color: var(--ara-color-black);
     cursor: pointer;
 }
@@ -60,6 +61,7 @@ table.zone-plan th.thEscaliers { background-color: #808080; }
 table.zone-plan td.tdplaceClosed {
     background-color: var(--ara-color-black);
     color: var(--ara-color-white);
+    border-color: var(--ara-color-white); /* Améliore la séparation visuelle */
 }
 
 table.zone-plan .tdplaceVide { background: transparent; }
@@ -99,6 +101,13 @@ table.zone-plan td.tdplaceOriginal {
     background-color: var(--ara-color-blue);
     color: var(--ara-color-white);
     box-shadow: 0 0 0 2px var(--ara-color-white), 0 0 0 8px var(--ara-color-darkpink); /* Effet de contour pour visibilité */
+}
+
+/* Désactiver le survol en mode gestion */
+.mode-management table.zone-plan td:not(.tdplaceNone):hover {
+    background: var(--ara-color-pink); /* Applique un fond rose au survol */
+    color: var(--ara-color-black);     /* Assure un texte noir lisible */
+    cursor: default;     /* Rétablit le curseur par défaut */
 }
 
 /* Header du gradin */
@@ -335,6 +344,33 @@ table.zone-plan td.tdplaceNone .seat-placeholder {
     .gradins-row .nav-zone-btn.prev { margin-right: .5rem; }
     .gradins-row .nav-zone-btn.next { margin-left: .5rem; }
 }
+
+/* Styles pour le mode de gestion des gradins */
+.seat-management-content {
+    padding: 2px;
+    font-size: 0.7rem;
+    line-height: 1.1;
+    text-align: center;
+}
+.seat-management-content .seat-name {
+    font-weight: bold;
+    margin-bottom: 2px;
+}
+.seat-management-content .seat-controls {
+    display: flex;
+    flex-wrap: wrap;
+    flex-direction: column; /* Empile les éléments verticalement */
+    align-items: center;   /* Centre les éléments horizontalement */
+    gap: 2px;              /* Ajoute un petit espace vertical entre les checkboxes */
+}
+.seat-management-content .form-check-label {
+    font-size: 0.65rem;
+    padding-left: 2px;
+}
+/* La règle .form-check-inline n'est plus nécessaire car la classe est retirée en JS */
+
+
+/* Fin styles mode gestion */
 
 /* Conserver la taille réduite sur très petit écran */
 @media (max-width: 575.98px) {

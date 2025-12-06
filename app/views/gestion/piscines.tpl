@@ -101,7 +101,7 @@
                             </select>
                             {% if $piscine_loop['item']->getNumberedSeats() %}
                             <div class="mt-2">
-                                <a href="#" onclick="alert('A venir');">Gestion des gradins</a>
+                                <button type="button" class="btn btn-outline-info btn-sm" data-action="manage-bleachers" data-piscine-id="{{ $piscine_loop['item']->getId() }}">Gestion des gradins</button>
                             </div>
                             {% endif %}
                         </div>
@@ -176,7 +176,7 @@
                         <option value="oui" {{ $piscine_loop['item']->getNumberedSeats() ? 'selected' : '' }}>Oui</option>
                     </select>
                     {% if $piscine_loop['item']->getNumberedSeats() %}
-                    <div class="mt-1"><a href="#" onclick="alert('A venir');">Gestion des gradins</a></div>
+                    <div class="mt-1"><button type="button" class="btn btn-outline-info btn-sm w-100" data-action="manage-bleachers" data-piscine-id="{{ $piscine_loop['item']->getId() }}">Gestion des gradins</button></div>
                     {% endif %}
                 </td>
                 <td>
@@ -199,3 +199,8 @@
         </table>
     </div>
 </div>
+
+<script type="module">
+    import { initGradinsManagement } from '/assets/js/gestion/gradinsManagementModal.js';
+    initGradinsManagement();
+</script>

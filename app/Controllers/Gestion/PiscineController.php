@@ -7,17 +7,23 @@ use app\Controllers\AbstractController;
 use app\Models\Piscine\Piscine;
 use app\Repository\Piscine\PiscineRepository;
 use app\Services\DataValidation\PiscineDataValidationService;
+use app\Services\Piscine\SeatingPlanService;
 
 class PiscineController extends AbstractController
 {
     private PiscineRepository $piscineRepository;
     private PiscineDataValidationService $piscineDataValidationService;
+    private SeatingPlanService $seatingPlanService;
 
-    public function __construct()
+    public function __construct(
+        SeatingPlanService $seatingPlanService,
+    )
     {
+        $this->seatingPlanService = $seatingPlanService;
         parent::__construct(false); // true = route publique
         $this->piscineRepository = new PiscineRepository();
         $this->piscineDataValidationService = new PiscineDataValidationService();
+        $this->seatingPlanService = $seatingPlanService;
     }
 
     #[Route('/gestion/piscines', name: 'app_gestion_piscines')]
@@ -106,4 +112,34 @@ class PiscineController extends AbstractController
         $this->redirect('/gestion/piscines');
     }
 
+    #[Route('/gestion/piscines/gradins/update-attribute', name: 'app_gestion_piscines_gradins', methods: ['POST'])]
+    public function handleBleacher(): void
+    {
+        //On vérifie que le CurrentUser a bien le droit de faire ça
+        $this->checkIfCurrentUserIsAllowedToManagedThis(2, 'piscines');
+
+        // On récupère les données JSON envoyées par le client
+        $input = json_decode(file_get_contents('php://input'), true);
+        $seatId = (int)($input['seatId'] ?? 0);
+        $attribute = trim($input['attribute'] ?? '');
+        $value = $input['value'] ?? null;
+
+        //On vérifie les données
+        $check = $this->seatingPlanService->checkDataForUpdateAttributeSeat($seatId, $attribute, $value);
+        if ($check['success'] === false) {
+            $this->json([
+                'success'  => false,
+                'message'  => $check['message'],
+            ]);
+        }
+
+        //On tente de mettre à jour
+        $this->seatingPlanService->updateAttribute($seatId, $attribute, $value);
+
+
+        $this->json([
+            'success'  => true,
+            'message'  => "Attribut mis à jour.",
+        ]);
+    }
 }

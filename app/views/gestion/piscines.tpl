@@ -101,7 +101,9 @@
                             </select>
                             {% if $piscine_loop['item']->getNumberedSeats() %}
                             <div class="mt-2">
-                                <button type="button" class="btn btn-outline-info btn-sm" data-action="manage-bleachers" data-piscine-id="{{ $piscine_loop['item']->getId() }}">Gestion des gradins</button>
+                                <a href="#" class="text-info" data-action="manage-bleachers" data-piscine-id="{{ $piscine_loop['item']->getId() }}" style="text-decoration: none;">
+                                    <i class="bi bi-grid-3x3-gap"></i> Gérer les gradins
+                                </a>
                             </div>
                             {% endif %}
                         </div>
@@ -176,7 +178,9 @@
                         <option value="oui" {{ $piscine_loop['item']->getNumberedSeats() ? 'selected' : '' }}>Oui</option>
                     </select>
                     {% if $piscine_loop['item']->getNumberedSeats() %}
-                    <div class="mt-1"><button type="button" class="btn btn-outline-info btn-sm w-100" data-action="manage-bleachers" data-piscine-id="{{ $piscine_loop['item']->getId() }}">Gestion des gradins</button></div>
+                    <div class="mt-2 text-center">
+                        <a href="#" class="text-info small" data-action="manage-bleachers" data-piscine-id="{{ $piscine_loop['item']->getId() }}" style="text-decoration: none;"><i class="bi bi-grid-3x3-gap"></i> Gérer les gradins</a>
+                    </div>
                     {% endif %}
                 </td>
                 <td>

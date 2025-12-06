@@ -369,6 +369,28 @@ table.zone-plan td.tdplaceNone .seat-placeholder {
 }
 /* La règle .form-check-inline n'est plus nécessaire car la classe est retirée en JS */
 
+/* Styles pour la légende dans la modale de gestion */
+.legend-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+}
+.legend-color-box {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    border: 1px solid var(--ara-color-black);
+    border-radius: 3px;
+    vertical-align: middle;
+}
+/* On réutilise les classes de la légende principale */
+.legend-color-box.placeClosed { background-color: var(--ara-color-black); }
+.legend-color-box.placePMR { background-color: var(--ara-color-darkblue); }
+.legend-color-box.placeVIP { background-color: var(--ara-color-darkpink); }
+.legend-color-box.placeBenevole { background-color: var(--ara-color-purple); }
+.legend-color-box.placeVide { background-color: transparent; }
+
+
 
 /* Fin styles mode gestion */
 

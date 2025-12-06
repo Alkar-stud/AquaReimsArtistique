@@ -10,10 +10,13 @@ use app\Repository\Piscine\PiscineGradinsZonesRepository;
 
 readonly class SeatingPlanService
 {
+    private array $allowedAttributes;
     public function __construct(
         private PiscineGradinsZonesRepository  $piscineGradinsZonesRepository = new PiscineGradinsZonesRepository(),
         private PiscineGradinsPlacesRepository $piscineGradinsPlacesRepository = new PiscineGradinsPlacesRepository(),
-    ) {}
+    ) {
+        $this->allowedAttributes = ['is_pmr', 'is_vip', 'is_volunteer', 'is_open'];
+    }
 
     /**
      * Retourne les zones d'une piscine (pour le sélecteur).
@@ -130,4 +133,54 @@ readonly class SeatingPlanService
         if ($p->isVolunteer()) $classes[] = 'seat-vol';
         return implode(' ', $classes);
     }
+
+    /**
+     * Retourne true ou false avec un message après (in)validation des données
+     *
+     * @param int $seatId
+     * @param string $attribute
+     * @param bool $value
+     * @return array
+     */
+    public function checkDataForUpdateAttributeSeat(int $seatId, string $attribute, bool $value): array
+    {
+        //L'ID doit être strictement supérieur à 0.
+        if ($seatId <= 0) {
+            return ['success' => false, 'message' => 'Ce siège n\'existe pas.'];
+        }
+
+        //On vérifie si l'attribut envoyé a le droit d'être modifié
+        if (!in_array($attribute, $this->allowedAttributes, true)) {
+            return ['success'  => false, 'message'  => "Modification non possible."];
+        }
+        return ['success' => true];
+    }
+
+
+    public function updateAttribute(int $seatId, string $attribute, bool $value): void
+    {
+        //On récupère l'objet
+        $piscineGradinsPlace = $this->piscineGradinsPlacesRepository->findById($seatId);
+        //On met à jour l'attribut demandé
+        switch ($attribute) {
+            case 'is_pmr':
+                $piscineGradinsPlace->setIsPmr($value);
+                break;
+            case 'is_vip':
+                $piscineGradinsPlace->setIsVip($value);
+                break;
+            case 'is_volunteer':
+                $piscineGradinsPlace->setIsVolunteer($value);
+                break;
+            case 'is_open':
+                // La checkbox 'Fermé' envoie `true` si cochée (place fermée), `false` si décochée (place ouverte).
+                // La propriété `is_open` du modèle est l'inverse : `false` si fermée, `true` si ouverte.
+                // Nous inversons donc la valeur reçue du frontend.
+                $piscineGradinsPlace->setIsOpen(!$value);
+                break;
+        }
+        //On persiste ensuite
+        $this->piscineGradinsPlacesRepository->update($piscineGradinsPlace);
+    }
+
 }

@@ -8,7 +8,7 @@ use app\Repository\AbstractRepository;
 class PiscineGradinsPlacesRepository extends AbstractRepository
 {
     // Colonnes autorisées
-    private $allowed = [
+    private array $allowed = [
         'id',
         'zone',
         'rank_in_zone',

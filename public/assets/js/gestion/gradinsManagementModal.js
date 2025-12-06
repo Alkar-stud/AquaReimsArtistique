@@ -35,8 +35,13 @@ function ensureModalDOM() {
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <div class="me-auto">
-                        <p class="mb-0 small text-muted">Légende : <strong>F</strong>=Fermé, <strong>P</strong>=PMR, <strong>V</strong>=VIP, <strong>B</strong>=Bénévole</p>
+                    <div class="me-auto d-flex flex-wrap align-items-center gap-3 small text-muted">
+                        <span>Légende :</span>
+                        <span class="legend-item"><span class="legend-color-box placeClosed"></span>Fermé</span>
+                        <span class="legend-item"><span class="legend-color-box placePMR"></span>PMR</span>
+                        <span class="legend-item"><span class="legend-color-box placeVIP"></span>VIP</span>
+                        <span class="legend-item"><span class="legend-color-box placeBenevole"></span>Bénévole</span>
+                        <span class="legend-item"><span class="legend-color-box placeVide"></span>Libre</span>
                     </div>
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
                 </div>
@@ -50,6 +55,44 @@ function ensureModalDOM() {
 }
 
 /**
+ * Met à jour l'apparence (classe CSS) d'une cellule de siège en fonction de l'état de ses attributs.
+ * @param {number} seatId L'ID du siège à mettre à jour.
+ */
+function updateSeatAppearance(seatId) {
+    const td = document.querySelector(`td[data-seat-id="${seatId}"]`);
+    if (!td) return;
+
+    // Récupérer l'état actuel de toutes les checkboxes pour ce siège
+    const isClosed = document.getElementById(`seat-${seatId}-is_open`)?.checked;
+    const isPmr = document.getElementById(`seat-${seatId}-is_pmr`)?.checked;
+    const isVip = document.getElementById(`seat-${seatId}-is_vip`)?.checked;
+    const isVolunteer = document.getElementById(`seat-${seatId}-is_volunteer`)?.checked;
+
+    // Déterminer la nouvelle classe en respectant la priorité d'affichage
+    let newClass = 'tdplaceVide'; // Classe par défaut si ouvert et sans attribut
+    if (isClosed) {
+        newClass = 'tdplaceClosed';
+    } else if (isPmr) {
+        newClass = 'tdplacePMR';
+    } else if (isVip) {
+        newClass = 'tdplaceVIP';
+    } else if (isVolunteer) {
+        newClass = 'tdplaceBenevole';
+    }
+
+    // Retirer toutes les classes de statut précédentes
+    td.classList.remove(
+        'tdplaceClosed',
+        'tdplacePMR',
+        'tdplaceVIP',
+        'tdplaceBenevole',
+        'tdplaceVide'
+    );
+    // Ajouter la nouvelle classe
+    td.classList.add(newClass);
+}
+
+/**
  * Gère le changement d'état d'une case à cocher pour un siège.
  * @param {number} seatId L'ID du siège.
  * @param {string} property La propriété à modifier (ex: 'is_open').
@@ -60,7 +103,7 @@ async function handleAttributeChange(seatId, property, value) {
     if (checkbox) checkbox.disabled = true;
 
     try {
-        const response = await apiPost('/api/gestion/gradins/update-attribute', {
+        const response = await apiPost('/gestion/piscines/gradins/update-attribute', {
             seatId: seatId,
             attribute: property,
             value: value
@@ -69,7 +112,8 @@ async function handleAttributeChange(seatId, property, value) {
         if (!response.success) {
             throw new Error(response.message || 'Erreur inconnue du serveur.');
         }
-        // Le changement est confirmé, on peut laisser la checkbox active.
+        // Le changement est confirmé, on met à jour l'apparence de la cellule.
+        updateSeatAppearance(seatId);
 
     } catch (error) {
         console.error(`Erreur lors de la mise à jour du siège ${seatId}:`, error);
@@ -153,6 +197,7 @@ export function initGradinsManagement() {
     document.body.addEventListener('click', (e) => {
         const target = e.target.closest('[data-action="manage-bleachers"]');
         if (target) {
+            e.preventDefault(); // Empêche le comportement par défaut du lien
             const piscineId = target.dataset.piscineId;
             openGradinsManagementModal(piscineId);
         }

@@ -29,6 +29,11 @@ class Paginator
         return $this->totalItems;
     }
 
+    public function getItemsPerPage(): int
+    {
+        return $this->itemsPerPage;
+    }
+
     public function getCurrentPage(): int
     {
         return $this->currentPage;

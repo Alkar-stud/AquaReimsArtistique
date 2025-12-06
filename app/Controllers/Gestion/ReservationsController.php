@@ -9,6 +9,7 @@ use app\Models\Reservation\ReservationPayment;
 use app\Repository\Reservation\ReservationPaymentRepository;
 use app\Repository\Reservation\ReservationRepository;
 use app\Repository\Reservation\ReservationTempRepository;
+use app\Services\Event\EventPiscineService;
 use app\Services\Event\EventQueryService;
 use app\Services\Log\Logger;
 use app\Services\Mails\MailPrepareService;
@@ -42,6 +43,7 @@ class ReservationsController extends AbstractController
     private MailService $mailService;
     private MailPrepareService $mailPrepareService;
     private DataHelper $dataHelper;
+    private EventPiscineService $EventPiscineService;
 
     function __construct(
         EventQueryService $eventQueryService,
@@ -58,6 +60,7 @@ class ReservationsController extends AbstractController
         MailService $mailService,
         MailPrepareService $mailPrepareService,
         DataHelper $dataHelper,
+        EventPiscineService $EventPiscineService,
     )
     {
         parent::__construct(false);
@@ -75,6 +78,7 @@ class ReservationsController extends AbstractController
         $this->mailService = $mailService;
         $this->mailPrepareService = $mailPrepareService;
         $this->dataHelper = $dataHelper;
+        $this->EventPiscineService = $EventPiscineService;
     }
 
     #[Route('/gestion/reservations', name: 'app_gestion_reservations')]
@@ -140,9 +144,13 @@ class ReservationsController extends AbstractController
         // Données pour le timeout de la session utilisateur
         $durationInSeconds = DurationHelper::iso8601ToSeconds(TIMEOUT_PLACE_RESERV);
 
+        //On récupère les piscines par event pour afficher le plan d'occupation
+        $piscinesPerEvent = $this->EventPiscineService->getPiscinesPerEvent($events);
+
         $this->render('/gestion/reservations', [
             'events' => $events,
             'selectedSessionId' => $sessionId,
+            'piscinesPerEvent' => $piscinesPerEvent,
             'tab' => $tab,
             'emailsTemplatesToSendManually' => $emailsTemplatesToSendManually,
             'reservations' => $paginator ? $paginator->getItems() : [],

@@ -85,16 +85,15 @@ $hasContext = ($selectedSessionId > 0) || $isSearchMode;
             <i class="bi bi-box-arrow-up"></i>
             <span class="d-none d-sm-inline ms-1">Exporter</span>
         </a>
+        {% if $piscinesPerEvent[$selectedSessionId]['numbered_seats'] %}
         <button type="button" id="show-occupation-plan" class="btn btn-sm btn-outline-info"
                 data-session-id="{{ $selectedSessionId }}"
-                data-piscine-id="0"
+                data-piscine-id="{{ $piscinesPerEvent[$selectedSessionId]['id'] }}"
         >
-            <!--
-            TODO : remplacer data-piscine-id par l'ID de la piscine associée à la session sélectionnée
-            -->
             <i class="bi bi-grid-3x3-gap-fill"></i>
             <span class="d-none d-sm-inline ms-1">Plan d'occupation</span>
         </button>
+        {% endif %}
         {% endif %}
     </div>
 

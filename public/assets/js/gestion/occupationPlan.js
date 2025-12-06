@@ -19,9 +19,6 @@ export function initOccupationPlan()
             const piscineId = button.dataset.piscineId ?? 0;
 
             if (sessionId && occupationPlanModal) {
-                // Affiche l'ID de la session dans la console
-                console.log(`ID de la session d'événement pour le plan d'occupation : ${sessionId}, ID de la piscine : ${button.dataset.piscineId}`);
-
                 // On passe les infos nécessaires à la modale avant de l'ouvrir
                 occupationPlanModalEl.dataset.sessionId = sessionId;
                 occupationPlanModalEl.dataset.piscineId = piscineId;

@@ -115,13 +115,16 @@ class Reservation extends AbstractModel
         if ($swimmer) { $this->swimmer_if_limitation = $swimmer->getId(); }
         return $this;
     }
-    public function setRgpdDateConsentement($rgpd_date_consentement): self
+    public function setRgpdDateConsentement(DateTimeInterface|string|null $date): self
     {
-        $date = DateTime::createFromFormat('Y-m-d H:i:s', $rgpd_date_consentement);
-        if ($date === false) {
-            throw new InvalidArgumentException("La date fournie est invalide.");
+        if (is_string($date) && $date !== '') {
+            $this->rgpd_date_consentement = new DateTime($date);
+        } elseif ($date instanceof DateTimeInterface) {
+            $this->rgpd_date_consentement = $date;
+        } else {
+            $this->rgpd_date_consentement = null;
         }
-        $this->rgpd_date_consentement = $date;
+
         return $this;
     }
     public function setTotalAmount(int $total_amount): self { $this->total_amount = $total_amount; return $this; }

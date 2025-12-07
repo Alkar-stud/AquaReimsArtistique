@@ -269,8 +269,8 @@ class ReservationTempRepository extends AbstractRepository
     public function insert(ReservationTemp $m): bool
     {
         $sql = "INSERT INTO {$this->tableName}
-            (event, event_session, session_id, name, firstname, email, phone, swimmer_if_limitation, access_code, total_amount, created_at)
-            VALUES (:event, :event_session, :session_id, :name, :firstname, :email, :phone, :swimmer_if_limitation, :access_code, :total_amount, :created_at)";
+            (event, event_session, session_id, name, firstname, email, phone, swimmer_if_limitation, rgpd_date_consentement, access_code, total_amount, created_at)
+            VALUES (:event, :event_session, :session_id, :name, :firstname, :email, :phone, :swimmer_if_limitation, :rgpd_date_consentement, :access_code, :total_amount, :created_at)";
         $params = [
             'event' => $m->getEvent(),
             'event_session' => $m->getEventSession(),
@@ -280,6 +280,7 @@ class ReservationTempRepository extends AbstractRepository
             'email' => $m->getEmail(),
             'phone' => $m->getPhone(),
             'swimmer_if_limitation' => $m->getSwimmerId(),
+            'rgpd_date_consentement' => $m->getRgpdDateConsentement()?->format('Y-m-d H:i:s'),
             'access_code' => $m->getAccessCode(),
             'total_amount' => $m->getTotalAmount(),
             'created_at' => $m->getCreatedAt()->format('Y-m-d H:i:s'),
@@ -309,6 +310,7 @@ class ReservationTempRepository extends AbstractRepository
             'email' => $reservationTemp->getEmail(),
             'phone' => $reservationTemp->getPhone(),
             'swimmer_if_limitation' => $reservationTemp->getSwimmerId(),
+            'rgpd_date_consentement' => $reservationTemp->getRgpdDateConsentement()?->format('Y-m-d H:i:s'),
             'access_code' => $reservationTemp->getAccessCode(),
             'total_amount' => $reservationTemp->getTotalAmount(),
             'is_locked' => $reservationTemp->isLocked() === true ? 1 : 0,
@@ -403,6 +405,7 @@ class ReservationTempRepository extends AbstractRepository
         $m->setEmail($row['email']);
         $m->setPhone($row['phone']);
         $m->setSwimmerId($row['swimmer_if_limitation'] !== null ? (int)$row['swimmer_if_limitation'] : null);
+        $m->setRgpdDateConsentement(isset($row['rgpd_date_consentement']) ? new DateTime($row['rgpd_date_consentement']) : null);
         $m->setAccessCode($row['access_code']);
         $m->setTotalAmount($row['total_amount']);
         $m->setIsLocked($row['is_locked']);

@@ -99,6 +99,7 @@ readonly class ReservationDataPersist
 
             // Détails + compléments (échec ⇛ exception ⇛ rollback)
             $this->persistDetails($newReservationId, $reservationTemp->getDetails());
+
             $this->persistComplements($newReservationId, $reservationTemp->getComplements());
             //On hydrate les 2 objets dans Reservation
             $reservation->setDetails($this->reservationDetailRepository->findByReservation($newReservationId, false, true, true));
@@ -190,6 +191,7 @@ readonly class ReservationDataPersist
             ->setEmail($tempReservation->getEmail())
             ->setPhone($tempReservation->getPhone())
             ->setSwimmerId($tempReservation->getSwimmerId())
+            ->setRgpdDateConsentement($tempReservation->getRgpdDateConsentement())
             ->setTotalAmount($tempReservation->getTotalAmount())
             ->setTotalAmountPaid($paymentData->amount->total ?? 0)
             ->setToken($tokenGenerated['token'])
@@ -201,6 +203,7 @@ readonly class ReservationDataPersist
         $this->reservation->setEventSessionObject($this->eventSessionRepository->findById($this->reservation->getEventSession()));
 
         $newReservationId = $this->reservationRepository->insert($this->reservation);
+
         $this->reservation->setId($newReservationId);
 
         return $this->reservation;

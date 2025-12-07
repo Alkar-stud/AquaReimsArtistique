@@ -105,6 +105,28 @@ class ReservationDataValidationService
             $reservationTemp->setEmail((string)$data['email'] ?? null);
             $reservationTemp->setPhone((string)$data['phone'] ?? null);
 
+            // Gestion du consentement RGPD : si absent ou false -> erreur
+            $rgpdInput = $data['rgpd_consent'] ?? null;
+            // Considérer les valeurs "0", 0, null, '', false comme absence de consentement
+            if ($rgpdInput === null || $rgpdInput === '' || $rgpdInput === 0 || $rgpdInput === '0' || $rgpdInput === false) {
+                return [
+                    'success' => false,
+                    'errors'  => ['rgpd_consent' => 'La réservation ne peut pas se poursuivre sans votre consentement au traitement des données personnelles.'],
+                    'data'    => []
+                ];
+            }
+
+            // Côté serveur, on crée la date de consentement maintenant (ne dépend plus du client)
+            try {
+                $reservationTemp->setRgpdDateConsentement(new DateTime());
+            } catch (\InvalidArgumentException $e) {
+                return [
+                    'success' => false,
+                    'errors'  => ['rgpd_consent' => 'Impossible d\'enregistrer la date de consentement.'],
+                    'data'    => ['message' => $e]
+                ];
+            }
+
             $result = $this->validateDataStep2($reservationTemp);
 
             if (!$result['success']) {

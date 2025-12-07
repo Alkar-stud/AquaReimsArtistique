@@ -8,6 +8,7 @@ use app\Models\Swimmer\Swimmer;
 use app\Utils\StringHelper;
 use DateTime;
 use DateTimeInterface;
+use InvalidArgumentException;
 
 class Reservation extends AbstractModel
 {
@@ -18,6 +19,7 @@ class Reservation extends AbstractModel
     private int $event_session;
     private ?EventSession $eventSessionObject = null;
     private ?string $reservation_temp_id = null;
+    private ?DateTimeInterface $rgpd_date_consentement = null;
     private string $name;
     private string $firstname;
     private string $email;
@@ -56,6 +58,7 @@ class Reservation extends AbstractModel
     public function getEmail(): string { return $this->email; }
     public function getPhone(): ?string { return $this->phone; }
     public function getSwimmerId(): ?int { return $this->swimmer_if_limitation; }
+    public function getRgpdDateConsentement(): ?DateTimeInterface { return $this->rgpd_date_consentement; }
     public function getSwimmer(): ?Swimmer { return $this->swimmer; }
     public function getTotalAmount(): int { return $this->total_amount; }
     public function getTotalAmountPaid(): int { return $this->total_amount_paid; }
@@ -112,7 +115,15 @@ class Reservation extends AbstractModel
         if ($swimmer) { $this->swimmer_if_limitation = $swimmer->getId(); }
         return $this;
     }
-
+    public function setRgpdDateConsentement($rgpd_date_consentement): self
+    {
+        $date = DateTime::createFromFormat('Y-m-d H:i:s', $rgpd_date_consentement);
+        if ($date === false) {
+            throw new InvalidArgumentException("La date fournie est invalide.");
+        }
+        $this->rgpd_date_consentement = $date;
+        return $this;
+    }
     public function setTotalAmount(int $total_amount): self { $this->total_amount = $total_amount; return $this; }
     public function setTotalAmountPaid(int $total_amount_paid): self { $this->total_amount_paid = $total_amount_paid; return $this; }
 
@@ -153,13 +164,14 @@ class Reservation extends AbstractModel
             'firstName' => $this->getFirstName(),
             'email' => $this->getEmail(),
             'phone' => $this->getPhone(),
+            'rgpdDateConsentement' => $this->getRgpdDateConsentement()?->format(DateTimeInterface::ATOM),
             'totalAmount' => $this->getTotalAmount(),
             'totalAmountPaid' => $this->getTotalAmountPaid(),
             'isCanceled' => $this->isCanceled(),
             'isChecked' => $this->isChecked(),
             'comments' => $this->getComments(),
             'token' => $this->getToken(),
-            'tokenExpireAt' => $this->getTokenExpireAt()?->format(DateTime::ATOM),
+            'tokenExpireAt' => $this->getTokenExpireAt()?->format(DateTimeInterface::ATOM),
             'event' => $eventObject ? [
                 'id' => $eventObject->getId(),
                 'name' => $eventObject->getName(),

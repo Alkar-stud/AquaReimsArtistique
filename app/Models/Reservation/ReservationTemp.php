@@ -8,6 +8,7 @@ use app\Models\Swimmer\Swimmer;
 use app\Utils\StringHelper;
 use DateTime;
 use DateTimeInterface;
+use InvalidArgumentException;
 
 class ReservationTemp extends AbstractModel
 {
@@ -22,6 +23,7 @@ class ReservationTemp extends AbstractModel
     private ?string $email = null;
     private ?string $phone = null;
     private ?int $swimmer_if_limitation = null;
+    private ?DateTimeInterface $rgpd_date_consentement = null;
     private ?Swimmer $swimmer = null;
     private ?string $access_code = null;
     private ?int $total_amount = null;
@@ -43,6 +45,7 @@ class ReservationTemp extends AbstractModel
     public function getPhone(): ?string { return $this->phone; }
     public function getSwimmerId(): ?int { return $this->swimmer_if_limitation; }
     public function getSwimmer(): ?Swimmer { return $this->swimmer; }
+    public function getRgpdDateConsentement(): ?DateTimeInterface { return $this->rgpd_date_consentement; }
     public function getAccessCode(): ?string { return $this->access_code; }
     public function getTotalAmount(): ?int { return $this->total_amount; }
     public function isLocked(): bool { return $this->is_locked; }
@@ -78,6 +81,15 @@ class ReservationTemp extends AbstractModel
         if ($swimmer) { $this->swimmer_if_limitation = $swimmer->getId(); }
         return $this;
     }
+    public function setRgpdDateConsentement($rgpd_date_consentement): self
+    {
+        $date = DateTime::createFromFormat('Y-m-d H:i:s', $rgpd_date_consentement);
+        if ($date === false) {
+            throw new InvalidArgumentException("La date fournie est invalide.");
+        }
+        $this->rgpd_date_consentement = $date;
+        return $this;
+    }
     public function setAccessCode(?string $access_code): self { $this->access_code = ($access_code === '' ? null : $access_code); return $this; }
     public function setTotalAmount(?int $total_amount): self { $this->total_amount = $total_amount; return $this; }
     public function setIsLocked(bool $is_locked): void { $this->is_locked = $is_locked; }
@@ -94,6 +106,8 @@ class ReservationTemp extends AbstractModel
             'firstName' => $this->getFirstName(),
             'email' => $this->getEmail(),
             'phone' => $this->getPhone(),
+            'swimmer' => $this->getSwimmer(),
+            'rgpdDateConsentement' => $this->getRgpdDateConsentement()?->format(DateTimeInterface::ATOM),
             'totalAmount' => $this->getTotalAmount(),
             'isLocked' => $this->isLocked(),
             'details' => array_map(fn($detail) => $detail->toArray(), $this->getDetails()),

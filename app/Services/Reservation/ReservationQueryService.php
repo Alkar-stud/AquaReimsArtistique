@@ -217,7 +217,7 @@ class ReservationQueryService
                 'id' => $detail->getId(),
                 'name' => $detail->getName(),
                 'firstname' => $detail->getFirstName(),
-                'place_number' => $detail->getPlaceObject()->getFullPlaceName(),
+                'place_number' => $detail->getPlaceObject()?->getFullPlaceName(),
                 'tarif_access_code' => method_exists($detail, 'getTarifAccessCode')
                     ? $detail->getTarifAccessCode()
                     : null,

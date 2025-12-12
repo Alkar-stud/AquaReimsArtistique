@@ -2,19 +2,24 @@
 
 namespace app\Services\Tarif;
 
+use app\Models\Reservation\ReservationDetailTemp;
 use app\Models\Tarif\Tarif;
+use app\Repository\Event\EventTarifRepository;
 use app\Repository\Tarif\TarifRepository;
 
 class TarifService
 {
     private TarifRepository $tarifRepository;
+    private EventTarifRepository $eventTarifRepository;
 
 
     public function __construct(
         TarifRepository $tarifRepository,
+        EventTarifRepository $eventTarifRepository,
     )
     {
         $this->tarifRepository = $tarifRepository;
+        $this->eventTarifRepository = $eventTarifRepository;
     }
 
     /**
@@ -120,19 +125,16 @@ class TarifService
      * Construit le "pré-remplissage" s'il existe déjà un tarif avec code en session.
      *
      * @param array $allTarifsForThisEvent
-     * @param array $session
-     * @param string $dto Le texte du DTO attendu (detail ou complement)
+     * @param ReservationDetailTemp[] $details
      * @return array|null
      */
-    public function getAllTarifAndPrepareViewWithSpecialCode(array $allTarifsForThisEvent, array $session, string $dto): ?array
+    public function getAllTarifAndPrepareViewWithSpecialCode(array $allTarifsForThisEvent, array $details): ?array
     {
         $specialTarifSession = null;
-        $details = $session[$dto] ?? [];
-
-        if (is_array($details) && !empty($details)) {
-            foreach ($details as $d) {
-                $code = is_object($d) ? ($d->tarif_access_code ?? null) : ($d['tarif_access_code'] ?? null);
-                $tarifId = (int)(is_object($d) ? ($d->tarif_id ?? 0) : ($d['tarif_id'] ?? 0));
+        if (!empty($details)) {
+            foreach ($details as $detail) {
+                $code = $detail->getTarifAccessCode();
+                $tarifId = $detail->getTarif();
                 if (!$code || $tarifId <= 0) {
                     continue;
                 }
@@ -153,46 +155,6 @@ class TarifService
         }
 
         return $specialTarifSession ?: null;
-    }
-
-    /**
-     * Retourne un tableau d'objet Tarif indexé par leur ID à partir de la session[reservation][reservation_detail]
-     *
-     * @param array $listTarifsEventsSelected
-     * @return array
-     */
-    public function getIndexedTarifFromEvent(array $listTarifsEventsSelected): array
-    {
-        // Extraire les ids de tarif depuis $listTarifsEventsSelected
-        $ids = [];
-        foreach ($listTarifsEventsSelected as $row) {
-            $id = is_array($row)
-                ? ($row['tarif_id'] ?? null)
-                : ($row->tarif_id ?? null);
-
-            $id = (int)$id;
-            if ($id > 0) {
-                $ids[] = $id;
-            }
-        }
-
-        if (empty($ids)) {
-            return [];
-        }
-
-        // Dé-dupliquer
-        $ids = array_values(array_unique($ids));
-
-        // Charger les tarifs correspondants
-        $tarifs = $this->tarifRepository->findByIds($ids);
-
-        // Indexer par id
-        $indexed = [];
-        foreach ($tarifs as $tarif) {
-            $indexed[$tarif->getId()] = $tarif;
-        }
-
-        return $indexed;
     }
 
     /**
@@ -233,5 +195,20 @@ class TarifService
         return mb_strtolower($trimmed);
     }
 
+
+    /**
+     * Vérifie si un tarif donné est bien associé à un événement spécifique.
+     *
+     * @param int $tarifId L'ID du tarif à vérifier.
+     * @param int $eventId L'ID de l'événement contextuel.
+     * @return bool
+     */
+    public function isTarifAssociatedWithEvent(int $tarifId, int $eventId): bool
+    {
+        if ($tarifId <= 0 || $eventId <= 0) {
+            return false;
+        }
+        return $this->eventTarifRepository->associationExists($eventId, $tarifId);
+    }
 
 }

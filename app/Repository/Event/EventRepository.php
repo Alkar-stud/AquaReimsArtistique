@@ -3,6 +3,7 @@
 namespace app\Repository\Event;
 
 use app\Models\Event\Event;
+use app\Models\Event\EventSession;
 use app\Models\Piscine\Piscine;
 use app\Repository\AbstractRepository;
 use app\Repository\Piscine\PiscineRepository;
@@ -80,6 +81,112 @@ class EventRepository extends AbstractRepository
         }
 
         return $this->hydrate($row, $piscine, $sessions, $inscDates, $tarifs, $presentations);
+    }
+
+    /**
+     * Retourne une liste d'événements par leurs IDs
+     * @param int[] $ids
+     * @param bool $withPiscine
+     * @param bool $withSessions
+     * @param bool $withInscriptionDates
+     * @param bool $withTarifs
+     * @param bool $withPresentations
+     * @return Event[]
+     */
+    public function findByIds(
+        array $ids,
+        bool $withPiscine = false,
+        bool $withSessions = false,
+        bool $withInscriptionDates = false,
+        bool $withTarifs = true,
+        bool $withPresentations = false
+    ): array {
+        if (empty($ids)) {
+            return [];
+        }
+
+        $placeholders = implode(',', array_fill(0, count($ids), '?'));
+        $sql = "SELECT * FROM {$this->tableName} WHERE id IN ($placeholders)";
+        $rows = $this->query($sql, $ids);
+        if (!$rows) {
+            return [];
+        }
+
+        $events = array_map(fn($row) => $this->hydrate($row), $rows);
+        $eventsById = [];
+        foreach ($events as $event) {
+            $eventsById[$event->getId()] = $event;
+        }
+
+        if ($withPiscine) {
+            $piscineRepo = new PiscineRepository();
+            $piscineIds = array_unique(array_map(fn(Event $e) => $e->getPlace(), $events));
+            $piscinesResult = $piscineRepo->findByIds($piscineIds);
+
+            // On ré-indexe le tableau de piscines par leur ID pour une association facile.
+            $piscinesById = [];
+            foreach ($piscinesResult as $piscine) {
+                $piscinesById[$piscine->getId()] = $piscine;
+            }
+
+            foreach ($events as $event) {
+                $event->setPiscine($piscinesById[$event->getPlace()] ?? null);
+            }
+        }
+
+        if ($withSessions) {
+            $sessionRepo = new EventSessionRepository();
+            // On récupère toutes les sessions pour cette liste d'événements
+            $eventsSessions = $sessionRepo->findByEventIds(array_keys($eventsById));
+
+            // On groupe les sessions par id d'événement
+            $sessionsByEventId = [];
+            foreach ($eventsSessions as $sessions) {
+                foreach ($sessions as $session) {
+                    /** @var EventSession $session */
+                    $sessionsByEventId[$session->getEventId()][] = $session;
+                }
+            }
+
+            // On attache les sessions à chaque événement
+            foreach ($eventsById as $eventId => $event) {
+                $event->setSessions($sessionsByEventId[$eventId] ?? []);
+            }
+        }
+
+        if ($withTarifs) {
+            $tarifRepo = new TarifRepository();
+            $eventTarifRepo = new EventTarifRepository($tarifRepo);
+
+            // On récupère tous les tarifs (avec ou sans places selon votre besoin, ici avec places par défaut)
+            $eventsTarifs = $eventTarifRepo->findTarifsByEvents(array_keys($eventsById), null);
+
+            // On associe les tarifs à leurs Events
+            foreach ($eventsById as $eventId => $event) {
+                $eventTarifs = $eventsTarifs[$eventId] ?? [];
+
+                // On ne garde que la liste d'objets Tarif (sans les clés id si vous n'en avez pas besoin)
+                $event->setTarifs(array_values($eventTarifs));
+            }
+        }
+
+        if ($withInscriptionDates) {
+            $inscRepo = new EventInscriptionDateRepository();
+            $inscDatesByEvent = $inscRepo->findByEventIds($ids);
+            foreach ($events as $event) {
+                $event->setInscriptionDates($inscDatesByEvent[$event->getId()] ?? []);
+            }
+        }
+
+        if ($withPresentations) {
+            $presentationRepo = new EventPresentationsRepository();
+            $presentationsByEvent = $presentationRepo->findByEventIds($ids);
+            foreach ($events as $event) {
+                $event->setPresentations($presentationsByEvent[$event->getId()] ?? []);
+            }
+        }
+
+        return array_values($events);
     }
 
     /**

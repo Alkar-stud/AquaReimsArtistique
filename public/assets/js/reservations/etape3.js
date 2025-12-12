@@ -63,7 +63,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (dejaReserveesSpan) dejaReserveesSpan.textContent = String(dejaReservees + totalDemanded);
         }
 
-        const enable = (totalDemanded > 0 || hasSpecial) && (limitation === null || remaining > 0 || hasSpecial);
+        const enable = (totalDemanded > 0 || hasSpecial) && (limitation === null || remaining >= 0 || hasSpecial);
         submitButton.disabled = !enable;
     }
 

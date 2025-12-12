@@ -124,22 +124,33 @@ class TemplateEngine
      */
     private function compileIncludes(string $template): string
     {
-        // {% include 'file.tpl' %}
-        // {% include 'file.tpl' with {'var': $value} %}
+        // Dotall (/s) pour matcher sur plusieurs lignes
         return preg_replace_callback(
-            '/\{%\s*include\s+[\'"](.+?)[\'"](?:\s+with\s+(.+?))?\s*%}/',
+            '/\{%\s*include\s+([\'"])(.+?)\1(?:\s+with\s+(.+?))?\s*%}/s',
             function ($m) {
-                $file = addslashes($m[1]); // Le chemin du fichier
-                $context = $m[2] ?? '[]'; // Le contexte (ex: "{'event': $event}")
+                $file = addslashes($m[2]);
+                $context = trim($m[3] ?? '[]');
 
-                // Remplace la syntaxe de type objet JSON/JS par une syntaxe de tableau PHP
-                // {'key': $value} devient ['key' => $value]
-                $context = str_replace(['{', ':', '}'], ['[', '=>', ']'], $context);
+                if ($context === '' || $context === 'null') {
+                    $context = '[]';
+                } else {
+                    // Si le contexte est en {...}, convertir en [...]
+                    if ($context[0] === '{' && substr($context, -1) === '}') {
+                        $context = '[' . substr($context, 1, -1) . ']';
 
-                // On fusionne le contexte local ($context) avec les données globales ($__data)
-                // Le contexte local écrase les données globales en cas de conflit de nom.
+                        // Si pas déjà en '=>', convertir les ':' de niveau supérieur en '=>'
+                        if (!str_contains($context, '=>')) {
+                            // Remplace les ':' hors des chaînes (quotes), évite de casser 'http://', '14:00', etc.
+                            $context = preg_replace_callback(
+                                '/(["\'])(?:\\\\.|(?!\1).)*\1(*SKIP)(*F)|:/',
+                                fn() => '=>',
+                                $context
+                            );
+                        }
+                    }
+                }
+
                 $data_to_pass = "array_merge(\$__data, $context)";
-
                 return "<?php echo \$this->render(\$this->resolveInclude('$file'), $data_to_pass); ?>";
             },
             $template

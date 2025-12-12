@@ -7,6 +7,7 @@ use app\Services\Pdf\BasePdf;
 use app\Services\Pdf\PdfTypeInterface;
 use app\Utils\BuildLink;
 use app\Utils\QRCode;
+use app\Utils\StringHelper;
 use RuntimeException;
 
 final readonly class RecapFinalPdf implements PdfTypeInterface
@@ -65,7 +66,7 @@ final readonly class RecapFinalPdf implements PdfTypeInterface
         $pdf->Cell(180, 6, mb_convert_encoding($reservation->getEventObject()->getPiscine()->getLabel() . ' située au ' . $reservation->getEventObject()->getPiscine()->getAddress(), 'ISO-8859-1', 'UTF-8'), 0, 0, 'L');
         $pdf->SetFont('Arial', '', 10);
         $pdf->Ln(8);
-        $pdf->Cell(160, 6, mb_convert_encoding('Voici le récapitulatif de votre commande ARA-' . str_pad($reservation->getId(), 5, '0', STR_PAD_LEFT) . ',', 'ISO-8859-1', 'UTF-8'), 0, 0, 'L');
+        $pdf->Cell(160, 6, mb_convert_encoding('Voici le récapitulatif de votre commande ' . StringHelper::generateReservationNumber($reservation->getId()) . ',', 'ISO-8859-1', 'UTF-8'), 0, 0, 'L');
         $pdf->Ln(8);
 
 // Informations de la réservation

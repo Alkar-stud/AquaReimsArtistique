@@ -66,29 +66,42 @@
                         {% if $nbSessions === 1 %}
                         <div class="form-check">
                             <input
-                                    class="form-check-input"
-                                    type="radio"
-                                    name="session_{{ $event->getId() }}"
-                                    id="session_{{ $event->getId() }}_{{ $sessions[0]->getId() }}"
-                                    value="{{ $sessions[0]->getId() }}"
-                                    checked
+                                class="form-check-input"
+                                type="radio"
+                                name="session_{{ $event->getId() }}"
+                                id="session_{{ $event->getId() }}_{{ $sessions[0]->getId() }}"
+                                value="{{ $sessions[0]->getId() }}"
+                                {% if isset($nbSpectatorsPerSession[$sessions[0]->getId()]['is_full']) and $nbSpectatorsPerSession[$sessions[0]->getId()]['is_full'] === true %}
+                                disabled
+                                {% else %}
+                                checked
+                                {% endif %}
                             >
                             <label class="form-check-label" for="session_{{ $event->getId() }}_{{ $sessions[0]->getId() }}">
                                 {{ $sessions[0]->getEventStartAt()->format('d/m/Y H:i') }}
+                                {% if isset($nbSpectatorsPerSession[$sessions[0]->getId()]['is_full']) and $nbSpectatorsPerSession[$sessions[0]->getId()]['is_full'] === true %}
+                                 - Complet
+                                {% endif %}
                             </label>
                         </div>
                         {% else %}
                         {% foreach $sessions as $session %}
                         <div class="form-check">
                             <input
-                                    class="form-check-input"
-                                    type="radio"
-                                    name="session_{{ $event->getId() }}"
-                                    id="session_{{ $event->getId() }}_{{ $session->getId() }}"
-                                    value="{{ $session->getId() }}"
+                                class="form-check-input"
+                                type="radio"
+                                name="session_{{ $event->getId() }}"
+                                id="session_{{ $event->getId() }}_{{ $session->getId() }}"
+                                value="{{ $session->getId() }}"
+                                    {% if isset($nbSpectatorsPerSession[$session->getId()]['is_full']) and $nbSpectatorsPerSession[$session->getId()]['is_full'] === true %}
+                                disabled
+                                    {% endif %}
                             >
                             <label class="form-check-label" for="session_{{ $event->getId() }}_{{ $session->getId() }}">
                                 {{ $session->getSessionName() ?? '' }} {{ $session->getSessionName() ? ' : ' : '' }}{{ $session->getEventStartAt()->format('d/m/Y H:i') }}
+                                {% if isset($nbSpectatorsPerSession[$session->getId()]['is_full']) and $nbSpectatorsPerSession[$session->getId()]['is_full'] === true %}
+                                - Complet
+                                {% endif %}
                             </label>
                         </div>
                         {% endforeach %}
@@ -155,10 +168,10 @@
                     </button>
 
                     <div
-                            id="form_error_message_{{ $event->getId() }}"
-                            class="text-danger mt-2"
-                            role="alert"
-                            aria-live="assertive"
+                        id="form_error_message_{{ $event->getId() }}"
+                        class="text-danger mt-2"
+                        role="alert"
+                        aria-live="assertive"
                     ></div>
                 </div>
             </div>

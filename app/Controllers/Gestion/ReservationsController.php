@@ -8,6 +8,8 @@ use app\Enums\LogType;
 use app\Models\Reservation\ReservationPayment;
 use app\Repository\Reservation\ReservationPaymentRepository;
 use app\Repository\Reservation\ReservationRepository;
+use app\Repository\Reservation\ReservationTempRepository;
+use app\Services\Event\EventPiscineService;
 use app\Services\Event\EventQueryService;
 use app\Services\Log\Logger;
 use app\Services\Mails\MailPrepareService;
@@ -21,6 +23,7 @@ use app\Services\Reservation\ReservationDeletionService;
 use app\Services\Reservation\ReservationTokenService;
 use app\Services\Reservation\ReservationUpdateService;
 use app\Utils\DataHelper;
+use app\Utils\DurationHelper;
 use Exception;
 use Throwable;
 
@@ -28,6 +31,7 @@ class ReservationsController extends AbstractController
 {
     private EventQueryService $eventQueryService;
     private ReservationRepository $reservationRepository;
+    private ReservationTempRepository $reservationTempRepository;
     private PaginationService $paginationService;
     private ReservationUpdateService $reservationUpdateService;
     private ReservationDeletionService $reservationDeletionService;
@@ -39,10 +43,12 @@ class ReservationsController extends AbstractController
     private MailService $mailService;
     private MailPrepareService $mailPrepareService;
     private DataHelper $dataHelper;
+    private EventPiscineService $EventPiscineService;
 
     function __construct(
         EventQueryService $eventQueryService,
         ReservationRepository $reservationRepository,
+        ReservationTempRepository $reservationTempRepository,
         PaginationService $paginationService,
         ReservationUpdateService $reservationUpdateService,
         ReservationDeletionService $reservationDeletionService,
@@ -54,11 +60,13 @@ class ReservationsController extends AbstractController
         MailService $mailService,
         MailPrepareService $mailPrepareService,
         DataHelper $dataHelper,
+        EventPiscineService $EventPiscineService,
     )
     {
         parent::__construct(false);
         $this->eventQueryService = $eventQueryService;
         $this->reservationRepository = $reservationRepository;
+        $this->reservationTempRepository = $reservationTempRepository;
         $this->paginationService = $paginationService;
         $this->reservationUpdateService = $reservationUpdateService;
         $this->reservationDeletionService = $reservationDeletionService;
@@ -70,6 +78,7 @@ class ReservationsController extends AbstractController
         $this->mailService = $mailService;
         $this->mailPrepareService = $mailPrepareService;
         $this->dataHelper = $dataHelper;
+        $this->EventPiscineService = $EventPiscineService;
     }
 
     #[Route('/gestion/reservations', name: 'app_gestion_reservations')]
@@ -89,6 +98,9 @@ class ReservationsController extends AbstractController
         if ($tab == 'extract') {
             //On envoie tous les galas
             $events = $this->eventQueryService->getAllEventsWithRelations();
+        } elseif ($tab == 'incoming') {
+            //On envoie les réservations en cours : dans reservation_temp
+            $events = $this->eventQueryService->getAllEventsWithRelations(true);
         } elseif ($tab == 'past') {
             //On envoie les galas passés
             $events = $this->eventQueryService->getAllEventsWithRelations(false);
@@ -98,9 +110,15 @@ class ReservationsController extends AbstractController
         }
 
         $paginator = null;
+        if ($tab == 'incoming') {
+            $repo = $this->reservationTempRepository;
+        } else {
+            $repo = $this->reservationRepository;
+        }
+
         //Si on a une session, on cherche pour la session
         if ($sessionId > 0) {
-            $paginator = $this->reservationRepository->findBySessionPaginated(
+            $paginator = $repo->findBySessionPaginated(
                 $sessionId,
                 $paginationConfig->getCurrentPage(),
                 $paginationConfig->getItemsPerPage(),
@@ -114,6 +132,7 @@ class ReservationsController extends AbstractController
                 $searchQuery,
                 $paginationConfig->getCurrentPage(),
                 $paginationConfig->getItemsPerPage(),
+                $repo
             );
         }
 
@@ -122,9 +141,16 @@ class ReservationsController extends AbstractController
         // Filtrer RecapFinal avant de passer au template
         $pdfTypesFiltered = array_filter(PdfGenerationService::PDF_TYPES, fn($key) => $key !== 'RecapFinal', ARRAY_FILTER_USE_KEY);
 
+        // Données pour le timeout de la session utilisateur
+        $durationInSeconds = DurationHelper::iso8601ToSeconds(TIMEOUT_PLACE_RESERV);
+
+        //On récupère les piscines par event pour afficher le plan d'occupation
+        $piscinesPerEvent = $this->EventPiscineService->getPiscinesPerEvent($events);
+
         $this->render('/gestion/reservations', [
             'events' => $events,
             'selectedSessionId' => $sessionId,
+            'piscinesPerEvent' => $piscinesPerEvent,
             'tab' => $tab,
             'emailsTemplatesToSendManually' => $emailsTemplatesToSendManually,
             'reservations' => $paginator ? $paginator->getItems() : [],
@@ -137,6 +163,7 @@ class ReservationsController extends AbstractController
             'isCancel' => $isCancel,                    //Pour les boutons de filtre
             'isChecked' => $isChecked,                  //Pour les boutons de filtre
             'searchQuery' => $searchQuery,              //Pour afficher la recherche en cours
+            'timeout_session_reservation' => $durationInSeconds,
         ], "Gestion des réservations");
     }
 
@@ -154,6 +181,76 @@ class ReservationsController extends AbstractController
         }
 
         $this->json($reservation->toArray());
+    }
+
+    #[Route('/gestion/reservations-temp/details/{id}', name: 'app_gestion_reservation_temp_details', methods: ['GET'])]
+    public function getReservationTempDetails(int $id): void
+    {
+        // Vérifier les permissions de l'utilisateur connecté
+        $this->checkUserPermission('R');
+
+        $reservation = $this->reservationTempRepository->findById($id);
+
+        if (!$reservation) {
+            $this->json(['error' => 'Réservation temporaire non trouvée'], 404);
+            return;
+        }
+
+        $this->json($reservation->toArray());
+    }
+
+    #[Route('/gestion/reservations-temp/delete/{id}', name: 'app_gestion_reservation_temp_delete', methods: ['DELETE'])]
+    public function deleteTempReservation(int $id): void
+    {
+        // Vérifier les permissions de l'utilisateur connecté
+        $this->checkUserPermission('D');
+
+        $reservation = $this->reservationTempRepository->findById($id);
+        if (!$reservation) {
+            $this->json(['success' => false, 'message' => 'Réservation temporaire non trouvée.'], 404);
+            return;
+        }
+
+        // Ajout de la vérification du statut de verrouillage
+        if ($reservation->isLocked()) {
+            $this->json(['success' => false, 'message' => 'Impossible de supprimer une réservation temporaire qui est verrouillée.'], 403);
+            return;
+        }
+
+        try {
+            // Utilise la méthode existante deleteByIds du repository
+            $this->reservationTempRepository->deleteByIds([$id]);
+            $this->flashMessageService->setFlashMessage('success', "La réservation temporaire a été supprimée avec succès.");
+
+            $this->json(['success' => true]);
+        } catch (Exception $e) {
+            // Log de l'erreur pour le débogage
+            error_log("Erreur lors de la suppression de la réservation temporaire ID $id : " . $e->getMessage());
+            // Message d'erreur générique pour l'utilisateur
+            $this->json(['success' => false, 'message' => 'Une erreur serveur est survenue lors de la suppression de la réservation temporaire.'], 500);
+        } catch (Throwable $e) {
+            $this->json(['success' => false, 'message' => 'Une erreur serveur est survenue lors de la suppression de la réservation temporaire.'], 500);
+        }
+    }
+
+    #[Route('/gestion/reservations-temp/toggle-lock', name: 'app_gestion_reservation_temp_toggle_lock', methods: ['POST'])]
+    public function toggleTempLock(): void
+    {
+        // Vérifier les permissions de l'utilisateur connecté
+        $this->checkUserPermission('U');
+
+        $data = $this->dataHelper->getAndCheckPostData(['id', 'isLocked']);
+
+        try {
+            $this->reservationTempRepository->updateSingleField((int)$data['id'], 'is_locked', (bool)$data['isLocked']);
+            // On génère et renvoie un nouveau token pour maintenir la session sécurisée
+            $newCsrfToken = $this->csrfService->getToken($this->getCsrfContext());
+
+            parent::json(['success' => true, 'csrfToken' => $newCsrfToken]);
+        } catch (Exception $e) {
+            error_log("Erreur lors de la mise à jour du verrouillage : " . $e->getMessage());
+            $this->json(['success' => false, 'message' => 'Erreur serveur.'], 500);
+        }
     }
 
     #[Route('/gestion/reservations/update', name: 'app_gestion_reservations_update', methods: ['POST'])]
@@ -181,6 +278,31 @@ class ReservationsController extends AbstractController
 
         $this->json($return);
     }
+
+    #[Route('/gestion/reservations/update-seat', name: 'app_gestion_reservations_update_seat', methods: ['POST'])]
+    public function updateSeat(): void
+    {
+        // Vérifier les permissions de l'utilisateur connecté
+        $this->checkUserPermission('U');
+
+        $data = $this->dataHelper->getAndCheckPostData(['detailId', 'newPlaceId']);
+
+        $detailId = (int)($data['detailId'] ?? 0);
+        // newPlaceId peut être null si on libère la place
+        $newPlaceId = isset($data['newPlaceId']) ? (int)$data['newPlaceId'] : null;
+
+        try {
+            $success = $this->reservationUpdateService->updateSeatForDetail($detailId, $newPlaceId);
+            if ($success) {
+                $this->json(['success' => true, 'message' => 'La place a été mise à jour avec succès.']);
+            } else {
+                $this->json(['success' => false, 'message' => 'La mise à jour de la place a échoué.'], 500);
+            }
+        } catch (\InvalidArgumentException $e) {
+            $this->json(['success' => false, 'message' => $e->getMessage()], 404);
+        }
+    }
+
 
     #[Route('/gestion/reservations/toggle-status', name: 'app_gestion_reservations_toggle_status', methods: ['POST'])]
     public function toggleStatus(): void

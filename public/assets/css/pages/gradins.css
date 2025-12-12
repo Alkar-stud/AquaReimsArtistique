@@ -1,105 +1,136 @@
-/*  CSS pour l'affichage des gradins */
+/* CSS pour l'affichage des gradins */
 
+/* Base tableau */
 table.zone-plan td,
 table.zone-plan th {
     border: 1px solid var(--ara-color-black);
     padding: 5px 0;
 }
 
+/* Boutons/places - style commun */
 table.zone-plan .seat.btn {
+    background: none;
+    color: inherit;
     border: none;
     box-shadow: none;
+    font-variant-numeric: tabular-nums;
+    -webkit-tap-highlight-color: transparent;
 }
 
+/* Titre de zone */
+[data-bleacher-zone-name].zone-title {
+    display: inline-block;
+    font-weight: 700;
+    font-size: 1rem;
+    line-height: 1.25;
+    padding: .25rem .5rem;
+    border: 1px solid var(--ara-color-black);
+    border-radius: .375rem;
+    background-color: var(--ara-color-white);
+}
 
-/* Place libre : survol et sélection sur la cellule sauf pour les places non réservables */
-table.zone-plan td:not(.tdplaceClosed):not(.tdplacePris):not(.tdplaceVIP):not(.tdplaceBenevole):not(.tdplaceTemp):hover {
-    background: var(--ara-color-pink);
+/* Desktop (>=992px) */
+@media (min-width: 992px) {
+    table.zone-plan {
+        width: 100%;
+    }
+    table.zone-plan td {
+        height: 36px; /* Hauteur fixe pour les cellules */
+        padding: 0;
+    }
+    table.zone-plan th {
+        padding: 2px 0;
+    }
+    table.zone-plan .seat.btn {
+        font-size: 0.8rem; /* Police légèrement plus grande pour la lisibilité */
+        padding: 0;
+    }
+}
+
+/* Hover pour places interactives (ne pas appliquer aux états non-interactifs) */
+table.zone-plan td:not(.tdplaceClosed):not(.tdplacePris):not(.tdplaceVIP):not(.tdplaceBenevole):not(.tdplaceTemp):not(.tdplaceNone):hover {
+    /* Désactivé en mode gestion via la classe sur le conteneur */
+    background: var(--ara-color-pink); 
     color: var(--ara-color-black);
     cursor: pointer;
 }
 
-/* Pour surcharger le style bootstrap de table table-bordered */
-table.zone-plan td .seat.btn {
-    background: none !important;
-    color: inherit;
-    border: none;
-    box-shadow: none;
-}
+/* Couleurs / états */
+table.zone-plan th.thEscaliers { background-color: #808080; }
 
-/*  Couleur des escaliers */
-table.zone-plan th.thEscaliers {
-    background-color: #808080; /* gris */
-}
-
-/*  Couleur des cases fermées */
 table.zone-plan td.tdplaceClosed {
     background-color: var(--ara-color-black);
     color: var(--ara-color-white);
+    border-color: var(--ara-color-white); /* Améliore la séparation visuelle */
 }
 
-/*  Couleur des cases vide */
-table.zone-plan .tdplaceVide {
-    background: transparent; /* blanc */
-}
+table.zone-plan .tdplaceVide { background: transparent; }
 
-/*  Couleur des cases déjà réservées */
 table.zone-plan td.tdplacePris {
-    background: var(--ara-color-red); /* rouge */
-    color: var(--ara-color-white); /* blanc */
+    background: var(--ara-color-red);
+    color: var(--ara-color-white);
+    font-weight: bold; /* Améliore la lisibilité sur fond rouge */
 }
 
-/*  Couleur des cases PMR non réservées */
 table.zone-plan td.tdplacePMR {
     background: var(--ara-color-darkblue);
     color: var(--ara-color-white);
 }
 
-/*  Couleur des cases VIP */
 table.zone-plan .tdplaceVIP {
     background-color: var(--ara-color-darkpink);
+    color: var(--ara-color-white); /* Correction pour contraste */
 }
 
-/*  Couleur des cases Bénévole */
 table.zone-plan .tdplaceBenevole {
     background: var(--ara-color-purple);
+    color: var(--ara-color-white); /* Correction pour contraste */
 }
 
-/*  Couleur des cases en cours de réservation par d'autres */
 table.zone-plan td.tdplaceTemp {
-    background-color: var(--ara-color-darkgray); /* gris clair */
+    background-color: var(--ara-color-darkgray);
+    color: var(--ara-color-white); /* Correction pour contraste */
 }
 
-/*  Couleur des cases en cours de réservation par le visiteur */
 table.zone-plan td.tdplaceTempSession {
-    background-color: var(--ara-color-gray); /* gris */
+    background-color: var(--ara-color-gray);
     color: var(--ara-color-black);
 }
 
-@media (max-width: 768px) {
-    .zone-plan {
-        max-width: 100vw;
-        overflow-x: auto;
-    }
-    table.zone-plan {
-        font-size: 0.65em;
-        min-width: 400px;
-    }
-    table.zone-plan td,
-    table.zone-plan th {
-        padding: 0;
-    }
+table.zone-plan td.tdplaceOriginal {
+    background-color: var(--ara-color-blue);
+    color: var(--ara-color-white);
+    box-shadow: 0 0 0 2px var(--ara-color-white), 0 0 0 8px var(--ara-color-darkpink); /* Effet de contour pour visibilité */
 }
 
+/* Désactiver le survol en mode gestion */
+.mode-management table.zone-plan td:not(.tdplaceNone):hover {
+    background: var(--ara-color-pink); /* Applique un fond rose au survol */
+    color: var(--ara-color-black);     /* Assure un texte noir lisible */
+    cursor: default;     /* Rétablit le curseur par défaut */
+}
 
+/* Header du gradin */
+.bleacher-header {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+.bleacher-controls {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+@media (min-width: 992px) {
+    .bleacher-header { flex-direction: row; justify-content: space-between; align-items: center; }
+}
 
-/* Legende */
+/* Legend */
 .legende .case {
     align-items: center;
     display: flex;
     position: relative;
 }
-
 .legende .case::before {
     border: 1px solid var(--ara-color-black);
     content: "";
@@ -108,36 +139,262 @@ table.zone-plan td.tdplaceTempSession {
     width: 30px;
     margin-right: .5rem;
 }
+.legende .placeClosed::before { background-color: var(--ara-color-black); color: var(--ara-color-white); }
+.legende .placeVide::before { background: transparent; }
+.legende .placePMR::before { background: var(--ara-color-darkblue); }
+.legende .placePris::before { background: var(--ara-color-red); }
+.legende .placeVIP::before { background-color: var(--ara-color-darkpink); }
+.legende .placeBenevole::before { background: var(--ara-color-purple); }
+.legende .placeTemp::before { background: var(--ara-color-darkgray); }
+.legende .placeTempSession::before { background: var(--ara-color-gray); }
 
-.legende .placeClosed::before {
-    background-color: var(--ara-color-black); /* noir */
-    color: var(--ara-color-white); /* blanc */
+/* Liste des participants responsive */
+@media (min-width: 768px) {
+    #participants-list.list-group-horizontal-md {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr); /* 2 colonnes sur tablettes */
+        gap: 0.5rem;
+    }
+    #participants-list.list-group-horizontal-md .list-group-item {
+        /* Rétablir la bordure du haut que Bootstrap retire en mode horizontal */
+        border-top-width: var(--bs-list-group-border-width);
+    }
+}
+@media (min-width: 1200px) {
+    #participants-list.list-group-horizontal-md {
+        grid-template-columns: repeat(3, 1fr); /* 3 colonnes sur grands écrans */
+    }
 }
 
-.legende .placeVide::before {
-    background: transparent;
+/* Zone card */
+.zone-card.zone-open {
+    cursor: pointer;
+    transition: box-shadow .15s, transform .15s;
+}
+.zone-card.zone-open:hover,
+.zone-card.zone-open:focus {
+    box-shadow: 0 .5rem 1rem rgba(0,0,0,.15);
+    transform: translateY(-2px);
+    outline: none;
+}
+.zone-card.zone-closed {
+    opacity: .55;
+    filter: grayscale(20%);
+}
+.zone-card.zone-closed .badge { font-size: .7rem; }
+
+/* ===== Mobile-friendly grid (<=991.98px) ===== */
+@media (max-width: 991.98px) {
+    [data-bleacher-seats] {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        touch-action: pan-x;
+    }
+    table.zone-plan {
+        width: max-content;
+        border-collapse: separate;
+        border-spacing: 0;
+        font-size: .8rem;
+    }
+    table.zone-plan td,
+    table.zone-plan th { padding: 0; }
+    table.zone-plan td {
+        min-width: clamp(34px, 7.5vw, 48px);
+        height: clamp(34px, 7.5vw, 48px);
+    }
+    table.zone-plan .seat.btn {
+        display: block;
+        width: 100%;
+        height: 100%;
+        padding: 0;
+        line-height: 1;
+        background: none;
+        color: inherit;
+        border: none;
+        box-shadow: none;
+    }
 }
 
-.legende .placePMR::before {
-    background: var(--ara-color-darkblue);
+/* Très petit écran (<=576px) */
+@media (max-width: 575.98px) {
+    table.zone-plan td {
+        min-width: clamp(36px, 10vw, 52px);
+        height: clamp(36px, 10vw, 52px);
+    }
+    /* Masque le texte et affiche uniquement le numéro via data-number */
+    table.zone-plan .seat.btn { font-size: 0; }
+    table.zone-plan .seat.btn::after {
+        content: attr(data-number);
+        font-size: 12px;
+        font-weight: 600;
+    }
+    .legende { font-size: .85rem; }
 }
 
-.legende .placePris::before {
-    background: var(--ara-color-red);
+/* Sticky repères en mobile (<=768px) */
+@media (max-width: 767.98px) {
+    table.zone-plan td:first-child,
+    table.zone-plan th:first-child {
+        position: sticky;
+        left: 0;
+        z-index: 1;
+        background: var(--ara-color-white);
+        box-shadow: 1px 0 0 rgba(0,0,0,.05);
+    }
+    table.zone-plan thead th {
+        position: sticky;
+        top: 0;
+        z-index: 2;
+        background: var(--ara-color-white);
+        box-shadow: 0 1px 0 rgba(0,0,0,.05);
+    }
 }
 
-.legende .placeVIP::before {
-    background-color: var(--ara-color-darkpink);
+/* Tooltip pour les cases non cliquables */
+.bleacher-tooltip {
+    position: fixed;
+    left: 50%;
+    top: 0;
+    transform: translate(-50%, -100%);
+    background: rgba(0,0,0,0.85);
+    color: #fff;
+    padding: .35rem .6rem;
+    border-radius: .35rem;
+    font-size: .85rem;
+    line-height: 1;
+    pointer-events: none;
+    z-index: 9999;
+    white-space: nowrap;
+    box-shadow: 0 .25rem .5rem rgba(0,0,0,.15);
+}
+@media (min-width: 576px) {
+    .bleacher-tooltip { font-size: .9rem; }
 }
 
-.legende .placeBenevole::before {
-    background: var(--ara-color-purple);
+/* Case inexistante : fond blanc, non-interactive, pas de bordure/ombre ni focus indésirable */
+table.zone-plan td.tdplaceNone {
+    background: var(--ara-color-white);
+    pointer-events: none;
+    color: inherit;
+    border: 0;
+    box-shadow: none;
+    outline: none;
 }
 
-.legende .placeTemp::before {
-    background: var(--ara-color-darkgray);
+/* placeholder pour garantir la taille si nécessaire (invisible, ne capte pas les événements) */
+table.zone-plan td.tdplaceNone .seat-placeholder {
+    display: block;
+    width: 100%;
+    height: 100%;
+    line-height: 1;
+    visibility: hidden;
+    pointer-events: none;
 }
 
-.legende .placeTempSession::before {
-    background: var(--ara-color-gray);
+/* styles pour boutons nav latéraux (placé près du conteneur des gradins) */
+.nav-zone-btn {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 50;
+    border-radius: 999px;
+    width: 40px;
+    height: 40px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255,255,255,0.9);
+    border: 1px solid rgba(0,0,0,0.08);
+    box-shadow: 0 .25rem .5rem rgba(0,0,0,.08);
+    color: var(--ara-color-black);
+    cursor: pointer;
+    transition: transform .12s, opacity .12s;
+}
+.nav-zone-btn:disabled { opacity: 0.45; cursor: default; pointer-events: auto; }
+
+.bleacher-container { position: relative; }
+.nav-zone-btn.prev { left: 8px; }
+.nav-zone-btn.next { right: 8px; }
+.gradins-row {
+    display: block; /* mobile : empilé */
+    gap: .5rem;
+    align-items: stretch;
+}
+
+/* Desktop / tablette (>=768px) : rangée en flex et boutons hors du flux */
+@media (min-width: 768px) {
+    .gradins-row {
+        display: flex;
+        align-items: center;
+        gap: .5rem;
+    }
+
+    .gradins-row .nav-zone-btn {
+        position: relative;
+        top: 0;
+        left: 0;
+        transform: none;
+        margin: 0;
+    }
+
+    .gradins-row .bleacher-container {
+        flex: 1 1 auto;
+    }
+
+    .gradins-row .nav-zone-btn.prev { margin-right: .5rem; }
+    .gradins-row .nav-zone-btn.next { margin-left: .5rem; }
+}
+
+/* Styles pour le mode de gestion des gradins */
+.seat-management-content {
+    padding: 2px;
+    font-size: 0.7rem;
+    line-height: 1.1;
+    text-align: center;
+}
+.seat-management-content .seat-name {
+    font-weight: bold;
+    margin-bottom: 2px;
+}
+.seat-management-content .seat-controls {
+    display: flex;
+    flex-wrap: wrap;
+    flex-direction: column; /* Empile les éléments verticalement */
+    align-items: center;   /* Centre les éléments horizontalement */
+    gap: 2px;              /* Ajoute un petit espace vertical entre les checkboxes */
+}
+.seat-management-content .form-check-label {
+    font-size: 0.65rem;
+    padding-left: 2px;
+}
+/* La règle .form-check-inline n'est plus nécessaire car la classe est retirée en JS */
+
+/* Styles pour la légende dans la modale de gestion */
+.legend-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+}
+.legend-color-box {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    border: 1px solid var(--ara-color-black);
+    border-radius: 3px;
+    vertical-align: middle;
+}
+/* On réutilise les classes de la légende principale */
+.legend-color-box.placeClosed { background-color: var(--ara-color-black); }
+.legend-color-box.placePMR { background-color: var(--ara-color-darkblue); }
+.legend-color-box.placeVIP { background-color: var(--ara-color-darkpink); }
+.legend-color-box.placeBenevole { background-color: var(--ara-color-purple); }
+.legend-color-box.placeVide { background-color: transparent; }
+
+
+
+/* Fin styles mode gestion */
+
+/* Conserver la taille réduite sur très petit écran */
+@media (max-width: 575.98px) {
+    .nav-zone-btn { width: 36px; height: 36px; }
 }

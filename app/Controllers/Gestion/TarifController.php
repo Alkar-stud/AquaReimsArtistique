@@ -5,6 +5,7 @@ namespace app\Controllers\Gestion;
 use app\Attributes\Route;
 use app\Controllers\AbstractController;
 use app\Models\Tarif\Tarif;
+use app\Repository\Event\EventTarifRepository;
 use app\Repository\Tarif\TarifRepository;
 use app\Services\DataValidation\TarifDataValidationService;
 use app\Services\Tarif\TarifService;
@@ -12,17 +13,22 @@ use app\Services\Tarif\TarifService;
 class TarifController extends AbstractController
 {
     private TarifRepository $tarifRepository;
+    private TarifService $tarifService;
     private TarifDataValidationService $tarifDataValidationService;
+    private EventTarifRepository $eventTarifRepository;
 
-    public function __construct()
+    public function __construct(
+        TarifRepository $tarifRepository,
+        EventTarifRepository $eventTarifRepository,
+        TarifDataValidationService $tarifDataValidationService,
+        TarifService $tarifService,
+    )
     {
         parent::__construct(false);
-        $this->tarifRepository = new TarifRepository();
-        $this->tarifDataValidationService = new TarifDataValidationService();
-
-        $this->tarifDataValidationService->setTarifService(
-            new TarifService($this->tarifRepository)
-        );
+        $this->tarifRepository = $tarifRepository;
+        $this->tarifService = $tarifService;
+        $this->eventTarifRepository = $eventTarifRepository;
+        $this->tarifDataValidationService = $tarifDataValidationService;
     }
 
     #[Route('/gestion/tarifs', name: 'app_gestion_tarifs')]

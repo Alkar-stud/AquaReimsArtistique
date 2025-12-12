@@ -7,6 +7,19 @@ use app\Repository\AbstractRepository;
 
 class PiscineGradinsPlacesRepository extends AbstractRepository
 {
+    // Colonnes autorisées
+    private array $allowed = [
+        'id',
+        'zone',
+        'rank_in_zone',
+        'place_number',
+        'is_pmr',
+        'is_vip',
+        'is_volunteer',
+        'is_open',
+        'created_at',
+        'updated_at'
+    ];
     public function __construct()
     {
         parent::__construct('piscine_gradins_places');
@@ -18,7 +31,7 @@ class PiscineGradinsPlacesRepository extends AbstractRepository
      */
     public function findAll(): array
     {
-        $sql = "SELECT * FROM $this->tableName ORDER BY rankInZone , place_number";
+        $sql = "SELECT * FROM $this->tableName ORDER BY rank_in_zone , place_number";
         $rows = $this->query($sql);
         return array_map([$this, 'hydrate'], $rows);
     }
@@ -43,111 +56,83 @@ class PiscineGradinsPlacesRepository extends AbstractRepository
         return $this->hydrate($rows[0], $zone);
     }
 
+
     /**
-     * Retourne les places d'une zone ordonnées par rang et numéro.
-     * @param int $zoneId
-     * @param bool|null $onlyOpen
-     * @param bool $withZone
-     * @return array
+     * Recherche par plusieurs champs.
+     * @param array $fields  Liste des noms de colonnes.
+     * @param array $values  Liste des valeurs correspondantes.
+     * @param bool $withZone Inclure l'objet zone.
+     * @return PiscineGradinsPlaces[]
      */
-    public function findByZone(int $zoneId, ?bool $onlyOpen = null, bool $withZone = true): array
+
+    /**
+     * Recherche par plusieurs champs (appel: findByFields(['zone' => 3, 'is_open' => 1])).
+     * @param array $criteria Tableau associatif colonne => valeur.
+     * @param bool $withZone Inclure l'objet zone.
+     * @return PiscineGradinsPlaces[]
+     */
+    public function findByFields(array $criteria, bool $withZone = false): array
     {
-        $flags = [];
-        if ($onlyOpen !== null) {
-            $flags['is_open'] = $onlyOpen;
+        if (empty($criteria)) {
+            return [];
         }
-        return $this->findByFlags($flags, $zoneId, $withZone);
-    }
 
-    /** Wrappers lisibles pour les statuts spéciaux. */
-    public function findPmrPlaces(bool $withZone = false): array
-    {
-        return $this->findByFlags(['is_pmr' => true, 'is_open' => true], null, $withZone);
-    }
-
-    public function findVipPlaces(bool $withZone = false): array
-    {
-        return $this->findByFlags(['is_vip' => true, 'is_open' => true], null, $withZone);
-    }
-
-    public function findVolunteerPlaces(bool $withZone = false): array
-    {
-        return $this->findByFlags(['is_volunteer' => true, 'is_open' => true], null, $withZone);
-    }
-
-    /**
-     * Retourne les places d'une zone ordonnées par rang et numéro.
-     * @param array $flags
-     * @param int|null $zoneId
-     * @param bool $withZone
-     * @return array
-     */
-    public function findByFlags(array $flags = [], ?int $zoneId = null, bool $withZone = false): array
-    {
-        $where = [];
+        $whereParts = [];
         $params = [];
+        $i = 0;
 
-        if ($zoneId !== null) {
-            $where[] = 'zone = :zoneId';
-            $params['zoneId'] = $zoneId;
-        }
-
-        foreach (['is_open', 'is_pmr', 'is_vip', 'is_volunteer'] as $flag) {
-            if (array_key_exists($flag, $flags)) {
-                $where[] = "$flag = :$flag";
-                $params[$flag] = $flags[$flag] ? 1 : 0;
+        foreach ($criteria as $col => $value) {
+            if (!in_array($col, $this->allowed, true)) {
+                return []; // colonne non autorisée
             }
+            $paramName = 'p' . $i++;
+            $whereParts[] = "$col = :$paramName";
+            $params[$paramName] = $value;
         }
 
-        $sql = "SELECT * FROM $this->tableName"
-            . (count($where) ? ' WHERE ' . implode(' AND ', $where) : '')
-            . " ORDER BY rankInZone, place_number";
+        $whereSql = implode(' AND ', $whereParts);
+        $sql = "SELECT * FROM {$this->tableName} WHERE $whereSql ORDER BY rank_in_zone, place_number";
 
         $rows = $this->query($sql, $params);
+        if (!$rows) return [];
 
-        if (!$withZone) {
-            return array_map([$this, 'hydrate'], $rows);
+        $results = [];
+        $zonesRepo = $withZone ? new PiscineGradinsZonesRepository() : null;
+
+        foreach ($rows as $row) {
+            $zoneObj = null;
+            if ($withZone) {
+                $zoneObj = $zonesRepo->findById((int)$row['zone']);
+            }
+            $results[] = $this->hydrate($row, $zoneObj);
         }
-
-        // Hydratation de la zone : une requête si zoneId est fourni, sinon une par ligne.
-        $zoneObject = null;
-        if ($zoneId !== null) {
-            $zonesRepo = new PiscineGradinsZonesRepository();
-            $zoneObject = $zonesRepo->findById($zoneId);
-        }
-
-        if ($zoneObject) {
-            return array_map(fn(array $r) => $this->hydrate($r, $zoneObject), $rows);
-        }
-
-        return array_map(function (array $r) {
-            $zonesRepo = new PiscineGradinsZonesRepository();
-            $z = $zonesRepo->findById((int)$r['zone']);
-            return $this->hydrate($r, $z);
-        }, $rows);
+        return $results;
     }
 
     /**
-     * Trouve une place par sa zone, son rang et son numéro.
-     * @param int $zoneId
-     * @param string $rank
-     * @param int $placeNumber
+     * Récupère plusieurs places par leurs IDs.
+     *
+     * @param int[] $ids
      * @param bool $withZone
-     * @return PiscineGradinsPlaces|null
+     * @return PiscineGradinsPlaces[]
      */
-    public function findByZoneRankAndNumber(int $zoneId, string $rank, int $placeNumber, bool $withZone = true): ?PiscineGradinsPlaces
+    public function findByIds(array $ids, bool $withZone = true): array
     {
-        $sql = "SELECT * FROM $this->tableName WHERE zone = :zoneId AND rankInZone = :rank AND place_number = :placeNumber";
-        $rows = $this->query($sql, ['zoneId' => $zoneId, 'rank' => $rank, 'placeNumber' => $placeNumber]);
-        if (!$rows) return null;
-
-        $zone = null;
-        if ($withZone) {
-            $zonesRepo = new PiscineGradinsZonesRepository();
-            $zone = $zonesRepo->findById($zoneId);
+        if (empty($ids)) {
+            return [];
         }
-        return $this->hydrate($rows[0], $zone);
+
+        $placeholders = implode(',', array_fill(0, count($ids), '?'));
+        $sql = "SELECT * FROM {$this->tableName} WHERE id IN ($placeholders)";
+
+        $rows = $this->query($sql, $ids);
+        if (empty($rows)) {
+            return [];
+        }
+
+        return $this->hydrateRelations(array_map([$this, 'hydrate'], $rows), $withZone);
     }
+
 
     /**
      * Ajoute une place.
@@ -156,12 +141,12 @@ class PiscineGradinsPlacesRepository extends AbstractRepository
     public function insert(PiscineGradinsPlaces $place): int
     {
         $sql = "INSERT INTO $this->tableName
-            (zone, rankInZone, place_number, is_pmr, is_vip, is_volunteer, is_open, created_at)
-            VALUES (:zone, :rankInZone, :place_number, :is_pmr, :is_vip, :is_volunteer, :is_open, :created_at)";
+            (zone, rank_in_zone, place_number, is_pmr, is_vip, is_volunteer, is_open, created_at)
+            VALUES (:zone, :rank_in_zone, :place_number, :is_pmr, :is_vip, :is_volunteer, :is_open, :created_at)";
 
         $ok = $this->execute($sql, [
             'zone' => $place->getZone(),
-            'rankInZone' => $place->getRankInZone(),
+            'rank_in_zone' => $place->getRankInZone(),
             'place_number' => $place->getPlaceNumber(),
             'is_pmr' => $place->isPmr() ? 1 : 0,
             'is_vip' => $place->isVip() ? 1 : 0,
@@ -182,7 +167,7 @@ class PiscineGradinsPlacesRepository extends AbstractRepository
     {
         $sql = "UPDATE $this->tableName SET
             zone = :zone,
-            rankInZone = :rankInZone,
+            rank_in_zone = :rank_in_zone,
             place_number = :place_number,
             is_pmr = :is_pmr,
             is_vip = :is_vip,
@@ -194,7 +179,7 @@ class PiscineGradinsPlacesRepository extends AbstractRepository
         return $this->execute($sql, [
             'id' => $place->getId(),
             'zone' => $place->getZone(),
-            'rankInZone' => $place->getRankInZone(),
+            'rank_in_zone' => $place->getRankInZone(),
             'place_number' => $place->getPlaceNumber(),
             'is_pmr' => $place->isPmr() ? 1 : 0,
             'is_vip' => $place->isVip() ? 1 : 0,
@@ -214,7 +199,7 @@ class PiscineGradinsPlacesRepository extends AbstractRepository
         $place = new PiscineGradinsPlaces();
         $place->setId((int)$data['id'])
             ->setZone((int)$data['zone'])
-            ->setRankInZone($data['rankInZone'])
+            ->setRankInZone($data['rank_in_zone'])
             ->setPlaceNumber($data['place_number'])
             ->setIsPmr((bool)$data['is_pmr'])
             ->setIsVip((bool)$data['is_vip'])
@@ -227,4 +212,38 @@ class PiscineGradinsPlacesRepository extends AbstractRepository
         }
         return $place;
     }
+
+    /**
+     * Hydrate les relations (ici, l'objet Zone) pour une liste de places.
+     *
+     * @param PiscineGradinsPlaces[] $places
+     * @param bool $withZone
+     * @return PiscineGradinsPlaces[]
+     */
+    private function hydrateRelations(array $places, bool $withZone): array
+    {
+        if (empty($places) || !$withZone) {
+            return $places;
+        }
+
+        $zoneIds = array_values(array_unique(array_map(fn($p) => $p->getZone(), $places)));
+        if (empty($zoneIds)) {
+            return $places;
+        }
+
+        $zonesRepo = new PiscineGradinsZonesRepository();
+        $zones = $zonesRepo->findByIds($zoneIds);
+        $zonesById = [];
+        foreach ($zones as $zone) {
+            $zonesById[$zone->getId()] = $zone;
+        }
+
+        foreach ($places as $place) {
+            $place->setZoneObject($zonesById[$place->getZone()] ?? null);
+        }
+
+        return $places;
+    }
+
+
 }

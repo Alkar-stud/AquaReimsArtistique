@@ -141,8 +141,8 @@ class SwimmerQueryService
      */
     public function getStateOfLimitPerSwimmer($session): array
     {
-        $eventId   = (int)($session['event_id'] ?? 0);
-        $swimmerId = (int)($session['swimmer_id'] ?? 0);
+        $eventId   = ($session['reservation']->getEvent() ?? 0);
+        $swimmerId = ($session['reservation']->getSwimmerId() ?? 0);
         // Ne teste la limite que si un nageur est effectivement sélectionné
         $swimmerLimitReached = ['limitReached' => false, 'limit' => null, 'currentReservations' => null];
         if ($swimmerId > 0) {

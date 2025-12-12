@@ -3,7 +3,7 @@
 import { apiPost } from '../components/apiClient.js';
 import { buttonLoading } from '../components/utils.js';
 import { showFlashMessage } from '../components/ui.js';
-import { formatEuro } from '../components/utils.js'; // Nouveau formatter pour euro
+import { formatEuro } from '../components/utils.js'; // Formatter pour euro
 
 /**
  * Initialise la logique du code spécial pour l'étape 3.

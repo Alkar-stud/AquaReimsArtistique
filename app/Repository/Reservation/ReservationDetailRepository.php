@@ -81,36 +81,39 @@ class ReservationDetailRepository extends AbstractRepository
      * @param bool $withReservation
      * @param bool $withTarif
      * @param bool $withPlace
-     * @return ReservationDetail[]
+     * @return ReservationDetail|null
      */
     public function findByPlaceNumber(
         int $placeId,
         bool $withReservation = false,
         bool $withTarif = false,
         bool $withPlace = false
-    ): array {
-        $sql = "SELECT * FROM $this->tableName WHERE place_number = :placeNumber ORDER BY created_at DESC";
+    ): ?ReservationDetail {
+        $sql = "SELECT * FROM $this->tableName WHERE place_number = :placeNumber ORDER BY created_at DESC LIMIT 1";
         $rows = $this->query($sql, ['placeNumber' => $placeId]);
-        $details = array_map([$this, 'hydrate'], $rows);
-        return $this->hydrateRelations($details, $withReservation, $withTarif, $withPlace);
+        if (!$rows) return null;
+
+        $d = $this->hydrate($rows[0]);
+        $hydrated = $this->hydrateRelations([$d], $withReservation, $withTarif, $withPlace);
+        return $hydrated[0] ?? null;
     }
 
     /**
-     * Tous les IDs de places déjà réservées pour une session
-     * Retourne un tableau plat d'IDs de places (colonne place_number).
+     * Tous les IDs de places déjà réservées pour une session, avec l'ID de la réservation associée.
+     * Retourne un tableau associatif [place_id => reservation_id].
      * @param int $sessionId
      * @return array
      */
     public function findReservedSeatsForSession(int $sessionId): array
     {
-        $sql = "SELECT rd.place_number
+        $sql = "SELECT rd.place_number, rd.reservation
                  FROM reservation_detail rd
                  INNER JOIN reservation r ON rd.reservation = r.id
                  WHERE r.event_session = :sessionId
                    AND r.is_canceled = 0
                    AND rd.place_number IS NOT NULL";
         $results = $this->query($sql, ['sessionId' => $sessionId]);
-        return array_column($results, 'place_number');
+        return array_column($results, 'reservation', 'place_number');
     }
 
     /**
@@ -126,7 +129,7 @@ class ReservationDetailRepository extends AbstractRepository
     }
 
     /**
-     * Compte le nombre de détails pour une session
+     * Compte le nombre de personnes (de détails) pour une session
      * @param int $sessionId
      * @return int
      */
@@ -194,6 +197,9 @@ class ReservationDetailRepository extends AbstractRepository
 
     /**
      * Met à jour un détail
+     *
+     * @param ReservationDetail $detail
+     * @return bool
      */
     public function update(ReservationDetail $detail): bool
     {

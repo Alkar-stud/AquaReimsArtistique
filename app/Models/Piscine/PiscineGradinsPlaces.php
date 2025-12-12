@@ -8,7 +8,7 @@ class PiscineGradinsPlaces extends AbstractModel
 {
     private int $zone; // ID de la zone
     private ?PiscineGradinsZones $zoneObject = null; // Objet PiscineGradinsZones lié
-    private string $rankInZone;
+    private string $rank_in_zone;
     private string $place_number;
     private bool $is_pmr = false;
     private bool $is_vip = false;
@@ -18,7 +18,7 @@ class PiscineGradinsPlaces extends AbstractModel
     // --- GETTERS ---
     public function getZone(): int { return $this->zone; }
     public function getZoneObject(): ?PiscineGradinsZones { return $this->zoneObject; }
-    public function getRankInZone(): string { return $this->rankInZone; }
+    public function getRankInZone(): string { return $this->rank_in_zone; }
     public function getPlaceNumber(): string { return $this->place_number; }
     /*
      * Pour récupérer le nom/numéro complet de la place
@@ -43,7 +43,7 @@ class PiscineGradinsPlaces extends AbstractModel
         }
         return $this;
     }
-    public function setRankInZone(string $rankInZone): self { $this->rankInZone = $rankInZone; return $this; }
+    public function setRankInZone(string $rank_in_zone): self { $this->rank_in_zone = $rank_in_zone; return $this; }
     public function setPlaceNumber(string $place_number): self { $this->place_number = $place_number; return $this; }
     /**
      * Pour récupérer le nom court de la place (Rang + Numéro)
@@ -58,4 +58,17 @@ class PiscineGradinsPlaces extends AbstractModel
     public function setIsVolunteer(bool $is_volunteer): self { $this->is_volunteer = $is_volunteer; return $this; }
     public function setIsOpen(bool $is_open): self { $this->is_open = $is_open; return $this; }
 
+    public function toArray(): array
+    {
+        return [
+            'id' => $this->getId(),
+            'zone' => $this->getZone(),
+            'rank_in_zone' => $this->getRankInZone(),
+            'place_number' => $this->getPlaceNumber(),
+            'is_pmr' => $this->isPmr(),
+            'is_vip' => $this->isVip(),
+            'is_volunteer' => $this->isVolunteer(),
+            'is_open' => $this->isOpen(),
+        ];
+    }
 }

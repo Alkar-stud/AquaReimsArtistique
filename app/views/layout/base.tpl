@@ -77,7 +77,7 @@
         {{! json_encode($js_data, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) !}}
     </script>
 {% endif %}
-<script src="/assets/js/components/debug-bar.js" defer></script>
+<script type="module" src="/assets/js/components/debug-bar.js" defer></script>
 {% endif %}
 
 </body>

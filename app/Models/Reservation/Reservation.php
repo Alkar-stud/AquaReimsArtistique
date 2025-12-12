@@ -5,8 +5,10 @@ use app\Models\AbstractModel;
 use app\Models\Event\Event;
 use app\Models\Event\EventSession;
 use app\Models\Swimmer\Swimmer;
+use app\Utils\StringHelper;
 use DateTime;
 use DateTimeInterface;
+use InvalidArgumentException;
 
 class Reservation extends AbstractModel
 {
@@ -17,6 +19,7 @@ class Reservation extends AbstractModel
     private int $event_session;
     private ?EventSession $eventSessionObject = null;
     private ?string $reservation_temp_id = null;
+    private ?DateTimeInterface $rgpd_date_consentement = null;
     private string $name;
     private string $firstname;
     private string $email;
@@ -55,6 +58,7 @@ class Reservation extends AbstractModel
     public function getEmail(): string { return $this->email; }
     public function getPhone(): ?string { return $this->phone; }
     public function getSwimmerId(): ?int { return $this->swimmer_if_limitation; }
+    public function getRgpdDateConsentement(): ?DateTimeInterface { return $this->rgpd_date_consentement; }
     public function getSwimmer(): ?Swimmer { return $this->swimmer; }
     public function getTotalAmount(): int { return $this->total_amount; }
     public function getTotalAmountPaid(): int { return $this->total_amount_paid; }
@@ -92,8 +96,16 @@ class Reservation extends AbstractModel
 
     public function setReservationTempId(?string $reservation_temp_id): self { $this->reservation_temp_id = $reservation_temp_id; return $this; }
 
-    public function setName(string $name): self { $this->name = $name; return $this; }
-    public function setFirstName(string $firstname): self { $this->firstname = $firstname; return $this; }
+    public function setName(string $name): self
+    {
+        $this->name = StringHelper::toUpperCase($name);
+        return $this;
+    }
+    public function setFirstName(string $firstname): self
+    {
+        $this->firstname = StringHelper::toTitleCase($firstname);
+        return $this;
+    }
     public function setEmail(string $email): self { $this->email = $email; return $this; }
     public function setPhone(?string $phone): self { $this->phone = ($phone === '' ? null : $phone); return $this; }
 
@@ -103,7 +115,18 @@ class Reservation extends AbstractModel
         if ($swimmer) { $this->swimmer_if_limitation = $swimmer->getId(); }
         return $this;
     }
+    public function setRgpdDateConsentement(DateTimeInterface|string|null $date): self
+    {
+        if (is_string($date) && $date !== '') {
+            $this->rgpd_date_consentement = new DateTime($date);
+        } elseif ($date instanceof DateTimeInterface) {
+            $this->rgpd_date_consentement = $date;
+        } else {
+            $this->rgpd_date_consentement = null;
+        }
 
+        return $this;
+    }
     public function setTotalAmount(int $total_amount): self { $this->total_amount = $total_amount; return $this; }
     public function setTotalAmountPaid(int $total_amount_paid): self { $this->total_amount_paid = $total_amount_paid; return $this; }
 
@@ -144,14 +167,19 @@ class Reservation extends AbstractModel
             'firstName' => $this->getFirstName(),
             'email' => $this->getEmail(),
             'phone' => $this->getPhone(),
+            'rgpdDateConsentement' => $this->getRgpdDateConsentement()?->format(DateTimeInterface::ATOM),
             'totalAmount' => $this->getTotalAmount(),
             'totalAmountPaid' => $this->getTotalAmountPaid(),
             'isCanceled' => $this->isCanceled(),
             'isChecked' => $this->isChecked(),
             'comments' => $this->getComments(),
             'token' => $this->getToken(),
-            'tokenExpireAt' => $this->getTokenExpireAt()?->format(DateTime::ATOM),
-            'event' => $eventObject ? ['id' => $eventObject->getId(), 'name' => $eventObject->getName()] : null,
+            'tokenExpireAt' => $this->getTokenExpireAt()?->format(DateTimeInterface::ATOM),
+            'event' => $eventObject ? [
+                'id' => $eventObject->getId(),
+                'name' => $eventObject->getName(),
+                'piscineId' => $eventObject->getPlace() // Ajout de l'ID de la piscine
+            ] : null,
             'eventSession' => $eventSessionObject ? ['id' => $eventSessionObject->getId(), 'name' => $eventSessionObject->getSessionName()] : null,
             'swimmer' => $this->getSwimmer() ? [
                 'id' => $this->getSwimmer()->getId(),

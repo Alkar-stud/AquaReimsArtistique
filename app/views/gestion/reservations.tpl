@@ -9,12 +9,17 @@
             <a class="nav-link {{ $tab === 'past' ? 'active' : '' }}" id="tab-past" href="/gestion/reservations?tab=past">Passées</a>
         </li>
         <li class="nav-item">
+            <a class="nav-link {{ $tab === 'incoming' ? 'active' : '' }}" id="tab-incoming" href="/gestion/reservations?tab=incoming">En cours</a>
+        </li>
+        <li class="nav-item">
             <a class="nav-link {{ $tab === 'extract' ? 'active' : '' }}" id="tab-past" href="/gestion/reservations?tab=extract">Extractions</a>
         </li>
     </ul>
 
     {% if $tab === 'extract' %}
         {% include '/gestion/reservations/_extracts.tpl' %}
+    {% elseif $tab === 'incoming' %}
+        {% include '/gestion/reservations/_reservations_incoming_list.tpl' %}
     {% else %}
         {% include '/gestion/reservations/_reservations_list.tpl' %}
     {% endif %}

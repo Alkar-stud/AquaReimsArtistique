@@ -72,6 +72,42 @@ class ReservationRepository extends AbstractRepository
     }
 
     /**
+     * Recherche et retourne des réservations par leurs IDs.
+     *
+     * @param int[] $ids Les IDs des réservations.
+     * @param bool $withEvent Si true, hydrate l'objet Event associé.
+     * @param bool $withEventSession Si true, hydrate l'objet EventSession associé.
+     * @param bool $withEventInscriptionDates Si true, hydrate les dates d'inscription de l'événement.
+     * @param bool $withChildren Si true, hydrate les relations enfants (détails, compléments, paiements, mails envoyés).
+     * @return Reservation[] Les réservations trouvées.
+     */
+    public function findByIds(
+        array $ids,
+        bool $withEvent = false,
+        bool $withEventSession = false,
+        bool $withEventInscriptionDates = false,
+        bool $withChildren = true
+    ): array {
+        if (empty($ids)) {
+            return [];
+        }
+
+        $ids = array_values(array_unique(array_map('intval', $ids)));
+        $placeholders = implode(',', array_fill(0, count($ids), '?'));
+
+        $sql = "SELECT * FROM $this->tableName WHERE id IN ($placeholders)";
+        $rows = $this->query($sql, $ids);
+        if (!$rows) return [];
+
+        $reservations = array_map([$this, 'hydrate'], $rows);
+        foreach ($reservations as $r) {
+            $this->hydrateOptionalRelations($r, $withEvent, $withEventSession, $withEventInscriptionDates);
+        }
+
+        return $withChildren ? $this->hydrateRelations($reservations) : $reservations;
+    }
+
+    /**
      * Retourne toutes les réservations actives pour un événement.
      *
      * @param int $eventId L'ID de l'événement.
@@ -108,7 +144,7 @@ class ReservationRepository extends AbstractRepository
     ): ?Reservation {
         // Liste blanche des champs autorisés pour éviter toute injection via le nom de colonne
         $allowed = [
-            'id', 'reservation_temp_id', 'name', 'firstname', 'email', 'phone',
+            'id', 'reservation_temp_id', 'name', 'firstname', 'email', 'phone', 'rgpd_date_consentement',
             'event', 'event_session', 'swimmer_if_limitation', 'token', 'is_canceled', 'is_checked'
         ];
 
@@ -340,6 +376,7 @@ class ReservationRepository extends AbstractRepository
             'totalAmount'     => 'r.total_amount AS totalAmount',
             'totalAmountPaid' => 'r.total_amount_paid AS totalAmountPaid',
             'isCanceled'      => 'r.is_canceled AS isCanceled',
+            'rgpd_date_consentement' => 'r.rgpd_date_consentement AS rgpd_date_consentement'
         ];
 
         // Normalisation entrée utilisateur
@@ -731,9 +768,9 @@ class ReservationRepository extends AbstractRepository
     public function insert(Reservation $reservation): int
     {
         $sql = "INSERT INTO $this->tableName
-            (event, event_session, reservation_temp_id, name, firstname, email, phone, swimmer_if_limitation,
+            (event, event_session, reservation_temp_id, name, firstname, email, phone, swimmer_if_limitation, rgpd_date_consentement,
              total_amount, total_amount_paid, token, token_expire_at, comments, created_at)
-            VALUES (:event, :event_session, :reservation_temp_id, :name, :firstname, :email, :phone, :swimmer_if_limitation,
+            VALUES (:event, :event_session, :reservation_temp_id, :name, :firstname, :email, :phone, :swimmer_if_limitation, :rgpd_date_consentement,
              :total_amount, :total_amount_paid, :token, :token_expire_at, :comments, :created_at)";
 
         $ok = $this->execute($sql, [
@@ -745,6 +782,7 @@ class ReservationRepository extends AbstractRepository
             'email' => $reservation->getEmail(),
             'phone' => $reservation->getPhone(),
             'swimmer_if_limitation' => $reservation->getSwimmerId(),
+            'rgpd_date_consentement' => $reservation->getRgpdDateConsentement()->format('Y-m-d H:i:s'),
             'total_amount' => $reservation->getTotalAmount(),
             'total_amount_paid' => $reservation->getTotalAmountPaid(),
             'token' => $reservation->getToken(),
@@ -773,6 +811,7 @@ class ReservationRepository extends AbstractRepository
             email = :email,
             phone = :phone,
             swimmer_if_limitation = :swimmer_if_limitation,
+            rgpd_date_consentement = :rgpd_date_consentement,
             total_amount = :total_amount,
             total_amount_paid = :total_amount_paid,
             token = :token,
@@ -791,6 +830,7 @@ class ReservationRepository extends AbstractRepository
             'email' => $reservation->getEmail(),
             'phone' => $reservation->getPhone(),
             'swimmer_if_limitation' => $reservation->getSwimmerId(),
+            'rgpd_date_consentement' => $reservation->getRgpdDateConsentement()->format('Y-m-d H:i:s') ?? null,
             'total_amount' => $reservation->getTotalAmount(),
             'total_amount_paid' => $reservation->getTotalAmountPaid(),
             'token' => $reservation->getToken(),
@@ -809,7 +849,7 @@ class ReservationRepository extends AbstractRepository
     public function updateSingleField(int $id, string $field, mixed $value): bool
     {
         $allowed = [
-            'name', 'firstname', 'email', 'phone', 'total_amount', 'total_amount_paid',
+            'name', 'firstname', 'email', 'phone', 'total_amount', 'total_amount_paid','rgpd_date_consentement',
             'is_canceled', 'is_checked', 'complements_given_at'
         ];
 
@@ -927,6 +967,7 @@ class ReservationRepository extends AbstractRepository
             ->setEmail($data['email'])
             ->setPhone($data['phone'] ?? null)
             ->setSwimmerId(isset($data['swimmer_if_limitation']) ? (int)$data['swimmer_if_limitation'] : null)
+            ->setRgpdDateConsentement($data['rgpd_date_consentement'] ?? null)
             ->setTotalAmount((int)$data['total_amount'])
             ->setTotalAmountPaid((int)$data['total_amount_paid'])
             ->setToken($data['token'] ?? null)

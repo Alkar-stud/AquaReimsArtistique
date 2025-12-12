@@ -1,7 +1,9 @@
+import { initCountdown } from '../components/utils.js';
+
 /**
  * Initialise les interactions de la page de liste des réservations.
  */
-function init() {
+function initReservationList() {
     // On sélectionne la liste déroulante, peu importe l'onglet actif
     // en se basant sur le début de son ID "event-selector-".
     const eventSelector = document.querySelector('[id^="event-selector-"]');
@@ -38,6 +40,14 @@ function init() {
             window.location.href = currentUrl.toString();
         });
     }
+
+    // Initialiser tous les comptes à rebours présents sur la page
+    const countdownElements = document.querySelectorAll('.countdown');
+    if (countdownElements.length > 0) {
+        countdownElements.forEach(element => {
+            initCountdown(element);
+        });
+    }
 }
 
-export { init as initReservationList };
+export { initReservationList };

@@ -1,4 +1,3 @@
-<!-- app/views/reservation/confirmation.tpl -->
 <div class="container-fluid">
     <h2 class="mb-4">Confirmation de votre réservation</h2>
 
@@ -20,14 +19,14 @@
         <?php if (!empty($reservation['booker'])): ?>
         <li class="list-group-item">
             <strong>Réservant&nbsp;:</strong>
-            {{ $reservation['booker']['name'] ?? '' }}
-            {{ $reservation['booker']['firstname'] ?? '' }}
-            ({{ $reservation['booker']['email'] ?? '' }})
-            {{ $reservation['booker']['phone'] ?? '' }}
+            {{ $reservation['reservation']->getName() ?? '' }}
+            {{ $reservation['reservation']->getFirstName() ?? '' }}
+            ({{ $reservation['reservation']->getEmail() ?? '' }})
+            {{ $reservation['reservation']->getPhone() ?? '' }}
         </li>
         {% endif %}
         <li class="list-group-item">
-            <strong>Nombre de places réservées&nbsp;:</strong> {{ count($reservation['reservation_detail']) ?? 0 }}
+            <strong>Nombre de places réservées&nbsp;:</strong> {{ count($reservation['reservation_details']) ?? 0 }}
         </li>
     </ul>
 
@@ -44,15 +43,15 @@
                 {% endif %}
                 <div class="mt-1">
                     {% foreach $group['participants'] as $i => $p %}
-                    {{ ($p['name'] ?? '') . ' ' . ($p['firstname'] ?? '') }}
-                    {% if !empty($p['place_id']) %}
-                    <em>(place {{ $p['place_id'] }})</em>
+                    {{ ($p->getName() ?? '') . ' ' . ($p->getFirstName() ?? '') }}
+                    {% if !empty($p->getPlaceNumber()) %}
+                    <em>(place {{ $p->getPlaceObject()->getZoneObject()->getZoneName() }}{{ $p->getPlaceObject()->getRankInZone() }}{{ $p->getPlaceObject()->getPlaceNumber() }})</em>
                     {% endif %}
-                    {% if !empty($p['justificatif_name']) %}
-                    <div class="text-muted small">({{ $p['justificatif_original_name'] }})</div>
+                    {% if !empty($p->getJustificatifName()) %}
+                    <div class="text-muted small">({{ $p->getJustificatifOriginalName() }})</div>
                     {% endif %}
-                    {% if !empty($p['tarif_access_code']) %}
-                    <div class="text-muted small">(code {{ $p['tarif_access_code'] }})</div>
+                    {% if !empty($p->getTarifAccessCode()) %}
+                    <div class="text-muted small">(code {{ $p->getTarifAccessCode() }})</div>
                     {% endif %}
                     {% if $i < ($group['count'] - 1) %}<br>{% endif %}
                     {% endforeach %}
@@ -83,8 +82,8 @@
                 <small class="text-muted">— {{ $group['description'] }}</small>
                 {% endif %}
                 <div class="mt-1">Qté&nbsp;: {{ $group['qty'] }}</div>
-                {% if (!empty($group['codes'])) %}
-                <div class="text-muted small">(code {{ implode(', ', $group['codes']) }})</div>
+                {% if (!empty($group['code'])) %}
+                <div class="text-muted small">(code {{ $group['code'] }})</div>
                 {% endif %}
             </div>
             <div class="ms-auto text-end">
@@ -131,7 +130,7 @@
 Ici pour la suite, on a déjà enregistré ça&nbsp;:
 {% php %}
 echo '<pre>';
-print_r($_SESSION['reservation']);
+print_r($reservation);
 echo '</pre>';
 {% endphp %}
 {% endif %}

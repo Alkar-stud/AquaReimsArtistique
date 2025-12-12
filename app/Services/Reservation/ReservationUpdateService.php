@@ -157,6 +157,7 @@ readonly class ReservationUpdateService
         $updatableFields = [
             'name',
             'firstname',
+            'place_number',
             // Ajouter ici d'autres champs comme 'justificatif_name'.
         ];
 
@@ -195,6 +196,32 @@ readonly class ReservationUpdateService
         return $this->reservationDetailRepository->updateSingleField($detailId, $field, $normalizedValue);
     }
 
+    /**
+     * Met à jour la place d'un participant (détail de réservation).
+     *
+     * @param int $detailId L'ID du détail de la réservation.
+     * @param int|null $newPlaceId L'ID de la nouvelle place (ou null pour la supprimer).
+     * @return bool True si la mise à jour a réussi.
+     * @throws InvalidArgumentException Si le détail n'est pas trouvé.
+     */
+    public function updateSeatForDetail(int $detailId, ?int $newPlaceId): bool
+    {
+        $detail = $this->reservationDetailRepository->findById($detailId);
+        if (!$detail) {
+            throw new InvalidArgumentException("Le participant avec l'ID $detailId n'a pas été trouvé.");
+        }
+
+        // On met à jour le numéro de place
+        $detail->setPlaceNumber($newPlaceId ? (string)$newPlaceId : null);
+
+        // On sauvegarde l'objet entier
+        $success = $this->reservationDetailRepository->update($detail);
+
+        // On met la commande à 'non vérifiée' après un changement
+        $this->reservationRepository->updateSingleField($detail->getReservation(), 'is_checked', false);
+
+        return $success;
+    }
     /**
      * Pour mettre à jour une ligne de complément
      * @param int $reservationId

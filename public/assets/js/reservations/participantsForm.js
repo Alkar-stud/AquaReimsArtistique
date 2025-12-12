@@ -81,7 +81,9 @@ function updateUI(containerEl, reservationData, isReadOnly = false) {
 
     containerEl.innerHTML = ''; // Vider la liste
 
-    const esc = (s) => String(s === null || s === undefined ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    const esc = (s) => String(s === null || s === undefined ? '' : s)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 
     // On groupe les participants par tarif.
     const participantsByTarif = (reservationData.details || []).reduce((acc, detail) => {
@@ -100,18 +102,53 @@ function updateUI(containerEl, reservationData, isReadOnly = false) {
     for (const tarifId in participantsByTarif) {
         const group = participantsByTarif[tarifId];
         let participantsHtml = '';
+
         group.participants.forEach(p => {
-            // Préparer le champ place_number
-            const placeNumberInput = p.placeNumber ?
-                `<div class="col-md-6"><div class="input-group input-group-sm"><span class="input-group-text">Place</span><input type="text" class="form-control editable-detail" value="${esc(p.placeNumber)}" ${isReadOnly ? 'readonly' : ''} data-detail-id="${p.id}" data-field="place_number"><span class="input-group-text feedback-span"></span></div></div>` :
-                ''; // Si pas de place_number, on n'affiche pas le champ
+            const placeCol = p.placeNumber ? `
+                <div class="col-12 col-md-3 d-flex align-items-center">
+                    <div class="input-group input-group-sm w-100">
+                        Place :&nbsp;
+                        <span class="PlaceNameDisplay"
+                            data-place-id="${esc(p.placeId ?? p.place_id ?? p.placeNumber ?? '')}"
+                            data-detail-id="${p.id}"
+                            aria-label="Numéro de place ${esc(p.fullPlaceName)}"
+                            role="button"
+                            tabindex="0">
+                            ${esc(p.fullPlaceName)}
+                        </span>
+                    </div>
+                </div>
+            ` : '';
 
             participantsHtml += `
-                 <div class="row g-2 mb-2">
-                     <div class="col-md-6"><div class="input-group input-group-sm"><span class="input-group-text">Nom</span><input type="text" class="form-control editable-detail" value="${esc(p.name || '')}" ${isReadOnly ? 'readonly' : ''} data-detail-id="${p.id}" data-field="name"><span class="input-group-text feedback-span"></span></div></div>
-                     <div class="col-md-6"><div class="input-group input-group-sm"><span class="input-group-text">Prénom</span><input type="text" class="form-control editable-detail" value="${esc(p.firstname || '')}" ${isReadOnly ? 'readonly' : ''} data-detail-id="${p.id}" data-field="firstname"><span class="input-group-text feedback-span"></span></div></div>
-                     ${placeNumberInput}
-                 </div>`;
+                <div class="row g-2 mb-2 participant-row">
+                    <div class="col-12 col-md-4">
+                        <div class="input-group input-group-sm">
+                            <span class="input-group-text">Nom</span>
+                            <input type="text"
+                                   class="form-control editable-detail"
+                                   value="${esc(p.name || '')}"
+                                   ${isReadOnly ? 'readonly' : ''}
+                                   data-detail-id="${p.id}"
+                                   data-field="name">
+                            <span class="input-group-text feedback-span"></span>
+                        </div>
+                    </div>
+                    <div class="col-12 col-md-5">
+                        <div class="input-group input-group-sm">
+                            <span class="input-group-text">Prénom</span>
+                            <input type="text"
+                                   class="form-control editable-detail"
+                                   value="${esc(p.firstname || '')}"
+                                   ${isReadOnly ? 'readonly' : ''}
+                                   data-detail-id="${p.id}"
+                                   data-field="firstname">
+                            <span class="input-group-text feedback-span"></span>
+                        </div>
+                    </div>
+                    ${placeCol}
+                </div>
+            `;
         });
 
         containerEl.innerHTML += `<div class="list-group-item"><strong>${group.participants.length} × ${esc(group.tarifName)}</strong>${group.tarifDescription ? `<div class="text-muted small">${esc(group.tarifDescription)}</div>` : ''}<div class="mt-2">${participantsHtml}</div></div>`;

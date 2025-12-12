@@ -3,10 +3,11 @@ import { initContactForm } from '../reservations/contactForm.js';
 import { initParticipantsForm, updateParticipantsUI } from '../reservations/participantsForm.js';
 import { initComplementsForm, updateComplementsUI } from '../reservations/complementsForm.js';
 import ScrollManager from '../components/scrollManager.js';
-import { apiDelete, apiPost } from '../components/apiClient.js';
+import { apiDelete, apiPost, apiGet } from '../components/apiClient.js';
 import { toggleReservationStatus } from './statusToggle.js';
 import { toggleCancelStatus } from '../reservations/cancelReservation.js';
 import { showFlashMessage } from "../components/ui.js";
+import { openSeatPickerModal, initSeatPicker } from '../components/seatPickerModal.js';
 
 
 // Dictionnaire des explications pour les statuts de paiement HelloAsso
@@ -40,14 +41,13 @@ async function refreshModalContent(modal, reservationId) {
 
     try {
         // Aller chercher les données de la réservation
-        const response = await fetch(`/gestion/reservations/details/${reservationId}`);
-        if (!response.ok) {
-            throw new Error(`Erreur serveur : ${response.statusText}`);
-        }
-        const reservation = await response.json();
-console.log('reservation : ', reservation);
+        const reservation = await apiGet(`/gestion/reservations/details/${reservationId}`);
         // Restaurer le HTML et remplir la modale
         modalBody.innerHTML = originalModalBodyHtml;
+
+        // Stocker les IDs importants sur la modale pour un accès facile
+        modal.dataset.eventSessionId = reservation.eventSession.id;
+        modal.dataset.piscineId = reservation.event.piscineId;
 
         /*---------------------------------
 
@@ -84,6 +84,29 @@ console.log('reservation : ', reservation);
                 apiUrl: '/gestion/reservations/update',
                 reservationIdentifier: reservation.id,
                 identifierType: 'reservationId'
+            });
+
+            // Ajoute un écouteur global (délégation) pour capter les clics sur `.PlaceNameDisplay`
+            document.addEventListener('click', (event) => {
+                const el = event.target.closest('.PlaceNameDisplay');
+                if (!el) return;
+
+                const placeId = el.dataset.placeId;
+                const detailId = el.dataset.detailId;
+                const modalEl = el.closest('.modal');
+                const eventSessionId = modalEl?.dataset.eventSessionId;
+                const piscineId = modalEl?.dataset.piscineId;
+
+                openSeatPickerModal({
+                    piscineId: Number(piscineId),
+                    eventSessionId: Number(eventSessionId),
+                    detailId: Number(detailId),
+                    placeId: Number(placeId),
+                    onSuccess: () => {
+                        const reservationId = modalEl.querySelector('#modal_reservation_id').value;
+                        refreshModalContent(modalEl, reservationId);
+                    }
+                });
             });
         }
 
@@ -163,7 +186,9 @@ console.log('reservation : ', reservation);
                             await refreshModalContent(modal, reservationId);
                         } else {
                             // Si l'API retourne une erreur contrôlée
-                            throw new Error(result.message || 'Une erreur est survenue.');
+                            alert(result.message || 'Une erreur est survenue.');
+                            button.style.pointerEvents = 'auto';
+                            button.innerHTML = originalIcon;
                         }
                     } catch (error) {
                         alert(`Erreur : ${error.message}`);
@@ -349,12 +374,12 @@ console.log('reservation : ', reservation);
                     });
 
                     if (result.success) {
-console.log('retour : ', result);
+
                         showFlashMessage('success', result.message, 'send-email-dialog');
                         // Met à jour la section "mails envoyés" et l’ouvre
                         updateMailSentSection(modal, result.reservation);
                     } else {
-                        throw new Error(result.message || 'Erreur lors de l’envoi du mail.');
+                        showFlashMessage('danger', result.message || 'Erreur lors de l’envoi du mail.', 'send-email-dialog');
                     }
                 } catch (e) {
                     alert(`Erreur: ${e.userMessage || e.message}`);
@@ -433,7 +458,9 @@ console.log('retour : ', result);
                     if (result.success) {
                         feedbackSpan.innerHTML = '<i class="bi bi-check-lg text-success"></i>';
                     } else {
-                        throw new Error(result.message || 'Erreur inconnue');
+                        // Afficher le message d'erreur dans le feedback
+                        const msg = result && result.message ? result.message : 'Erreur inconnue';
+                        feedbackSpan.innerHTML = `<i class="bi bi-x-lg text-danger" title="${msg}"></i>`;
                     }
                 } catch (error) {
                     feedbackSpan.innerHTML = `<i class="bi bi-x-lg text-danger" title="${error.message}"></i>`;
@@ -446,7 +473,7 @@ console.log('retour : ', result);
         if (resetTokenButton) {
             resetTokenButton.addEventListener('click', async () => {
                 const reservationId = modal.querySelector('#modal_reservation_id').value;
-                //On récupère la valeur (si coché ou non)
+                //On récupère la valeur (si coché ou non).
                 const sendEmail = modal.querySelector('#modal-resend-token-email').checked;
                 //On remet décoché
                 modal.querySelector('#modal-resend-token-email').checked = false;
@@ -516,6 +543,9 @@ export function initReservationModal() {
     if (modal) {
         // On attache l'écouteur qui se déclenchera à chaque ouverture
         modal.addEventListener('show.bs.modal', onModalOpen);
+
+        // On initialise notre nouveau composant de sélection de place
+        initSeatPicker();
 
         // On gère le clic sur le bouton "Fermer" du footer
         const closeButton = modal.querySelector('#modal-close-btn');
@@ -591,12 +621,16 @@ function updateMailSentSection(modal, reservation) {
     const toggleMailSentLink = modal.querySelector('#toggle-mail_sent-details');
     const nbMailSent = modal.querySelector('#modal-nb-mail-sent');
 
-    if (!mailSentContainer || !toggleMailSentLink) return;
+    if (!mailSentContainer || !toggleMailSentLink) {
+        return;
+    }
 
     const list = Array.isArray(reservation?.mailSent) ? reservation.mailSent : [];
 
     // Met à jour le compteur
-    if (nbMailSent) nbMailSent.textContent = String(list.length);
+    if (nbMailSent) {
+        nbMailSent.textContent = String(list.length);
+    }
 
     // Affiche le lien si des mails existent
     toggleMailSentLink.style.display = list.length > 0 ? 'inline' : 'none';
@@ -633,4 +667,74 @@ function updateMailSentSection(modal, reservation) {
         mailSentContainer.style.display = 'none';
         toggleMailSentLink.textContent = 'Voir le détail des mails envoyés';
     }
+}
+
+export function openReservationModal(reservation) {
+    const isPaid = (reservation.total_amount_paid || 0) >= (reservation.total_amount || 0);
+
+    if (isPaid) {
+        // Modale standard déjà existante
+        const modalEl = document.getElementById('reservation-modal');
+        if (!modalEl) {
+            showFlashMessage('danger', 'Modale de réservation introuvable', 'ajax_flash_container');
+            return;
+        }
+        const modal = new bootstrap.Modal(modalEl);
+        // Hydratez ici les champs de la modale standard...
+        modal.show();
+        return;
+    }
+
+    // Modale en cours (non réglée)
+    const incomingEl = document.getElementById('reservation-incoming-modal');
+    if (!incomingEl) {
+        showFlashMessage('danger', 'Modale en cours introuvable', 'ajax_flash_container');
+        return;
+    }
+
+    // Hydratation minimale
+    incomingEl.querySelector('#incoming-name').textContent = `${reservation.name} ${reservation.firstname}`;
+    incomingEl.querySelector('#incoming-email').textContent = reservation.email || '';
+    incomingEl.querySelector('#incoming-phone').textContent = reservation.phone || '';
+
+    const amount = reservation.total_amount ?? 0;
+    const paid = reservation.total_amount_paid ?? 0;
+    incomingEl.querySelector('#incoming-amount').textContent = `À régler: ${(amount - paid)} / Total: ${amount}`;
+
+    // Détails & compléments (attendu depuis vos services contrôleur)
+    const details = reservation.details || [];
+    const complements = reservation.complements || [];
+
+    incomingEl.querySelector('#incoming-details').innerHTML =
+        details.length
+            ? details.map(d => `• ${d.tarif_name ?? 'Tarif'} x${d.count ?? 1}`).join('<br>')
+            : '<span class="text-muted">Aucun participant</span>';
+
+    incomingEl.querySelector('#incoming-complements').innerHTML =
+        complements.length
+            ? complements.map(c => `• ${c.tarif_name ?? 'Complément'} x${c.qty ?? 1}`).join('<br>')
+            : '<span class="text-muted">Aucun complément</span>';
+
+    // Actions mails
+    incomingEl.querySelector('#send-reminder-email').onclick = async () => {
+        try {
+            const resp = await fetch(`/gestion/reservations/${reservation.id}/mail/reminder`, { method: 'POST' });
+            if (!resp.ok) {
+                // Gestion explicite sans throw
+                showFlashMessage('danger', 'Erreur envoi de mail', 'ajax_flash_container');
+                return;
+            }
+            showFlashMessage('success', 'Mail de relance envoyé', 'ajax_flash_container');
+        } catch (e) {
+            showFlashMessage('danger', 'Échec envoi de mail', 'ajax_flash_container');
+        }
+    };
+
+    incomingEl.querySelector('#send-custom-email').onclick = async () => {
+        // Ouvrir une autre modale / formulaire personnalisé si besoin
+        showFlashMessage('info', 'Ouverture du mail personnalisé', 'ajax_flash_container');
+    };
+
+    const modal = new bootstrap.Modal(incomingEl);
+    modal.show();
 }

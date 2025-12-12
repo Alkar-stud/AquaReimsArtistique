@@ -3,15 +3,22 @@
 namespace app\Services\Reservation;
 
 use app\Core\Paginator;
+use app\Models\Piscine\Piscine;
 use app\Models\Reservation\Reservation;
+use app\Models\Reservation\ReservationDetail;
 use app\Models\Reservation\ReservationMailSent;
 use app\Repository\Event\EventRepository;
 use app\Repository\Mail\MailTemplateRepository;
+use app\Repository\Piscine\PiscineGradinsPlacesRepository;
+use app\Repository\Piscine\PiscineGradinsZonesRepository;
 use app\Repository\Reservation\ReservationComplementRepository;
 use app\Repository\Reservation\ReservationDetailRepository;
+use app\Repository\Reservation\ReservationDetailTempRepository;
 use app\Repository\Reservation\ReservationMailSentRepository;
 use app\Repository\Reservation\ReservationRepository;
+use app\Repository\Reservation\ReservationTempRepository;
 use app\Services\Mails\MailPrepareService;
+use app\Utils\StringHelper;
 use DateTime;
 
 class ReservationQueryService
@@ -22,6 +29,7 @@ class ReservationQueryService
     private ReservationPriceCalculator $priceCalculator;
     private ReservationComplementRepository $reservationComplementRepository;
     private ReservationDetailRepository $reservationDetailRepository;
+    private ReservationDetailTempRepository $reservationDetailTempRepository;
 
     public function __construct(
         ReservationRepository $reservationRepository,
@@ -30,6 +38,7 @@ class ReservationQueryService
         ReservationPriceCalculator $priceCalculator,
         ReservationComplementRepository $reservationComplementRepository,
         ReservationDetailRepository $reservationDetailRepository,
+        ReservationDetailTempRepository $reservationDetailTempRepository,
     )
     {
         $this->reservationRepository = $reservationRepository;
@@ -38,6 +47,7 @@ class ReservationQueryService
         $this->priceCalculator = $priceCalculator;
         $this->reservationComplementRepository = $reservationComplementRepository;
         $this->reservationDetailRepository = $reservationDetailRepository;
+        $this->reservationDetailTempRepository = $reservationDetailTempRepository;
     }
 
     /**
@@ -191,6 +201,7 @@ class ReservationQueryService
         $readyForView = ['details' => [], 'complements' => []];
 
         // Grouper participants par tarif
+        /** @var ReservationDetail $detail */
         foreach ($reservation->getDetails() as $detail) {
             $tarif = $detail->getTarifObject();
             $tarifId = $tarif->getId();
@@ -206,11 +217,7 @@ class ReservationQueryService
                 'id' => $detail->getId(),
                 'name' => $detail->getName(),
                 'firstname' => $detail->getFirstName(),
-                'place_number' => method_exists($detail, 'getPlaceNumber')
-                    ? $detail->getPlaceNumber()
-                    : (method_exists($detail->getPlaceObject() ?: null, 'getId')
-                        ? $detail->getPlaceObject()->getId()
-                        : null),
+                'place_number' => $detail->getPlaceObject()?->getFullPlaceName(),
                 'tarif_access_code' => method_exists($detail, 'getTarifAccessCode')
                     ? $detail->getTarifAccessCode()
                     : null,
@@ -302,9 +309,10 @@ class ReservationQueryService
      * @param string $searchQuery
      * @param int $currentPage
      * @param int $itemsPerPage
+     * @param ReservationRepository|ReservationTempRepository $repo
      * @return Paginator|array
      */
-    public function searchReservationsWithParam(string $searchQuery, int $currentPage, int $itemsPerPage): Paginator|array
+    public function searchReservationsWithParam(string $searchQuery, int $currentPage, int $itemsPerPage, ReservationRepository|ReservationTempRepository $repo): Paginator|array
     {
         $q = trim($searchQuery);
         if ($q === '') {
@@ -312,7 +320,7 @@ class ReservationQueryService
         }
 
         // Limiter par défaut pour éviter de gros résultats si non paginé côté appelant
-        return $this->reservationRepository->findBySearchPaginated($q, $currentPage, $itemsPerPage, false, null);
+        return $repo->findBySearchPaginated($q, $currentPage, $itemsPerPage, false, null);
     }
 
     /**
@@ -379,17 +387,18 @@ class ReservationQueryService
 
     /**
      * Vérifie si la capacité totale de la piscine est atteinte et renvoi le nombre de places restantes
-     * @param array $session
+     * @param int $event_id
+     * @param int $event_session_id
      * @return array
      */
-    public function checkTotalCapacityLimit(array $session): array
+    public function checkTotalCapacityLimit(int $event_id, int $event_session_id): array
     {
         //On récupère la capacité de la piscine
-        $event = $this->eventRepository->findById($session['event_id'], true);
+        $event = $this->eventRepository->findById($event_id, true);
         $piscine = $event->getPiscine();
 
         //On récupère le nombre de places actuellement réservées (et validées).
-        $nbPlaceReserved = $this->reservationDetailRepository->countBySession($session['event_session_id'], false, false, true);
+        $nbPlaceReserved = $this->reservationDetailRepository->countBySession($event_session_id, false, false, true);
 
         //On vérifie la différence
         if ($nbPlaceReserved >= $piscine->getMaxPlaces()) {
@@ -399,4 +408,131 @@ class ReservationQueryService
         return ['limitReached' => false, 'limit' => $piscine->getMaxPlaces() - $nbPlaceReserved];
     }
 
+    /**
+     * Retourne les zones et leurs places, plus les listes d'IDs par statut,
+     * prêtes à être passées au contrôleur pour les vues piscine.
+     *
+     * - zones: PiscineGradinsZones[]
+     * - placesByZone: array<int, PiscineGradinsPlaces[]>
+     * - reservedPlaceIds, tempOtherPlaceIds, tempMyPlaceIds: int[]
+     * - zoneUrlPattern, zonesListUrl, viewMode: strings
+     *
+     * @param Piscine $piscine
+     * @return array
+     */
+    public function getAllSeatsInSwimmingPoolWithStatus(Piscine $piscine): array
+    {
+        $zonesRepo = new PiscineGradinsZonesRepository();
+        $placesRepo = new PiscineGradinsPlacesRepository();
+
+        // Récupère toutes les zones
+        $zones = $zonesRepo->findByPiscine($piscine);
+
+        // Indexe les places par zone et rattache l'objet zone à chaque place
+        $placesByZone = [];
+        foreach ($zones as $zone) {
+            $zoneId = $zone->getId();
+            $places = $placesRepo->findByFields(['zone' => $zoneId]);
+            foreach ($places as $p) {
+                $p->setZoneObject($zone);
+            }
+            $placesByZone[$zoneId] = $places;
+        }
+
+        return [
+            'zones' => $zones,
+            'placesByZone' => $placesByZone,
+            'reservedPlaceIds' => [],
+            'tempOtherPlaceIds' => [],
+            'tempMyPlaceIds' => [],
+            'zoneUrlPattern' => '/piscine/zone',
+            'zonesListUrl' => '/piscine/zones',
+            'viewMode' => 'readonly',
+        ];
+    }
+
+    /**
+     * Retourne le nombre de spectateurs inscrits par session
+     *
+     * @param array $events
+     * @return array
+     */
+    public function getNbSpectatorsPerSession(array $events): array
+    {
+        $nbSpectatorsPerSession = [];
+        foreach ($events as $event) {
+            foreach ($event->getSessions() as $session) {
+                $countDetail = $this->reservationDetailRepository->countBySession($session->getId());
+                $nbSpectatorsPerSession[$session->getId()]['qty'] = $countDetail;
+                if ($countDetail >= $event->getPiscine()->getMaxPlaces()) {
+                    $nbSpectatorsPerSession[$session->getId()]['is_full'] = true;
+                } else {
+                    $nbSpectatorsPerSession[$session->getId()]['is_full'] = false;
+                }
+            }
+        }
+        return $nbSpectatorsPerSession;
+    }
+
+    /**
+     * Pour récupérer toutes les places assises enregistrées et payées pour une session donnée.
+     *
+     * @param int $eventSessionId
+     * @param bool $isForAdminView Si true, enrichit les données des places occupées.
+     * @return array
+     */
+    public function getSeatStates(int $eventSessionId, bool $isForAdminView = false): array
+    {
+        $seatStates = [];
+        $currentUserSessionId = session_id();
+
+        // Places déjà payées (statut le plus prioritaire)
+        $occupiedSeats = $this->reservationDetailRepository->findReservedSeatsForSession($eventSessionId);
+        if (!empty($occupiedSeats)) {
+            if ($isForAdminView) {
+                // Pour l'admin, on charge les objets Reservation pour avoir les détails
+                $reservationIds = array_unique(array_values($occupiedSeats));
+                $reservations = $this->reservationRepository->findByIds($reservationIds, true, false, false, true);
+                $reservationsById = [];
+                foreach ($reservations as $r) {
+                    $reservationsById[$r->getId()] = $r;
+                }
+
+                foreach ($occupiedSeats as $seatId => $reservationId) {
+                    if ($seatId && isset($reservationsById[$reservationId])) {
+                        /** @var Reservation $reservation */
+                        $reservation = $reservationsById[$reservationId];
+                        $seatStates[$seatId] = [
+                            'status' => 'occupied',
+                            'reservationId' => $reservation->getId(),
+                            'reservationNumber' => StringHelper::generateReservationNumber($reservation->getId()),
+                            'reserverName' => $reservation->getFirstName() . ' ' . $reservation->getName(),
+                            'reservationSeatCount' => count($reservation->getDetails()),
+                        ];
+                    }
+                }
+            } else {
+                // Pour le public, on met juste le statut
+                foreach ($occupiedSeats as $seatId => $reservationId) {
+                    if ($seatId) {
+                        $seatStates[$seatId] = ['status' => 'occupied'];
+                    }
+                }
+            }
+        }
+
+        // Places en cours de réservation dans les paniers
+        $inCartSeats = $this->reservationDetailTempRepository->findSeatStatesForSession($eventSessionId);
+        foreach ($inCartSeats as $seatId => $seatSessionId) {
+            if (!isset($seatStates[$seatId])) {
+                if ($seatSessionId === $currentUserSessionId) {
+                    $seatStates[$seatId] = ['status' => 'in_cart_session'];
+                } else {
+                    $seatStates[$seatId] = ['status' => 'in_cart_other'];
+                }
+            }
+        }
+
+        return $seatStates;
+    }
 }

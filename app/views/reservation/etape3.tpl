@@ -23,7 +23,6 @@
           aria-describedby="step3-hint"
           data-limitation="{{ $swimmerLimit['limit'] ?? 'null' }}"
           data-deja-reservees="{{ $swimmerLimit['currentReservations'] ?? 0 }}"
-          data-special-tarif-session="{{ json_encode($specialTarifSession ?? null) }}"
           data-special-tarif-session="{{ json_encode($specialTarifSession ?? null, $jsonFlags) }}"
           data-all-tarifs-seats="{{ json_encode($allTarifsWithSeatForThisEvent, $jsonFlags) }}"
     >
@@ -32,7 +31,7 @@
             Saisissez le nombre de places souhaité pour chaque tarif. Les compteurs sont mis à jour automatiquement. Les champs non remplis seront ignorés.
         </p>
 
-        <input type="hidden" id="event_id" name="event_id" value="{{ $event_id }}">
+        <input type="hidden" id="event_id" name="event_id" value="{{ $reservation['reservation']->getEvent() }}">
 
         {% if !empty($allTarifsWithSeatForThisEvent) %}
         <div id="tarifsContainer">
@@ -129,7 +128,7 @@
 Ici pour la suite, on a déjà enregistré ça :
 {% php %}
 echo '<pre>';
-print_r($_SESSION['reservation']);
+print_r($reservation);
 echo '</pre>';
 {% endphp %}
 {% endif %}

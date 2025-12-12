@@ -151,3 +151,110 @@ export function extractErrorMessages(errorData) {
     // Déduplique et joint (à adapter: '\n' ou ' • ')
     return [...new Set(messages)].join('\n');
 }
+
+
+/**
+ * Convertit une durée ISO8601 de type PT... en secondes (supporte D/H/M/S).
+ * Ex: "PT2H" => 7200, "PT20M" => 1200
+ * Retourne 0 si spec invalide.
+ */
+export function parseIsoDurationToSeconds(spec) {
+    if (!spec || typeof spec !== 'string') return 0;
+    const m = /P(?:(\d+)D)?T?(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/i.exec(spec.trim());
+    if (!m) return 0;
+    const days = Number(m[1] || 0);
+    const hours = Number(m[2] || 0);
+    const minutes = Number(m[3] || 0);
+    const seconds = Number(m[4] || 0);
+    return days * 86400 + hours * 3600 + minutes * 60 + seconds;
+}
+
+/**
+ * Calcule une date ISO d'expiration en partant d'un createdAt (ISO) et d'une spec ISO8601.
+ * Retourne null si impossible.
+ */
+export function computeExpiryIsoFromCreatedAndSpec(createdIso, spec) {
+    if (!createdIso || !spec) return null;
+    const base = new Date(createdIso);
+    if (isNaN(base.getTime())) return null;
+    const seconds = parseIsoDurationToSeconds(spec);
+    if (!seconds) return null;
+    return new Date(base.getTime() + seconds * 1000).toISOString();
+}
+
+export function initCountdown(element, expiresAtMs = null) {
+    if (!element) return;
+
+    let expiresAt = null;
+    if (typeof expiresAtMs === 'number' && !Number.isNaN(expiresAtMs)) {
+        expiresAt = Number(expiresAtMs);
+    } else if (element.dataset.expiresAt) {
+        // Support du timestamp (ancien fonctionnement)
+        const timestamp = Number(element.dataset.expiresAt);
+        if (!Number.isNaN(timestamp) && timestamp > 0) expiresAt = timestamp * 1000; // Convert seconds to milliseconds
+    } else if (element.dataset.createdAtTimestamp && element.dataset.timeoutSeconds) {
+        // NOUVELLE LOGIQUE (inspirée de la debug-bar)
+        const createdAt = Number(element.dataset.createdAtTimestamp);
+        const timeout = Number(element.dataset.timeoutSeconds);
+
+        if (createdAt > 0 && timeout > 0) {
+            expiresAt = (createdAt + timeout) * 1000;
+        } else {
+            console.warn('Invalid data for countdown:', { createdAt, timeout });
+        }
+    }
+
+    if (!expiresAt) {
+        element.textContent = '--:--';
+        return;
+    }
+
+    // Mise à jour périodique — NE PAS arrêter l'intervalle définitivement sur "Expiré"
+    const updateCountdown = () => {
+        if (!document.body.contains(element)) {
+            if (element._countdownInterval) {
+                clearInterval(element._countdownInterval);
+                element._countdownInterval = null;
+            }
+            return;
+        }
+
+        const now = Date.now();
+        const distance = expiresAt - now;
+
+        // Tolérance courte pour éviter faux "Expiré" liés à latence/synchro (-5s)
+        if (distance <= 0 && distance > -5000) {
+            element.textContent = '00:00';
+            element.classList.remove('text-danger');
+            return;
+        }
+
+        if (distance <= 0) {
+            // Affiche Expiré mais garde l'intervalle pour possibilité de récupération
+            element.textContent = 'Expiré';
+            element.classList.add('text-danger');
+            return;
+        }
+
+        // Si on était en état "Expiré", on restaure l'affichage normal
+        if (element.classList.contains('text-danger')) {
+            element.classList.remove('text-danger');
+        }
+
+        const totalSeconds = Math.floor(distance / 1000);
+        const hours = Math.floor(totalSeconds / 3600);
+        const minutes = Math.floor((totalSeconds % 3600) / 60);
+        const seconds = totalSeconds % 60;
+
+        if (hours > 0) {
+            element.textContent = `${hours}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+        } else {
+            element.textContent = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+        }
+    };
+
+    // Lancer et stocker l'intervalle (évite doublons)
+    updateCountdown();
+    if (element._countdownInterval) clearInterval(element._countdownInterval);
+    element._countdownInterval = setInterval(updateCountdown, 1000);
+}

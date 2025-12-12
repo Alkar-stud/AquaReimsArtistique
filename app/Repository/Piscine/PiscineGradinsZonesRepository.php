@@ -48,20 +48,65 @@ class PiscineGradinsZonesRepository extends AbstractRepository
      * Retourne les zones d'une piscine ordonnées par nom
      * @return PiscineGradinsZones[]
      */
-    public function findByPiscine(int $piscineId, bool $withPiscine = false): array
+    public function findByPiscine(Piscine $piscine): array
     {
         $sql = "SELECT * FROM $this->tableName WHERE piscine = :piscineId ORDER BY zone_name";
-        $rows = $this->query($sql, ['piscineId' => $piscineId]);
-
-        $piscine = null;
-        if ($withPiscine) {
-            $piscineRepo = new PiscineRepository();
-            $piscine = $piscineRepo->findById($piscineId);
-        }
+        $rows = $this->query($sql, ['piscineId' => $piscine->getId()]);
 
         return array_map(function(array $r) use ($piscine) {
             return $this->hydrate($r, $piscine);
         }, $rows);
+    }
+
+    /**
+     * Retourne les zones d'une piscine par son ID, ordonnées par nom.
+     * @param int $piscineId
+     * @return PiscineGradinsZones[]
+     */
+    public function findByPiscineId(int $piscineId): array
+    {
+        $sql = "SELECT * FROM $this->tableName WHERE piscine = :piscineId ORDER BY zone_name";
+        $rows = $this->query($sql, ['piscineId' => $piscineId]);
+
+        // On hydrate sans l'objet Piscine, car non nécessaire pour ce cas d'usage.
+        return array_map(fn($row) => $this->hydrate($row), $rows);
+    }
+
+    /**
+     * Récupère plusieurs zones par leurs IDs.
+     *
+     * @param int[] $ids
+     * @param bool $withPiscine
+     * @return PiscineGradinsZones[]
+     */
+    public function findByIds(array $ids, bool $withPiscine = false): array
+    {
+        if (empty($ids)) {
+            return [];
+        }
+
+        $placeholders = implode(',', array_fill(0, count($ids), '?'));
+        $sql = "SELECT * FROM {$this->tableName} WHERE id IN ($placeholders)";
+        $rows = $this->query($sql, $ids);
+
+        if (empty($rows)) {
+            return [];
+        }
+
+        $zones = array_map(fn($row) => $this->hydrate($row), $rows);
+
+        if ($withPiscine) {
+            $piscineIds = array_values(array_unique(array_map(fn(PiscineGradinsZones $z) => $z->getPiscine(), $zones)));
+            if (!empty($piscineIds)) {
+                $piscineRepo = new PiscineRepository();
+                $piscines = $piscineRepo->findByIds($piscineIds); // findByIds doit retourner un tableau indexé par ID
+                foreach ($zones as $zone) {
+                    $zone->setPiscineObject($piscines[$zone->getPiscine()] ?? null);
+                }
+            }
+        }
+
+        return $zones;
     }
 
     /**
@@ -162,14 +207,6 @@ class PiscineGradinsZonesRepository extends AbstractRepository
     }
 
     /**
-     * Wrapper explicite pour la bascule d'ouverture.
-     */
-    public function updateOpenStatus(int $id, bool $isOpen): bool
-    {
-        return $this->updateFields($id, ['is_open' => $isOpen]);
-    }
-
-    /**
      * Hydrate une zone depuis une ligne BDD.
      * @param array<string,mixed> $data
      */
@@ -191,4 +228,38 @@ class PiscineGradinsZonesRepository extends AbstractRepository
         }
         return $zone;
     }
+
+    /**
+     * Sérialise une zone en tableau.
+     * @param PiscineGradinsZones $zone
+     * @param bool $camelCase
+     * @return array
+     */
+    public function toArray(PiscineGradinsZones $zone, bool $camelCase = true): array
+    {
+        if ($camelCase) {
+            return [
+                'id' => $zone->getId(),
+                'piscineId' => $zone->getPiscine(),
+                'zoneName' => $zone->getZoneName(),
+                'nbSeatsVertically' => $zone->getNbSeatsVertically(),
+                'nbSeatsHorizontally' => $zone->getNbSeatsHorizontally(),
+                'isOpen' => $zone->isOpen(),
+                'isStairsAfter' => $zone->isStairsAfter(),
+                'comments' => $zone->getComments(),
+            ];
+        }
+
+        return [
+            'id' => $zone->getId(),
+            'piscine' => $zone->getPiscine(),
+            'zone_name' => $zone->getZoneName(),
+            'nb_seats_vertically' => $zone->getNbSeatsVertically(),
+            'nb_seats_horizontally' => $zone->getNbSeatsHorizontally(),
+            'is_open' => $zone->isOpen(),
+            'is_stairs_after' => $zone->isStairsAfter(),
+            'comments' => $zone->getComments(),
+        ];
+    }
+
 }

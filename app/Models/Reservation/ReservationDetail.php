@@ -3,6 +3,7 @@ namespace app\Models\Reservation;
 
 use app\Models\AbstractModel;
 use app\Models\Piscine\PiscineGradinsPlaces;
+use app\Utils\StringHelper;
 use DateTime;
 use DateTimeInterface;
 
@@ -52,13 +53,13 @@ class ReservationDetail extends AbstractModel
 
     public function setName(?string $name): self
     {
-        $this->name = $name;
+        $this->name = ($name === null || $name === '') ? null : StringHelper::toUpperCase($name);
         return $this;
     }
 
     public function setFirstName(?string $firstname): self
     {
-        $this->firstname = $firstname;
+        $this->firstname = ($firstname === null || $firstname === '') ? null : StringHelper::toTitleCase($firstname);
         return $this;
     }
 
@@ -121,6 +122,7 @@ class ReservationDetail extends AbstractModel
             'tarifDescription' => $tarifObject?->getDescription(),
             'tarifPrice' => $tarifObject?->getPrice(),
             'placeNumber' => $this->getPlaceNumber(),
+            'placeId' => $this->getPlaceObject()?->getId(),
             'fullPlaceName' => $placeObject?->getFullPlaceName(),
             'enteredAt' => $this->getEnteredAt()?->format(DateTimeInterface::ATOM), // ISO 8601
         ];

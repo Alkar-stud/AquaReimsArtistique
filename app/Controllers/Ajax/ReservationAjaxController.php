@@ -6,7 +6,9 @@ use app\Attributes\Route;
 use app\Controllers\AbstractController;
 use app\DTO\ReservationComplementItemDTO;
 use app\DTO\ReservationDetailItemDTO;
+use app\Repository\Reservation\ReservationDetailTempRepository;
 use app\Repository\Tarif\TarifRepository;
+use app\Repository\User\UserRepository;
 use app\Services\FlashMessageService;
 use app\Services\Reservation\ReservationQueryService;
 use app\Services\Reservation\ReservationSessionService;
@@ -22,6 +24,7 @@ class ReservationAjaxController extends AbstractController
     private ReservationDataValidationService $reservationDataValidationService;
     private ReservationQueryService $reservationQueryService;
     private TarifService $tarifService;
+    private ReservationDetailTempRepository $reservationDetailTempRepository;
     //Pour définir les steps existants
     private array $existingStep = [1, 2, 3, 4, 5, 6];
 
@@ -32,6 +35,7 @@ class ReservationAjaxController extends AbstractController
         ReservationDataValidationService $reservationDataValidationService,
         ReservationQueryService $reservationQueryService,
         TarifService $tarifService,
+        ReservationDetailTempRepository $reservationDetailTempRepository,
     )
     {
         // On déclare la route comme publique pour éviter la redirection vers la page de login.
@@ -42,6 +46,7 @@ class ReservationAjaxController extends AbstractController
         $this->reservationDataValidationService = $reservationDataValidationService;
         $this->reservationQueryService = $reservationQueryService;
         $this->tarifService = $tarifService;
+        $this->reservationDetailTempRepository = $reservationDetailTempRepository;
     }
 
 
@@ -51,7 +56,7 @@ class ReservationAjaxController extends AbstractController
      * @return void
      *
      */
-    #[Route('/reservation/valid/{step}', name: 'etape1', methods: ['POST'])]
+    #[Route('/reservation/valid/{step}', name: 'etapes', methods: ['POST'])]
     public function validStep(int $step): void
     {
         //On vérifie
@@ -59,11 +64,11 @@ class ReservationAjaxController extends AbstractController
             $this->json(['success' => false, 400, 'error' => 'Cette étape n\'existe pas']);
         }
 
-        //On récupère la session
-        $session = $this->reservationSessionService->getReservationSession();
+        //On récupère la réservation en cours.
+        $session = $this->reservationSessionService->getReservationTempSession();
 
-        //On vérifie si la session est expirée
-        if (!$session || $this->reservationSessionService->isReservationSessionExpired($session)) {
+        //On vérifie si la session est expirée : si on ne trouve rien ET qu'on a dépassé l'étape1, c'est que c'est expiré.
+        if (!$session['reservation'] && $step > 1) {
             $flashMessageService = new FlashMessageService();
             $flashMessageService->setFlashMessage('warning', 'Votre session a expiré. Merci de recommencer votre réservation.');
             $this->json([
@@ -72,17 +77,9 @@ class ReservationAjaxController extends AbstractController
             ], 200);
         }
 
-        //on vérifie les données des étapes précédentes
-        for ($i = 1; $i <= $step; $i++) {
-            $return = $this->reservationDataValidationService->checkPreviousStep($i, $session);
-            if (!$return['success']) {
-                $this->json($return, 400);
-            }
-        }
-
         //Pour la troisième étape, on vérifie si la capacité globale n'est pas dépassée
         if ($step == 3) {
-            $totalCapacityLimit = $this->reservationQueryService->checkTotalCapacityLimit($session);
+            $totalCapacityLimit = $this->reservationQueryService->checkTotalCapacityLimit($session['reservation']->getEvent(), $session['reservation']->getEventSession());
             if ($totalCapacityLimit['limitReached']) {
                 $this->json([
                     'success' => false,
@@ -105,7 +102,7 @@ class ReservationAjaxController extends AbstractController
             $files = null;
         }
 
-        $result = $this->reservationDataValidationService->validateAndPersistDataPerStep($step, $input, $files);
+        $result = $this->reservationDataValidationService->validateDataPerStep($session['reservation'], $step, $input, $files);
 
         if (!$result['success']) {
             $this->json($result, 200);
@@ -211,35 +208,11 @@ class ReservationAjaxController extends AbstractController
         $this->json($result);
     }
 
-    /**
-     * Redirige vers session expirée si timeout session réservation est expiré
-     *
-     * @return array|null
-     */
-    private function redirectIfReservationSessionIsExpired(): ?array
-    {
-        $session = $this->reservationSessionService->getReservationSession();
-
-        //On vérifie si la session est expirée
-        if (!$session || $this->reservationSessionService->isReservationSessionExpired($session)) {
-            $this->json([
-                'success'  => false,
-                'error'    => 'Votre session a expiré. Merci de recommencer votre réservation.',
-                'redirect' => '/reservation?session_expiree=ra'
-            ], 419);
-        }
-
-        // Rafraîchir l'activité
-        $_SESSION['reservation']['last_activity'] = time();
-
-        return $session;
-    }
-
     //======================================================================
     // ETAPE 3 : Choix des places
     //======================================================================
 
-    //Pour valider les tarifs avec code
+    //Pour valider les tarifs avec code, étape 3 pour les places assises et étape 6 pour les compléments
     /**
      * @return void
      */
@@ -249,7 +222,7 @@ class ReservationAjaxController extends AbstractController
         $input = json_decode(file_get_contents('php://input'), true);
         $eventId = (int)($input['event_id'] ?? 0);
         $code = trim($input['code'] ?? '');
-        $withSeat = array_key_exists('with_seat', $input) ? (bool)$input['with_seat'] : true;
+        $withSeat = !array_key_exists('with_seat', $input) || $input['with_seat'];
 
         //On va chercher le tarif correspondant s'il y en a un
         $result = $this->tarifService->validateSpecialCode($eventId, $code, $withSeat);
@@ -299,14 +272,14 @@ class ReservationAjaxController extends AbstractController
         //Selon s'il y a des places assises ou non, on est dans reservation_detail ou reservation_complement
         if ($result->getSeatCount() === null) {
             // Récupérer les détails actuels de la session
-            $currentDetails = $this->reservationSessionService->getReservationSession()['reservation_complement'] ?? [];
+            $currentDetails = $this->reservationSessionService->getReservationTempSession()['reservation_complements'] ?? [];
             // Utiliser le service pour retirer le tarif
             $newDetails = $this->tarifService->removeTarifFromDetails($currentDetails, $tarifId);
             // Mettre à jour la session
             $this->reservationSessionService->setReservationSession('reservation_complement', $newDetails);
         } else {
             // Récupérer les détails actuels de la session
-            $currentDetails = $this->reservationSessionService->getReservationSession()['reservation_detail'] ?? [];
+            $currentDetails = $this->reservationSessionService->getReservationTempSession()['reservation_details'] ?? [];
             // Utiliser le service pour retirer le tarif
             $newDetails = $this->tarifService->removeTarifFromDetails($currentDetails, $tarifId);
             // Mettre à jour la session
@@ -314,6 +287,126 @@ class ReservationAjaxController extends AbstractController
         }
 
         $this->json(['success' => true], 200, 'reservation');
+    }
+
+    //======================================================================
+    // ETAPE 5 : Choix des places numérotées
+    //======================================================================
+    #[Route('/reservation/seat-states/{eventSessionId}', name: 'seat_states', methods: ['GET'])]
+    public function seatStates(int $eventSessionId): void
+    {
+        $isAdmin = false;
+        if (isset($_SESSION['user']['id'])) {
+            try {
+                $userRepo = new UserRepository();
+                $user = $userRepo->findById((int)$_SESSION['user']['id']);
+                if ($user) {
+                    $this->currentUser = $user;
+                    $isAdmin = $this->authorizationService->hasPermission($this->currentUser, 'U');
+                }
+            } catch (\Throwable $e) {
+                // Ignorer l'erreur si l'utilisateur ne peut être chargé, $isAdmin reste false
+            }
+        }
+
+        /* Doit renvoyer quelque chose du style :
+        {
+          "success": true,
+          "seatStates": {
+            123: {"status" : "occupied"},
+            250: {"status" : "in_cart_other"},
+            251: {"status" : "in_cart_session"}
+          }
+        }
+        */
+
+        $seatStates = $this->reservationQueryService->getSeatStates($eventSessionId, $isAdmin);
+
+        $this->json(
+            [
+                'success' => true,
+                'seatStates' => (object)$seatStates // Forcer un objet JSON {} si le tableau est vide
+            ]
+        );
+    }
+
+    #[Route('/reservation/etape5AddSeat/{id}', name: 'etape5_add_seat', methods: ['POST'])]
+    public function etape5AddSeat(int $id): void
+    {
+        $session = $this->reservationSessionService->getReservationTempSession();
+        if (!$session['reservation']) {
+            $this->json(['success' => false, 'error' => 'Session expirée.']);
+            return;
+        }
+
+        // Trouver un participant sans place et lui assigner la place {id}
+        $details = $session['reservation_details'] ?? [];
+        $participantToUpdate = null;
+        foreach ($details as $detail) {
+            if (empty($detail->getPlaceNumber())) {
+                $participantToUpdate = $detail;
+                break;
+            }
+        }
+
+        if (!$participantToUpdate) {
+            $this->json(['success' => false, 'error' => 'Tous les participants ont déjà une place attribuée.']);
+            return;
+        }
+
+        // Mettre à jour la place et sauvegarder
+        $participantToUpdate->setPlaceNumber($id);
+        $this->reservationDetailTempRepository->update($participantToUpdate);
+
+        // Récupérer le nouvel état complet des sièges
+        $seatStates = $this->reservationQueryService->getSeatStates($session['reservation']->getEventSession());
+
+        // Récupérer les participants mis à jour et vérifier si tous ont une place
+        $updatedParticipants = $this->reservationDetailTempRepository->findByFields(['reservation_temp' => $session['reservation']->getId()]);
+        $allSeated = empty(array_filter($updatedParticipants, fn($d) => empty($d->getPlaceNumber())));
+
+        // Renvoyer la réponse avec le nouvel état
+        $this->json([
+            'success' => true,
+            'seatStates' => $seatStates,
+            'participants' => array_map(fn($d) => $d->toArray(), $updatedParticipants),
+            'allParticipantsSeated' => $allSeated
+        ]);
+    }
+
+    #[Route('/reservation/etape5RemoveSeat/{id}', name: 'etape5_remove_seat', methods: ['POST'])]
+    public function etape5RemoveSeat(int $id): void
+    {
+        $session = $this->reservationSessionService->getReservationTempSession();
+        if (!$session['reservation']) {
+            $this->json(['success' => false, 'error' => 'Session expirée.']);
+            return;
+        }
+
+        // Trouver le participant qui a cette place et la retirer
+        $details = $session['reservation_details'] ?? [];
+        foreach ($details as $detail) {
+            if ((int)$detail->getPlaceNumber() === $id) {
+                $detail->setPlaceNumber(null);
+                $this->reservationDetailTempRepository->update($detail);
+                break;
+            }
+        }
+
+        // Récupérer le nouvel état complet des sièges
+        $seatStates = $this->reservationQueryService->getSeatStates($session['reservation']->getEventSession());
+
+        // Récupérer les participants mis à jour et vérifier si tous ont une place
+        $updatedParticipants = $this->reservationDetailTempRepository->findByFields(['reservation_temp' => $session['reservation']->getId()]);
+        $allSeated = empty(array_filter($updatedParticipants, fn($d) => empty($d->getPlaceNumber())));
+
+        // Renvoyer la réponse
+        $this->json([
+            'success' => true,
+            'seatStates' => $seatStates,
+            'participants' => array_map(fn($d) => $d->toArray(), $updatedParticipants),
+            'allParticipantsSeated' => $allSeated
+        ]);
     }
 
 }

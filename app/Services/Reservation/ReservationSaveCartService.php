@@ -2,6 +2,9 @@
 
 namespace app\Services\Reservation;
 
+use app\Models\Reservation\ReservationComplement;
+use app\Models\Reservation\ReservationComplementTemp;
+use app\Models\Reservation\ReservationDetailTemp;
 use app\Models\Tarif\Tarif;
 use app\Repository\Tarif\TarifRepository;
 
@@ -22,6 +25,11 @@ class ReservationSaveCartService
         $this->priceCalculator = $priceCalculator;
     }
 
+    /**
+     * @param ReservationDetailTemp[] $reservationDetails
+     * @param array $tarifsById
+     * @return array
+     */
     public function prepareReservationDetailSummary(array $reservationDetails, array $tarifsById): array
     {
         $grouped = $this->reservationSessionService->prepareSessionReservationDetailToView($reservationDetails, $tarifsById);
@@ -30,11 +38,16 @@ class ReservationSaveCartService
         $subtotal = 0;
 
         foreach ($grouped as $tarifId => $group) {
-            $participants = array_values(array_filter($group, 'is_array'));
+
+            // On garde uniquement les valeurs qui sont des objets ReservationDetailTemp
+            $participants = array_values(array_filter(
+                $group,
+                static fn($item) => $item instanceof ReservationDetailTemp
+            ));
             $count = count($participants);
 
             $tarif = $tarifsById[$tarifId] ?? null;
-            $seatCount = $tarif ? (int)($tarif->getSeatCount() ?? 0) : 0;
+            $seatCount = $tarif ? ($tarif->getSeatCount() ?? 0) : 0;
             $price = $tarif ? (int)$tarif->getPrice() : 0;
 
             $calc = $this->priceCalculator->computeDetailTotals($count, $seatCount, $price);
@@ -58,16 +71,47 @@ class ReservationSaveCartService
         return ['details' => $summary, 'subtotal' => $subtotal];
     }
 
-    public function prepareReservationComplementSummary(array $reservationComplement, array $tarifsById): array
+    /**
+     * @param ReservationComplementTemp[] $reservationComplements
+     * @param array $tarifsById
+     * @return array
+     */
+    public function prepareReservationComplementSummary(array $reservationComplements, array $tarifsById): array
     {
-        $complements = $this->reservationSessionService->prepareReservationComplementToView($reservationComplement, $tarifsById);
+        $complements = [];
+        $subtotal    = 0;
 
-        $subtotal = 0;
-        foreach ($complements as $tid => &$group) {
-            $qty = (int)($group['qty'] ?? 0);
+        foreach ($reservationComplements as $row) {
+            if (!$row instanceof ReservationComplementTemp) {
+                continue;
+            }
+
+            $tarifId = $row->getTarif() ?? 0;
+            if ($tarifId <= 0 || !isset($tarifsById[$tarifId])) {
+                continue;
+            }
+
+            /** @var Tarif $tarif */
+            $tarif = $row->getTarifObject();
+
+            $complements[$tarifId] = [
+                'tarif_name'  => $tarif->getName(),
+                'description' => $tarif->getDescription(),
+                'price'       => $tarif->getPrice(),
+                'qty'         => $row->getQty(),
+                'code'       => $row->getTarifAccessCode(),
+                'total'       => $row->getQty() * $tarif->getPrice(),
+            ];
+
+        }
+
+        // Calcul des totaux + normalisation des codes pour la vue
+        foreach ($complements as $tarifId => &$group) {
+            $qty   = (int)($group['qty']   ?? 0);
             $price = (int)($group['price'] ?? 0);
+
             $group['total'] = $this->priceCalculator->computeComplementTotal($qty, $price);
-            $group['codes'] = $group['codes'] ?? [];
+
             $subtotal += $group['total'];
         }
         unset($group);
@@ -78,16 +122,21 @@ class ReservationSaveCartService
         ];
     }
 
+
+    /**
+     * @param $session
+     * @return array
+     */
     public function prepareReservationToSaveTemporarily($session): array
     {
-        $tarifs = $this->tarifRepository->findByEventId($session['event_id']);
+        $tarifs = $this->tarifRepository->findByEventId($session['reservation']->getEvent());
         $tarifsById = [];
         foreach ($tarifs as $tarif) {
             $tarifsById[$tarif->getId()] = $tarif;
         }
 
-        $detailReport     = $this->prepareReservationDetailSummary($session['reservation_detail'], $tarifsById);
-        $complementReport = $this->prepareReservationComplementSummary($session['reservation_complement'] ?? [], $tarifsById);
+        $detailReport     = $this->prepareReservationDetailSummary($session['reservation_details'], $tarifsById);
+        $complementReport = $this->prepareReservationComplementSummary($session['reservation_complements'] ?? [], $tarifsById);
 
         $this->reservationSessionService->setReservationSession('totals', [
             'details_subtotal'     => $detailReport['subtotal'],
@@ -96,8 +145,8 @@ class ReservationSaveCartService
         ]);
 
         return [
-            'event_id'               => $session['event_id'],
-            'event_session_id'       => $session['event_session_id'] ?? null,
+            'event_id'               => $session['reservation']->getEvent(),
+            'event_session_id'       => $session['reservation']->getEventSession() ?? null,
             'swimmer_id'             => $session['swimmer_id'] ?? null,
             'access_code_used'       => $session['access_code_used'] ?? null,
             'booker'                 => $session['booker'] ?? [],

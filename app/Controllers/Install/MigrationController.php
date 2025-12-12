@@ -19,7 +19,7 @@ class MigrationController
     use HasPdoConnection;
     private BuildLink $buildLink;
 
-    private const MIGRATIONS_TABLE = 'migrations';
+    private const string MIGRATIONS_TABLE = 'migrations';
     private string $migrationPath = __DIR__ . '/../../../database/migrations/';
 
     public function __construct()
@@ -58,36 +58,41 @@ class MigrationController
             }
         }
 
+        // Nettoie un éventuel flag de session
+        if (isset($_SESSION['applied_migrations']) && empty($toApply) && $this->doesAdminUserExist()) {
+            unset($_SESSION['applied_migrations']);
+        }
         // Doit-on afficher le formulaire email admin ?
         $needEmail = $userMigrationApplied
-            || isset($_SESSION['applied_migrations'])
-            || $this->shouldPromptForAdminEmail();
+                || isset($_SESSION['applied_migrations'])
+                || $this->shouldPromptForAdminEmail();
+
 
         if ($needEmail) {
             $error = '';
 
-            if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST' && isset($_POST['email'])) {
-                $email = trim((string)($_POST['email']));
-                $error = $this->processAdminEmail($email);
-                if ($error === '') {
-                    echo "Email du user id=1 mis à jour avec succès.<br>";
-                    echo "Un email de réinitialisation de mot de passe a été envoyé à l'adresse fournie.<br>";
-
-                    if (!empty($_SESSION['applied_migrations'])) {
-                        echo "Fichiers de migration traités :<ul>";
-                        foreach ($_SESSION['applied_migrations'] as $file) {
-                            echo "<li>" . htmlspecialchars((string)$file) . "</li>";
-                        }
-                        echo "</ul>";
-                        unset($_SESSION['applied_migrations']);
-                    }
-                    echo '<a href="/">Retour à l\'accueil</a>';
-                    return;
-                }
-            }
-
             $this->renderAdminEmailForm($error);
             return;
+        }
+
+        if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST' && isset($_POST['email'])) {
+            $email = trim((string)($_POST['email']));
+            $error = $this->processAdminEmail($email);
+            if ($error === '') {
+                echo "Email du user id=1 mis à jour avec succès.<br>";
+                echo "Un email de réinitialisation de mot de passe a été envoyé à l'adresse fournie.<br>";
+
+                if (!empty($_SESSION['applied_migrations'])) {
+                    echo "Fichiers de migration traités :<ul>";
+                    foreach ($_SESSION['applied_migrations'] as $file) {
+                        echo "<li>" . htmlspecialchars((string)$file) . "</li>";
+                    }
+                    echo "</ul>";
+                    unset($_SESSION['applied_migrations']);
+                }
+                echo '<a href="/">Retour à l\'accueil</a>';
+                return;
+            }
         }
 
         if (empty($toApply)) {
@@ -108,8 +113,8 @@ class MigrationController
     private function getAppliedMigrations(): array
     {
         $this->pdo->query(
-            "CREATE TABLE IF NOT EXISTS " . self::MIGRATIONS_TABLE .
-            " (name VARCHAR(255) PRIMARY KEY, executed_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP)"
+                "CREATE TABLE IF NOT EXISTS " . self::MIGRATIONS_TABLE .
+                " (name VARCHAR(255) PRIMARY KEY, executed_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP)"
         );
         $stmt = $this->pdo->query("SELECT name FROM " . self::MIGRATIONS_TABLE);
         return $stmt->fetchAll(PDO::FETCH_COLUMN) ?: [];
@@ -142,21 +147,92 @@ class MigrationController
         // Retire commentaires blocs
         $sql = preg_replace('/\/\*.*?\*\//s', '', $sql) ?? $sql;
 
-        $lines = preg_split('/\R/', $sql) ?: [];
-        $filtered = [];
-        foreach ($lines as $line) {
-            $trim = trim($line);
-            if ($trim === '' || str_starts_with($trim, '--') || str_starts_with($trim, '#')) {
+        $len = strlen($sql);
+        $statements = [];
+        $current = '';
+        $inSingle = false;
+        $inDouble = false;
+
+        for ($i = 0; $i < $len; $i++) {
+            $ch = $sql[$i];
+            $next = $i + 1 < $len ? $sql[$i + 1] : null;
+            $prev = $i > 0 ? $sql[$i - 1] : null;
+
+            // Gère les commentaires de ligne (-- ...\n) et (# ...\n) hors quotes
+            if (!$inSingle && !$inDouble) {
+                if ($ch === '-' && $next === '-') {
+                    // saute jusqu'à fin de ligne
+                    $i += 2;
+                    while ($i < $len && $sql[$i] !== "\n") {
+                        $i++;
+                    }
+                    continue;
+                }
+                if ($ch === '#') {
+                    $i++;
+                    while ($i < $len && $sql[$i] !== "\n") {
+                        $i++;
+                    }
+                    continue;
+                }
+            }
+
+            // Toggle quotes (ignore si précédé par backslash)
+            if ($ch === "'" && !$inDouble) {
+                // si précédent est backslash, il peut être une échappement, mais MySQL utilise souvent '' ; on gère backslash simple
+                if ($prev !== '\\') {
+                    $inSingle = !$inSingle;
+                }
+                $current .= $ch;
                 continue;
             }
-            $filtered[] = $line;
+
+            if ($ch === '"' && !$inSingle) {
+                if ($prev !== '\\') {
+                    $inDouble = !$inDouble;
+                }
+                $current .= $ch;
+                continue;
+            }
+
+            // Si on trouve un ; hors quotes, termine une statement
+            if ($ch === ';' && !$inSingle && !$inDouble) {
+                $trimmed = trim($current);
+                if ($trimmed !== '') {
+                    $statements[] = $trimmed;
+                }
+                $current = '';
+                continue;
+            }
+
+            $current .= $ch;
         }
 
-        $clean = trim(implode("\n", $filtered));
-        // Découpe naïve sur ';'
-        $parts = array_map('trim', explode(';', $clean));
-        // Filtre vide
-        return array_values(array_filter($parts, static fn($p) => $p !== ''));
+        // Ajoute le dernier morceau s'il n'est pas vide
+        $last = trim($current);
+        if ($last !== '') {
+            $statements[] = $last;
+        }
+
+        // Filtre lignes vides et supprime commentaires début de ligne résiduels
+        $out = [];
+        foreach ($statements as $stmt) {
+            $lines = preg_split('/\R/', $stmt) ?: [$stmt];
+            $filtered = [];
+            foreach ($lines as $line) {
+                $t = ltrim($line);
+                if ($t === '' || str_starts_with($t, '--') || str_starts_with($t, '#')) {
+                    continue;
+                }
+                $filtered[] = $line;
+            }
+            $s = trim(implode("\n", $filtered));
+            if ($s !== '') {
+                $out[] = $s;
+            }
+        }
+
+        return array_values($out);
     }
 
     /** Classification minimale. */
@@ -195,43 +271,60 @@ class MigrationController
                     continue;
                 }
 
-                // Exécute DDL/DCL hors transaction
-                try {
-                    foreach ($statements as $stmt) {
-                        $type = $this->getStmtType($stmt);
-                        if ($type === 'DDL' || $type === 'DCL') {
-                            $this->pdo->exec($stmt);
-                        }
+                // Détecte si le fichier contient du DDL/DCL
+                $hasDDL = false;
+                foreach ($statements as $stmt) {
+                    $type = $this->getStmtType($stmt);
+                    if ($type === 'DDL' || $type === 'DCL') {
+                        $hasDDL = true;
+                        break;
                     }
+                }
+
+                try {
+                    if ($hasDDL) {
+                        // Exécute chaque instruction sans transaction (DDL provoque des commits implicites)
+                        foreach ($statements as $stmt) {
+                            $isUserInsert = (bool)preg_match('/^\s*INSERT\s+(?:IGNORE\s+)?INTO\s+[`"]?user[`"]?\b/i', $stmt);
+                            $res = $this->pdo->exec($stmt);
+                            if ($res === false) {
+                                $err = $this->pdo->errorInfo();
+                                throw new PDOException($err[2] ?? 'Erreur lors de l\'exécution de la requête DDL/DCL');
+                            }
+                            if ($isUserInsert) {
+                                $userMigrationApplied = true;
+                            }
+                        }
+                    } else {
+                        // Regroupe les DML dans une transaction
+                        $this->pdo->beginTransaction();
+                        foreach ($statements as $stmt) {
+                            $isUserInsert = (bool)preg_match('/^\s*INSERT\s+(?:IGNORE\s+)?INTO\s+[`"]?user[`"]?\b/i', $stmt);
+                            $res = $this->pdo->exec($stmt);
+                            if ($res === false) {
+                                $err = $this->pdo->errorInfo();
+                                throw new PDOException($err[2] ?? 'Erreur lors de l\'exécution de la requête DML');
+                            }
+                            if ($isUserInsert) {
+                                $userMigrationApplied = true;
+                            }
+                        }
+                        $this->pdo->commit();
+                    }
+
+                    // Enregistre la migration
+                    $insert = $this->pdo->prepare("INSERT INTO " . self::MIGRATIONS_TABLE . " (name) VALUES (:name)");
+                    $insert->execute(['name' => $file]);
+
+                    $appliedNow[] = $file;
+
+                    // Ne plus se baser sur le nom du fichier pour détecter la migration user
                 } catch (PDOException $e) {
-                    echo "Erreur DDL/DCL " . htmlspecialchars($file) . " : " . htmlspecialchars($e->getMessage()) . "<br>";
+                    if ($this->pdo->inTransaction()) {
+                        $this->pdo->rollBack();
+                    }
+                    echo "Erreur DDL/DML " . htmlspecialchars($file) . " : " . htmlspecialchars($e->getMessage()) . "<br>";
                     continue;
-                }
-
-                //Pas de transaction/commit pour les requêtes DDL (Data Definition Language) car commit implicite de MySQL et donc plus rien à commit, ce qui lève une erreur de commit.
-                if ($this->getStmtType($statements[0]) == "DDL") {
-                    //On exécute la requête SQL du fichier
-                    $this->pdo->exec($sql);
-                    //Puis, on insère le nom du fichier dans la table migrations
-                    $stmt = $this->pdo->prepare("INSERT INTO " . self::MIGRATIONS_TABLE . " (name) VALUES (:name)");
-                    $stmt->execute(['name' => $file]);
-                } else {
-                    $this->pdo->beginTransaction();
-                    //On exécute la requête SQL du fichier
-                    $this->pdo->exec($sql);
-                    //Puis, on insère le nom du fichier dans la table migrations
-                    $stmt = $this->pdo->prepare("INSERT INTO " . self::MIGRATIONS_TABLE . " (name) VALUES (:name)");
-                    $stmt->execute(['name' => $file]);
-                    $this->pdo->commit();
-                }
-
-
-
-                $appliedNow[] = $file;
-
-                // Heuristique large : toute migration mentionnant "user" déclenche la suite d'initialisation
-                if (stripos($file, 'user') !== false) {
-                    $userMigrationApplied = true;
                 }
             } catch (PDOException $e) {
                 if ($this->pdo->inTransaction()) {
@@ -240,9 +333,6 @@ class MigrationController
                 echo "Erreur lors de la migration " . htmlspecialchars($file) . " : " . htmlspecialchars($e->getMessage()) . "<br>";
             }
         }
-
-        // Si la table/user existe maintenant, on force l'étape email
-        $userMigrationApplied = $userMigrationApplied || $this->doesAdminUserExist();
 
         return ['appliedNow' => $appliedNow, 'userMigrationApplied' => $userMigrationApplied];
     }

@@ -1,4 +1,4 @@
-<form method="POST" id="export-form" action="/gestion/reservations/search">
+<form id="export-form">
     <div class="row g-2 align-items-end mb-3">
         <div class="col-md-5">
             <label for="search-input" class="form-label">Rechercher une réservation :</label>
@@ -85,6 +85,15 @@ $hasContext = ($selectedSessionId > 0) || $isSearchMode;
             <i class="bi bi-box-arrow-up"></i>
             <span class="d-none d-sm-inline ms-1">Exporter</span>
         </a>
+        {% if $piscinesPerEvent[$selectedSessionId]['numbered_seats'] %}
+        <button type="button" id="show-occupation-plan" class="btn btn-sm btn-outline-info"
+                data-session-id="{{ $selectedSessionId }}"
+                data-piscine-id="{{ $piscinesPerEvent[$selectedSessionId]['id'] }}"
+        >
+            <i class="bi bi-grid-3x3-gap-fill"></i>
+            <span class="d-none d-sm-inline ms-1">Plan d'occupation</span>
+        </button>
+        {% endif %}
         {% endif %}
     </div>
 
@@ -214,6 +223,9 @@ $qParam = !empty($searchQuery) ? ('&q=' . urlencode($searchQuery)) : '';
 
 <!-- Modal Détails Réservation -->
 {% include '/gestion/reservations/_modal.tpl' with {'reservation' => $reservation, 'emailsTemplatesToSendManually' => $emailsTemplatesToSendManually} %}
+
+<!-- Modal Plan d'occupation -->
+{% include '/gestion/reservations/_occupation_plan_modal.tpl' %}
 
 {% if $totalPages > 1 %}
 <nav aria-label="Page navigation">

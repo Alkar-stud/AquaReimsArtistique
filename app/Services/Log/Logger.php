@@ -106,18 +106,18 @@ final class Logger implements LoggerInterface
                 $uri = $context['route'] ?? strtok($_SERVER['REQUEST_URI'] ?? '/', '?');
                 $status = $context['status'] ?? '???';
                 // Format: GET /gestion/logs
-                return "{$method} {$uri} -> {$status}";
+                return "$method $uri -> $status";
 
             case LogType::URL->value:
             case LogType::URL_ERROR->value:
                 $method = $context['method'] ?? $_SERVER['REQUEST_METHOD'] ?? 'UNK';
                 $uri = $context['uri'] ?? strtok($_SERVER['REQUEST_URI'] ?? '/', '?');
-                return "{$method} {$uri}";
+                return "$method $uri";
 
             case LogType::SECURITY->value:
                 $user = $context['user_id'] ?? 'anonymous';
                 $ip = $context['ip'] ?? ($_SERVER['REMOTE_ADDR'] ?? 'unknown');
-                return "{$message} - User: {$user}, IP: {$ip}";
+                return "$message - User: $user, IP: $ip";
 
             // Ajoutez d'autres cas pour d'autres canaux si nécessaire
 

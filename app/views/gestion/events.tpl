@@ -276,4 +276,4 @@
     </div>
 </template>
 
-<script src="/assets/js/gestion/events.js"></script>
+<script type="module" src="/assets/js/gestion/events.js"></script>

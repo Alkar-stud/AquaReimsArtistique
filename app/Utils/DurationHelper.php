@@ -33,4 +33,25 @@ class DurationHelper
 
         return max($seconds, 0);
     }
+
+    /**
+     * Pour savoir si le timeout est dépassé.
+     * @param string $dateTime au format ISO 8601
+     * @return bool
+     */
+    public function timeoutIsExpired(string$dateTime): bool
+    {
+        try {
+            $timeoutDate = new DateTimeImmutable($dateTime);
+            $now = new DateTimeImmutable();
+            // Retourne vrai si la date actuelle est postérieure à la date du timeout
+            return $now > $timeoutDate;
+        } catch (Throwable) {
+            // Si le format de la date est invalide, on peut considérer le timeout
+            // comme expiré pour des raisons de sécurité, ou retourner false.
+            // Retourner true est souvent plus sûr pour ne pas laisser une action se poursuivre indéfiniment.
+            return true;
+        }
+    }
+
 }

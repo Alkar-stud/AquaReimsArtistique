@@ -830,7 +830,7 @@ class ReservationRepository extends AbstractRepository
             'email' => $reservation->getEmail(),
             'phone' => $reservation->getPhone(),
             'swimmer_if_limitation' => $reservation->getSwimmerId(),
-            'rgpd_date_consentement'  => $reservation->getRgpdDateConsentement(),
+            'rgpd_date_consentement' => $reservation->getRgpdDateConsentement()->format('Y-m-d H:i:s') ?? null,
             'total_amount' => $reservation->getTotalAmount(),
             'total_amount_paid' => $reservation->getTotalAmountPaid(),
             'token' => $reservation->getToken(),

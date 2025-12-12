@@ -7,7 +7,7 @@
 - `qrcodeModif` \: chemin du PNG du QR code de modification.
 - `qrcodeEntrance` \: chemin du PNG du QR code d’entrée.
 - `qrcodeEntranceInMail` \: balise HTML \`<img>\` pour intégrer le QR code d’entrée inline \(`cid:qrcode_entrance`\).
-- `IDreservation` \: numéro lisible de réservation \(`StringHelper::generateReservationNumber($reservation->getId())`\).
+- `IDreservation` \: numéro lisible de réservation \.
 - `EventName` \: nom de l’évènement.
 - `DateEvent` \: date/heure de début \(`format('d/m/Y à Hhi')`\).
 - `DoorsOpen` \: heure d’ouverture des portes \(`format('d/m/Y à partir de Hhi')`\).

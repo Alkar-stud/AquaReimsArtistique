@@ -10,6 +10,7 @@ use app\Services\Log\Logger;
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;
 use PHPMailer\PHPMailer\SMTP;
+use app\Utils\MailSmtpDebugLogger;
 
 class MailService
 {
@@ -67,6 +68,11 @@ class MailService
 
         if ($this->debug) {
             $this->mailer->SMTPDebug = SMTP::DEBUG_SERVER;
+
+            $smtpLogger = new MailSmtpDebugLogger();
+            $this->mailer->Debugoutput = function (string $str, int $level) use ($smtpLogger) {
+                $smtpLogger->append($str, $level);
+            };
         }
     }
 

@@ -288,15 +288,18 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         // Onglet 2: Tarifs
-        const hasSeatedTarif = [...document.querySelectorAll('#pane-tarifs input[type="checkbox"]:checked')]
-            .some(cb => {
-                // Cette vérification est un peu fragile. Idéalement, on aurait une data-attribute.
-                // On se base sur le fait qu'il est dans la première liste.
-                return cb.closest('.list-group').previousElementSibling.textContent.includes('avec places');
-            });
-        if (!hasSeatedTarif) {
-            errors.push({ tab: 'tab-tarifs', message: "Au moins un tarif 'avec places' doit être sélectionné." });
-        }
+        const checkedTarifs = [...document.querySelectorAll('#pane-tarifs input[type="checkbox"]:checked')];
+
+        const hasSeatedTarif = checkedTarifs.some(cb => {
+            const ds = cb.dataset || {};
+            if (ds.seated === '1' || ds.type === 'seated' || ds.category === 'places') return true;
+
+            // 2) Fallback
+            const group = cb.closest('.list-group');
+            const heading = group ? group.previousElementSibling : null;
+            const text = (heading && heading.textContent) ? heading.textContent : '';
+            return /avec\s*places/i.test(text) || /places\s*assises/i.test(text);
+        });
 
         // Onglet  : Séances
         if (sessionsContainer.children.length === 0) {
@@ -343,3 +346,13 @@ document.addEventListener('DOMContentLoaded', function() {
         return true;
     }
 });
+
+
+// helper pour récupérer un libellé lisible d'un champ
+function safeLabel(input) {
+    const label = input?.previousElementSibling;
+    if (label && label.textContent) return label.textContent.trim();
+    const id = input.id ? document.querySelector(`label[for="${input.id}"]`) : null;
+    if (id && id.textContent) return id.textContent.trim();
+    return input.name || 'Champ requis';
+}

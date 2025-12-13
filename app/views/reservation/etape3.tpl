@@ -34,24 +34,29 @@
         <input type="hidden" id="event_id" name="event_id" value="{{ $reservation['reservation']->getEvent() }}">
 
         {% if !empty($allTarifsWithSeatForThisEvent) %}
-        <div id="tarifsContainer">
+        <div id="tarifsContainer" class="d-flex flex-wrap gap-2 mb-4">
             {% foreach $allTarifsWithSeatForThisEvent as $tarif %}
             {% if $tarif->getAccessCode() === null %}
-            <div class="mb-3">
-                <label for="tarif_{{ $tarif->getId() }}" class="form-label">
-                    <strong>{{ $tarif->getName() }}</strong>
-                    ({{ $tarif->getSeatCount() }} place{{ $tarif->getSeatCount() > 1 ? 's':'' }} incluse{{ $tarif->getSeatCount() > 1 ? 's':'' }})
-                    - {{ number_format($tarif->getPrice() / 100, 2, ',', ' ') }} €
-                    <br>
+            <div class="card-body d-flex align-items-start gap-2">
+                <div class="flex-grow-1">
+                    <div class="tarif-header">
+                        <span class="tarif-name">{{ $tarif->getName() }}</span>
+                        <span class="tarif-price">{{ number_format($tarif->getPrice() / 100, 2, ',', ' ') }} €</span>
+                    </div>
+
+                    <div class="tarif-includes">
+                        ({{ $tarif->getSeatCount() }} place{{ $tarif->getSeatCount() > 1 ? 's':'' }} incluse{{ $tarif->getSeatCount() > 1 ? 's':'' }})
+                    </div>
+
                     <div class="text small text-muted">
                         {{ $tarif->getDescription() }}
                     </div>
-                </label>
-
+                </div>
                 <div id="tarif_{{ $tarif->getId() }}_help" class="visually-hidden">
                     Chaque unité de ce tarif comprend {{ $tarif->getSeatCount() }} place{{ $tarif->getSeatCount() > 1 ? 's':'' }}.
+                    Saisissez un nombre entier supérieur ou égal à 0.
                 </div>
-
+                <!-- L'input de quantité à droite de la card -->
                 <input
                         type="number"
                         class="form-control place-input"
@@ -64,8 +69,8 @@
                         aria-invalid="false"
                         aria-describedby="step3-hint tarif_{{ $tarif->getId() }}_help tarif_{{ $tarif->getId() }}_error"
                 >
-                <div id="tarif_{{ $tarif->getId() }}_error" class="invalid-feedback" role="alert" aria-live="polite"></div>
             </div>
+
             {% endif %}
             {% endforeach %}
         </div>

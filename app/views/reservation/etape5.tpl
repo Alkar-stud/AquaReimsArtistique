@@ -1,6 +1,17 @@
 <div class="container-fluid" data-event-session-id="{{ $reservation['reservation']->getEventSession() ?? '0' }}">
     <h2 class="mb-4">Choix des places assises</h2>
 
+    <form id="reservationPlacesForm">
+        <!-- Bloc de boutons TOP (toujours visible) -->
+        <div class="row mb-3">
+            <div class="col-12 col-md-6 mb-2 mb-md-0">
+                <a href="/reservation/etape4Display" class="btn btn-secondary w-100 w-md-auto">Modifier mon choix précédent</a>
+            </div>
+            <div class="col-12 col-md-6 d-flex justify-content-md-end">
+                <button type="submit" class="btn btn-primary w-100 w-md-auto" data-role="submit-reservation" disabled>Valider et continuer</button>
+            </div>
+        </div>
+
     <!-- Liste des zones (visible au départ) -->
     {% include '/piscine/_zones.tpl' with { 'zones': $zones } %}
 
@@ -28,7 +39,7 @@
             </div>
         </div>
 
-    <form id="reservationPlacesForm">
+
         <!-- Conteneur pour la liste des participants à placer -->
         <div id="participants-to-seat-container" class="my-3">
             <h3 class="h5">Participants à placer</h3>
@@ -37,15 +48,7 @@
                 <li class="list-group-item text-muted">Chargement des participants...</li>
             </ul>
         </div>
-        <!-- Bloc de boutons TOP -->
-        <div class="row mb-3">
-            <div class="col-12 col-md-6 mb-2 mb-md-0">
-                <a href="/reservation/etape4Display" class="btn btn-secondary w-100 w-md-auto">Modifier mon choix précédent</a>
-            </div>
-            <div class="col-12 col-md-6 d-flex justify-content-md-end">
-                <button type="submit" class="btn btn-primary w-100 w-md-auto" data-role="submit-reservation" disabled>Valider et continuer</button>
-            </div>
-        </div>
+
 
         <div class="gradins-row align-items-center mb-2">
             <button type="button" class="nav-zone-btn prev d-none d-md-inline-flex" data-action="prev-zone" aria-label="Zone précédente">&larr;</button>

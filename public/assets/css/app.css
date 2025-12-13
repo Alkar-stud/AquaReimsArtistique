@@ -10,10 +10,8 @@
 /* Components */
 @import "components/buttons.css";
 @import "components/forms.css";
-
-
-
 @import "components/donation-slider.css";
+@import "components/reservation-step-tarif-card.css";
 
 /* Pages */
 @import "pages/login.css";

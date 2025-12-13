@@ -22,6 +22,18 @@
     --bs-btn-hover-color: var(--ara-color-white);
 }
 
+.btn-minus {
+    --bs-btn-bg: var(--ara-color-pink); /* purple */
+    --bs-btn-border-color: var(--ara-color-pink); /* purple */
+    /* On utilise une version foncée de la couleur secondaire (purple) pour le survol */
+    --bs-btn-hover-bg: var(--ara-color-darkpink);
+    --bs-btn-hover-border-color: var(--ara-color-darkpink);
+    --bs-btn-active-bg: var(--ara-color-darkpink);
+    --bs-btn-active-border-color: var(--ara-color-darkpink);
+    --bs-btn-color: var(--ara-color-white);
+    --bs-btn-hover-color: var(--ara-color-white);
+}
+
 .btn {
     display: inline-flex;
     align-items: center;       /* centrage vertical du contenu */

@@ -76,11 +76,11 @@
                                 <label for="modal-tarif-seat_count" class="form-label">Nb. sièges</label>
                                 <input type="number" min="0" name="seat_count" id="modal-tarif-seat_count" class="form-control">
                             </div>
-                            <div class="col-md-4 mb-3">
+                            <div class="col-md-4 mb-3 d-none">
                                 <label for="modal-tarif-min_age" class="form-label">Âge min.</label>
                                 <input type="number" min="0" name="min_age" id="modal-tarif-min_age" class="form-control">
                             </div>
-                            <div class="col-md-4 mb-3">
+                            <div class="col-md-4 mb-3 d-none">
                                 <label for="modal-tarif-max_age" class="form-label">Âge max.</label>
                                 <input type="number" min="0" name="max_age" id="modal-tarif-max_age" class="form-control">
                             </div>
@@ -135,7 +135,18 @@
         <table class="table align-middle">
             <thead>
             <tr>
-                <th>Nom</th><th>Description</th><th>Nb sièges</th><th>Âge min.</th><th>Âge max.</th><th>Max tickets</th><th>Prix</th><th>Prog. inclus</th><th>Justif. requis</th><th>Code d'accès</th><th>Actif</th><th>Actions</th>
+                <th>Nom</th
+                ><th>Description</th>
+                <th>Nb sièges</th>
+                <th class="d-none">Âge min.</th>
+                <th class="d-none">Âge max.</th>
+                <th>Max tickets</th>
+                <th>Prix</th>
+                <th>Prog. inclus</th>
+                <th>Justif. requis</th>
+                <th>Code d'accès</th>
+                <th>Actif</th>
+                <th>Actions</th>
             </tr>
             </thead>
             <tbody>
@@ -145,8 +156,8 @@
                     <td><input type="text" name="name" class="form-control" required></td>
                     <td><input type="text" name="description" class="form-control"></td>
                     <td><input type="number" min="0" name="seat_count" class="form-control"></td>
-                    <td><input type="number" min="0" name="min_age" class="form-control"></td>
-                    <td><input type="number" min="0" name="max_age" class="form-control"></td>
+                    <td><input type="number" min="0" name="min_age" class="form-control d-none"></td>
+                    <td><input type="number" min="0" name="max_age" class="form-control d-none"></td>
                     <td><input type="number" min="0" name="max_tickets" class="form-control"></td>
                     <td><input type="number" min="0" step="0.01" name="price" class="form-control" required></td>
                     <td class="text-center"><input type="checkbox" name="includes_program"></td>

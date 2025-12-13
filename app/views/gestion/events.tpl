@@ -146,26 +146,36 @@
                                 <p class="text-muted">Sélectionnez les tarifs applicables à cet événement. Au moins un tarif avec place est requis.</p>
 
                                 <h6><i class="bi bi-person-workspace"></i> Tarifs avec places</h6>
-                                <div class="list-group mb-4">
+                                <!-- Conteneur des cartes tarifs avec places -->
+                                <div class="d-flex flex-wrap gap-2 mb-4">
                                     {% foreach $allActiveTarifs as $tarif %}
                                     {% if $tarif->getSeatCount() > 0 %}
-                                    <label class="list-group-item">
-                                        <input class="form-check-input me-2" type="checkbox" name="tarifs[]" value="{{ $tarif->getId() }}">
-                                        {{ $tarif->getName() }}
-                                        <span class="text-muted float-end">{{ number_format($tarif->getPrice() / 100, 2, ',', ' ') }} €</span>
+                                    <label class="card shadow-sm" style="min-width: 150px; cursor: pointer;">
+                                        <div class="card-body d-flex align-items-start gap-2">
+                                            <input class="form-check-input mt-1" type="checkbox" name="tarifs[]" value="{{ $tarif->getId() }}">
+                                            <div class="flex-grow-1">
+                                                <div class="fw-semibold">{{ $tarif->getName() }}</div>
+                                                <div class="text-muted small">{{ number_format($tarif->getPrice() / 100, 2, ',', ' ') }} €</div>
+                                            </div>
+                                        </div>
                                     </label>
                                     {% endif %}
                                     {% endforeach %}
                                 </div>
 
                                 <h6><i class="bi bi-plus-slash-minus"></i> Compléments</h6>
-                                <div class="list-group">
+                                <!-- Conteneur des cartes compléments -->
+                                <div class="d-flex flex-wrap gap-2">
                                     {% foreach $allActiveTarifs as $tarif %}
                                     {% if $tarif->getSeatCount() === null || $tarif->getSeatCount() == 0 %}
-                                    <label class="list-group-item">
-                                        <input class="form-check-input me-2" type="checkbox" name="tarifs[]" value="{{ $tarif->getId() }}">
-                                        {{ $tarif->getName() }}
-                                        <span class="text-muted float-end">{{ number_format($tarif->getPrice() / 100, 2, ',', ' ') }} €</span>
+                                    <label class="card shadow-sm" style="min-width: 150px; cursor: pointer;">
+                                        <div class="card-body d-flex align-items-start gap-2">
+                                            <input class="form-check-input mt-1" type="checkbox" name="tarifs[]" value="{{ $tarif->getId() }}">
+                                            <div class="flex-grow-1">
+                                                <div class="fw-semibold">{{ $tarif->getName() }}</div>
+                                                <div class="text-muted small">{{ number_format($tarif->getPrice() / 100, 2, ',', ' ') }} €</div>
+                                            </div>
+                                        </div>
                                     </label>
                                     {% endif %}
                                     {% endforeach %}
@@ -260,7 +270,7 @@
             </div>
             <div class="row">
                 <div class="col-md-6 mb-3 mb-md-0">
-                    <label for="inscription_dates___INDEX___start_registration_at" class="form-label">Ouverture des inscriptions</gabel>
+                    <label for="inscription_dates___INDEX___start_registration_at" class="form-label">Ouverture des inscriptions</label>
                         <input type="datetime-local" class="form-control" name="inscription_dates[__INDEX__][start_registration_at]" id="inscription_dates___INDEX___start_registration_at" required>
                 </div>
                 <div class="col-md-6">

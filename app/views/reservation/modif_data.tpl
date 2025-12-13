@@ -130,7 +130,7 @@ $checkoutIntentId = $_GET['checkoutIntentId'] ?? null;
                             </div>
                         </div>
                         {% if !empty($p['place_number']) %}
-                        <em>(place {{ $p['place_number'] }}</em>
+                        <em>(place {{ $p['place_number'] }})</em>
                         {% endif %}
                         {% if $i < ($group['count'] - 1) %}<br>{% endif %}
                         {% endforeach %}
@@ -160,73 +160,92 @@ $checkoutIntentId = $_GET['checkoutIntentId'] ?? null;
         <div id="complements-section">
             <h5>Compléments</h5>
             {% if !empty($reservationView['complements']) %}
-            <ul class="list-group mb-3" id="complements-container">
+            <div id="complements-container" class="d-flex flex-wrap gap-2 mb-3">
                 {% foreach $reservationView['complements'] as $tarif_id => $complementGroup %}
-                <li class="list-group-item d-flex justify-content-between align-items-start" data-complement-row-id="{{ $complementGroup['id'] }}">
-                    <div class="me-3">
-                        <strong>{{ $complementGroup['tarif']->getName() ?? '' }}</strong>
-                        {% if !empty($complementGroup['tarif']->getDescription()) %}
-                        <small class="text-muted">— {{ $complementGroup['tarif']->getDescription() }}</small>
-                        {% endif %}
-                        <div class="mt-1">Qté : {{ $complementGroup['qty'] }}</div>
-                        {% if isset($complementGroup['codes']) && !empty($complementGroup['codes']) %}
-                        <div class="text-muted small">(code {{ implode(', ', $complementGroup['codes']) }})</div>
-                        {% endif %}
-                    </div>
+                <div class="card">
+                    <div class="card-body d-flex align-items-start gap-2" data-complement-row-id="{{ $complementGroup['id'] }}">
+                        <div class="flex-grow-1">
+                            <div class="tarif-header">
+                                <span class="tarif-name">{{ $complementGroup['tarif']->getName() ?? '' }}</span>
+                                <span class="tarif-price">{{ number_format((($complementGroup['price'] ?? null) ?? ($complementGroup['tarif']->getPrice() ?? 0)) / 100, 2, ',', ' ') }} €</span>
+                            </div>
 
-                    <div class="ms-auto text-end">
-                        <div class="input-group input-group-sm" style="max-width: 100px;">
-                            <button class="btn btn-outline-secondary btn-sm complement-qty-btn" type="button" data-action="minus" data-complement-id="{{ $complementGroup['id'] }}">-</button>
-                            <input type="text" class="form-control text-center" id="qty-complement-{{ $complementGroup['id'] }}" value="{{ $complementGroup['qty'] }}" readonly>
+                            {% if !empty($complementGroup['tarif']->getDescription()) %}
+                            <div class="text small text-muted">{{ $complementGroup['tarif']->getDescription() }}</div>
+                            {% endif %}
 
-                            {% if (is_null($complementGroup['tarif']->getMaxTickets()) || $complementGroup['qty'] < $complementGroup['tarif']->getMaxTickets()) %}
-                            <button class="btn btn-outline-secondary btn-sm complement-qty-btn" type="button" data-action="plus" data-complement-id="{{ $complementGroup['id'] }}">+</button>
+                            <div class="mt-1">Qté : <span class="fw-bold">{{ $complementGroup['qty'] }}</span></div>
+
+                            {% if isset($complementGroup['codes']) && !empty($complementGroup['codes']) %}
+                            <div class="text-muted small">(code {{ implode(', ', $complementGroup['codes']) }})</div>
                             {% endif %}
                         </div>
 
-                        <strong>{{ number_format(($complementGroup['total'] ?? 0) / 100, 2, ',', ' ') }} €</strong>
-                        <div class="text-muted small">
-                            {{ $complementGroup['qty'] ?? 0 }}
-                            × {{ number_format((($complementGroup['price'] ?? null) ?? ($complementGroup['tarif']->getPrice() ?? 0)) / 100, 2, ',', ' ') }} €
+                        <div class="text-end">
+                            <div class="input-group input-group-sm mb-2" style="max-width: 120px;">
+                                <button class="btn btn-minus btn-sm complement-qty-btn" type="button" data-action="minus" data-complement-id="{{ $complementGroup['id'] }}" aria-label="Diminuer la quantité pour {{ $complementGroup['tarif']->getName() }}">-</button>
+                                <label for="qty-complement-{{ $complementGroup['id'] }}" class="visually-hidden">Quantité pour {{ $complementGroup['tarif']->getName() }}</label>
+                                <input type="text" class="form-control text-center" id="qty-complement-{{ $complementGroup['id'] }}" value="{{ $complementGroup['qty'] }}" readonly aria-readonly="true" inputmode="numeric" aria-live="polite">
+
+                                {% if (is_null($complementGroup['tarif']->getMaxTickets()) || $complementGroup['qty'] < $complementGroup['tarif']->getMaxTickets()) %}
+                                <button class="btn btn-secondary btn-sm complement-qty-btn" type="button" data-action="plus" data-complement-id="{{ $complementGroup['id'] }}" aria-label="Augmenter la quantité pour {{ $complementGroup['tarif']->getName() }}">+</button>
+                                {% endif %}
+                            </div>
+
+                            <strong>{{ number_format(($complementGroup['total'] ?? 0) / 100, 2, ',', ' ') }} €</strong>
+                            <div class="text-muted small">{{ $complementGroup['qty'] ?? 0 }} × {{ number_format((($complementGroup['price'] ?? null) ?? ($complementGroup['tarif']->getPrice() ?? 0)) / 100, 2, ',', ' ') }} €</div>
                         </div>
                     </div>
-                </li>
+                </div>
                 {% endforeach %}
-                <li class="list-group-item d-flex justify-content-between align-items-center bg-light">
-                    <span><strong>Sous-total compléments</strong></span>
-                    <strong>{{ number_format(($reservationView['totals']['complements_subtotal'] ?? 0) / 100, 2, ',', ' ') }} €</strong>
-                </li>
-            </ul>
+                <div class="w-100">
+                    <div class="list-group-item d-flex justify-content-between align-items-center bg-light mt-1">
+                        <span><strong>Sous-total compléments</strong></span>
+                        <strong>{{ number_format(($reservationView['totals']['complements_subtotal'] ?? 0) / 100, 2, ',', ' ') }} €</strong>
+                    </div>
+                </div>
+            </div>
             {% endif %}
 
             <!-- Ajouter des articles si disponibles -->
             {% if isset($availableComplements) && !empty($availableComplements) %}
             <h5 class="mt-4">Ajouter des compléments</h5>
-            <div class="list-group mb-3">
+            <div id="available-complements-container" class="d-flex flex-wrap gap-2 mb-3">
                 {% foreach $availableComplements as $tarif %}
                 {% if !$tarif->getAccessCode() %}
-                <div class="list-group-item">
-                    <div class="d-flex justify-content-between align-items-center">
-                     <span class="fw-bold">
-                         {{ $tarif->getName() ?? '' }}
-                         <small class="text-muted">({{ number_format(($tarif->getPrice() ?? 0) / 100, 2, ',', ' ') }} €)</small>
-                     </span>
-                        <button class="btn btn-success btn-sm add-complement-btn" type="button" data-tarif-id="{{ $tarif->getId() }}">
-                            <i class="bi bi-plus-circle"></i>&nbsp;Ajouter
-                        </button>
+                <div class="card">
+                    <div class="card-body d-flex align-items-start gap-2">
+                        <div class="flex-grow-1">
+                            <div class="tarif-header">
+                                <span class="tarif-name">{{ $tarif->getName() ?? '' }}</span>
+                                <span class="tarif-price">{{ number_format(($tarif->getPrice() ?? 0) / 100, 2, ',', ' ') }} €</span>
+                            </div>
+                            {% if !empty($tarif->getDescription()) %}
+                            <div class="text small text-muted">{{ $tarif->getDescription() }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="text-end">
+                            <button class="btn btn-secondary btn-sm add-complement-btn" type="button" data-tarif-id="{{ $tarif->getId() }}">
+                                <i class="bi bi-plus-circle"></i>&nbsp;Ajouter
+                            </button>
+                        </div>
                     </div>
                 </div>
                 {% endif %}
                 {% endforeach %}
-                <div class="mb-3">
-                    <label for="specialCode" class="form-label">Vous avez un code ?</label>
-                    <div class="input-group">
-                        <input type="text" class="form-control" id="specialCode" placeholder="Saisissez votre code" style="max-width: 250px;">
-                        <button type="button" class="btn btn-outline-primary" id="validateCodeBtn">Valider le code</button>
+
+                <div class="w-100 mt-2">
+                    <div class="mb-3">
+                        <label for="specialCode" class="form-label">Vous avez un code ?</label>
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="specialCode" placeholder="Saisissez votre code" style="max-width: 250px;">
+                            <button type="button" class="btn btn-outline-primary" id="validateCodeBtn">Valider le code</button>
+                        </div>
+                        <div id="specialCodeFeedback" class="form-text text-danger"></div>
                     </div>
-                    <div id="specialCodeFeedback" class="form-text text-danger"></div>
+                    <div id="specialTarifContainer"></div>
                 </div>
-                <div id="specialTarifContainer"></div>
             </div>
         </div>
         {% endif %}
@@ -241,6 +260,7 @@ $checkoutIntentId = $_GET['checkoutIntentId'] ?? null;
                         Faire un don à l'association :
                     </label>
                     <div class="d-inline-block align-middle">
+                        <label for="donation-amount-input" class="visually-hidden">Montant du don</label>
                         <input type="number" id="donation-amount-input" min="0" step="0.1" value="0" class="form-control form-control-sm" style="width: 90px; display: inline-block;"> €
                         <button type="button" id="round-up-donation-btn" class="btn btn-outline-secondary btn-sm d-none ms-2" title="Arrondir à l'euro supérieur" style="font-size: 0.7rem; padding: 0.1rem 0.3rem;">
                             Arrondir
@@ -279,7 +299,7 @@ $checkoutIntentId = $_GET['checkoutIntentId'] ?? null;
 
                 <hr>
 
-                <!-- Total avec don (affiché si don > 0, ou si baseDue<=0 et don crée un dû) -->
+                <!-- Total avec don (affiché si don > 0, ou si baseDue <=0 et don crée un dû) -->
                 <div class="mt-2 d-none" id="total-with-donation">
                     Total à régler (avec don) :
                     <span class="text-danger" id="total-to-pay-with-donation">{{ number_format(max(0, $amountDue) / 100, 2, ',', ' ') }} €</span>
@@ -313,7 +333,7 @@ $checkoutIntentId = $_GET['checkoutIntentId'] ?? null;
                     <button type="button" id="pay-balance-btn" class="btn p-0 border-0" title="Payer le solde avec HelloAsso">
                         <img src="/assets/images/payer-avec-helloasso.svg" alt="Payer le solde avec HelloAsso" style="height: 50px;">
                     </button>
-                    {% if (isset($_ENV['APP_DEBUG']) and $_ENV['APP_DEBUG'] == "true") %}
+                    {% if (isset($_ENV['APP_ENV']) && in_array($_ENV['APP_ENV'], ['local', 'preprod'])) %}
                     <div class="alert alert-info mt-4">
                         <p class="mb-0"><b>Environnement de test :</b> voici la carte bancaire à utiliser : <b>4242424242424242</b>. Validité <b>date supérieure au mois en cours</b>, code : <b>3 chiffres au choix</b>.</p>
                         <p class="mb-0">Il faut cliquer sur le lien, la redirection automatique est désactivée en environnement de test.</p>

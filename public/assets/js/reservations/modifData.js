@@ -7,7 +7,7 @@ import { initComplementsForm } from './complementsForm.js';
 import { initSpecialCodeForm } from './specialCodeForm.js';
 import { initCancelButtons } from './cancelReservation.js';
 import { initPaymentManager } from './paymentManager.js';
-import { initPaymentCheckHandler } from './paymentCheckHandler.js'; // Import du nouveau gestionnaire
+import { initPaymentCheckHandler } from './paymentCheckHandler.js'; // Import du gestionnaire
 
 document.addEventListener('DOMContentLoaded', () => {
     const reservationDataContainer = document.getElementById('reservation-data-container');

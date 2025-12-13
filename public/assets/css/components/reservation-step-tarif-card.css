@@ -1,5 +1,7 @@
 /* Encadré + effets pour chaque item tarif existant (div.card-body) */
-#tarifsContainer > .card-body {
+#tarifsContainer > .card-body,
+#complements-container > .card > .card-body,
+#available-complements-container > .card > .card-body {
     display: flex;
     align-items: center;
     gap: .75rem;
@@ -16,56 +18,79 @@
     cursor: pointer;
 }
 
-#tarifsContainer > .card-body:hover {
+#tarifsContainer > .card-body:hover,
+#complements-container > .card > .card-body:hover,
+#available-complements-container > .card > .card-body:hover {
     transform: translateY(-1px);
     box-shadow: 0 6px 16px rgba(0,0,0,.08);
     border-color: #d0d0d0;
     background-color: #fafafa;
 }
 
-#tarifsContainer > .card-body:active {
+#tarifsContainer > .card-body:active,
+#complements-container > .card > .card-body:active,
+#available-complements-container > .card > .card-body:active {
     transform: translateY(0);
     box-shadow: 0 3px 10px rgba(0,0,0,.06);
 }
 
-#tarifsContainer > .card-body:focus-within {
+#tarifsContainer > .card-body:focus-within,
+#complements-container > .card > .card-body:focus-within,
+#available-complements-container > .card > .card-body:focus-within {
     border-color: var(--ara-color-purple, #7b1fa2);
     box-shadow: 0 0 0 3px rgba(123, 31, 162, .15);
 }
 
 /* Clic global sans bloquer les inputs */
 #tarifsContainer > .card-body .form-text,
-#tarifsContainer > .card-body .flex-grow-1 {
+#tarifsContainer > .card-body .flex-grow-1,
+#complements-container > .card > .card-body .form-text,
+#complements-container > .card > .card-body .flex-grow-1,
+#available-complements-container > .card > .card-body .form-text,
+#available-complements-container > .card > .card-body .flex-grow-1 {
     pointer-events: none;
 }
 #tarifsContainer > .card-body input,
 #tarifsContainer > .card-body button,
-#tarifsContainer > .card-body .place-input {
+#tarifsContainer > .card-body .place-input,
+#complements-container > .card > .card-body input,
+#complements-container > .card > .card-body button,
+#complements-container > .card > .card-body .place-input,
+#available-complements-container > .card > .card-body input,
+#available-complements-container > .card > .card-body button,
+#available-complements-container > .card > .card-body .place-input {
     pointer-events: auto;
 }
 
 /* Mise en page interne */
 #tarifsContainer .form-check-input { flex: 0 0 auto; }
 #tarifsContainer .flex-grow-1 { min-width: 0; }
+#complements-container .flex-grow-1 { min-width: 0; }
+#available-complements-container .flex-grow-1 { min-width: 0; }
 
 /* Nom + prix sur la même ligne */
-#tarifsContainer .tarif-header {
+#tarifsContainer .tarif-header,
+#complements-container .tarif-header,
+#available-complements-container .tarif-header {
     display: flex;
     align-items: baseline;
     gap: .5rem;
     flex-wrap: wrap;
 }
-#tarifsContainer .tarif-name { font-weight: 600; } /* seulement le nom en gras */
-#tarifsContainer .tarif-price { font-weight: 400; color: #555; }
+#tarifsContainer .tarif-name,
+#complements-container .tarif-name,
+#available-complements-container .tarif-name { font-weight: 600; } /* seulement le nom en gras */
+#tarifsContainer .tarif-price,
+#complements-container .tarif-price,
+#available-complements-container .tarif-price { font-weight: 400; color: #555; }
 
 /* Ligne "inclut X places" */
-#tarifsContainer .tarif-includes {
-    font-size: .9rem;
-    color: #6c757d;
-}
+#tarifsContainer .tarif-includes { font-size: .9rem; color: #6c757d; }
 
 /* Input de quantité à droite, taille compacte */
-#tarifsContainer .place-input {
+#tarifsContainer .place-input,
+#complements-container .place-input,
+#available-complements-container .place-input {
     width: 96px;
     margin-left: auto;
 }

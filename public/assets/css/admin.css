@@ -126,3 +126,36 @@
 }
 .btn-gestion .bi { line-height: 1; }
 .btn-sm.btn-gestion .bi { font-size: .95em; }
+
+
+/* Effets sur les "cards" de sélection de tarifs dans la modale Event */
+#pane-tarifs .card {
+    display: block;
+    border: 1px solid #e5e5e5;
+    transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease;
+    will-change: transform;
+}
+
+#pane-tarifs .card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(0,0,0,.08);
+    border-color: #d0d0d0;
+}
+
+#pane-tarifs .card:active {
+    transform: translateY(0);
+    box-shadow: 0 3px 10px rgba(0,0,0,.06);
+}
+
+#pane-tarifs .card:focus-within {
+    border-color: var(--ara-color-purple);
+    box-shadow: 0 0 0 3px rgba(123, 31, 162, .15);
+}
+
+/* Améliore le clic sur toute la carte */
+#pane-tarifs .card .card-body {
+    pointer-events: none;
+}
+#pane-tarifs .card input[type="checkbox"] {
+    pointer-events: auto;
+}

@@ -28,7 +28,7 @@ class EventSessionRepository extends AbstractRepository
         $event = null;
         if ($withEvent) {
             $eventRepo = new EventRepository();
-            $event = $eventRepo->findById((int)$rows[0]['event']);
+            $event = $eventRepo->findById((int)$rows[0]['event'], true);
         }
         return $this->hydrate($rows[0], $event);
     }

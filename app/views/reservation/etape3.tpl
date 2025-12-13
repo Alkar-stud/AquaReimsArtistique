@@ -38,11 +38,10 @@
             {% foreach $allTarifsWithSeatForThisEvent as $tarif %}
             {% if $tarif->getAccessCode() === null %}
             <div class="card-body d-flex align-items-start gap-2">
-                <input class="form-check-input mt-1" type="checkbox" name="tarifs[]" value="{{ $tarif->getId() }}">
                 <div class="flex-grow-1">
                     <div class="tarif-header">
                         <span class="tarif-name">{{ $tarif->getName() }}</span>
-                        <span class="tarif-price">{{ number_format($tarif->getPrice() / 100, 2, ',', ' ') }} €</span>
+                        <span class="tarif-price">{{ number_format($tarif->getPrice() / 100, 2, ',', ' ') }} €</span>
                     </div>
 
                     <div class="tarif-includes">
@@ -53,7 +52,10 @@
                         {{ $tarif->getDescription() }}
                     </div>
                 </div>
-
+                <div id="tarif_{{ $tarif->getId() }}_help" class="visually-hidden">
+                    Chaque unité de ce tarif comprend {{ $tarif->getSeatCount() }} place{{ $tarif->getSeatCount() > 1 ? 's':'' }}.
+                    Saisissez un nombre entier supérieur ou égal à 0.
+                </div>
                 <!-- L'input de quantité à droite de la card -->
                 <input
                         type="number"

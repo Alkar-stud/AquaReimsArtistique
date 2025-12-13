@@ -18,25 +18,21 @@
         <div id="reservationAlert" role="alert" aria-live="polite" tabindex="-1"></div>
 
         {% if !empty($allTarifsWithoutSeatForThisEvent) %}
-        <div id="tarifsContainer">
+        <div id="tarifsContainer" class="d-flex flex-wrap gap-2 mb-4">
             {% foreach $allTarifsWithoutSeatForThisEvent as $tarif %}
             {% if $tarif->getAccessCode() === null %}
-            <div class="mb-3">
-                <label for="tarif_{{ $tarif->getId() }}" class="form-label">
-                    <strong>{{ $tarif->getName() }}</strong>
-                    ({{ $tarif->getSeatCount() }} place{{ $tarif->getSeatCount() > 1 ? 's':'' }} incluse{{ $tarif->getSeatCount() > 1 ? 's':'' }})
-                    - {{ number_format($tarif->getPrice() / 100, 2, ',', ' ') }} €
-                    <br>
-                    <span class="text small text-muted">
+            <div class="card-body d-flex align-items-start gap-2">
+                <div class="flex-grow-1">
+                    <div class="tarif-header">
+                        <span class="tarif-name">{{ $tarif->getName() }}</span>
+                        <span class="tarif-price">{{ number_format($tarif->getPrice() / 100, 2, ',', ' ') }} €</span>
+                    </div>
+
+                    <div class="text small text-muted">
                         {{ $tarif->getDescription() }}
-                    </span>
-                </label>
-
-                <div id="tarif_{{ $tarif->getId() }}_help" class="visually-hidden">
-                    Chaque unité de ce complément comprend {{ $tarif->getSeatCount() }} place{{ $tarif->getSeatCount() > 1 ? 's':'' }}.
-                    Saisissez un nombre entier supérieur ou égal à 0.
+                    </div>
                 </div>
-
+                <!-- L'input de quantité à droite de la card -->
                 <input
                         type="number"
                         class="form-control place-input"
@@ -44,13 +40,12 @@
                         name="tarifs[{{ $tarif->getId() }}]"
                         min="0"
                         value="{{ isset($arrayTarifForForm[$tarif->getId()]) ? $arrayTarifForForm[$tarif->getId()] : 0 }}"
-                        data-nb-place="{{ $tarif->getSeatCount() ?? 1 }}"
                         inputmode="numeric"
                         aria-invalid="false"
                         aria-describedby="step6-hint tarif_{{ $tarif->getId() }}_help tarif_{{ $tarif->getId() }}_error"
                 >
-                <div id="tarif_{{ $tarif->getId() }}_error" class="invalid-feedback" role="alert" aria-live="polite"></div>
             </div>
+
             {% endif %}
             {% endforeach %}
         </div>

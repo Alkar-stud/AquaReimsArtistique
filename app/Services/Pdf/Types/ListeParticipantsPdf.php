@@ -4,29 +4,25 @@ namespace app\Services\Pdf\Types;
 
 use app\Repository\Reservation\ReservationRepository;
 use app\Services\Event\EventQueryService;
+use app\Services\Pdf\AbstractSessionPdfType;
 use app\Services\Pdf\BasePdf;
 use app\Services\Pdf\PdfTypeInterface;
-use RuntimeException;
 
-final readonly class ListeParticipantsPdf implements PdfTypeInterface
+final readonly class ListeParticipantsPdf extends AbstractSessionPdfType implements PdfTypeInterface
 {
     public function __construct(
-        private EventQueryService     $eventQueryService,
+        EventQueryService $eventQueryService,
         private ReservationRepository $reservationRepository
     ) {
+        parent::__construct($eventQueryService);
     }
 
     public function build(array $data): BasePdf
     {
-        $sessionId = $data['sessionId'];
-        $sortOrder = $data['sortOrder'];
+        $session = $this->requireSession($data);
 
-        // Récupérer les données
-        $session = $this->eventQueryService->findSessionById($sessionId);
-        if (!$session) {
-            throw new RuntimeException("Session non trouvée pour l'ID: $sessionId");
-        }
-        $reservations = $this->reservationRepository->findBySession($sessionId, false, null, null, null, true, true, $sortOrder);
+        $sortOrder = $data['sortOrder'];
+        $reservations = $this->reservationRepository->findBySession($data['sessionId'], false, null, null, null, true, true, $sortOrder);
 
         $documentTitle = "Liste des participants - " . $session->getEventObject()->getName() . " - " . $session->getSessionName();
         // Instancier BasePdf (le constructeur ajoute la 1ère page et l'en-tête)
@@ -37,7 +33,7 @@ final readonly class ListeParticipantsPdf implements PdfTypeInterface
         $widths = [8,50,20,16];
 
         if (!empty($reservations) && $reservations[0]->getEventObject()->getPiscine()->getNumberedSeats()) {
-            $headers[] = 'Emplacement';
+            $headers[] = 'N° place';
             $widths[] = 21;
         }
 
@@ -91,7 +87,7 @@ final readonly class ListeParticipantsPdf implements PdfTypeInterface
             $pdf->SetFillColor(255, 255, 255); // Couleur de fond pour les lignes de participants
             foreach ($reservation->getDetails() as $participant) {
                 //1ère colonne vide
-                $pdf->Cell($widths[0], 6, '', 1, 0);
+                $pdf->Cell($widths[0], 6, '', 1);
                 //2ème colonne avec NomPrenom
                 $pdf->Cell($widths[1], 6, mb_convert_encoding($participant->getName() . ' ' . $participant->getFirstName(), 'ISO-8859-1', 'UTF-8'), 1, 0, 'L', true);
                 //3ème colonne avec le type de tarif

@@ -3,40 +3,33 @@
 namespace app\Services\Pdf\Types;
 
 use app\Repository\Piscine\PiscineGradinsZonesRepository;
-use app\Repository\Reservation\ReservationRepository;
 use app\Services\Event\EventQueryService;
+use app\Services\Pdf\AbstractSessionPdfType;
 use app\Services\Pdf\BasePdf;
 use app\Services\Pdf\PdfTypeInterface;
 use app\Services\Piscine\SeatingPlanService;
 use app\Services\Reservation\ReservationQueryService;
-use RuntimeException;
 
-final class RecapPlacesA3Pdf implements PdfTypeInterface
+final readonly class RecapPlacesA3Pdf extends AbstractSessionPdfType implements PdfTypeInterface
 {
-    private EventQueryService     $eventQueryService;
-    private ReservationRepository $reservationRepository;
     private ReservationQueryService $reservationQueryService;
-
 
     public function __construct(
         EventQueryService $eventQueryService,
-        ReservationRepository $reservationRepository,
         ReservationQueryService $reservationQueryService,
     ) {
-        $this->eventQueryService = $eventQueryService;
+        parent::__construct($eventQueryService);
         $this->reservationQueryService = $reservationQueryService;
     }
 
     public function build(array $data): BasePdf
     {
+        // Session centralisée
+        $session = $this->requireSession($data);
         $sessionId = (int)($data['sessionId'] ?? 0);
-        $eventSession = $this->eventQueryService->findSessionById($sessionId);
-        if (!$eventSession) {
-            throw new RuntimeException("Session non trouvée pour l'ID: $sessionId");
-        }
 
-        $event = $eventSession->getEventObject();
-        $title = "Plan récapitulatif des places - " . $event->getName() . " - " . $eventSession->getSessionName();
+        $event = $session->getEventObject();
+        $title = "Plan récapitulatif des places - " . $event->getName() . " - " . $session->getSessionName();
 
         // A3 paysage
         $pdf = new BasePdf(mb_convert_encoding($title, 'ISO-8859-1', 'UTF-8'), 'P', 'mm', 'A3');

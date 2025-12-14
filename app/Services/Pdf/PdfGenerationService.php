@@ -12,6 +12,7 @@ use app\Services\Pdf\Types\RecapReservationsPdf;
 use app\Services\Reservation\ReservationQueryService;
 use app\Utils\StringHelper;
 use InvalidArgumentException;
+use RuntimeException;
 
 readonly class PdfGenerationService
 {
@@ -100,7 +101,7 @@ readonly class PdfGenerationService
     {
         $session = $this->eventQueryService->findSessionById($sessionId);
         if (!$session) {
-            throw new \RuntimeException("Session non trouvée pour l'ID: $sessionId");
+            throw new RuntimeException("Session non trouvée pour l'ID: $sessionId");
         }
 
         if (!isset(self::PDF_TYPES[$pdfType])) {
@@ -126,8 +127,15 @@ readonly class PdfGenerationService
 
         $builderClass = self::PDF_TYPES[$pdfType]['builder'];
 
-        // On instancie la classe spécialiste requise en lui passant les dépendances nécessaires.
-        return new $builderClass($this->eventQueryService, $this->reservationRepository, $this->reservationQueryService);
+        // On instancie la classe spécialiste requise en lui passant uniquement les dépendances nécessaires.
+        return match ($builderClass) {
+            RecapEvenementPdf::class => new RecapEvenementPdf($this->eventQueryService),
+            ListeParticipantsPdf::class => new ListeParticipantsPdf($this->eventQueryService, $this->reservationRepository),
+            RecapReservationsPdf::class => new RecapReservationsPdf($this->eventQueryService, $this->reservationRepository),
+            RecapPlacesA3Pdf::class => new RecapPlacesA3Pdf($this->eventQueryService, $this->reservationQueryService ),
+            RecapFinalPdf::class => new RecapFinalPdf(),
+            default => throw new InvalidArgumentException("Builder non pris en charge: $builderClass"),
+        };
     }
 
     /**

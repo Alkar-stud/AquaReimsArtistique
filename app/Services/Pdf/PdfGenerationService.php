@@ -133,7 +133,7 @@ readonly class PdfGenerationService
             ListeParticipantsPdf::class => new ListeParticipantsPdf($this->eventQueryService, $this->reservationRepository),
             RecapReservationsPdf::class => new RecapReservationsPdf($this->eventQueryService, $this->reservationRepository),
             RecapPlacesA3Pdf::class => new RecapPlacesA3Pdf($this->eventQueryService, $this->reservationQueryService ),
-            RecapFinalPdf::class => new RecapFinalPdf(),
+            RecapFinalPdf::class => new RecapFinalPdf($this->reservationRepository),
             default => throw new InvalidArgumentException("Builder non pris en charge: $builderClass"),
         };
     }

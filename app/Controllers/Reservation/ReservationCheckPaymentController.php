@@ -89,6 +89,10 @@ class ReservationCheckPaymentController extends AbstractController
         }
     }
 
+    /**
+     * Pour vérifier l'état d'un paiement directement auprès de HelloAsso
+     * @return void
+     */
     #[Route('/reservation/checkPaymentState', name: 'app_reservation_check_payment_state', methods: ['POST'])]
     public function checkPaymentState(): void
     {
@@ -106,6 +110,10 @@ class ReservationCheckPaymentController extends AbstractController
     }
 
 
+    /**
+     * Pour vérifier l'état d'un remboursement directement auprès de HelloAsso -- À supprimer ?
+     * @return void
+     */
     #[Route('/reservation/checkPaymentRefund', name: 'app_reservation_check_payment_refund', methods: ['POST'])]
     public function checkPaymentRefund(): void
     {
@@ -115,7 +123,6 @@ class ReservationCheckPaymentController extends AbstractController
         }
 
         //$this->paymentWebhookService->handlePaymentRefund($paymentId);
-
 
         $this->json(['success' => true]);
     }

@@ -1,0 +1,9 @@
+<?php
+namespace bin;
+
+require __DIR__ . '/../vendor/autoload.php';
+
+use app\Commands\AnonymizeDataCommand;
+
+$cmd = new AnonymizeDataCommand();
+exit($cmd->execute());

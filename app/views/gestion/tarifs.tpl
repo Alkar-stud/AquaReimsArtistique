@@ -156,8 +156,8 @@
                     <td><input type="text" name="name" class="form-control" required></td>
                     <td><input type="text" name="description" class="form-control"></td>
                     <td><input type="number" min="0" name="seat_count" class="form-control"></td>
-                    <td><input type="number" min="0" name="min_age" class="form-control d-none"></td>
-                    <td><input type="number" min="0" name="max_age" class="form-control d-none"></td>
+                    <td class=" d-none"><input type="number" min="0" name="min_age" class="form-control d-none"></td>
+                    <td class=" d-none"><input type="number" min="0" name="max_age" class="form-control d-none"></td>
                     <td><input type="number" min="0" name="max_tickets" class="form-control"></td>
                     <td><input type="number" min="0" step="0.01" name="price" class="form-control" required></td>
                     <td class="text-center"><input type="checkbox" name="includes_program"></td>
@@ -182,8 +182,8 @@
                 </td>
                 <td><input type="text" name="description" class="form-control" value="{{ $tarif_loop['item']->getDescription() ?? '' }}" size="100" form="form-update-{{ $tarif_loop['item']->getId() }}"></td>
                 <td><input type="number" name="seat_count" min="0" class="form-control" value="{{ $tarif_loop['item']->getSeatCount() ?? '' }}" form="form-update-{{ $tarif_loop['item']->getId() }}"></td>
-                <td><input type="number" name="min_age" min="0" class="form-control" value="{{ $tarif_loop['item']->getMinAge() ?? '' }}" form="form-update-{{ $tarif_loop['item']->getId() }}"></td>
-                <td><input type="number" name="max_age" class="form-control" value="{{ $tarif_loop['item']->getMaxAge() ?? '' }}" form="form-update-{{ $tarif_loop['item']->getId() }}"></td>
+                <td class="d-none"><input type="number" name="min_age" min="0" class="form-control" value="{{ $tarif_loop['item']->getMinAge() ?? '' }}" form="form-update-{{ $tarif_loop['item']->getId() }}"></td>
+                <td class="d-none"><input type="number" name="max_age" class="form-control" value="{{ $tarif_loop['item']->getMaxAge() ?? '' }}" form="form-update-{{ $tarif_loop['item']->getId() }}"></td>
                 <td><input type="number" name="max_tickets" min="0" class="form-control" value="{{ $tarif_loop['item']->getMaxTickets() }}" form="form-update-{{ $tarif_loop['item']->getId() }}"></td>
                 <td><input type="number" step="0.10" min="0" name="price" class="form-control" required value="{{ number_format($tarif_loop['item']->getPrice() / 100, 2, '.', '') }}" form="form-update-{{ $tarif_loop['item']->getId() }}"></td>
                 <td class="text-center"><input type="checkbox" name="includes_program" {{ $tarif_loop['item']->getIncludesProgram() ? 'checked' : '' }} form="form-update-{{ $tarif_loop['item']->getId() }}"></td>

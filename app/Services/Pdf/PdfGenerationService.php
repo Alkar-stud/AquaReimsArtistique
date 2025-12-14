@@ -9,6 +9,7 @@ use app\Services\Pdf\Types\RecapEvenementPdf;
 use app\Services\Pdf\Types\RecapFinalPdf;
 use app\Services\Pdf\Types\RecapPlacesA3Pdf;
 use app\Services\Pdf\Types\RecapReservationsPdf;
+use app\Services\Reservation\ReservationQueryService;
 use app\Utils\StringHelper;
 use InvalidArgumentException;
 
@@ -39,7 +40,9 @@ readonly class PdfGenerationService
 
     public function __construct(
         private EventQueryService     $eventQueryService,
-        private ReservationRepository $reservationRepository
+        private ReservationRepository $reservationRepository,
+        private ReservationQueryService $reservationQueryService,
+
     ) {
     }
 
@@ -124,7 +127,7 @@ readonly class PdfGenerationService
         $builderClass = self::PDF_TYPES[$pdfType]['builder'];
 
         // On instancie la classe spécialiste requise en lui passant les dépendances nécessaires.
-        return new $builderClass($this->eventQueryService, $this->reservationRepository);
+        return new $builderClass($this->eventQueryService, $this->reservationRepository, $this->reservationQueryService);
     }
 
     /**

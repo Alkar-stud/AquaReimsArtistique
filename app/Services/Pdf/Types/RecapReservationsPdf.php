@@ -4,29 +4,25 @@ namespace app\Services\Pdf\Types;
 
 use app\Repository\Reservation\ReservationRepository;
 use app\Services\Event\EventQueryService;
+use app\Services\Pdf\AbstractSessionPdfType;
 use app\Services\Pdf\BasePdf;
 use app\Services\Pdf\PdfTypeInterface;
-use RuntimeException;
 
-final readonly class RecapReservationsPdf implements PdfTypeInterface
+final readonly class RecapReservationsPdf extends AbstractSessionPdfType implements PdfTypeInterface
 {
     public function __construct(
-        private EventQueryService     $eventQueryService,
+        EventQueryService $eventQueryService,
         private ReservationRepository $reservationRepository
     ) {
+        parent::__construct($eventQueryService);
     }
 
     public function build(array $data): BasePdf
     {
-        $sessionId = $data['sessionId'];
-        $sortOrder = $data['sortOrder'];
+        $session = $this->requireSession($data);
 
-        // Récupérer les données
-        $session = $this->eventQueryService->findSessionById($sessionId);
-        if (!$session) {
-            throw new RuntimeException("Session non trouvée pour l'ID: $sessionId");
-        }
-        $reservations = $this->reservationRepository->findBySession($sessionId, false, null, null, null, true, true, $sortOrder);
+        $sortOrder = $data['sortOrder'];
+        $reservations = $this->reservationRepository->findBySession($data['sessionId'], false, null, null, null, true, true, $sortOrder);
 
         $documentTitle = "Récapitulatif des réservations - " . $session->getEventObject()->getName() . " - " . $session->getSessionName();
         // Instancier BasePdf (le constructeur ajoute la 1ère page et l'en-tête)
@@ -106,7 +102,6 @@ final readonly class RecapReservationsPdf implements PdfTypeInterface
                 }
             }
 
-            $indent = 5; // Indentation pour les lignes de complément (en mm)
             $complementLineHeight = 5; // Hauteur légèrement plus petite pour les lignes de détail
 
             if (!empty($groupedComplements)) {

@@ -2,28 +2,21 @@
 
 namespace app\Services\Pdf\Types;
 
-use app\Repository\Reservation\ReservationRepository;
 use app\Services\Event\EventQueryService;
+use app\Services\Pdf\AbstractSessionPdfType;
 use app\Services\Pdf\BasePdf;
 use app\Services\Pdf\PdfTypeInterface;
-use RuntimeException;
 
-final readonly class RecapEvenementPdf implements PdfTypeInterface
+final readonly class RecapEvenementPdf extends AbstractSessionPdfType implements PdfTypeInterface
 {
-    public function __construct(
-        private EventQueryService $eventQueryService,
-    ) {
+    public function __construct(EventQueryService $eventQueryService)
+    {
+        parent::__construct($eventQueryService);
     }
 
     public function build(array $data): BasePdf
     {
-        $sessionId = $data['sessionId'];
-
-        // Récupérer les données de la session
-        $session = $this->eventQueryService->findSessionById($sessionId);
-        if (!$session) {
-            throw new RuntimeException("Session non trouvée pour l'ID: $sessionId");
-        }
+        $session = $this->requireSession($data);
 
         $stats = $this->eventQueryService->getTarifStatsForEvent($session->getEventId());
         ksort($stats['sessions']);
@@ -37,14 +30,13 @@ final readonly class RecapEvenementPdf implements PdfTypeInterface
         $headersDetail = ['Places assises', 'Nb ticket', 'Nb personnes', 'Total'];
         $headersComplement = ['Compléments', 'Quantité', '', 'Total'];
         $widths = [50,25,25,25];
-        $totalWidth = array_sum($widths);
 
         // Calculer la marge gauche pour centrer le tableau
         $totalWidth = array_sum($widths);
         $leftMargin = ($pdf->GetPageWidth() - $totalWidth) / 2;
 
 
-        foreach ($stats['sessions'] as $sessionId => $stat) {
+        foreach ($stats['sessions'] as $stat) {
             //Dessiner le début pour la session
             $pdf->SetX($leftMargin);
             $pdf->drawTableHeader($pdf,[$stat['sessionName']], [$totalWidth]);
@@ -52,7 +44,7 @@ final readonly class RecapEvenementPdf implements PdfTypeInterface
             // Dessiner l'en-tête du tableau pour les places assises
             $pdf->SetX($leftMargin);
             $pdf->drawTableHeader($pdf, $headersDetail, $widths);
-            foreach ($stat['seated']['perTarif'] as $tarifId => $tarifStat) {
+            foreach ($stat['seated']['perTarif'] as $tarifStat) {
                 $amount = number_format($tarifStat['amount'] / 100, 2, ',', ' ');
                 $unitPrice = number_format($tarifStat['price'] / 100, 2, ',', ' ');
                 $pdf->SetX($leftMargin);
@@ -79,7 +71,7 @@ final readonly class RecapEvenementPdf implements PdfTypeInterface
             // Dessiner l'en-tête du tableau pour les compléments
             $pdf->SetX($leftMargin);
             $pdf->drawTableHeader($pdf, $headersComplement, $widths);
-            foreach ($stat['complements']['perTarif'] as $tarifId => $tarifStat) {
+            foreach ($stat['complements']['perTarif'] as $tarifStat) {
                 $amount = number_format($tarifStat['amount'] / 100, 2, ',', ' ');
                 $unitPrice = number_format($tarifStat['price'] / 100, 2, ',', ' ');
                 $pdf->SetX($leftMargin);

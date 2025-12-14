@@ -12,6 +12,13 @@ use RuntimeException;
 
 final readonly class RecapFinalPdf implements PdfTypeInterface
 {
+    private ReservationRepository $reservationRepository;
+
+    public function __construct(
+        ReservationRepository $reservationRepository,
+    ) {
+        $this->reservationRepository = $reservationRepository;
+    }
     public function build(array $data): BasePdf
     {
         if (!defined('EURO_SYMBOL')) {
@@ -19,10 +26,9 @@ final readonly class RecapFinalPdf implements PdfTypeInterface
         }
 
         $reservationId = $data['reservationId'];
-        $reservationRepository = new ReservationRepository();
         $QRCode = new QRCode();
         // Récupérer les données
-        $reservation = $reservationRepository->findById($reservationId, true, true, false, true);
+        $reservation = $this->reservationRepository->findById($reservationId, true, true, false, true);
         if (!$reservation) {
             throw new RuntimeException("Réservation non trouvée pour l'ID: $reservationId");
         }

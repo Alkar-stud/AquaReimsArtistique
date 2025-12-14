@@ -5,11 +5,9 @@ namespace app\Controllers\Gestion;
 use app\Attributes\Route;
 use app\Controllers\AbstractController;
 use app\Repository\Tarif\TarifRepository;
-use app\Services\Csv\CsvGenerationService;
 use app\Services\Pdf\PdfGenerationService;
 use app\Services\Reservation\ReservationQueryService;
 use app\Utils\DataHelper;
-use app\Utils\FilesHelper;
 use app\Utils\StringHelper;
 use Exception;
 
@@ -18,20 +16,17 @@ class ExportsController extends AbstractController
     private PdfGenerationService $PdfGenerationService;
     private DataHelper $dataHelper;
     private ReservationQueryService $reservationQueryService;
-    private CsvGenerationService $CsvGenerationService;
 
     public function __construct(
         PdfGenerationService $PdfGenerationService,
         DataHelper $dataHelper,
         ReservationQueryService $reservationQueryService,
-        CsvGenerationService $CsvGenerationService,
     )
     {
         parent::__construct(false);
         $this->PdfGenerationService = $PdfGenerationService;
         $this->dataHelper = $dataHelper;
         $this->reservationQueryService = $reservationQueryService;
-        $this->CsvGenerationService = $CsvGenerationService;
     }
 
     #[Route('/gestion/reservations/exports', name: 'app_gestion_reservations_exports', methods: ['GET'])]

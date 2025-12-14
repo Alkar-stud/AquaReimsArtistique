@@ -86,17 +86,14 @@ class ReservationController extends AbstractController
     #[Route('/reservation/etape2Display', name: 'etape2Display')]
     public function etape2Display(): void
     {
-        //On récupère la session
-        $session = $this->reservationSessionService->getReservationTempSession();
+        $session = $this->checkSessionAndRedirect();
 
-        //On vérifie si la session est expirée
-        if (!$session) {
-            $this->flashMessageService->setFlashMessage('warning', 'Votre session a expiré. Merci de recommencer votre réservation.');
-            $this->redirect('/reservation?session_expiree=r2');
+        // Valider les étapes précédentes
+        $result = $this->reservationDataValidationService->checkPreviousStep(2, $session);
+        if (!$result['success']) {
+            $this->flashMessageService->setFlashMessage('warning', 'Erreur de validation des données. Merci de recommencer votre réservation.');
+            $this->redirect('/reservation?session_erreur=cps1');
         }
-
-        // Valider l'étape 1
-        $result = $this->reservationDataValidationService->checkPreviousStep(1, $session);
 
         if (!$result['success']) {
             $this->flashMessageService->setFlashMessage('warning', 'Erreur de validation des données. Merci de recommencer votre réservation.');
@@ -112,27 +109,13 @@ class ReservationController extends AbstractController
     #[Route('/reservation/etape3Display', name: 'etape3Display', methods: ['GET'])]
     public function etape3Display(): void
     {
-        //On récupère la session
-        $session = $this->reservationSessionService->getReservationTempSession();
+        $session = $this->checkSessionAndRedirect();
 
-        //On vérifie si la session est expirée
-        $reservationTemp = $session['reservation'] ?? null;
-        if (!$reservationTemp) {
-            $this->flashMessageService->setFlashMessage('warning', 'Votre session a expiré. Merci de recommencer votre réservation.');
-            $this->redirect('/reservation?session_expiree=r2');
-        }
-
-        // Valider l'étape 1
-        $result = $this->reservationDataValidationService->checkPreviousStep(1, $session);
+        // Valider les étapes précédentes
+        $result = $this->reservationDataValidationService->checkPreviousStep(3, $session);
         if (!$result['success']) {
-            $this->flashMessageService->setFlashMessage('warning', 'Erreur de validation des données de l\'étape 1. Merci de recommencer votre réservation.');
+            $this->flashMessageService->setFlashMessage('warning', 'Erreur de validation des données. Merci de recommencer votre réservation.');
             $this->redirect('/reservation?session_erreur=cps1');
-        }
-        // Valider l'étape 2
-        $result = $this->reservationDataValidationService->checkPreviousStep(2, $session);
-        if (!$result['success']) {
-            $this->flashMessageService->setFlashMessage('warning', 'Erreur de validation des données de l\'étape 2. Merci de recommencer votre réservation.');
-            $this->redirect('/reservation?session_erreur=cps2');
         }
 
         //Récupération des limites et l'état de la réservation par nageur
@@ -163,31 +146,13 @@ class ReservationController extends AbstractController
     #[Route('/reservation/etape4Display', name: 'etape4Display', methods: ['GET'])]
     public function etape4Display(): void
     {
-        //On récupère la session
-        $session = $this->reservationSessionService->getReservationTempSession();
+        $session = $this->checkSessionAndRedirect();
 
-        //On vérifie si la session est expirée
-        $reservationTemp = $session['reservation'] ?? null;
-        if (!$reservationTemp) {
-            $this->flashMessageService->setFlashMessage('warning', 'Votre session a expiré. Merci de recommencer votre réservation.');
-            $this->redirect('/reservation?session_expiree=r2');
-        }
-
-        // Valider l'étape 1
-        if (!$this->reservationDataValidationService->checkPreviousStep(1, $session)) {
-            $this->flashMessageService->setFlashMessage('danger', 'Erreur dans le parcours, veuillez recommencer');
-            $this->redirect('/reservation');
-        }
-        // Valider l'étape 2
-        if (!$this->reservationDataValidationService->checkPreviousStep(2, $session)) {
-            $this->flashMessageService->setFlashMessage('danger', 'Erreur dans le parcours, veuillez recommencer');
-            $this->redirect('/reservation');
-        }
-
-        // Valider l'étape 3
-        if (!$this->reservationDataValidationService->checkPreviousStep(3, $session)) {
-            $this->flashMessageService->setFlashMessage('danger', 'Erreur dans le parcours, veuillez recommencer');
-            $this->redirect('/reservation');
+        // Valider les étapes précédentes
+        $result = $this->reservationDataValidationService->checkPreviousStep(4, $session);
+        if (!$result['success']) {
+            $this->flashMessageService->setFlashMessage('warning', 'Erreur de validation des données. Merci de recommencer votre réservation.');
+            $this->redirect('/reservation?session_erreur=cps1');
         }
 
         $this->render('reservation/etape4', [
@@ -198,35 +163,13 @@ class ReservationController extends AbstractController
     #[Route('/reservation/etape5Display', name: 'etape5Display', methods: ['GET'])]
     public function etape5Display(): void
     {
-        //On récupère la session
-        $session = $this->reservationSessionService->getReservationTempSession();
+        $session = $this->checkSessionAndRedirect();
 
-        //On vérifie si la session est expirée
-        $reservationTemp = $session['reservation'] ?? null;
-        if (!$reservationTemp) {
-            $this->flashMessageService->setFlashMessage('warning', 'Votre session a expiré. Merci de recommencer votre réservation.');
-            $this->redirect('/reservation?session_expiree=r2');
-        }
-
-        // Valider l'étape 1
-        if (!$this->reservationDataValidationService->checkPreviousStep(1, $session)) {
-            $this->flashMessageService->setFlashMessage('danger', 'Erreur dans le parcours, veuillez recommencer');
-            $this->redirect('/reservation');
-        }
-        // Valider l'étape 2
-        if (!$this->reservationDataValidationService->checkPreviousStep(2, $session)) {
-            $this->flashMessageService->setFlashMessage('danger', 'Erreur dans le parcours, veuillez recommencer');
-            $this->redirect('/reservation');
-        }
-        // Valider l'étape 3
-        if (!$this->reservationDataValidationService->checkPreviousStep(3, $session)) {
-            $this->flashMessageService->setFlashMessage('danger', 'Erreur dans le parcours, veuillez recommencer');
-            $this->redirect('/reservation');
-        }
-        // Valider l'étape 4
-        if (!$this->reservationDataValidationService->checkPreviousStep(4, $session)) {
-            $this->flashMessageService->setFlashMessage('danger', 'Erreur dans le parcours, veuillez recommencer');
-            $this->redirect('/reservation');
+        // Valider les étapes précédentes
+        $result = $this->reservationDataValidationService->checkPreviousStep(5, $session);
+        if (!$result['success']) {
+            $this->flashMessageService->setFlashMessage('warning', 'Erreur de validation des données. Merci de recommencer votre réservation.');
+            $this->redirect('/reservation?session_erreur=cps1');
         }
 
         //On récupère la piscine de cet event
@@ -255,28 +198,13 @@ class ReservationController extends AbstractController
     #[Route('/reservation/etape6Display', name: 'etape6Display', methods: ['GET'])]
     public function etape6Display(): void
     {
-        //On récupère la session
-        $session = $this->reservationSessionService->getReservationTempSession();
+        $session = $this->checkSessionAndRedirect();
 
-        //On vérifie si la session est expirée
-        $reservationTemp = $session['reservation'] ?? null;
-        if (!$reservationTemp) {
-            $this->flashMessageService->setFlashMessage('warning', 'Votre session a expiré. Merci de recommencer votre réservation.');
-            $this->redirect('/reservation?session_expiree=r2');
-        }
-
-        //Il faut valider les étapes précédentes
-        if (!$this->reservationDataValidationService->checkPreviousStep(1, $session)) {
-            $this->flashMessageService->setFlashMessage('danger', 'Erreur 1 dans le parcours, veuillez recommencer');
-            $this->redirect('/reservation');
-        }
-        if (!$this->reservationDataValidationService->checkPreviousStep(2, $session)) {
-            $this->flashMessageService->setFlashMessage('danger', 'Erreur 2 dans le parcours, veuillez recommencer');
-            $this->redirect('/reservation');
-        }
-        if (!$this->reservationDataValidationService->checkPreviousStep(3, $session)) {
-            $this->flashMessageService->setFlashMessage('danger', 'Erreur 3 dans le parcours, veuillez recommencer');
-            $this->redirect('/reservation');
+        // Valider les étapes précédentes
+        $result = $this->reservationDataValidationService->checkPreviousStep(6, $session);
+        if (!$result['success']) {
+            $this->flashMessageService->setFlashMessage('warning', 'Erreur de validation des données. Merci de recommencer votre réservation.');
+            $this->redirect('/reservation?session_erreur=cps1');
         }
 
         // Récupération des tarifs avec tarif sans place non assise de cet event
@@ -302,5 +230,31 @@ class ReservationController extends AbstractController
             'arrayTarifForForm'                 => $arrayTarifForForm,
         ], 'Réservations');
     }
+
+
+    /**
+     * Pour vérifier et rediriger si la session est expirée ou absente
+     * @return null[]
+     */
+    private function checkSessionAndRedirect(): array
+    {
+        //On récupère la session
+        $session = $this->reservationSessionService->getReservationTempSession();
+
+        // Session expirée ou absente -> on nettoie et on redirige
+        if (
+            !$session['reservation'] ||
+            $this->reservationSessionService->isReservationSessionExpired([
+                'last_activity' => $session['reservation']?->getCreatedAt()?->getTimestamp() ?? 0
+            ])
+        ) {
+            $this->reservationSessionService->clearReservationSession();
+            $this->flashMessageService->setFlashMessage('warning', 'Votre session a expiré. Merci de recommencer votre réservation.');
+            $this->redirect('/reservation?session_expiree=r2');
+        }
+
+        return $session;
+    }
+
 
 }

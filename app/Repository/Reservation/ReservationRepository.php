@@ -8,6 +8,8 @@ use app\Repository\Event\EventRepository;
 use app\Repository\Event\EventSessionRepository;
 use app\Repository\Swimmer\SwimmerRepository;
 use DateTimeInterface;
+use PDOStatement;
+use ReflectionClass;
 
 class ReservationRepository extends AbstractRepository
 {
@@ -409,7 +411,7 @@ class ReservationRepository extends AbstractRepository
                 $where[] = 'r.is_canceled = 0';
             }
             $sql = "SELECT $selectReservationColumns
-                FROM {$this->tableName} r
+                FROM $this->tableName r
                 WHERE " . implode(' AND ', $where) . "
                 ORDER BY reservationId";
 
@@ -1024,10 +1026,77 @@ class ReservationRepository extends AbstractRepository
         $swimmerId = $r->getSwimmerId();
         if ($swimmerId !== null) {
             $swimmerRepo = new SwimmerRepository();
-            $r->setSwimmer($swimmerRepo->findById((int)$swimmerId));
+            $r->setSwimmer($swimmerRepo->findById($swimmerId));
         } else {
             // S'assurer que la relation est explicitement à null si pas de limitation
             $r->setSwimmer(null);
         }
     }
+
+    /**
+     * Pour anonymiser les données personnelles
+     * @param DateTimeInterface $thresholdDate
+     * @param array $fieldStrategies
+     * @return int
+     */
+    public function anonymizeOlderThan(DateTimeInterface $thresholdDate, array $fieldStrategies): int
+    {
+        $threshold = $thresholdDate->format('Y-m-d H:i:s');
+
+        $sets = [];
+        foreach ($fieldStrategies as $field => $strategy) {
+            if (str_starts_with($strategy, 'fixed:')) {
+                $val = substr($strategy, 6);
+                $sets[] = "r.`$field` = " . $this->quote($val);
+            } elseif ($strategy === 'null') {
+                $sets[] = "r.`$field` = NULL";
+            } elseif (str_starts_with($strategy, 'concatIdEmail:') && $field === 'email') {
+                $domain = substr($strategy, strlen('concatIdEmail:'));
+                $sets[] = "r.`email` = CONCAT(r.id, " . $this->quote($domain) . ")";
+            }
+        }
+
+        if (empty($sets)) {
+            return 0;
+        }
+
+        $sql = "
+            UPDATE {$this->tableName} r
+            SET " . implode(', ', $sets) . ", r.updated_at = NOW(), r.`anonymized_at` = NOW()
+            WHERE r.created_at < :threshold
+                AND r.`anonymized_at` IS NULL
+                AND (
+                    r.name IS NOT NULL
+                    OR r.firstname IS NOT NULL
+                    OR r.email IS NOT NULL
+                    OR r.phone IS NOT NULL
+                )
+        ";
+        $ok = $this->execute($sql, ['threshold' => $threshold]);
+        return $ok ? ($this->getLastAffectedRows() ?? 0) : 0;
+    }
+
+
+    /**
+     * Helper pour récupérer le rowCount du dernier statement.
+     */
+    private function getLastAffectedRows(): ?int
+    {
+        $ref = new ReflectionClass(AbstractRepository::class);
+        $prop = $ref->getProperty('lastStatement');
+        /** @var PDOStatement|null $stmt */
+        $stmt = $prop->getValue($this);
+        return $stmt?->rowCount();
+    }
+
+    /**
+     * Quote simple pour valeurs littérales dans SET.
+     */
+    private function quote(string $val): string
+    {
+        // Ici, on échappe basiquement les quotes simples
+        $val = str_replace("'", "\\'", $val);
+        return "'$val'";
+    }
+
 }

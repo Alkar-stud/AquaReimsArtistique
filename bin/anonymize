@@ -1,9 +1,35 @@
 <?php
 namespace bin;
 
+date_default_timezone_set('Europe/Paris');
+
 require __DIR__ . '/../vendor/autoload.php';
 
+use Dotenv\Dotenv;
+use Dotenv\Exception\InvalidPathException;
 use app\Commands\AnonymizeDataCommand;
+
+try {
+    // On charge d'abord le fichier le plus spécifique (.env.local) s'il existe.
+    if (file_exists(__DIR__ . '/../.env.local')) {
+        Dotenv::createImmutable(__DIR__ . '/../', '.env.local')->load();
+    } elseif (file_exists(__DIR__ . '/../.env.prod')) {
+        Dotenv::createImmutable(__DIR__ . '/../', '.env.prod')->load();
+    } else if (file_exists(__DIR__ . '/../.env.docker')) {
+        Dotenv::createImmutable(__DIR__ . '/../', '.env.docker')->load();
+    }
+
+    // ENSUITE, on charge le fichier de base .env.
+    Dotenv::createImmutable(__DIR__ . '/../', '.env')->load();
+
+} catch (InvalidPathException $e) {
+    die("Erreur Critique: Le fichier de configuration de base `.env` est introuvable.\n");
+}
+
+//On écrase DB_HOST car en ligne de commande il n'y a pas de localhost
+if (isset($_ENV['DB_HOST']) && $_ENV['DB_HOST'] === 'localhost') {
+    $_ENV['DB_HOST'] = '127.0.0.1';
+}
 
 $cmd = new AnonymizeDataCommand();
 exit($cmd->execute());

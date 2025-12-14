@@ -7,6 +7,9 @@ use app\Repository\AbstractRepository;
 use app\Repository\Piscine\PiscineGradinsPlacesRepository;
 use app\Repository\Tarif\TarifRepository;
 use app\Repository\Reservation\ReservationRepository as ResRepo;
+use DateTimeInterface;
+use PDOStatement;
+use ReflectionClass;
 
 class ReservationDetailRepository extends AbstractRepository
 {
@@ -370,4 +373,77 @@ class ReservationDetailRepository extends AbstractRepository
 
         return $details;
     }
+
+    /**
+     * Pour anonymiser les données personnelles
+     * @param DateTimeInterface $thresholdDate
+     * @param array $fieldStrategies
+     * @return int
+     */
+    public function anonymizeOlderThan(DateTimeInterface $thresholdDate, array $fieldStrategies): int
+    {
+        $threshold = $thresholdDate->format('Y-m-d H:i:s');
+
+        $sets = [];
+        foreach ($fieldStrategies as $field => $strategy) {
+            if (str_starts_with($strategy, 'fixed:')) {
+                $val = substr($strategy, 6);
+                $sets[] = "rd.`$field` = " . $this->quote($val);
+            } elseif ($strategy === 'null') {
+                $sets[] = "rd.`$field` = NULL";
+            } elseif (str_starts_with($strategy, 'concatIdEmail:') && $field === 'email') {
+                // S'il y avait un email dans les détails (rare), garder le même mécanisme
+                $domain = substr($strategy, strlen('concatIdEmail:'));
+                $sets[] = "rd.`email` = CONCAT(rd.id, " . $this->quote($domain) . ")";
+            }
+        }
+
+        if (empty($sets)) {
+            return 0;
+        }
+
+        // On met à jour uniquement les détails dont la réservation est plus ancienne que le seuil
+        // et qui n'ont pas encore été anonymisés.
+        $sql = "
+        UPDATE {$this->tableName} rd
+        JOIN reservation r ON r.id = rd.reservation
+        SET " . implode(', ', $sets) . ",
+            rd.`updated_at` = NOW(),
+            rd.`anonymized_at` = NOW()
+        WHERE r.`created_at` < :threshold
+          AND rd.`anonymized_at` IS NULL
+          AND (
+              rd.`name` IS NOT NULL
+              OR rd.`firstname` IS NOT NULL
+              OR rd.`justificatif_name` IS NOT NULL
+          )
+    ";
+
+        $ok = $this->execute($sql, ['threshold' => $threshold]);
+        return $ok ? ($this->getLastAffectedRows() ?? 0) : 0;
+    }
+
+
+    /**
+     * Helper pour récupérer le rowCount du dernier statement.
+     */
+    private function getLastAffectedRows(): ?int
+    {
+        $ref = new ReflectionClass(AbstractRepository::class);
+        $prop = $ref->getProperty('lastStatement');
+        /** @var PDOStatement|null $stmt */
+        $stmt = $prop->getValue($this);
+        return $stmt?->rowCount();
+    }
+
+    /**
+     * Quote simple pour valeurs littérales dans SET.
+     */
+    private function quote(string $val): string
+    {
+        // Ici, on échappe basiquement les quotes simples
+        $val = str_replace("'", "\\'", $val);
+        return "'$val'";
+    }
+
 }

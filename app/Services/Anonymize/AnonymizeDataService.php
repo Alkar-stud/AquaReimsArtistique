@@ -8,6 +8,18 @@ use DateInterval;
 use DateTime;
 use Exception;
 
+/**
+ * Service d’anonymisation des données personnelles après une période de rétention.
+ *
+ * - S’appuie sur `reservation.anonymized_at` et `reservation_detail.anonymized_at` pour éviter les doublons.
+ * - Utilise des stratégies par champ: `fixed:<valeur>`, `null`, `concatIdEmail:<domaine>` (pour `email`).
+ * - La période de rétention est fournie au format ISO 8601 pour DateInterval (ex: 'P2Y' ou 'P6M').
+ *
+ * Exemple d’usage:
+ * $service = new AnonymizeDataService('P2Y');
+ * $result = $service->run();
+ * // $result = ['threshold_date' => 'YYYY-mm-dd HH:ii:ss', 'anonymized_reservations' => n, 'anonymized_details' => m]
+ */
 class AnonymizeDataService
 {
     private string $retentionPeriod;

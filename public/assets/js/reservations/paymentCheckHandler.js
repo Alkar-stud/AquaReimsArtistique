@@ -51,7 +51,7 @@ export function initPaymentCheckHandler(config) {
                 pollAttempts = 0; // repart à zéro pour ne pas repasser par le mode "force"
                 // Appel immédiat pour obtenir le bon retour avec le token
                 await checkPaymentStatus();
-                return;
+
             } else {
                 handlePollingFailure('La vérification du paiement a pris trop de temps. Veuillez vérifier votre boîte mail pour la confirmation.');
             }

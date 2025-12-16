@@ -7,6 +7,7 @@ use app\Models\Reservation\ReservationPayment;
 use app\Repository\Reservation\ReservationPaymentRepository;
 use app\Repository\Reservation\ReservationRepository;
 use app\Services\Reservation\ReservationProcessAndPersistService;
+use RuntimeException;
 
 
 /**
@@ -73,7 +74,7 @@ class PaymentWebhookService
     }
 
     /**
-     * Pour gérer la vérification d'un paiement et on met à jour si besoin
+     * Pour gérer la vérification d'un paiement additionnel et on met à jour si besoin
      *
      * @param int $paymentId
      * @return array
@@ -103,6 +104,45 @@ class PaymentWebhookService
     }
 
     /**
+     * Pour gérer la vérification d'un paiement et on met à jour si besoin
+     *
+     * @param int $checkoutId
+     * @return array
+     */
+    public function checkCheckoutIntentState(int $checkoutId): array
+    {
+        //On va chercher la réponse de HelloAsso
+        $accessToken = $this->helloAssoService->GetToken();
+        $payload = $this->helloAssoService->checkPayment($accessToken, $checkoutId);
+
+        if (!$payload) {
+            http_response_code(400); // Bad Request
+            echo 'Invalid payload';
+            return ['success' => false, 'error' => 'Invalid payload'];
+        }
+
+        $context = $payload->metadata->context ?? 'new_reservation'; // Contexte par défaut
+        $orderData = $payload->order;
+
+        if ($context === 'new_reservation') {
+            $primaryTempId = $payload->metadata->primary_id ?? null;
+            if ($primaryTempId) {
+                $this->reservationProcessService->processAndPersistReservation($orderData, $primaryTempId, $context);
+            } else {
+                error_log("Webhook 'new_reservation' reçu sans primaryId dans les metadata.");
+            }
+        } elseif ($context === 'balance_payment') {
+            $reservationIdSql = $payload->metadata->primaryId ?? null;
+            if ($reservationIdSql) {
+                $this->reservationProcessService->processAndPersistReservationComplement($orderData, $reservationIdSql, $context);
+            } else {
+                error_log("Webhook 'balance_payment' reçu sans primaryId (SQL) dans les metadata.");
+            }
+        }
+        return ['success' => true, 'message' => 'peut-être bon'];
+    }
+
+    /**
      * Pour gérer le remboursement d'un paiement
      *
      * @param Reservation $reservation
@@ -124,7 +164,7 @@ class PaymentWebhookService
         //On l'insert
         $id = $this->reservationPaymentRepository->insert($refundOperations);
         if ($id <= 0) {
-            throw new \RuntimeException('Échec insertion payment.');
+            throw new RuntimeException('Échec insertion payment.');
         }
 
         //On met à jour la réservation avec le nouveau montant
@@ -155,7 +195,7 @@ class PaymentWebhookService
         //On l'insert
         $id = $this->reservationPaymentRepository->insert($refundOperations);
         if ($id <= 0) {
-            throw new \RuntimeException('Échec insertion payment.');
+            throw new RuntimeException('Échec insertion payment.');
         }
         //On met à jour la ligne du paiement concernée
         $payment->setStatusPayment('Refunded');

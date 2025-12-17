@@ -43,20 +43,17 @@ export function initPaymentCheckHandler(config) {
     let pollAttempts = 0;
 
     const forceCheckPaymentStatus = async () => {
-        pollAttempts++;
-        if (pollAttempts > config.maxPollAttempts) {
-            handlePollingFailure('La vérification du paiement a pris trop de temps. Veuillez vérifier votre boîte mail pour la confirmation.');
-            return;
-        }
-
         try {
             // On appelle la route qui force la vérification auprès de HelloAsso
             const result = await apiPost('/reservation/checkPaymentState', { checkoutIntentId });
-            if (result.success && result.state === 'Processed' && result.token) {
-                handleSuccess(result.token);
+            if (result.success === true) {
+                // Si HelloAsso confirme, on relance la vérification locale pour récupérer le token
+                pollAttempts = 0; // repart à zéro pour ne pas repasser par le mode "force"
+                // Appel immédiat pour obtenir le bon retour avec le token
+                await checkPaymentStatus();
+
             } else {
-                // Si même la vérification forcée ne donne rien, on attend et on réessaie
-                setTimeout(forceCheckPaymentStatus, config.pollIntervalMs);
+                handlePollingFailure('La vérification du paiement a pris trop de temps. Veuillez vérifier votre boîte mail pour la confirmation.');
             }
         } catch (error) {
             handlePollingFailure(error.userMessage || 'Erreur de communication avec le serveur lors de la vérification forcée.');
@@ -73,7 +70,8 @@ export function initPaymentCheckHandler(config) {
             }
             // On réinitialise le compteur pour la deuxième phase de polling
             pollAttempts = 0;
-            forceCheckPaymentStatus();
+
+            await forceCheckPaymentStatus();
             return;
         }
 

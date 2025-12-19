@@ -130,10 +130,10 @@ header .container img {
         gap: 0;
     }
 
-    .nav-link {
+    .navbar-nav .nav-link {
         width: 100%;
         text-align: left;
-        padding: 1rem;
+        padding: 1rem !important;
         border-radius: 0;
     }
 }

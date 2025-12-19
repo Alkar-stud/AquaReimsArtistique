@@ -1,5 +1,5 @@
 footer {
-    background-color: var(--ara-color-darkblue-darker); /* fond plus sombre pour meilleur contraste */
+    background-color: var(--ara-color-darkblue); /* fond plus sombre pour meilleur contraste */
     color: var(--ara-color-white);
 }
 

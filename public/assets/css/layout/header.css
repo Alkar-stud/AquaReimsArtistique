@@ -136,4 +136,11 @@ header .container img {
         padding: 1rem !important;
         border-radius: 0;
     }
+
+    /* Permet le scroll dans le menu mobile si le contenu dépasse */
+    .navbar-collapse {
+        max-height: 80vh; /* Hauteur max de 80% de la vue */
+        overflow-y: auto; /* Ajoute le scroll si nécessaire */
+        padding-bottom: 2rem; /* Espace en bas pour ne pas coller le dernier lien */
+    }
 }

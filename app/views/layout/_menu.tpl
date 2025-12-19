@@ -2,14 +2,28 @@
 <nav class="navbar navbar-expand-lg">
     <div class="container-fluid">
         <div class="d-flex align-items-center justify-content-start">
-            <a class="navbar-brand nav-link{{ $uri == '/' ? ' active-link' : '' }}" href="/"
+
+            {% if str_starts_with($uri, '/gestion') %}
+            <a class="navbar-brand nav-link" href="/"
                {{ $uri == '/' ? 'aria-current="page"' : '' }}
-            >Accueil</a>
+            >Retour au site</a>
+            {% else %}
+                <a class="navbar-brand nav-link{{ $uri == '/' ? ' active-link' : '' }}" href="/"
+                   {{ $uri == '/' ? 'aria-current="page"' : '' }}
+                >Accueil</a>
+            {% endif %}
+
             {% if str_starts_with($uri, '/entrance') %}
             <a class="nav-link d-lg-none{{ str_starts_with($uri, '/entrance/search') ? ' active-link' : '' }}"
                href="/entrance/search"
                {{ str_starts_with($uri, '/entrance/search') ? 'aria-current="page"' : '' }}>
                 Rechercher
+            </a>
+            {% elseif str_starts_with($uri, '/gestion') %}
+            <a class="nav-link d-lg-none{{ str_starts_with($uri, '/entrance/search') ? ' active-link' : '' }}"
+               href="/gestion"
+               {{ str_starts_with($uri, '/gestion') ? 'aria-current="page"' : '' }}>
+                Accueil gestion
             </a>
             {% else %}
             <a class="nav-link d-lg-none{{ $uri == '/reservation' ? ' active-link' : '' }}"
@@ -62,7 +76,7 @@
                     <a class="navbar-brand nav-link{{ $uri == '/gestion' ? ' active-link' : '' }}"
                        href="/gestion"
                        {{ $uri == '/gestion' ? 'aria-current="page"' : '' }}>
-                        Gestion
+                        Accueil gestion
                     </a>
                 </li>
                 <li class="nav-item">
@@ -120,7 +134,7 @@
                     <a class="nav-link {{ $uri == '/gestion/users' ? 'active-link' : '' }}" href="/gestion/users" {{ $uri == '/gestion/users' ? 'aria-current="page"' : '' }}>Utilisateurs</a>
                 </li>
                 <li class="nav-item dropdown">
-                    <a class="nav-link dropdown-toggle {{ $uri == '/gestion/configs' ? 'active-link' : '' }}" href="#" id="configDropdown" role="button" aria-expanded="false">
+                    <a class="nav-link dropdown-toggle {{ $uri == '/gestion/configs' ? 'active-link' : '' }}" href="#" id="configDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                         Configuration
                     </a>
                     <ul class="dropdown-menu" aria-labelledby="configDropdown">

@@ -2,6 +2,7 @@
 
 namespace app\Controllers;
 
+use app\Core\MenuBuilder;
 use app\Core\TemplateEngine;
 use app\Enums\LogType;
 use app\Models\User\User;
@@ -124,6 +125,11 @@ abstract class AbstractController
         $uri = strtok($_SERVER['REQUEST_URI'], '?');
         $data['uri'] = $uri;
         $data['is_gestion_page'] = str_starts_with($uri, '/gestion');
+
+        // Charger la structure du menu via MenuBuilder
+        $menuBuilder = new MenuBuilder();
+        $data['menu_items'] = $menuBuilder->build($uri, $_SESSION['user'] ?? null);
+
         //$data['load_ckeditor'] = $data['is_gestion_page'] && (str_starts_with($uri, '/gestion/mails_templates') || str_starts_with($uri, '/gestion/accueil'));
         // Charge CKEditor sur /gestion/mails_templates[/...] et /gestion/accueil[/...]
         $data['load_ckeditor'] = $data['is_gestion_page']

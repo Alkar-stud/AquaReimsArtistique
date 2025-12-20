@@ -66,7 +66,7 @@ final class ReservationFinalSummaryService
             }
 
             //On récupère le texte à mettre dans le mail
-            $params = $this->mailPrepareService->buildReservationEmailParams($reservation);
+            $params = $this->mailPrepareService->buildReservationEmailParams($reservation, true);
 
             //On génère le PDF à mettre en PJ et on récupère le binaire pour ensuite l'attacher au mail
             $pdf = $this->pdfGenerationService->generateUnitPdf('RecapFinal', $reservation->getId(), $params);

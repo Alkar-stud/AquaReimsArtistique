@@ -49,7 +49,7 @@ readonly class MailPrepareService
      */
     public function sendReservationConfirmationEmail(Reservation $reservation, string $mailTemplate = 'paiement_confirme', ?string $pdfPath = null): bool
     {
-        $params = $this->buildReservationEmailParams($reservation);
+        $params = $this->buildReservationEmailParams($reservation, $mailTemplate == 'final_summary');
         $tpl = $this->templateService->render($mailTemplate, $params);
         if (!$tpl) {
             return false;
@@ -58,7 +58,7 @@ readonly class MailPrepareService
         // Nom du PDF pour la PJ
         $pdfName = 'Recapitulatif_' . StringHelper::generateReservationNumber($reservation->getId()) . '.pdf';
 
-        // Préparer le chemin du QR code inline
+        // Préparer le chemin du QR code inline si besoin
         $inlineImagePath = $params['qrcodeEntrance'] ?? null;
         $tempFileToRemove = null;
 
@@ -141,9 +141,10 @@ readonly class MailPrepareService
 
     /**
      * @param Reservation $reservation
+     * @param bool $needQrCode
      * @return array
      */
-    public function buildReservationEmailParams(Reservation $reservation): array
+    public function buildReservationEmailParams(Reservation $reservation, bool $needQrCode = false): array
     {
         $recap = $this->summaryBuilder->buildFullRecap($reservation);
         $payment = $this->paymentCalculator->calculate($reservation);
@@ -151,18 +152,28 @@ readonly class MailPrepareService
         $qrCodeUrlModif = $buildLink->buildResetLink('/modifData', $reservation->getToken());
         $qrCodeUrlEntrance = $buildLink->buildResetLink('/entrance', $reservation->getToken());
 
-        // Génération du QR code pour modification (fichier temporaire pour PDF)
-        $qrcodeModifPath = QRCode::generate($qrCodeUrlModif, 250, 10);
+        if ($needQrCode) {
+            // Génération du QR code pour modification (fichier temporaire pour PDF)
+            $qrcodeModifPath = QRCode::generate($qrCodeUrlModif, 250, 10);
 
-        // Génération du QR code d'entrée : on retourne un chemin de fichier (pour l'inline)
-        $qrcodeEntrancePath = QRCode::generate($qrCodeUrlEntrance, 250, 10);
+            // Génération du QR code d'entrée : on retourne un chemin de fichier (pour l'inline)
+            $qrcodeEntrancePath = QRCode::generate($qrCodeUrlEntrance, 250, 10);
+
+            //Génération pour le QRCode dans le mail
+            $qrcodeEntranceInMail = '<img src="cid:qrcode_entrance" alt="QR Code d\'entrée" style="max-width: 250px; height: auto; display: block; margin: 20px auto;" />Montrez ce QR code pour faciliter votre entrée';
+
+        } else {
+            $qrcodeModifPath = null;
+            $qrcodeEntrancePath = null;
+            $qrcodeEntranceInMail = '';
+        }
 
         return [
             'name' => $reservation->getFirstName(),
             'token' => $reservation->getToken(),
             'qrcodeModif' => $qrcodeModifPath,
             'qrcodeEntrance' => $qrcodeEntrancePath, // chemin du PNG
-            'qrcodeEntranceInMail' => '<img src="cid:qrcode_entrance" alt="QR Code d\'entrée" style="max-width: 250px; height: auto; display: block; margin: 20px auto;" />Montrez ce QR code pour faciliter votre entrée',
+            'qrcodeEntranceInMail' => $qrcodeEntranceInMail,
             'IDreservation' => StringHelper::generateReservationNumber($reservation->getId()),
             'EventName' => $reservation->getEventObject()->getName(),
             'DateEvent' => $reservation->getEventSessionObject()->getEventStartAt()->format('d/m/Y \à H\hi'),

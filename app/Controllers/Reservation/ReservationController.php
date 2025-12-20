@@ -8,6 +8,7 @@ use app\Repository\Event\EventRepository;
 use app\Repository\Event\EventTarifRepository;
 use app\Services\DataValidation\ReservationDataValidationService;
 use app\Services\Event\EventQueryService;
+use app\Services\Piscine\PiscineQueryService;
 use app\Services\Reservation\ReservationQueryService;
 use app\Services\Reservation\ReservationSessionService;
 use app\Services\Swimmer\SwimmerQueryService;
@@ -22,6 +23,7 @@ class ReservationController extends AbstractController
     private TarifService $tarifService;
     private EventRepository $eventRepository;
     private ReservationQueryService $reservationQueryService;
+    private PiscineQueryService $piscineQueryService;
 
     public function __construct(
         EventQueryService $eventQueryService,
@@ -32,6 +34,7 @@ class ReservationController extends AbstractController
         TarifService $tarifService,
         EventRepository $eventRepository,
         ReservationQueryService $reservationQueryService,
+        PiscineQueryService $piscineQueryService,
     )
     {
         // On déclare la route comme publique pour éviter la redirection vers la page de login.
@@ -44,6 +47,7 @@ class ReservationController extends AbstractController
         $this->tarifService = $tarifService;
         $this->eventRepository = $eventRepository;
         $this->reservationQueryService = $reservationQueryService;
+        $this->piscineQueryService = $piscineQueryService;
     }
 
     /**
@@ -120,6 +124,8 @@ class ReservationController extends AbstractController
 
         //Récupération des limites et l'état de la réservation par nageur
         $swimmerLimitReached = $this->swimmerQueryService->getStateOfLimitPerSwimmer($session);
+        //On récupère le niveau de remplissement de la piscine
+        $piscineLimitReached = $this->piscineQueryService->checkTotalCapacityLimit($session['reservation']->getEventSession(), $session['reservation']->getEventObject()->getPiscine());
 
         // Récupération des tarifs avec place assise de cet event
         $allTarifsWithSeatForThisEvent = $this->eventTarifRepository->findTarifsByEvent($session['reservation']->getEvent());

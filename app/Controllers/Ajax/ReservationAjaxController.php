@@ -10,6 +10,7 @@ use app\Repository\Reservation\ReservationDetailTempRepository;
 use app\Repository\Tarif\TarifRepository;
 use app\Repository\User\UserRepository;
 use app\Services\FlashMessageService;
+use app\Services\Piscine\PiscineQueryService;
 use app\Services\Reservation\ReservationQueryService;
 use app\Services\Reservation\ReservationSessionService;
 use app\Services\DataValidation\ReservationDataValidationService;
@@ -25,6 +26,7 @@ class ReservationAjaxController extends AbstractController
     private ReservationQueryService $reservationQueryService;
     private TarifService $tarifService;
     private ReservationDetailTempRepository $reservationDetailTempRepository;
+    private PiscineQueryService $piscineQueryService;
     //Pour définir les steps existants
     private array $existingStep = [1, 2, 3, 4, 5, 6];
 
@@ -36,6 +38,7 @@ class ReservationAjaxController extends AbstractController
         ReservationQueryService $reservationQueryService,
         TarifService $tarifService,
         ReservationDetailTempRepository $reservationDetailTempRepository,
+        PiscineQueryService $piscineQueryService,
     )
     {
         // On déclare la route comme publique pour éviter la redirection vers la page de login.
@@ -47,6 +50,7 @@ class ReservationAjaxController extends AbstractController
         $this->reservationQueryService = $reservationQueryService;
         $this->tarifService = $tarifService;
         $this->reservationDetailTempRepository = $reservationDetailTempRepository;
+        $this->piscineQueryService = $piscineQueryService;
     }
 
 
@@ -79,8 +83,9 @@ class ReservationAjaxController extends AbstractController
 
         //Pour la troisième étape, on vérifie si la capacité globale n'est pas dépassée
         if ($step == 3) {
-            $totalCapacityLimit = $this->reservationQueryService->checkTotalCapacityLimit($session['reservation']->getEvent(), $session['reservation']->getEventSession());
-            if ($totalCapacityLimit['limitReached']) {
+            //On vérifie le niveau de remplissement de la piscine
+            $totalCapacityLimit = $this->piscineQueryService->checkTotalCapacityLimit($session['reservation']->getEventSession(), $session['reservation']->getEventObject()->getPiscine());
+            if (!$totalCapacityLimit['success']) {
                 $this->json([
                     'success' => false,
                     'error' => 'La capacité maximale de la piscine est atteinte.',
@@ -105,7 +110,27 @@ class ReservationAjaxController extends AbstractController
         $result = $this->reservationDataValidationService->validateDataPerStep($session['reservation'], $step, $input, $files);
 
         if (!$result['success']) {
-            $this->json($result, 200);
+            // Construire un message synthétique (ex: première erreur)
+            $errorMessage = 'Une erreur est survenue.';
+            if (!empty($result['errors'])) {
+                // Récupérer la première valeur d'erreur
+                $firstError = reset($result['errors']);
+                // Si c'est un tableau, prendre sa première valeur, sinon la valeur directement
+                if (is_array($firstError)) {
+                    $firstError = reset($firstError) ?: $errorMessage;
+                }
+                if (is_string($firstError) && trim($firstError) !== '') {
+                    $errorMessage = $firstError;
+                }
+            }
+
+            $this->json([
+                'success' => false,
+                'error'   => $errorMessage, // utilisé par le JS pour le flash
+                'errors'  => $result['errors'], // détails si besoin
+            ], 200);
+
+            return;
         }
 
         //selon si place de la piscine sont numérotées au pas

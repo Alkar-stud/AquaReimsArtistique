@@ -14,6 +14,7 @@ use app\Repository\Reservation\ReservationTempRepository;
 use app\Repository\Swimmer\SwimmerRepository;
 use app\Repository\Tarif\TarifRepository;
 use app\Services\FlashMessageService;
+use app\Services\Reservation\ReservationQueryService;
 use app\Services\Tarif\TarifService;
 use app\Services\UploadService;
 use app\Utils\StringHelper;
@@ -32,6 +33,7 @@ class ReservationDataValidationService
     private ReservationComplementTempRepository $reservationComplementTempRepository;
     private TarifRepository             $tarifRepository;
     private TarifService                $tarifService;
+    private ReservationQueryService     $reservationQueryService;
 
     public function __construct(
         EventRepository                  $eventRepository,
@@ -43,7 +45,8 @@ class ReservationDataValidationService
         ReservationDetailTempRepository  $reservationDetailTempRepository,
         ReservationComplementTempRepository $reservationComplementTempRepository,
         TarifRepository                  $tarifRepository,
-        TarifService                     $tarifService
+        TarifService                     $tarifService,
+        ReservationQueryService          $reservationQueryService,
     ) {
         $this->eventRepository = $eventRepository;
         $this->swimmerRepository = $swimmerRepository;
@@ -55,6 +58,7 @@ class ReservationDataValidationService
         $this->reservationComplementTempRepository = $reservationComplementTempRepository;
         $this->tarifRepository = $tarifRepository;
         $this->tarifService = $tarifService;
+        $this->reservationQueryService = $reservationQueryService;
     }
 
     /**
@@ -136,7 +140,7 @@ class ReservationDataValidationService
             $this->reservationTempRepository->update($reservationTemp);
         }
 
-        if($step == 3) {
+        if ($step == 3) {
             // Récupérer les détails existants et les regrouper par tarifId
             $existingDetailsRaw = $this->reservationDetailTempRepository->findByFields(['reservation_temp' => $reservationTemp->getId()]);
             $existingDetailsByTarif = [];
@@ -196,9 +200,22 @@ class ReservationDataValidationService
             // Validation des données
             $result = $this->validateDataStep3($finalDetails, $event);
 
+
+            //On vérifie maintenant si on dépasse avec la réservation en cours
+            $totalCapacityLimitWithCurrentlyReservation = $this->reservationQueryService->checkTotalCapacityCurrentlyLimit(
+                $reservationTemp->getEventObject()->getPiscine(),
+                $reservationTemp->getEventSession(),
+                count($finalDetails)
+            );
+            if (!$totalCapacityLimitWithCurrentlyReservation['success']) {
+                $result['success'] = false;
+                $result['errors']['limit'] = 'Le nombre de place souhaitée dépasse la capacité de la piscine.';
+            }
+
             if (!$result['success']) {
                 return ['success' => false, 'errors' => $result['errors'], 'data' => []];
             }
+
 
             // Persistance en base de données dans une transaction
             try {
@@ -561,7 +578,7 @@ class ReservationDataValidationService
                 $errors['tarif_id_' . $tarif->getId()] = "Le tarif '{$tarif->getName()}' n'est pas disponible pour cet événement.";
                 return ['success' => false, 'errors' => $errors];
             }
-            //On vérifie si le tarif nécessite un code eet si le bon est saisi
+            //On vérifie si le tarif nécessite un code et si le bon est saisi
             if (
                 $tarif->getAccessCode() !== null && // Si un code est requis pour ce tarif...
                 ($reservationDetailTemp->getTarifAccessCode() === null || $reservationDetailTemp->getTarifAccessCode() !== $tarif->getAccessCode()) // ...et que le code fourni est soit manquant, soit incorrect.

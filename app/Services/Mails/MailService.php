@@ -172,7 +172,13 @@ class MailService
      */
     public function emailsTemplatesToSendManually(): array
     {
-        return $this->mailTemplateRepository->findByCodes(['paiement_confirme','summary','paiement_relance_1','paiement_relance_2']);
+        return $this->mailTemplateRepository->findByCodes([
+            'paiement_confirme',
+            'paiement_confirme_add',
+            'summary',
+            'final_summary',
+            'paiement_relance_1',
+        ]);
     }
 
     /**

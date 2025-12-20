@@ -180,6 +180,7 @@ readonly class MailPrepareService
             'ReservationMontantTotal' => number_format($payment['amount'] / 100, 2, ',', ' ') . ' €',
             'SIGNATURE' => SIGNATURE,
             'email_club' => defined('EMAIL_CLUB') ? EMAIL_CLUB : '',
+            'email_gala' => defined('EMAIL_GALA') ? EMAIL_GALA : '',
         ];
     }
 

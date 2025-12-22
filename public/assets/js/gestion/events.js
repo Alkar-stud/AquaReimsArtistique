@@ -151,7 +151,9 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('event_limitation_per_swimmer').value = eventData.limitation_per_swimmer || '';
 
         // Afficher "Supprimer" uniquement en mode édition
-        if (deleteBtn) deleteBtn.classList.remove('d-none');
+        if (deleteBtn) {
+            deleteBtn.classList.remove('d-none');
+        }
 
         // Remplir l'onglet "Tarifs"
         const tarifCheckboxes = document.querySelectorAll('#pane-tarifs input[name="tarifs[]"]');
@@ -275,7 +277,9 @@ document.addEventListener('DOMContentLoaded', function() {
         });
 
         // Masquer "Supprimer" en mode ajout
-        if (deleteBtn) deleteBtn.classList.add('d-none');
+        if (deleteBtn) {
+            deleteBtn.classList.add('d-none');
+        }
 
         validationErrorsContainer.classList.add('d-none');
         validationErrorsContainer.innerHTML = '';
@@ -289,7 +293,9 @@ document.addEventListener('DOMContentLoaded', function() {
         resetModalForm();
         // Vider aussi le formulaire d'ajout rapide desktop au cas où
         const desktopNameInput = document.getElementById('desktop_add_name');
-        if(desktopNameInput) desktopNameInput.value = '';
+        if(desktopNameInput) {
+            desktopNameInput.value = '';
+        }
     });
 
     /**
@@ -300,8 +306,12 @@ document.addEventListener('DOMContentLoaded', function() {
     if (deleteBtn) {
         deleteBtn.addEventListener('click', () => {
             const id = document.getElementById('event_id').value;
-            if (!id) return; // Pas de suppression en mode ajout
-            if (!confirm("Êtes-vous sûr de vouloir supprimer cet événement ?")) return;
+            if (!id) {
+                return;
+            } // Pas de suppression en mode ajout
+            if (!confirm("Êtes-vous sûr de vouloir supprimer cet événement ?")) {
+                return;
+            }
 
             // Soumission via un formulaire dédié pour éviter d'envoyer le formulaire d'édition
             const form = document.createElement('form');
@@ -335,7 +345,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
         const hasSeatedTarif = checkedTarifs.some(cb => {
             const ds = cb.dataset || {};
-            if (ds.seated === '1' || ds.type === 'seated' || ds.category === 'places') return true;
+            if (ds.seated === '1' || ds.type === 'seated' || ds.category === 'places') {
+                return true;
+            }
 
             //Fallback
             const group = cb.closest('.list-group');
@@ -389,13 +401,3 @@ document.addEventListener('DOMContentLoaded', function() {
         return true;
     }
 });
-
-
-// helper pour récupérer un libellé lisible d'un champ
-function safeLabel(input) {
-    const label = input?.previousElementSibling;
-    if (label && label.textContent) return label.textContent.trim();
-    const id = input.id ? document.querySelector(`label[for="${input.id}"]`) : null;
-    if (id && id.textContent) return id.textContent.trim();
-    return input.name || 'Champ requis';
-}

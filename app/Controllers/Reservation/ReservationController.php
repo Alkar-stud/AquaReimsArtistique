@@ -8,10 +8,12 @@ use app\Repository\Event\EventRepository;
 use app\Repository\Event\EventTarifRepository;
 use app\Services\DataValidation\ReservationDataValidationService;
 use app\Services\Event\EventQueryService;
+use app\Services\Piscine\PiscineQueryService;
 use app\Services\Reservation\ReservationQueryService;
 use app\Services\Reservation\ReservationSessionService;
 use app\Services\Swimmer\SwimmerQueryService;
 use app\Services\Tarif\TarifService;
+use app\Utils\BuildLink;
 
 class ReservationController extends AbstractController
 {
@@ -22,6 +24,7 @@ class ReservationController extends AbstractController
     private TarifService $tarifService;
     private EventRepository $eventRepository;
     private ReservationQueryService $reservationQueryService;
+    private PiscineQueryService $piscineQueryService;
 
     public function __construct(
         EventQueryService $eventQueryService,
@@ -32,6 +35,7 @@ class ReservationController extends AbstractController
         TarifService $tarifService,
         EventRepository $eventRepository,
         ReservationQueryService $reservationQueryService,
+        PiscineQueryService $piscineQueryService,
     )
     {
         // On déclare la route comme publique pour éviter la redirection vers la page de login.
@@ -44,6 +48,7 @@ class ReservationController extends AbstractController
         $this->tarifService = $tarifService;
         $this->eventRepository = $eventRepository;
         $this->reservationQueryService = $reservationQueryService;
+        $this->piscineQueryService = $piscineQueryService;
     }
 
     /**
@@ -210,14 +215,27 @@ class ReservationController extends AbstractController
         // Récupération des tarifs avec tarif sans place non assise de cet event
         $allTarifsWithoutSeatForThisEvent = $this->eventTarifRepository->findTarifsByEvent($session['reservation']->getEvent(), false);
 
+        //On ajoute si les sièges sont numérotées pour le bouton retour dans la vue
+        $event = $this->eventRepository->findById($session['reservation']->getEvent(), true);
+
+        //On calcule l'étape précédente
+        $previousStep = $event->getPiscine()->getNumberedSeats() ? 'etape5Display' : 'etape4Display';
+
+        //S'il n'y aucun complément de proposé, on passe direct à l'étape suivante sauf si on en vient pour ne pas bloquer le retour en arrière.
+        if (count($allTarifsWithoutSeatForThisEvent) <= 0) {
+            if (isset($_SERVER['HTTP_REFERER']) && $_SERVER['HTTP_REFERER'] !== BuildLink::buildBasicLink('/reservation/confirmation')) {
+                $this->redirect('/reservation/confirmation');
+            }
+            else {
+                $this->redirect('/reservation/' . $previousStep);
+            }
+        }
+
         // Préparation des données à envoyer à la vue, construit le "pré-remplissage" s'il existe déjà un tarif avec code en session à l'aide du tableau des tarifs de cet event
         $dataForViewSpecialCode = $this->tarifService->getAllTarifAndPrepareViewWithSpecialCode(
             $allTarifsWithoutSeatForThisEvent,
             $session['reservation_complements']
         );
-
-        //On ajoute si les sièges sont numérotées pour le bouton retour dans la vue
-        $event = $this->eventRepository->findById($session['reservation']->getEvent(), true);
 
         //Préparation des données déjà saisie à cette étape, regroupé par id et quantité
         $arrayTarifForForm = $this->reservationSessionService->getComplementQuantities($session['reservation_complements']);

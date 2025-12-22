@@ -30,7 +30,7 @@ readonly class PdfGenerationService
             'builder' => RecapEvenementPdf::class,
         ],
         'RecapPlacesA3' => [
-            'label' => 'Pan récapitulatif des places (A3)',
+            'label' => 'Plan récapitulatif des places (A3)',
             'builder' => RecapPlacesA3Pdf::class,
         ],
         'RecapFinal' => [

@@ -160,9 +160,9 @@ class ReservationDetailTempRepository extends AbstractRepository
     /**
      * Détails pour une liste d'IDs de réservation.
      * @param int[] $reservationIds
-     * @param bool $withReservation
      * @param bool $withTarif
-     * @param bool $withPlace
+     * @param bool $withChildren
+     * @param bool $withSwimmer
      * @return array
      */
     public function findByReservations(array $reservationIds, bool $withTarif = false, bool $withChildren = false, bool $withSwimmer = false): array
@@ -183,6 +183,19 @@ class ReservationDetailTempRepository extends AbstractRepository
 
         // Retourner la liste hydratée
         return $list;
+    }
+
+
+    /**
+     * Compte le nombre de détails pour une réservation
+     * @param int $reservationTempId
+     * @return int
+     */
+    public function countByReservation(int $reservationTempId): int
+    {
+        $sql = "SELECT COUNT(*) as count FROM $this->tableName WHERE reservation_temp = :reservationTempId";
+        $result = $this->query($sql, ['reservationTempId' => $reservationTempId]);
+        return (int)($result[0]['count'] ?? 0);
     }
 
     /**

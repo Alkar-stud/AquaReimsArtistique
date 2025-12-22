@@ -150,9 +150,15 @@
                                 <div class="d-flex flex-wrap gap-2 mb-4">
                                     {% foreach $allActiveTarifs as $tarif %}
                                     {% if $tarif->getSeatCount() > 0 %}
-                                    <label class="card shadow-sm" style="min-width: 150px; cursor: pointer;">
+                                    <label class="card shadow-sm tarif-card" style="min-width: 150px; cursor: pointer;">
                                         <div class="card-body d-flex align-items-start gap-2">
-                                            <input class="form-check-input mt-1" type="checkbox" name="tarifs[]" value="{{ $tarif->getId() }}">
+                                            <input
+                                                    class="form-check-input mt-1"
+                                                    type="checkbox"
+                                                    name="tarifs[]"
+                                                    value="{{ $tarif->getId() }}"
+                                                    data-tarif-id="{{ $tarif->getId() }}"
+                                            >
                                             <div class="flex-grow-1">
                                                 <div class="fw-semibold">{{ $tarif->getName() }}</div>
                                                 <div class="text-muted small">{{ number_format($tarif->getPrice() / 100, 2, ',', ' ') }} €</div>
@@ -168,9 +174,15 @@
                                 <div class="d-flex flex-wrap gap-2">
                                     {% foreach $allActiveTarifs as $tarif %}
                                     {% if $tarif->getSeatCount() === null || $tarif->getSeatCount() == 0 %}
-                                    <label class="card shadow-sm" style="min-width: 150px; cursor: pointer;">
+                                    <label class="card shadow-sm tarif-card" style="min-width: 150px; cursor: pointer;">
                                         <div class="card-body d-flex align-items-start gap-2">
-                                            <input class="form-check-input mt-1" type="checkbox" name="tarifs[]" value="{{ $tarif->getId() }}">
+                                            <input
+                                                    class="form-check-input mt-1"
+                                                    type="checkbox"
+                                                    name="tarifs[]"
+                                                    value="{{ $tarif->getId() }}"
+                                                    data-tarif-id="{{ $tarif->getId() }}"
+                                            >
                                             <div class="flex-grow-1">
                                                 <div class="fw-semibold">{{ $tarif->getName() }}</div>
                                                 <div class="text-muted small">{{ number_format($tarif->getPrice() / 100, 2, ',', ' ') }} €</div>
@@ -286,4 +298,5 @@
     </div>
 </template>
 
+<script id="tarifs-used-data" type="application/json">{% php %} echo json_encode($tarifsUsed); {% endphp %}</script>
 <script type="module" src="/assets/js/gestion/events.js"></script>

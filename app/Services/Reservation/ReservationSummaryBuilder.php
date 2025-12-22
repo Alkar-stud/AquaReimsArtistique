@@ -34,7 +34,7 @@ class ReservationSummaryBuilder
             }
 
             if ($detail->getPlaceNumber()) {
-                $place = htmlspecialchars($detail->getPlaceNumber());
+                $place = htmlspecialchars($detail->getPlaceObject()->getFullPlaceName());
                 $html .= ' &mdash; Place: <em>' . $place . '</em>';
                 $text .= ' - Place: ' . $place;
             }

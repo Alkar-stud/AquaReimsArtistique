@@ -18,6 +18,7 @@ use app\Repository\Reservation\ReservationMailSentRepository;
 use app\Repository\Reservation\ReservationRepository;
 use app\Repository\Reservation\ReservationTempRepository;
 use app\Services\Mails\MailPrepareService;
+use app\Services\Piscine\PiscineQueryService;
 use app\Utils\StringHelper;
 use DateTime;
 
@@ -30,6 +31,7 @@ class ReservationQueryService
     private ReservationComplementRepository $reservationComplementRepository;
     private ReservationDetailRepository $reservationDetailRepository;
     private ReservationDetailTempRepository $reservationDetailTempRepository;
+    private PiscineQueryService $piscineQueryService;
 
     public function __construct(
         ReservationRepository $reservationRepository,
@@ -39,6 +41,7 @@ class ReservationQueryService
         ReservationComplementRepository $reservationComplementRepository,
         ReservationDetailRepository $reservationDetailRepository,
         ReservationDetailTempRepository $reservationDetailTempRepository,
+        PiscineQueryService $piscineQueryService,
     )
     {
         $this->reservationRepository = $reservationRepository;
@@ -48,6 +51,7 @@ class ReservationQueryService
         $this->reservationComplementRepository = $reservationComplementRepository;
         $this->reservationDetailRepository = $reservationDetailRepository;
         $this->reservationDetailTempRepository = $reservationDetailTempRepository;
+        $this->piscineQueryService = $piscineQueryService;
     }
 
     /**
@@ -386,26 +390,26 @@ class ReservationQueryService
 
 
     /**
-     * Vérifie si la capacité totale de la piscine est atteinte et renvoi le nombre de places restantes
-     * @param int $event_id
-     * @param int $event_session_id
+     * Vérifie si le nombre de place en cours de réservation ne va pas faire dépasser la capacité de la piscine
+     * @param Piscine $piscine
+     * @param int $sessionId
+     * @param int $nbPlaceCurrentlyBeingReserved
      * @return array
      */
-    public function checkTotalCapacityLimit(int $event_id, int $event_session_id): array
+    public function checkTotalCapacityCurrentlyLimit(Piscine $piscine, int $sessionId, int $nbPlaceCurrentlyBeingReserved): array
     {
-        //On récupère la capacité de la piscine
-        $event = $this->eventRepository->findById($event_id, true);
-        $piscine = $event->getPiscine();
-
-        //On récupère le nombre de places actuellement réservées (et validées).
-        $nbPlaceReserved = $this->reservationDetailRepository->countBySession($event_session_id, false, false, true);
-
-        //On vérifie la différence
-        if ($nbPlaceReserved >= $piscine->getMaxPlaces()) {
-            return ['limitReached' => true, 'limit' => $piscine->getMaxPlaces() - $nbPlaceReserved];
+        //On va récupérer le niveau de remplissement de la piscine
+        $result = $this->piscineQueryService->checkTotalCapacityLimit($sessionId, $piscine);
+        if (!$result['success']) {
+            return $result;
         }
 
-        return ['limitReached' => false, 'limit' => $piscine->getMaxPlaces() - $nbPlaceReserved];
+        //On vérifie la différence
+        if ($nbPlaceCurrentlyBeingReserved > $result['limit']) {
+            return ['success' => false, 'limitReached' => false, 'limit' => $nbPlaceCurrentlyBeingReserved - $result['limit']];
+        }
+
+        return ['success' => true, 'limitReached' => true, 'limit' => $nbPlaceCurrentlyBeingReserved];
     }
 
     /**

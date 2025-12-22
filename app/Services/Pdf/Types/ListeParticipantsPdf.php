@@ -17,6 +17,10 @@ final readonly class ListeParticipantsPdf extends AbstractSessionPdfType impleme
         parent::__construct($eventQueryService);
     }
 
+    /**
+     * @param array $data
+     * @return BasePdf
+     */
     public function build(array $data): BasePdf
     {
         $session = $this->requireSession($data);
@@ -29,8 +33,10 @@ final readonly class ListeParticipantsPdf extends AbstractSessionPdfType impleme
         $pdf = new BasePdf(mb_convert_encoding($documentTitle, 'ISO-8859-1', 'UTF-8'));
 
         // Définir la structure du tableau
-        $headers = ['ID', 'Nom de la réservation', 'Réglé', 'Nb Place'];
-        $widths = [8,50,20,16];
+        //$headers => les libellés des entêtes
+        //$widths  => la largeur des colonnes
+        $headers = ['ID', 'Nom de la réservation', 'Réglé', 'Nb Place', 'Enveloppe'];
+        $widths = [8,50,20,16,20];
 
         if (!empty($reservations) && $reservations[0]->getEventObject()->getPiscine()->getNumberedSeats()) {
             $headers[] = 'N° place';
@@ -61,7 +67,7 @@ final readonly class ListeParticipantsPdf extends AbstractSessionPdfType impleme
                 ? 'Oui'
                 : number_format($remainingAmount / 100, 2, ',', ' ');
 
-            //On remplit les colonnes, 1ère ligne correspondant à la réservation (ID, nom, état règlement, nb places de la commande).
+            //On remplit les colonnes, 1ère ligne correspondant à la réservation (ID, nom, état règlement, nb places de la commande, si enveloppe à donner).
             $pdf->SetX($leftMargin);
             //Couleur de fond.
             $pdf->SetFillColor(200,200,200);
@@ -78,7 +84,8 @@ final readonly class ListeParticipantsPdf extends AbstractSessionPdfType impleme
             }
             // Le nombre de places correspond au nombre de "détails" de la réservation
             $pdf->Cell($widths[3], 6, count($reservation->getDetails()), 1, 0, 'C', true);
-
+            // Oui ou Non selon si on donne une enveloppe avec les tickets pour les compléments
+            $pdf->Cell($widths[4], 6, count($reservation->getComplements()) > 0 ? 'Oui':'Non', 1, 0, 'C', true);
 
             $pdf->Ln();
             $pdf->SetX($leftMargin);
@@ -91,7 +98,7 @@ final readonly class ListeParticipantsPdf extends AbstractSessionPdfType impleme
                 //2ème colonne avec NomPrenom
                 $pdf->Cell($widths[1], 6, mb_convert_encoding($participant->getName() . ' ' . $participant->getFirstName(), 'ISO-8859-1', 'UTF-8'), 1, 0, 'L', true);
                 //3ème colonne avec le type de tarif
-                $pdf->Cell(($widths[2]+$widths[3]), 6, 'Tarif : ' . mb_convert_encoding($participant->getTarifObject()->getName(), 'ISO-8859-1', 'UTF-8'), 1, 0, 'C', true);
+                $pdf->Cell(($widths[2]+$widths[3]+$widths[4]), 6, 'Tarif : ' . mb_convert_encoding($participant->getTarifObject()->getName(), 'ISO-8859-1', 'UTF-8'), 1, 0, 'C', true);
 
                 //4ème avec le numéro de la place si requis
                 if ($reservation->getEventObject()->getPiscine()->getNumberedSeats()) {

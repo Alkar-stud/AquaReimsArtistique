@@ -104,8 +104,8 @@ class ReservationProcessAndPersistService
         //On met à jour $reservation
         $reservation = $this->reservationRepository->findById($reservationId, true, true);
 
-        // Envoyer l'email de confirmation d'annulation
-        if (!$this->mailPrepareService->sendReservationConfirmationEmail($reservation)) {
+        // Envoyer l'email de confirmation
+        if (!$this->mailPrepareService->sendReservationConfirmationEmail($reservation, 'paiement_confirme_add')) {
             throw new RuntimeException('Échec de l\'envoi de l\'email de confirmation.');
         }
 

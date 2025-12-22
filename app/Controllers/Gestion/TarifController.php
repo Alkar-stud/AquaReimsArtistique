@@ -5,29 +5,21 @@ namespace app\Controllers\Gestion;
 use app\Attributes\Route;
 use app\Controllers\AbstractController;
 use app\Models\Tarif\Tarif;
-use app\Repository\Event\EventTarifRepository;
 use app\Repository\Tarif\TarifRepository;
 use app\Services\DataValidation\TarifDataValidationService;
-use app\Services\Tarif\TarifService;
 
 class TarifController extends AbstractController
 {
     private TarifRepository $tarifRepository;
-    private TarifService $tarifService;
     private TarifDataValidationService $tarifDataValidationService;
-    private EventTarifRepository $eventTarifRepository;
 
     public function __construct(
         TarifRepository $tarifRepository,
-        EventTarifRepository $eventTarifRepository,
         TarifDataValidationService $tarifDataValidationService,
-        TarifService $tarifService,
     )
     {
         parent::__construct(false);
         $this->tarifRepository = $tarifRepository;
-        $this->tarifService = $tarifService;
-        $this->eventTarifRepository = $eventTarifRepository;
         $this->tarifDataValidationService = $tarifDataValidationService;
     }
 
@@ -36,17 +28,11 @@ class TarifController extends AbstractController
     {
         $onglet = $_GET['onglet'] ?? null;
 
-        switch ($onglet) {
-            case 'places':
-                $tarifs = $this->tarifRepository->findBySeatType(true);
-                break;
-            case 'autres':
-                $tarifs = $this->tarifRepository->findBySeatType(false);
-                break;
-            default:
-                $tarifs = $this->tarifRepository->findAll();
-                break;
-        }
+        $tarifs = match ($onglet) {
+            'places' => $this->tarifRepository->findBySeatType(true),
+            'autres' => $this->tarifRepository->findBySeatType(false),
+            default => $this->tarifRepository->findAll(),
+        };
 
         $this->render('/gestion/tarifs', [
             'data' => $tarifs,
@@ -153,6 +139,7 @@ class TarifController extends AbstractController
         //On vérifie si le tarif est utilisé
         if ($this->tarifRepository->isUsed($tarifId)) {
             $this->flashMessageService->setFlashMessage('danger', "Impossible de supprimer ce tarif.\nIl est utilisé dans au moins un événement.");
+            $this->redirect($redirectUrl);
         }
 
         $this->tarifRepository->delete($tarifId);

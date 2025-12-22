@@ -10,7 +10,6 @@ use app\Services\Event\EventQueryService;
 use app\Services\Event\EventResult;
 use app\Services\Event\EventUpdateService;
 use DateTime;
-use Exception;
 use Throwable;
 
 class EventController extends AbstractController
@@ -52,6 +51,7 @@ class EventController extends AbstractController
         // On prépare les listes pour séparer les événements à venir des événements passés.
         $eventsUpcoming = [];
         $eventsPast = [];
+        $tarifsUsed = [];
         $now = new DateTime();
 
         // On parcourt chaque événement pour le classer.
@@ -78,6 +78,9 @@ class EventController extends AbstractController
             } else {
                 $eventsUpcoming[] = $event;
             }
+
+            //On fait un tableau par event des tarifs utilisés, pour empêcher le retrait si déjà pris pour une session
+            $tarifsUsed[$event->getId()] = $this->eventQueryService->getEventTarifsWithUsage($event->getId());
         }
 
         // On récupère les listes complètes des piscines et des tarifs actifs pour les formulaires.
@@ -89,7 +92,8 @@ class EventController extends AbstractController
             'eventsUpcoming' => $eventsUpcoming,
             'eventsPast' => $eventsPast,
             'allPiscines' => $allPiscines,
-            'allActiveTarifs' => $allActiveTarifs
+            'allActiveTarifs' => $allActiveTarifs,
+            'tarifsUsed' => $tarifsUsed,
         ], 'Gestion des événements');
     }
 

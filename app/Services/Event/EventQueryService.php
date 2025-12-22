@@ -11,6 +11,8 @@ use app\Repository\Event\EventInscriptionDateRepository;
 use app\Repository\Event\EventRepository;
 use app\Repository\Event\EventSessionRepository;
 use app\Repository\Piscine\PiscineRepository;
+use app\Repository\Reservation\ReservationComplementRepository;
+use app\Repository\Reservation\ReservationDetailRepository;
 use app\Repository\Reservation\ReservationRepository;
 use app\Repository\Tarif\TarifRepository;
 use DateTime;
@@ -119,6 +121,43 @@ class EventQueryService
     public function getAllActiveTarifs(): array
     {
         return $this->tarifRepository->findAllActive();
+    }
+    /**
+     * Retourne les tarifs de l’événement enrichis avec l’indicateur d’usage et le compteur d’occurrences.
+     *
+     * Résultat indexé par ID de tarif.
+     *
+     * @param int $eventId ID de l’événement.
+     * @return array<int,array{tarif: Tarif, isUsed: bool, usedCount: int}>
+     */
+    public function getEventTarifsWithUsage(int $eventId): array
+    {
+        // Tarifs attachés à l’événement (actifs, ordre logique déjà géré côté repo).
+        $eventTarifs = $this->tarifRepository->findByEventId($eventId);
+        if (empty($eventTarifs)) {
+            return [];
+        }
+
+        $tarifIds = array_map(static fn(Tarif $t) => $t->getId(), $eventTarifs);
+
+        $reservationDetailRepository = new ReservationDetailRepository();
+        $usageMapDetails = $reservationDetailRepository->countUsageByTarifIdsForEvent($eventId, $tarifIds);
+        $reservationComplementRepository = new ReservationComplementRepository();
+        $usageMapComplement = $reservationComplementRepository->countUsageByTarifIdsForEvent($eventId, $tarifIds);
+
+        $out = [];
+        foreach ($eventTarifs as $tarif) {
+            $tid = $tarif->getId();
+            $countDetail = $usageMapDetails[$tid] ?? 0;
+            $countComplement = $usageMapComplement[$tid] ?? 0;
+            $totalUsage = $countDetail + $countComplement;
+            $out[$tid] = [
+                'isUsed' => $totalUsage > 0,
+                'usedCount' => $totalUsage,
+            ];
+
+        }
+        return $out;
     }
 
     /**

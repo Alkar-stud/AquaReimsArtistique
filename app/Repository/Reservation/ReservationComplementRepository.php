@@ -101,6 +101,46 @@ class ReservationComplementRepository extends AbstractRepository
     }
 
     /**
+     * Compte l’usage des tarifs pour un événement donné, groupé par ID de tarif.
+     *
+     * Ne compte que les réservations actives (non annulées) de l’événement.
+     *
+     * @param int $eventId ID de l’événement.
+     * @param int[] $tarifIds Liste d’IDs de tarifs à filtrer.
+     * @return array<int,int> Tableau [tarifId => count] des occurrences dans les détails de réservation.
+     */
+    public function countUsageByTarifIdsForEvent(int $eventId, array $tarifIds): array
+    {
+        $tarifIds = array_values(array_unique(array_map('intval', $tarifIds)));
+        if (empty($tarifIds)) {
+            return [];
+        }
+
+        $placeholdersTarifs = implode(',', array_fill(0, count($tarifIds), '?'));
+
+        // Jointure reservation -> event_session pour cibler l’événement.
+        $sql = "
+            SELECT rc.tarif AS tarif_id, SUM(rc.qty) AS cnt
+            FROM $this->tableName rc
+            INNER JOIN reservation r ON r.id = rc.reservation
+            INNER JOIN event_session es ON es.id = r.event_session
+            WHERE es.event = ?
+              AND r.is_canceled = 0
+              AND rc.tarif IN ($placeholdersTarifs)
+            GROUP BY rc.tarif
+        ";
+
+        $params = array_merge([$eventId], $tarifIds);
+        $rows = $this->query($sql, $params);
+
+        $result = [];
+        foreach ($rows as $row) {
+            $result[(int)$row['tarif_id']] = (int)$row['cnt'];
+        }
+        return $result;
+    }
+
+    /**
      * Insère un nouveau complément.
      * @param ReservationComplement $complement
      * @return int ID inséré (0 si échec)

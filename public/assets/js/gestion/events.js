@@ -4,12 +4,18 @@ document.addEventListener('DOMContentLoaded', function() {
      * CONSTANTES DE CONFIGURATION
      * =================================================================
      */
-        // Délai en minutes pour pré-remplir l'ouverture des portes avant le début d'une séance
+    // Délai en minutes pour pré-remplir l'ouverture des portes avant le début d'une séance
     const DOORS_OPENING_OFFSET_MINUTES = 30;
     // Nombre de jours avant la séance pour la clôture des inscriptions à pré-remplir
     const INSCRIPTION_CLOSE_DAY_OFFSET = 1;
     // Heure de la journée pour pré-remplir la clôture des inscriptions (12 = midi)
     const INSCRIPTION_CLOSE_HOUR = 12;
+
+    // Récupération des données sur l'utilisation des tarifs (injecté depuis la vue)
+    const tarifsUsedScript = document.getElementById('tarifs-used-data');
+    // Structure : { eventId: { tarifId: { isUsed: bool, usedCount: int, ... } } }
+    const tarifsUsedData = tarifsUsedScript ? JSON.parse(tarifsUsedScript.textContent) : {};
+
 
     /**
      * =================================================================
@@ -149,8 +155,34 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Remplir l'onglet "Tarifs"
         const tarifCheckboxes = document.querySelectorAll('#pane-tarifs input[name="tarifs[]"]');
+        const eventUsage = tarifsUsedData[eventData.id] || {};
+
         tarifCheckboxes.forEach(checkbox => {
-            checkbox.checked = eventData.tarifs.includes(parseInt(checkbox.value));
+            const tarifId = parseInt(checkbox.value);
+            const isChecked = eventData.tarifs.includes(tarifId);
+            checkbox.checked = isChecked;
+
+            // Vérification si le tarif est utilisé et doit être verrouillé
+            // On vérifie s'il est coché ET s'il est marqué comme utilisé dans les données
+            if (isChecked && eventUsage[tarifId] && eventUsage[tarifId].isUsed) {
+                checkbox.disabled = true;
+                
+                // Ajout d'un style visuel sur la carte parente
+                const card = checkbox.closest('.tarif-card');
+                if (card) {
+                    card.classList.add('opacity-50', 'bg-light');
+                    card.title = "Ce tarif est utilisé par des réservations et ne peut pas être décoché.";
+                }
+
+                // IMPORTANT : Un input disabled n'est pas envoyé par le formulaire.
+                // On ajoute donc un input hidden pour conserver l'association côté serveur.
+                const hiddenInput = document.createElement('input');
+                hiddenInput.type = 'hidden';
+                hiddenInput.name = 'tarifs[]';
+                hiddenInput.value = tarifId;
+                hiddenInput.classList.add('locked-tarif-input'); // Classe repère pour le nettoyage
+                checkbox.parentElement.appendChild(hiddenInput);
+            }
         });
 
         // Remplir l'onglet "Séances"
@@ -231,6 +263,17 @@ document.addEventListener('DOMContentLoaded', function() {
         sessionIndex = 0;
         inscriptionIndex = 0;
 
+        // Nettoyage des tarifs verrouillés (inputs hidden et styles)
+        document.querySelectorAll('.locked-tarif-input').forEach(el => el.remove());
+        document.querySelectorAll('#pane-tarifs input[name="tarifs[]"]').forEach(cb => {
+            cb.disabled = false;
+            const card = cb.closest('.tarif-card');
+            if (card) {
+                card.classList.remove('opacity-50', 'bg-light');
+                card.removeAttribute('title');
+            }
+        });
+
         // Masquer "Supprimer" en mode ajout
         if (deleteBtn) deleteBtn.classList.add('d-none');
 
@@ -294,14 +337,14 @@ document.addEventListener('DOMContentLoaded', function() {
             const ds = cb.dataset || {};
             if (ds.seated === '1' || ds.type === 'seated' || ds.category === 'places') return true;
 
-            // 2) Fallback
+            //Fallback
             const group = cb.closest('.list-group');
             const heading = group ? group.previousElementSibling : null;
             const text = (heading && heading.textContent) ? heading.textContent : '';
             return /avec\s*places/i.test(text) || /places\s*assises/i.test(text);
         });
 
-        // Onglet  : Séances
+        // Onglet 3 : Séances
         if (sessionsContainer.children.length === 0) {
             errors.push({ tab: 'tab-sessions', message: "Au moins une séance est obligatoire." });
         } else {

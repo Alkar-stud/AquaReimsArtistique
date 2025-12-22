@@ -192,6 +192,7 @@
                                     {% endif %}
                                     {% endforeach %}
                                 </div>
+                            </div>
 
                             <!-- Onglet 3: Séances -->
                             <div class="tab-pane fade" id="pane-sessions" role="tabpanel">

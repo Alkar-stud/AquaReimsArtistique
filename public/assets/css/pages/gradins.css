@@ -398,3 +398,9 @@ table.zone-plan td.tdplaceNone .seat-placeholder {
 @media (max-width: 575.98px) {
     .nav-zone-btn { width: 36px; height: 36px; }
 }
+
+.nav-zone-btn {
+    border: 2px solid var(--ara-color-purple-darker);
+    box-shadow: 0 0 0.25rem rgba(13,110,253,0.5);
+    font-weight: 600;
+}

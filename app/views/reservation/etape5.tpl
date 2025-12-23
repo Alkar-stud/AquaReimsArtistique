@@ -51,8 +51,9 @@
 
 
         <div class="gradins-row align-items-center mb-2">
-            <button type="button" class="nav-zone-btn prev d-none d-md-inline-flex" data-action="prev-zone" aria-label="Zone précédente">&larr;</button>
-
+            <button type="button" class="nav-zone-btn prev d-none d-md-inline-flex" data-action="prev-zone" aria-label="Zone précédente">
+                <i class="bi bi-chevron-left"></i>
+            </button>
             <div class="bleacher-container mb-4">
                 <div class="gradins-wrapper" data-mode="readonly">
                     <section>
@@ -63,7 +64,9 @@
                 </div>
             </div>
 
-            <button type="button" class="nav-zone-btn next d-none d-md-inline-flex" data-action="next-zone" aria-label="Zone suivante">&rarr;</button>
+            <button type="button" class="nav-zone-btn next d-none d-md-inline-flex" data-action="next-zone" aria-label="Zone suivante">
+                <i class="bi bi-chevron-right"></i>
+            </button>
         </div>
 
         <!-- Bloc de boutons BOTTOM -->

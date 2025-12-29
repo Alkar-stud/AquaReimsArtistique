@@ -124,7 +124,7 @@
         </div>
     </form>
 </div>
-
+<br>
 
 {% if ($_ENV['APP_DEBUG'] == "true") %}
 Ici pour la suite, on a déjà enregistré ça&nbsp;:

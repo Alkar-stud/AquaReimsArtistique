@@ -26,8 +26,8 @@ import {
 	SourceEditing,
 	Underline
 } from "/assets/ckeditor5/ckeditor5.js";
-
 import translations from "/assets/ckeditor5/translations/fr.js";
+import { apiPost } from './apiClient.js';
 
 /**
  * Create a free account with a trial: https://portal.ckeditor.com/checkout?plan=free
@@ -212,40 +212,34 @@ class CustomUploadAdapter {
 		this.editor = editor;
 	}
 
-	upload() {
-		return this.loader.file.then(file => {
-			const form = this.editor.sourceElement.closest('form');
-			const displayUntilInput = form.querySelector('[name="display_until"]');
-			const displayUntilValue = displayUntilInput ? displayUntilInput.value : '';
+    upload() {
+        return this.loader.file.then(file => {
+            const form = this.editor.sourceElement.closest('form');
+            const displayUntilInput = form.querySelector('[name="display_until"]');
+            const displayUntilValue = displayUntilInput ? displayUntilInput.value : '';
 
-			const formData = new FormData();
-			formData.append('upload', file);
+            const formData = new FormData();
+            formData.append('upload', file);
 
-			const url = `/gestion/accueil/upload?displayUntil=${encodeURIComponent(displayUntilValue)}`;
+            const url = `/gestion/accueil/upload?displayUntil=${encodeURIComponent(displayUntilValue)}`;
 
-			return fetch(url, {
-				method: 'POST',
-				body: formData
-			})
-				.then(response => {
-					if (!response.ok) {
-						throw new Error(`Erreur HTTP: ${response.status}`);
-					}
-					return response.json();
-				})
-				.then(data => {
-					if (data.url) {
-						return { default: data.url };
-					} else if (data.error) {
-						console.error('Erreur d\'upload:', data.error);
-						throw new Error(data.error.message || 'Détails d\'erreur non disponibles');
-					} else {
-						throw new Error('Format de réponse inattendu');
-					}
-				});
-		});
-	}
-
+            return apiPost(url, formData)
+                .then(data => {
+                    if (data.url) {
+                        return { default: data.url };
+                    } else if (data.error) {
+                        console.error('Erreur d\'upload:', data.error);
+                        throw new Error(data.error.message || 'Détails d\'erreur non disponibles');
+                    } else {
+                        throw new Error('Format de réponse inattendu');
+                    }
+                })
+                .catch(error => {
+                    console.error('Erreur lors de l\'upload:', error);
+                    throw error;
+                });
+        });
+    }
 
 	abort() {
 		// Cette méthode peut être implémentée pour gérer l'annulation de l'upload.

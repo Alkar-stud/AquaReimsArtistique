@@ -2,6 +2,7 @@
 
 namespace app\Services;
 
+use DateTime;
 use Exception;
 
 class UploadService
@@ -18,7 +19,7 @@ class UploadService
     {
         // --- Vérifications de sécurité ---
         if ($fileData['error'] !== UPLOAD_ERR_OK) {
-            throw new Exception('Erreur lors du téléversement du fichier.');
+            throw new Exception($this->getUploadErrorMessage($fileData['error']));
         }
 
         $allowedMimeTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
@@ -48,11 +49,11 @@ class UploadService
 
         try {
             // Si une date est fournie, on l'utilise, sinon on prend la date/heure actuelle
-            $date = new \DateTime($displayUntil ?: 'now');
+            $date = new DateTime($displayUntil ?: 'now');
             $baseName .= $date->format('Ymd_Hi');
         } catch (Exception $e) {
             // En cas de format de date invalide, on se rabat sur la date actuelle
-            $baseName .= (new \DateTime())->format('Ymd_Hi');
+            $baseName .= (new DateTime())->format('Ymd_Hi');
         }
 
         // Gérer les versions pour éviter d'écraser des fichiers
@@ -71,7 +72,9 @@ class UploadService
             return '/images/accueil/' . $fileName;
         }
 
-        throw new Exception('Impossible de déplacer le fichier téléversé.');
+        $error = error_get_last();
+        $errorMessage = $error ? $error['message'] : 'Erreur inconnue';
+        throw new Exception("Impossible de déplacer le fichier téléversé : " . $errorMessage);
     }
 
     /**

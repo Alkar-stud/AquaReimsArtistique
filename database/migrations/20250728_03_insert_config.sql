@@ -9,7 +9,7 @@ INSERT IGNORE INTO `config` (`label`, `config_key`, `config_value`, `config_type
 ('Durée max des log en nombre d\'entrée', 'MAX_LOGS_SIZE', '100000', 'int'),
 ('Dossier pour l\'upload des justificatifs', 'UPLOAD_PROOF_PATH', '/storage/proofs/', 'string'),
 ('Taille maxi des fichiers (Mo) justificatif pour preuve de tarif', 'MAX_UPLOAD_PROOF_SIZE', '4', 'int'),
-('Token pour cron', 'CRON_TOKEN', 'ToeknAGenerer', 'string'),
+('Token pour cron', 'CRON_TOKEN', 'TokenAGenerer', 'string'),
 ('nb caractère pour token', 'NB_CARACTERE_TOKEN', '32', 'int'),
 ('Signature des mails', 'SIGNATURE', 'Aqua Reims Artistique vous remercie et à bientôt...', 'string'),
 ('% max de la commande pour la jauge de don', 'DONATION_SLIDER_MAX_PERCENTAGE', '50', 'int');

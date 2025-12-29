@@ -13,7 +13,7 @@
 /* Sur les écrans de bureau (768px et plus), on limite la largeur de la figure */
 @media (min-width: 768px) {
     .homepage-content img {
-        width: 50%
+        max-width: 50%
     }
 }
 .homepage-content img {

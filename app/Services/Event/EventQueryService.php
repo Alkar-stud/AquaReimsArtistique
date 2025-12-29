@@ -416,28 +416,45 @@ class EventQueryService
             }
 
             // Traitement des détails (tarifs avec place)
+            $detailsByTarif = [];
             foreach ($reservation->getDetails() as $detail) {
                 $tarif = $detail->getTarifObject();
                 if (!$tarif) continue;
 
                 $tarifId = $tarif->getId();
+                if (!isset($detailsByTarif[$tarifId])) {
+                    $detailsByTarif[$tarifId] = [
+                        'tarif' => $tarif,
+                        'count' => 0,
+                    ];
+                }
+                $detailsByTarif[$tarifId]['count']++;
+            }
+
+            foreach ($detailsByTarif as $tarifId => $data) {
+                $tarif = $data['tarif'];
+                $detailCount = $data['count'];
                 $price = $tarif->getPrice();
                 $seatCount = $tarif->getSeatCount() ?? 1;
 
-                // Mettre à jour les stats pour ce tarif dans cette session (le tarif est déjà initialisé)
-                $stats['sessions'][$sessionId]['seated']['perTarif'][$tarifId]['persons'] += $seatCount;
-                $stats['sessions'][$sessionId]['seated']['perTarif'][$tarifId]['tickets']++;
-                $stats['sessions'][$sessionId]['seated']['perTarif'][$tarifId]['amount'] += $price;
+                // Calculer le nombre de tickets (packs)
+                $ticketCount = (int)ceil($detailCount / $seatCount);
+                $totalPersons = $detailCount; // Chaque detail = 1 personne
+
+                // Mettre à jour les stats pour ce tarif dans cette session
+                $stats['sessions'][$sessionId]['seated']['perTarif'][$tarifId]['persons'] += $totalPersons;
+                $stats['sessions'][$sessionId]['seated']['perTarif'][$tarifId]['tickets'] += $ticketCount;
+                $stats['sessions'][$sessionId]['seated']['perTarif'][$tarifId]['amount'] += $price * $ticketCount;
 
                 // Mettre à jour les totaux de la session
-                $stats['sessions'][$sessionId]['seated']['totals']['persons'] += $seatCount;
-                $stats['sessions'][$sessionId]['seated']['totals']['tickets']++;
-                $stats['sessions'][$sessionId]['seated']['totals']['amount'] += $price;
+                $stats['sessions'][$sessionId]['seated']['totals']['persons'] += $totalPersons;
+                $stats['sessions'][$sessionId]['seated']['totals']['tickets'] += $ticketCount;
+                $stats['sessions'][$sessionId]['seated']['totals']['amount'] += $price * $ticketCount;
 
                 // Mettre à jour les totaux de l'événement
-                $stats['eventTotals']['seated']['persons'] += $seatCount;
-                $stats['eventTotals']['seated']['tickets']++;
-                $stats['eventTotals']['seated']['amount'] += $price;
+                $stats['eventTotals']['seated']['persons'] += $totalPersons;
+                $stats['eventTotals']['seated']['tickets'] += $ticketCount;
+                $stats['eventTotals']['seated']['amount'] += $price * $ticketCount;
             }
 
             // Traitement des compléments (tarifs sans place)

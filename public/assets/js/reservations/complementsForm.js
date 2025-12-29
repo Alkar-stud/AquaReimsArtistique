@@ -82,7 +82,6 @@ function init(options) {
                 alert(response.message || 'Échec de l\'opération.');
             }
         } catch (error) {
-console.log('erreur : ', error);
             alert(error.userMessage || 'Erreur de communication.');
         } finally {
             button.disabled = false; // Réactiver le bouton

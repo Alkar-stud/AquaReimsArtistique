@@ -45,7 +45,7 @@ export function initSpecialCodeForm(options) {
             }
         } catch (error) {
             specialCodeFeedback.classList.add('text-danger');
-console.log('erreur : ', error);
+
             specialCodeFeedback.textContent = error.userMessage || 'Erreur de communication.';
         } finally {
             validateCodeBtn.disabled = false;

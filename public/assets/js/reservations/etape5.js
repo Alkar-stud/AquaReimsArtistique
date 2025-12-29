@@ -101,12 +101,6 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        console.log(`Statut : ${currentStatus} : `, {
-            id: seat.seatId,
-            code: seat.code,
-            status: currentStatus
-        });
-
         let urlPath;
         if (currentStatus === 'available') {
             urlPath = `/reservation/etape5AddSeat/${seat.seatId}`;

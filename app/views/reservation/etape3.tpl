@@ -79,7 +79,7 @@
         {% endif %}
 
         <hr>
-
+<!--
         <div class="mb-3">
             <label for="specialCode" class="form-label">Vous avez un code ?</label>
             <div id="specialCodeHelp" class="visually-hidden">
@@ -110,7 +110,7 @@
         </div>
 
         <div id="specialTarifContainer"></div>
-
+-->
         <br>
 
         <div class="row">
@@ -118,7 +118,7 @@
             <!-- afin que le bouton principal soit à droite en desktop -->
             <!-- et en 1er en mobile -->
             <div class="col-12 col-md-6 order-2 order-md-1 mb-2 mb-md-0">
-                <a href="/reservation/etape2Display" class="btn btn-secondary w-100 w-md-auto">Modifier mon choix précédent</a>
+                <a href="/reservation/etape2Display" class="btn btn-secondary w-100 w-md-auto">Retour</a>
             </div>
             <div class="col-12 col-md-6 order-1 order-md-2 d-flex justify-content-md-end mb-2 mb-md-0">
                 <button type="submit" class="btn btn-primary w-100 w-md-auto" id="submitButton">Valider et continuer</button>

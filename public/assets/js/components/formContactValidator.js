@@ -108,45 +108,52 @@ export function setState(input, ok, message = '') {
  * @returns {boolean} `true` si l'ensemble est valide, sinon `false`.
  */
 export function validateNameAndFirstname(nameInput, firstnameInput) {
-    // Utiliser les valeurs brutes pour détecter les chiffres
     const nRaw = nameInput.value.trim();
     const pRaw = firstnameInput.value.trim();
 
     const n = normalize(nRaw);
     const p = normalize(pRaw);
 
-    if (n.length <= 1 || p.length <= 1) {
-        const msg = 'Le nom et le prénom doivent contenir plus d’un caractère.';
-        setState(nameInput, false, msg);
-        setState(firstnameInput, false, msg);
-        return false;
+    let nameValid = true;
+    let firstnameValid = true;
+
+    // Validation individuelle du nom
+    if (nRaw && n.length <= 1) {
+        setState(nameInput, false, 'Le nom doit contenir plus d\'un caractère.');
+        nameValid = false;
+    } else if (/\d/.test(nRaw)) {
+        setState(nameInput, false, 'Le nom ne doit pas contenir de chiffres.');
+        nameValid = false;
+    } else if (/(.)\1\1/.test(n)) {
+        setState(nameInput, false, 'Le nom ne doit pas contenir trois caractères identiques consécutifs.');
+        nameValid = false;
+    } else {
+        setState(nameInput, true, '');
     }
 
-    // Vérifier les chiffres sur la valeur brute (pas normalisée)
-    if (/\d/.test(nRaw) || /\d/.test(pRaw)) {
-        const msg = 'Le nom et le prénom ne doivent pas contenir de chiffres.';
-        setState(nameInput, false, msg);
-        setState(firstnameInput, false, msg);
-        return false;
+    // Validation individuelle du prénom
+    if (pRaw && p.length <= 1) {
+        setState(firstnameInput, false, 'Le prénom doit contenir plus d\'un caractère.');
+        firstnameValid = false;
+    } else if (/\d/.test(pRaw)) {
+        setState(firstnameInput, false, 'Le prénom ne doit pas contenir de chiffres.');
+        firstnameValid = false;
+    } else if (/(.)\1\1/.test(p)) {
+        setState(firstnameInput, false, 'Le prénom ne doit pas contenir trois caractères identiques consécutifs.');
+        firstnameValid = false;
+    } else {
+        setState(firstnameInput, true, '');
     }
 
-    if (/(.)\1\1/.test(n) || /(.)\1\1/.test(p)) {
-        const msg = 'Le nom et le prénom ne doivent pas contenir trois caractères identiques consécutifs.';
-        setState(nameInput, false, msg);
-        setState(firstnameInput, false, msg);
-        return false;
-    }
-
-    if (n === p) {
+    // Vérification de l'identité uniquement si les deux champs sont valides et non vides
+    if (nameValid && firstnameValid && n && p && n === p) {
         const msg = 'Le nom et le prénom ne doivent pas être identiques.';
         setState(nameInput, false, msg);
         setState(firstnameInput, false, msg);
         return false;
     }
 
-    setState(nameInput, true, '');
-    setState(firstnameInput, true, '');
-    return true;
+    return nameValid && firstnameValid;
 }
 
 /**

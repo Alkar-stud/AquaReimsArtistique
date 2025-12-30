@@ -100,7 +100,7 @@
             <!-- afin que le bouton principal soit à droite en desktop -->
             <!-- et en 1er en mobile -->
             <div class="col-12 col-md-6 order-2 order-md-1 mb-2 mb-md-0">
-                <a href="/reservation" class="btn btn-secondary w-100 w-md-auto">Modifier la session choisie</a>
+                <a href="/reservation" class="btn btn-secondary w-100 w-md-auto">Retour</a>
             </div>
             <div class="col-12 col-md-6 order-1 order-md-2 d-flex justify-content-md-end mb-2 mb-md-0">
                 <button type="submit" class="btn btn-primary w-100 w-md-auto">Valider et continuer</button>

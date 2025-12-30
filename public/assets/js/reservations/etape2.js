@@ -58,7 +58,7 @@ document.addEventListener('DOMContentLoaded', () => {
         syncAriaFromResult(phoneInput, phoneErr, ok);
     };
 
-    ['input', 'blur'].forEach(evt => {
+    ['blur'].forEach(evt => {
         nameInput.addEventListener(evt, updateNamePair);
         firstnameInput.addEventListener(evt, updateNamePair);
         emailInput.addEventListener(evt, updateEmail);

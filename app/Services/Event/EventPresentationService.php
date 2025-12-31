@@ -55,7 +55,7 @@ class EventPresentationService
 
                     // Ajout du alt à l'image
                     if ($content->getEventObject()) {
-                        $image->setAttribute('alt', 'Réserver pour ' . htmlspecialchars($content->getEventObject()->getName()));
+                        $image->setAttribute('alt', 'Réserver pour ' . $content->getEventObject()->getName());
                     }
 
                     // On remplace l'image par le lien, et on met l'image à l'intérieur du lien
@@ -69,7 +69,48 @@ class EventPresentationService
         }
 
         return $contents;
-
     }
+
+    public function resizeAllPictures(array $contents): array
+    {
+        foreach ($contents as $content) {
+            try {
+                $html = $content->getContent();
+                if (empty(trim($html))) {
+                    continue;
+                }
+
+                $previousLibXmlErrors = libxml_use_internal_errors(true);
+
+                $doc = new DOMDocument();
+                $doc->loadHTML('<?xml encoding="utf-8" ?>' . $html, LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD);
+
+                libxml_use_internal_errors($previousLibXmlErrors);
+
+                $images = $doc->getElementsByTagName('img');
+                foreach ($images as $image) {
+                    // Supprime les attributs de taille inline
+                    $image->removeAttribute('width');
+                    $image->removeAttribute('height');
+                    $image->removeAttribute('style');
+
+                    // Ajoute des classes Bootstrap pour un redimensionnement responsive
+                    $currentClass = $image->getAttribute('class');
+                    $newClasses = trim($currentClass . ' img-fluid');
+                    $image->setAttribute('class', $newClasses);
+
+                    // Ajoute un style inline pour limiter la hauteur à 70vh (laisse de la place pour le texte)
+                    $image->setAttribute('style', 'max-height: 60vh; width: auto; object-fit: contain;');
+                }
+
+                $content->setContent($doc->saveHTML());
+            } catch (Exception $e) {
+                error_log("Erreur lors du redimensionnement des images pour le contenu ID " . $content->getId() . ": " . $e->getMessage());
+            }
+        }
+
+        return $contents;
+    }
+
 
 }

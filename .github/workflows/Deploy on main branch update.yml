@@ -21,4 +21,7 @@ jobs:
         exclude: |
           **/.git*
           **/.git*/**
+          ChampEmail.md
+          Dockerfile
+          docker-compose.yml
         server-dir: /          

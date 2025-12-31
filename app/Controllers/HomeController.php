@@ -26,6 +26,7 @@ class HomeController extends AbstractController
         $eventPresentations = $this->eventPresentationsRepository->findAll(true, true);
 
         $contents = $this->eventPresentationService->addLinkToAllPictures($eventPresentations);
+        $contents = $this->eventPresentationService->resizeAllPictures($eventPresentations);
 
         $this->render('home', [
             'contents' => $contents

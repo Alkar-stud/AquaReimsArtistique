@@ -58,7 +58,7 @@
                         {% foreach $event['registrationPeriods'] as $period %}
                         <li>
                             <small>
-                                <i class="bi bi-clock-history"></i> {{ $period['name'] }}: du {{ (new DateTime($period['start']))->format('d/m') }} au {{ (new DateTime($period['end']))->format('d/m/Y') }}
+                                <i class="bi bi-clock-history"></i> {{ $period['name'] }}: du {{ (new DateTime($period['start']))->format('d/m/Y') }} au {{ (new DateTime($period['end']))->format('d/m/Y') }}
                             </small>
                         </li>
                         {% endforeach %}

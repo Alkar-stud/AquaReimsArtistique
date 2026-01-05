@@ -152,6 +152,7 @@ $qParam = !empty($searchQuery) ? ('&q=' . urlencode($searchQuery)) : '';
                 <td>
                     {% if $reservation->getSwimmer() %}
                     {{ $reservation->getSwimmer()->getName() }}
+                    ({{ $reservation->getSwimmer()->getGroupObject()->getName() }})
                     {% else %}
                     N/A
                     {% endif %}

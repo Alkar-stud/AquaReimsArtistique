@@ -1026,7 +1026,8 @@ class ReservationRepository extends AbstractRepository
         $swimmerId = $r->getSwimmerId();
         if ($swimmerId !== null) {
             $swimmerRepo = new SwimmerRepository();
-            $r->setSwimmer($swimmerRepo->findById($swimmerId));
+            $swimmer = $swimmerRepo->findById($swimmerId, true);
+            $r->setSwimmer($swimmer);
         } else {
             // S'assurer que la relation est explicitement à null si pas de limitation
             $r->setSwimmer(null);

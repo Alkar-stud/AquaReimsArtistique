@@ -107,7 +107,8 @@ class ReservationDataValidationService
             $reservationTemp->setName((string)$data['name'] ?? null);
             $reservationTemp->setFirstname((string)$data['firstname'] ?? null);
             $reservationTemp->setEmail((string)$data['email'] ?? null);
-            $reservationTemp->setPhone((string)$data['phone'] ?? null);
+            //$reservationTemp->setPhone((string)$data['phone'] ?? null);
+            $reservationTemp->setPhone(isset($data['phone']) ? str_replace(' ', '', (string)$data['phone']) : null);
 
             // Gestion du consentement RGPD : si absent ou false -> erreur
             $rgpdInput = $data['rgpd_consent'] ?? null;

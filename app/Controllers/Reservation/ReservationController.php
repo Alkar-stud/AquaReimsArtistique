@@ -100,11 +100,6 @@ class ReservationController extends AbstractController
             $this->redirect('/reservation?session_erreur=cps1');
         }
 
-        if (!$result['success']) {
-            $this->flashMessageService->setFlashMessage('warning', 'Erreur de validation des données. Merci de recommencer votre réservation.');
-            $this->redirect('/reservation?session_erreur=cps1');
-        }
-
         $this->render('reservation/etape2', [
             'reservation' => $session,
         ],'Réservations');
@@ -119,7 +114,9 @@ class ReservationController extends AbstractController
         // Valider les étapes précédentes
         $result = $this->reservationDataValidationService->checkPreviousStep(3, $session);
         if (!$result['success']) {
-            $this->flashMessageService->setFlashMessage('warning', 'Erreur de validation des données. Merci de recommencer votre réservation.');
+            $errorDetails = !empty($result['errors']) ? ' (' . json_encode($result['errors'], JSON_UNESCAPED_UNICODE) . ')' : '';
+            $errorMessage = 'Erreur de validation des données. Merci de recommencer votre réservation. (' . $errorDetails . ')';
+            $this->flashMessageService->setFlashMessage('warning', $errorMessage);
             $this->redirect('/reservation?session_erreur=cps1');
         }
 
@@ -156,7 +153,9 @@ class ReservationController extends AbstractController
         // Valider les étapes précédentes
         $result = $this->reservationDataValidationService->checkPreviousStep(4, $session);
         if (!$result['success']) {
-            $this->flashMessageService->setFlashMessage('warning', 'Erreur de validation des données. Merci de recommencer votre réservation.');
+            $errorDetails = !empty($result['errors']) ? ' (' . json_encode($result['errors'], JSON_UNESCAPED_UNICODE) . ')' : '';
+            $errorMessage = 'Erreur de validation des données. Merci de recommencer votre réservation. (' . $errorDetails . ')';
+            $this->flashMessageService->setFlashMessage('warning', $errorMessage);
             $this->redirect('/reservation?session_erreur=cps1');
         }
 
@@ -173,7 +172,9 @@ class ReservationController extends AbstractController
         // Valider les étapes précédentes
         $result = $this->reservationDataValidationService->checkPreviousStep(5, $session);
         if (!$result['success']) {
-            $this->flashMessageService->setFlashMessage('warning', 'Erreur de validation des données. Merci de recommencer votre réservation.');
+            $errorDetails = !empty($result['errors']) ? ' (' . json_encode($result['errors'], JSON_UNESCAPED_UNICODE) . ')' : '';
+            $errorMessage = 'Erreur de validation des données. Merci de recommencer votre réservation. (' . $errorDetails . ')';
+            $this->flashMessageService->setFlashMessage('warning', $errorMessage);
             $this->redirect('/reservation?session_erreur=cps1');
         }
 
@@ -208,7 +209,9 @@ class ReservationController extends AbstractController
         // Valider les étapes précédentes
         $result = $this->reservationDataValidationService->checkPreviousStep(6, $session);
         if (!$result['success']) {
-            $this->flashMessageService->setFlashMessage('warning', 'Erreur de validation des données. Merci de recommencer votre réservation.');
+            $errorDetails = !empty($result['errors']) ? ' (' . json_encode($result['errors'], JSON_UNESCAPED_UNICODE) . ')' : '';
+            $errorMessage = 'Erreur de validation des données. Merci de recommencer votre réservation. (' . $errorDetails . ')';
+            $this->flashMessageService->setFlashMessage('warning', $errorMessage);
             $this->redirect('/reservation?session_erreur=cps1');
         }
 

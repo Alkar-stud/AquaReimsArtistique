@@ -606,7 +606,7 @@ class ReservationRepository extends AbstractRepository
      */
     public function findByEmailAndEvent(string $email, int $eventId, bool ...$with): array
     {
-        $sql = "SELECT id FROM $this->tableName WHERE email = :email AND event = :eventId";
+        $sql = "SELECT id FROM $this->tableName WHERE email = :email AND event = :eventId AND is_canceled = 0";
         $rows = $this->query($sql, ['email' => $email, 'eventId' => $eventId]);
 
         $reservations = [];

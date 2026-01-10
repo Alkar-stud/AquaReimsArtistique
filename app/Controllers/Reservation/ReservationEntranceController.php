@@ -6,7 +6,6 @@ use app\Attributes\Route;
 use app\Controllers\AbstractController;
 use app\Repository\Reservation\ReservationDetailRepository;
 use app\Repository\Reservation\ReservationRepository;
-use app\Services\Pagination\PaginationService;
 use app\Services\Reservation\ReservationQueryService;
 
 class ReservationEntranceController extends AbstractController
@@ -14,19 +13,16 @@ class ReservationEntranceController extends AbstractController
     private ReservationRepository $reservationRepository;
     private ReservationQueryService $reservationQueryService;
     private ReservationDetailRepository $reservationDetailRepository;
-    private PaginationService $paginationService;
 
     public function __construct(
         ReservationRepository $reservationRepository,
         ReservationQueryService $reservationQueryService,
         ReservationDetailRepository $reservationDetailRepository,
-        PaginationService $paginationService,
     ) {
         parent::__construct(false);
         $this->reservationRepository = $reservationRepository;
         $this->reservationQueryService = $reservationQueryService;
         $this->reservationDetailRepository = $reservationDetailRepository;
-        $this->paginationService = $paginationService;
     }
 
     #[Route('/entrance', name: 'app_entrance', methods: ['GET'])]
@@ -38,7 +34,7 @@ class ReservationEntranceController extends AbstractController
             return;
         }
 
-        $reservation = $this->reservationRepository->findByField('token', $reservationToken, true, true, false, true);
+        $reservation = $this->reservationRepository->findByField('token', $reservationToken, true, true, false);
         //On compare le nombre de détails avec entered_at == null au nombre de details avec entered_at == not null
         $everyOneInReservation = $this->reservationQueryService->everyOneInReservationIsHere($reservation);
 

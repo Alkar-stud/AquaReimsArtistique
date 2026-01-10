@@ -12,19 +12,23 @@ class UserDataValidationService
     public function checkData(array $data): ?string
     {
         // Normalisation
-        $this->username = htmlspecialchars(trim($data['username'] ?? ''), ENT_QUOTES, 'UTF-8');
+        $usernameRaw = trim($data['username'] ?? '');
+        $this->username = htmlspecialchars($usernameRaw, ENT_QUOTES, 'UTF-8');
         $this->displayName = htmlspecialchars(trim($data['display_name'] ?? ''), ENT_QUOTES, 'UTF-8');
         $emailRaw = trim($data['email'] ?? '');
         $this->email = filter_var($emailRaw, FILTER_VALIDATE_EMAIL) ?: null;
         $this->roleId = (int)($data['role'] ?? 0);
 
         // Checkbox "Actif" (toujours présent grâce au hidden input)
-        // Accepte '1', 'on', 'true', 'yes' => true | '0', 'off', 'false', 'no' => false
         $this->isActive = filter_var($data['is_active'] ?? '0', FILTER_VALIDATE_BOOLEAN);
 
-        // Validation
-        if (empty($this->username) || strlen($this->username) < 3 || strlen($this->username) > 50) {
-            return "Le nom d'utilisateur doit contenir entre 3 et 50 caractères.";
+        // Validation du nom d'utilisateur :
+        // - accepte les lettres Unicode (y compris accentuées) \p{L}, les chiffres \p{N}, "_" et "-"
+        // - interdit les espaces et autres caractères
+        // - longueur entre 3 et 50 (vérifiée avec mb_strlen)
+        $len = mb_strlen($usernameRaw, 'UTF-8');
+        if (empty($usernameRaw) || !preg_match('/^[\p{L}\p{N}_-]+$/u', $usernameRaw) || $len < 3 || $len > 50) {
+            return "Le nom d'utilisateur doit contenir entre 3 et 50 caractères sans espaces : seuls les lettres (y compris accentuées), chiffres, underscore et tiret sont autorisés.";
         }
         if (!$this->email) {
             return "L'adresse email saisie est invalide.";

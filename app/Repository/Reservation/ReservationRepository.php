@@ -7,6 +7,7 @@ use app\Repository\AbstractRepository;
 use app\Repository\Event\EventRepository;
 use app\Repository\Event\EventSessionRepository;
 use app\Repository\Swimmer\SwimmerRepository;
+use app\Repository\User\UserRepository;
 use DateTimeInterface;
 use PDOStatement;
 use ReflectionClass;
@@ -852,7 +853,7 @@ class ReservationRepository extends AbstractRepository
     {
         $allowed = [
             'name', 'firstname', 'email', 'phone', 'total_amount', 'total_amount_paid','rgpd_date_consentement',
-            'is_canceled', 'is_checked', 'complements_given_at'
+            'is_canceled', 'is_checked', 'complements_given_at', 'complements_given_by'
         ];
 
         if (!in_array($field, $allowed, true)) return false;
@@ -862,7 +863,7 @@ class ReservationRepository extends AbstractRepository
             $value = $value ? 1 : 0;
         } elseif (in_array($field, ['total_amount', 'total_amount_paid'], true)) {
             $value = (int)$value;
-        } elseif (in_array($field, ['phone', 'complements_given_at'], true)) {
+        } elseif (in_array($field, ['phone', 'complements_given_at', 'complements_given_by'], true)) {
             $value = ($value === '' || $value === null) ? null : (string)$value;
         } else {
             $value = (string)$value;
@@ -977,7 +978,17 @@ class ReservationRepository extends AbstractRepository
             ->setIsCanceled(!empty($data['is_canceled']))
             ->setIsChecked(!empty($data['is_checked'] ?? 0))
             ->setComments($data['comments'] ?? null)
-            ->setComplementsGivenAt($data['complements_given_at'] ?? null);
+            ->setComplementsGivenAt($data['complements_given_at'] ?? null)
+            ->setComplementsGivenBy($data['complements_given_by'] ?? null);
+
+        // Hydratation du User si complements_given_by existe
+        if (!empty($data['complements_given_by'])) {
+            $userRepo = new UserRepository();
+            $user = $userRepo->findById((int)$data['complements_given_by']);
+            if ($user) {
+                $r->setComplementsGivenByUser($user);
+            }
+        }
 
         return $r;
     }

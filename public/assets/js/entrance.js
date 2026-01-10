@@ -62,12 +62,14 @@ document.addEventListener('DOMContentLoaded', () => {
                     // Mettre à jour l'état et le visuel
                     toggleComplementsBtn.dataset.complementGiven = (!isGiven).toString();
                     if (!isGiven) {
+console.log(result);
                         const ts = result.complements_given_at || new Date().toISOString();
+                        const userName = result.user_name || 'Inconnu';
                         toggleComplementsBtn.dataset.complementsGivenAt = ts;
                         const heure = formatTime(ts);
                         toggleComplementsBtn.classList.remove('btn-outline-primary');
                         toggleComplementsBtn.classList.add('btn-success');
-                        toggleComplementsBtn.innerHTML = `<i class="bi bi-check-circle-fill"></i>&nbsp;Remis à ${heure}`;
+                        toggleComplementsBtn.innerHTML = `<i class="bi bi-check-circle-fill"></i>&nbsp;Remis à ${heure} par ${userName}`;
                     } else {
                         toggleComplementsBtn.classList.remove('btn-success');
                         toggleComplementsBtn.classList.add('btn-outline-primary');

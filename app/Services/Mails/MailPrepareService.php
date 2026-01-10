@@ -8,6 +8,7 @@ use app\Services\Reservation\ReservationSummaryBuilder;
 use app\Utils\BuildLink;
 use app\Utils\QRCode;
 use app\Utils\StringHelper;
+use DateTimeInterface;
 
 readonly class MailPrepareService
 {
@@ -28,6 +29,18 @@ readonly class MailPrepareService
     {
         $params = $this->buildPasswordResetParams($username, $resetLink);
         return $this->sendTemplatedEmail($recipientEmail, 'password_reset', $params);
+    }
+
+    /**
+     * @param string $recipientEmail
+     * @param string $username
+     * @param string $resetLink
+     * @return bool
+     */
+    public function sendPasswordNewAccount(string $recipientEmail, string $username, string $resetLink, DatetimeInterface $expiresAt): bool
+    {
+        $params = $this->buildNewAccountParams($username, $resetLink, $expiresAt);
+        return $this->sendTemplatedEmail($recipientEmail, 'new_account', $params);
     }
 
     /**
@@ -124,6 +137,21 @@ readonly class MailPrepareService
         return [
             'username' => $username,
             'link' => $resetLink,
+        ];
+    }
+
+    /**
+     * @param string $username
+     * @param string $resetLink
+     * @return string[]
+     */
+    private function buildNewAccountParams(string $username, string $resetLink, DateTimeInterface $expiresAt): array
+    {
+        return [
+            'username' => $username,
+            'app_name' => $_ENV['APP_NAME'],
+            'link' => $resetLink,
+            'timeout_token_new_account' => $expiresAt->format('d/m/Y \à H\hi')
         ];
     }
 

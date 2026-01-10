@@ -73,10 +73,11 @@ class UserController extends AbstractController
         try {
             $buildLink = new buildLink();
             $resetLink = $buildLink->buildResetLink('/reset-password', $resetTokenData['token']);
-            (new MailPrepareService())->sendPasswordResetEmail(
+            (new MailPrepareService())->sendPasswordNewAccount(
                 $newUser->getEmail(),
                 $newUser->getDisplayName(),
-                $resetLink
+                $resetLink,
+                $newUser->getPasswordResetExpiresAt()
             );
 
         } catch (Exception $e) {

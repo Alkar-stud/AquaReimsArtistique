@@ -7,6 +7,7 @@ use app\Repository\AbstractRepository;
 use app\Repository\Event\EventRepository;
 use app\Repository\Event\EventSessionRepository;
 use app\Repository\Swimmer\SwimmerRepository;
+use app\Repository\User\UserRepository;
 use DateTimeInterface;
 use PDOStatement;
 use ReflectionClass;
@@ -977,7 +978,17 @@ class ReservationRepository extends AbstractRepository
             ->setIsCanceled(!empty($data['is_canceled']))
             ->setIsChecked(!empty($data['is_checked'] ?? 0))
             ->setComments($data['comments'] ?? null)
-            ->setComplementsGivenAt($data['complements_given_at'] ?? null);
+            ->setComplementsGivenAt($data['complements_given_at'] ?? null)
+            ->setComplementsGivenBy($data['complements_given_by'] ?? null);
+
+        // Hydratation du User si complements_given_by existe
+        if (!empty($data['complements_given_by'])) {
+            $userRepo = new UserRepository();
+            $user = $userRepo->findById((int)$data['complements_given_by']);
+            if ($user) {
+                $r->setComplementsGivenByUser($user);
+            }
+        }
 
         return $r;
     }

@@ -5,6 +5,7 @@ use app\Models\AbstractModel;
 use app\Models\Event\Event;
 use app\Models\Event\EventSession;
 use app\Models\Swimmer\Swimmer;
+use app\Models\User\User;
 use app\Utils\StringHelper;
 use DateTime;
 use DateTimeInterface;
@@ -40,6 +41,8 @@ class Reservation extends AbstractModel
 
     private ?string $comments = null;
     private ?DateTimeInterface $complements_given_at = null;
+    private ?int $complements_given_by = null;
+    private ?User $complements_given_by_user = null;
 
     // Relations enfants
     private array $details = [];
@@ -68,6 +71,8 @@ class Reservation extends AbstractModel
     public function isChecked(): bool { return $this->is_checked; }
     public function getComments(): ?string { return $this->comments; }
     public function getComplementsGivenAt(): ?DateTimeInterface { return $this->complements_given_at; }
+    public function getComplementsGivenBy(): ?int { return $this->complements_given_by; }
+    public function getComplementsGivenByUser(): ?User { return $this->complements_given_by_user; }
     public function getDetails(): array { return $this->details; }
     public function getComplements(): array { return $this->complements; }
     public function getPayments(): array { return $this->payments; }
@@ -142,6 +147,18 @@ class Reservation extends AbstractModel
     public function setComments(?string $comments): self { $this->comments = ($comments === '' ? null : $comments); return $this; }
     public function setComplementsGivenAt(?string $complements_given_at): self {
         $this->complements_given_at = $complements_given_at ? new DateTime($complements_given_at) : null;
+        return $this;
+    }
+    public function setComplementsGivenBy(?int $complements_given_by): self {
+        $this->complements_given_by = $complements_given_by;
+        return $this;
+    }
+
+    public function setComplementsGivenByUser(?User $user): self {
+        $this->complements_given_by_user = $user;
+        if ($user !== null) {
+            $this->complements_given_by = $user->getId();
+        }
         return $this;
     }
 

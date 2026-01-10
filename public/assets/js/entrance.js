@@ -4,7 +4,7 @@ import {formatTime} from "./components/utils.js";
 document.addEventListener('DOMContentLoaded', () => {
 
     const toggleComplementsBtn = document.querySelector('[data-action="toggle-complements"]');
-    const reservationId = toggleComplementsBtn.dataset.reservationId;
+    const reservationId = document.querySelector('[data-reservation-id]')?.dataset.reservationId;
     const participantItems = document.querySelectorAll('[data-action="toggle-participant"]');
     const everyonePresentBadge = document.getElementById('every-one-is-present');
     const checkReservationCheckbox = document.querySelector('[data-action="check-reservation"]');

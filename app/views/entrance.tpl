@@ -1,4 +1,4 @@
-<div class="container-fluid">
+<div class="container-fluid" data-reservation-id="{{ $reservation->getId() }}">
     <div class="mb-3 sticky-reservation-header shadow-sm px-2 py-2">
         <h5 class="mb-2">Réservation ARA-{{ str_pad($reservation->getId(), 5, '0', STR_PAD_LEFT) }}</h5>
         <div class="d-flex gap-2 mb-2">

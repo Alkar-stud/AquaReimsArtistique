@@ -101,7 +101,15 @@ class ReservationEntranceController extends AbstractController
             $value = $complement ? date('Y-m-d H:i:s') : null;
             $this->reservationRepository->updateSingleField($reservation->getId(), 'complements_given_at', $value);
             $this->reservationRepository->updateSingleField($reservation->getId(), 'complements_given_by', $value == null ? null:$this->currentUser->getId());
-            $this->json(['success' => true, 'message' => 'Mise à jour effectuée']);
+
+            $userName = $value !== null ? $this->currentUser->getDisplayName() : null;
+
+            $this->json([
+                'success' => true,
+                'message' => 'Mise à jour effectuée',
+                'complements_given_at' => $value,
+                'user_name' => $userName
+            ]);
         }
 
         if ($participant !== null) {

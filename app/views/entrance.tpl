@@ -58,7 +58,8 @@
                     data-complements-given-at="{{ $reservation->getComplementsGivenAt()->format('Y-m-d\\TH:i:s') }}"
                     {% endif %}>
                 {% if $reservation->getComplementsGivenAt() %}
-                <i class="bi bi-check-circle-fill"></i>&nbsp;Remis à {{ $reservation->getComplementsGivenAt()->format('H:i') }}
+                <i class="bi bi-check-circle-fill"></i>&nbsp;Remis à {{ $reservation->getComplementsGivenAt()->format('H:i') }} par
+                {{ $reservation->getComplementsGivenByUser()->getDisplayName() }}
                 {% else %}
                 <i class="bi bi-circle"></i>&nbsp;À remettre
                 {% endif %}

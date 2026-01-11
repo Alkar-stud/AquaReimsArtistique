@@ -118,15 +118,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
 
                 if (result.success) {
+console.log(result);
                     if (!isPresent) {
                         item.classList.add('list-group-item-success');
                         const icon = item.querySelector('.bi-circle');
+                        const userName = result.user_name || 'Inconnu';
                         if (icon) {
                             icon.className = 'bi bi-check-circle-fill text-success fs-4';
                         }
                         const timeDiv = document.createElement('div');
                         timeDiv.className = 'small text-muted mt-1';
-                        timeDiv.textContent = `Entré à ${new Date().toLocaleTimeString('fr-FR', {hour: '2-digit', minute: '2-digit'})}`;
+                        timeDiv.textContent = `Entré(e) à ${new Date().toLocaleTimeString('fr-FR', {hour: '2-digit', minute: '2-digit'})}, validé par ${userName}`;
                         item.querySelector('.d-flex').parentElement.appendChild(timeDiv);
                     } else {
                         item.classList.remove('list-group-item-success');

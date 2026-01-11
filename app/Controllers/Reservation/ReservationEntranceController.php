@@ -148,7 +148,15 @@ class ReservationEntranceController extends AbstractController
             //On compare le nombre de détails avec entered_at == null au nombre de details avec entered_at == not null
             $reservation = $this->reservationRepository->findById($id);
             $everyOneInReservation = $this->reservationQueryService->everyOneInReservationIsHere($reservation);
-            $this->json(['success' => true, 'message' => 'Mise à jour effectuée', 'everyOneInReservation' => $everyOneInReservation]);
+
+            $userName = $value !== null ? $this->currentUser->getDisplayName() : null;
+
+            $this->json([
+                'success' => true,
+                'message' => 'Mise à jour effectuée',
+                'everyOneInReservation' => $everyOneInReservation,
+                'user_name' => $userName
+            ]);
         }
 
         if ($isChecked !== null) {

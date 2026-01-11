@@ -121,7 +121,7 @@
                 </div>
                 {% if $detail->getEnteredAt() %}
                 <div class="small text-muted mt-1">
-                    Entré à {{ $detail->getEnteredAt()->format('H:i') }}
+                    Entré(e) à {{ $detail->getEnteredAt()->format('H:i') }}, validé par {{ $detail->getEntryValidateByUser()->getDisplayName() }}
                 </div>
                 {% endif %}
             </div>

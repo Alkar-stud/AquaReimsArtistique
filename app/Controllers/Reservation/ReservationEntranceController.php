@@ -4,9 +4,12 @@ namespace app\Controllers\Reservation;
 
 use app\Attributes\Route;
 use app\Controllers\AbstractController;
+use app\Models\Reservation\Reservation;
 use app\Repository\Reservation\ReservationDetailRepository;
 use app\Repository\Reservation\ReservationRepository;
 use app\Services\Reservation\ReservationQueryService;
+use DateMalformedStringException;
+use DateTime;
 
 class ReservationEntranceController extends AbstractController
 {
@@ -25,6 +28,9 @@ class ReservationEntranceController extends AbstractController
         $this->reservationDetailRepository = $reservationDetailRepository;
     }
 
+    /**
+     * @return void
+     */
     #[Route('/entrance', name: 'app_entrance', methods: ['GET'])]
     public function reservationEntrance(): void
     {
@@ -35,15 +41,22 @@ class ReservationEntranceController extends AbstractController
         }
 
         $reservation = $this->reservationRepository->findByField('token', $reservationToken, true, true, false);
+        $accessCheck = $this->canModifyReservation($reservation);
         //On compare le nombre de détails avec entered_at == null au nombre de details avec entered_at == not null
         $everyOneInReservation = $this->reservationQueryService->everyOneInReservationIsHere($reservation);
 
         $this->render('entrance', [
             'reservation' => $reservation,
             'everyOneIsPresent' => $everyOneInReservation,
+            'canModify' => $accessCheck['allowed'],
+            'accessMessage' => $accessCheck['message'] ?? null,
+            'availableAt' => $accessCheck['availableAt'] ?? null,
         ], 'Réservations');
     }
 
+    /**
+     * @return void
+     */
     #[Route('/entrance/search', name: 'app_entrance_search', methods: ['GET'])]
     public function search(): void
     {
@@ -75,15 +88,31 @@ class ReservationEntranceController extends AbstractController
     }
 
 
+    /**
+     * @param int $id
+     * @return void
+     */
     #[Route('/entrance/update/{id}', name: 'app_entrance_update', methods: ['POST'])]
     public function reservationEntranceUpdate(int $id): void
     {
         // Vérifier les permissions de l'utilisateur connecté
         $this->checkUserPermission('R');
 
-        $reservation = $this->reservationRepository->findById($id);
+        $reservation = $this->reservationRepository->findById($id, true, true);
         if (!$reservation) {
             $this->json(['success' => false, 'message' => 'Réservation non trouvée.'], 404);
+            return;
+        }
+
+        // Vérification de l'accès temporel
+        $accessCheck = $this->canModifyReservation($reservation);
+
+        if (!$accessCheck['allowed']) {
+            $this->json([
+                'success' => false,
+                'message' => $accessCheck['message'],
+                'availableAt' => $accessCheck['availableAt'] ?? null
+            ], 403);
             return;
         }
 
@@ -128,5 +157,39 @@ class ReservationEntranceController extends AbstractController
 
         $this->json(['success' => false, 'message' => 'Erreur inconnue']);
     }
+
+    /**
+     * @param Reservation $reservation
+     * @return array|true[]
+     */
+    private function canModifyReservation(Reservation $reservation): array
+    {
+        $eventSession = $reservation->getEventSessionObject();
+        if (!$eventSession) {
+            return ['allowed' => false, 'message' => 'Session non trouvée.'];
+        }
+
+        $eventStart = $eventSession->getEventStartAt();
+
+        $now = new DateTime();
+        // Convertir DateTimeInterface en DateTime pour pouvoir le cloner et le modifier
+        $eventStartDateTime = DateTime::createFromInterface($eventStart);
+        try {
+            $twoHoursBefore = (clone $eventStartDateTime)->modify('-2 hours');
+        } catch (DateMalformedStringException $e) {
+
+        }
+
+        if ($now < $twoHoursBefore) {
+            return [
+                'allowed' => false,
+                'message' => 'Les modifications ne sont pas encore autorisées. Accessible 2h avant le début de la séance.',
+                'availableAt' => $twoHoursBefore->format('d/m/Y à H:i')
+            ];
+        }
+
+        return ['allowed' => true];
+    }
+
 
 }

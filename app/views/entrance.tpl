@@ -1,4 +1,14 @@
 <div class="container-fluid" data-reservation-id="{{ $reservation->getId() }}">
+    {% if !$canModify %}
+    <div class="alert alert-warning mb-3 mx-2">
+        <i class="bi bi-clock"></i> {{ $accessMessage }}
+        {% if $availableAt %}
+        <br><strong>Accessible à partir du {{ $availableAt }}</strong>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <div class="container-fluid{% if !$canModify %} pe-none opacity-50{% endif %}" data-reservation-id="{{ $reservation->getId() }}">
     <div class="mb-3 sticky-reservation-header shadow-sm px-2 py-2">
         <h5 class="mb-2">Réservation ARA-{{ str_pad($reservation->getId(), 5, '0', STR_PAD_LEFT) }}</h5>
         <div class="d-flex gap-2 mb-2">

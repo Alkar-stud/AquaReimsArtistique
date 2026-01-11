@@ -9,11 +9,16 @@ document.addEventListener('DOMContentLoaded', () => {
     const everyonePresentBadge = document.getElementById('every-one-is-present');
     const checkReservationCheckbox = document.querySelector('[data-action="check-reservation"]');
 
+    const canModify = !document.querySelector('.container-fluid').classList.contains('pe-none');
+
     /*
      * Section pour vérifier la commande
      */
     if (checkReservationCheckbox) {
         checkReservationCheckbox.addEventListener('change', async () => {
+            if (!canModify) {
+                return;
+            }
             if (!checkReservationCheckbox.checked) return;
 
             // Demander confirmation
@@ -48,6 +53,9 @@ document.addEventListener('DOMContentLoaded', () => {
      */
     if (toggleComplementsBtn) {
         toggleComplementsBtn.addEventListener('click', async () => {
+            if (!canModify) {
+                return;
+            }
             const isGiven = toggleComplementsBtn.dataset.complementGiven === 'true';
             // Désactiver le bouton et afficher un spinner
             const originalIcon = toggleComplementsBtn.innerHTML;
@@ -62,7 +70,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     // Mettre à jour l'état et le visuel
                     toggleComplementsBtn.dataset.complementGiven = (!isGiven).toString();
                     if (!isGiven) {
-console.log(result);
                         const ts = result.complements_given_at || new Date().toISOString();
                         const userName = result.user_name || 'Inconnu';
                         toggleComplementsBtn.dataset.complementsGivenAt = ts;
@@ -95,6 +102,9 @@ console.log(result);
      */
     participantItems.forEach(item => {
         item.addEventListener('click', async () => {
+            if (!canModify) {
+                return;
+            }
             const detailId = item.dataset.detailId;
             const isPresent = item.classList.contains('list-group-item-success');
 

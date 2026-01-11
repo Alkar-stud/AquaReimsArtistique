@@ -3,6 +3,7 @@ namespace app\Models\Reservation;
 
 use app\Models\AbstractModel;
 use app\Models\Piscine\PiscineGradinsPlaces;
+use app\Models\User\User;
 use app\Utils\StringHelper;
 use DateTime;
 use DateTimeInterface;
@@ -20,6 +21,8 @@ class ReservationDetail extends AbstractModel
     private ?string $place_number = null;
     private ?PiscineGradinsPlaces $placeObject = null;
     private ?DateTimeInterface $entered_at = null;
+    private ?int $entry_validate_by = null;
+    private ?User $entry_validate_by_user = null;
 
     // --- GETTERS ---
     public function getReservation(): int { return $this->reservation; }
@@ -33,6 +36,8 @@ class ReservationDetail extends AbstractModel
     public function getPlaceNumber(): ?string { return $this->place_number; }
     public function getPlaceObject(): ?PiscineGradinsPlaces { return $this->placeObject; }
     public function getEnteredAt(): ?DateTimeInterface { return $this->entered_at; }
+    public function getEntryValidateBy(): ?int { return $this->entry_validate_by; }
+    public function getEntryValidateByUser(): ?User { return $this->entry_validate_by_user; }
 
 
     // --- SETTERS ---
@@ -101,6 +106,19 @@ class ReservationDetail extends AbstractModel
 
     public function setEnteredAt(?string $enteredAt): self {
         $this->entered_at = $enteredAt ? new DateTime($enteredAt) : null;
+        return $this;
+    }
+
+    public function setEntryValidateBy(?int $entry_validate_by): self {
+        $this->entry_validate_by = $entry_validate_by;
+        return $this;
+    }
+
+    public function setEntryValidateByUser(?User $user): self {
+        $this->entry_validate_by_user = $user;
+        if ($user) {
+            $this->entry_validate_by = $user->getId();
+        }
         return $this;
     }
 

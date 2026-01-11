@@ -144,6 +144,7 @@ class ReservationEntranceController extends AbstractController
         if ($participant !== null) {
             $value = $isPresent ? date('Y-m-d H:i:s') : null;
             $this->reservationDetailRepository->updateSingleField($participant, 'entered_at', $value);
+            $this->reservationDetailRepository->updateSingleField($participant, 'entry_validate_by', $value == null ? null:$this->currentUser->getId());
             //On compare le nombre de détails avec entered_at == null au nombre de details avec entered_at == not null
             $reservation = $this->reservationRepository->findById($id);
             $everyOneInReservation = $this->reservationQueryService->everyOneInReservationIsHere($reservation);

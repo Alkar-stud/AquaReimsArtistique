@@ -7,6 +7,7 @@ use app\Repository\AbstractRepository;
 use app\Repository\Piscine\PiscineGradinsPlacesRepository;
 use app\Repository\Tarif\TarifRepository;
 use app\Repository\Reservation\ReservationRepository as ResRepo;
+use app\Repository\User\UserRepository;
 use DateTimeInterface;
 use PDOStatement;
 use ReflectionClass;
@@ -326,11 +327,22 @@ class ReservationDetailRepository extends AbstractRepository
             // Par défaut, on stocke l'ID de la place (remplacé par le numéro réel si withPlace=true).
             ->setPlaceNumber(isset($data['place_number']) ? (string)$data['place_number'] : null)
             ->setEnteredAt($data['entered_at'] ?? null)
+            ->setEntryValidateBy($data['entry_validate_by'] ?? null)
             ->setCreatedAt($data['created_at']);
 
         if (!empty($data['updated_at'])) {
             $d->setUpdatedAt($data['updated_at']);
         }
+
+        // Hydratation du User si entry_validate_by existe
+        if (!empty($data['entry_validate_by'])) {
+            $userRepo = new UserRepository();
+            $user = $userRepo->findById((int)$data['entry_validate_by']);
+            if ($user) {
+                $d->setEntryValidateByUser($user);
+            }
+        }
+
         return $d;
     }
 

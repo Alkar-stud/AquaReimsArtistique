@@ -169,7 +169,7 @@ class ReservationEntranceController extends AbstractController
             return ['allowed' => false, 'message' => 'Session non trouvée.'];
         }
 
-        $eventStart = $eventSession->getEventStartAt();
+        $eventStart = $eventSession->getOpeningDoorsAt();
 
         $now = new DateTime();
         // Convertir DateTimeInterface en DateTime pour pouvoir le cloner et le modifier
@@ -183,7 +183,7 @@ class ReservationEntranceController extends AbstractController
         if ($now < $twoHoursBefore) {
             return [
                 'allowed' => false,
-                'message' => 'Les modifications ne sont pas encore autorisées. Accessible 2h avant le début de la séance.',
+                'message' => 'Les modifications ne sont pas encore autorisées. Accessible 2h avant l\'ouverture des portes.',
                 'availableAt' => $twoHoursBefore->format('d/m/Y à H:i')
             ];
         }

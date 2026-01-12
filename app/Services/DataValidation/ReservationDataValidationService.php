@@ -433,7 +433,7 @@ class ReservationDataValidationService
         $nbSpectator = $this->reservationDetailRepository->countBySession($reservationTemp->getEventSession());
 
         //on vérifie que le quota n'est pas atteint
-        if ($event->getPiscine()->getMaxPlaces() > 0 && $nbSpectator >= $event->getPiscine()->getMaxPlaces()) {
+        if ($event->getPiscine()->getMaxPlaces() > 0 && $nbSpectator['total'] >= $event->getPiscine()->getMaxPlaces()) {
             $errors['event_session_id'] = 'Le maximum de spectateurs autorisés est atteint.';
         }
 

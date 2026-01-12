@@ -474,12 +474,13 @@ class ReservationQueryService
         foreach ($events as $event) {
             foreach ($event->getSessions() as $session) {
                 $countDetail = $this->reservationDetailRepository->countBySession($session->getId());
-                $nbSpectatorsPerSession[$session->getId()]['qty'] = $countDetail;
-                if ($countDetail >= $event->getPiscine()->getMaxPlaces()) {
+                $nbSpectatorsPerSession[$session->getId()]['qty'] = $countDetail['total'];
+                if ($countDetail['total'] >= $event->getPiscine()->getMaxPlaces()) {
                     $nbSpectatorsPerSession[$session->getId()]['is_full'] = true;
                 } else {
                     $nbSpectatorsPerSession[$session->getId()]['is_full'] = false;
                 }
+                $nbSpectatorsPerSession[$session->getId()]['entered'] = $countDetail['entered'];
             }
         }
         return $nbSpectatorsPerSession;

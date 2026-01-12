@@ -16,7 +16,14 @@
                 </button>
             </div>
         </form>
+    </div>
+    <div>
+        Séances aujourd'hui : <br>
+        {% foreach $todaySessions as $session %}
+            {{ $session['name'] }} : {{ $session['entered'] }} personnes entrée(s) / reste(s) {{ $session['total'] - $session['entered'] }}.
 
+        <br>
+        {% endforeach %}
     </div>
 
     {% if $searchQuery != '' %}

@@ -135,17 +135,23 @@ class ReservationDetailRepository extends AbstractRepository
     /**
      * Compte le nombre de personnes (de détails) pour une session
      * @param int $sessionId
-     * @return int
-     */
-    public function countBySession(int $sessionId): int
+     * @return array ['total' => int, 'entered' => int]
+ */
+    public function countBySession(int $sessionId): array
     {
-        $sql = "SELECT COUNT(*) as count 
+        $sql = "SELECT 
+                COUNT(*) as total,
+                COUNT(rd.entered_at) as entered
             FROM $this->tableName rd
             INNER JOIN reservation r ON rd.reservation = r.id
             WHERE r.event_session = :sessionId
-              AND r.is_canceled = 0;";
+              AND r.is_canceled = 0";
         $result = $this->query($sql, ['sessionId' => $sessionId]);
-        return (int)($result[0]['count'] ?? 0);
+
+        return [
+            'total' => (int)($result[0]['total'] ?? 0),
+            'entered' => (int)($result[0]['entered'] ?? 0)
+        ];
     }
 
     /**

@@ -403,10 +403,17 @@ class ReservationQueryService
         if (!$result['success']) {
             return $result;
         }
+        //Nb places restantes pour cette session
+        $nb_places_remaining = $result['limit'];
 
         //On vérifie la différence
         if ($nbPlaceCurrentlyBeingReserved > $result['limit']) {
-            return ['success' => false, 'limitReached' => false, 'limit' => $nbPlaceCurrentlyBeingReserved - $result['limit']];
+            return [
+                'success' => false,
+                'limitReached' => false,
+                'limit' => $nbPlaceCurrentlyBeingReserved - $result['limit'],
+                'remainingPlaces' => $nb_places_remaining
+                ];
         }
 
         return ['success' => true, 'limitReached' => true, 'limit' => $nbPlaceCurrentlyBeingReserved];

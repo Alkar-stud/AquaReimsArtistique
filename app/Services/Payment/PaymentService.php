@@ -67,7 +67,7 @@ class PaymentService
         $now = time();
         $intentTimestamp = $session['paymentIntentTimestamp'] ?? 0;
         // L'URL est valide pendant 15 minutes, on la régénère au bout de 10 minutes par sécurité.
-        $isIntentValid = ($now - $intentTimestamp) < 600; // 10 minutes = 600 seconds
+        $isIntentValid = ($now - $intentTimestamp) < 5; // 10 minutes = 600 seconds // 5 secondes
 
         // Si un checkoutIntentId et une URL de redirection existent déjà en session ET sont valides, on les réutilise.
         if (
@@ -117,7 +117,7 @@ class PaymentService
         // On remplit le DTO avec les informations de la réservation
         $this->helloAssoCartDTO->setTotalAmount((int)$reservation['totals']['total_amount']);
         $this->helloAssoCartDTO->setInitialAmount((int)$reservation['totals']['total_amount']); // Identique pour un paiement unique
-        $this->helloAssoCartDTO->setItemName("Réservation pour {$eventName}");
+        $this->helloAssoCartDTO->setItemName("Réservation pour $eventName");
 
         // URLs de redirection pour le processus de paiement
         $this->helloAssoCartDTO->setBackUrl($baseUrl . '/reservation/confirmation'); // URL pour revenir au panier

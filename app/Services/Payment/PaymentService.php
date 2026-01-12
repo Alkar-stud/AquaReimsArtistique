@@ -212,11 +212,8 @@ class PaymentService
 
         try {
             $accessToken = $this->helloAssoService->GetToken();
-echo '<pre>';
-print_r($cartDTO);
             $checkout = $this->helloAssoService->PostCheckoutIntents($accessToken, $cartDTO);
-print_r($checkout);
-die;
+
             if (isset($checkout->redirectUrl) && isset($checkout->id)) {
                 return ['success' => true, 'redirectUrl' => $checkout->redirectUrl, 'checkoutIntentId' => $checkout->id];
             }

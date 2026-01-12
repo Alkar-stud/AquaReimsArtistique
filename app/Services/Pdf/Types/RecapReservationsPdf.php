@@ -26,7 +26,7 @@ final readonly class RecapReservationsPdf extends AbstractSessionPdfType impleme
 
         $documentTitle = "Récapitulatif des réservations - " . $session->getEventObject()->getName() . " - " . $session->getSessionName();
         // Instancier BasePdf (le constructeur ajoute la 1ère page et l'en-tête)
-        $pdf = new BasePdf(mb_convert_encoding($documentTitle, 'ISO-8859-1', 'UTF-8'), 'L');
+        $pdf = new BasePdf(mb_convert_encoding($documentTitle, 'ISO-8859-1', 'UTF-8'), 'P');
 
         // Définir la structure du tableau
         $headers = ['ID', 'Nom de la réservation', 'Réglé', 'Nb Place'];
@@ -45,7 +45,7 @@ final readonly class RecapReservationsPdf extends AbstractSessionPdfType impleme
             // Vérifier si on a besoin d'une nouvelle page avant d'écrire la ligne
             // Le '6' correspond à la hauteur de la cellule
             if ($pdf->GetY() + 6 > $pdf->GetPageHeight() - 15) { // 15mm = marge du bas (Footer)
-                $pdf->AddPage('L');
+                $pdf->AddPage('P');
                 $pdf->SetX($leftMargin);
                 $pdf->drawTableHeader($pdf, $headers, $widths);
                 // Réappliquer la police après l'en-tête

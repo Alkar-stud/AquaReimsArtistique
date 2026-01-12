@@ -67,7 +67,7 @@ class PaymentService
         $now = time();
         $intentTimestamp = $session['paymentIntentTimestamp'] ?? 0;
         // L'URL est valide pendant 15 minutes, on la régénère au bout de 10 minutes par sécurité.
-        $isIntentValid = ($now - $intentTimestamp) < 600; // 10 minutes = 600 seconds
+        $isIntentValid = ($now - $intentTimestamp) < 5; // 10 minutes = 600 seconds // 5 secondes
 
         // Si un checkoutIntentId et une URL de redirection existent déjà en session ET sont valides, on les réutilise.
         if (
@@ -212,8 +212,11 @@ class PaymentService
 
         try {
             $accessToken = $this->helloAssoService->GetToken();
+echo '<pre>';
+print_r($cartDTO);
             $checkout = $this->helloAssoService->PostCheckoutIntents($accessToken, $cartDTO);
-
+print_r($checkout);
+die;
             if (isset($checkout->redirectUrl) && isset($checkout->id)) {
                 return ['success' => true, 'redirectUrl' => $checkout->redirectUrl, 'checkoutIntentId' => $checkout->id];
             }

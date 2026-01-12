@@ -117,7 +117,7 @@ class PaymentService
         // On remplit le DTO avec les informations de la réservation
         $this->helloAssoCartDTO->setTotalAmount((int)$reservation['totals']['total_amount']);
         $this->helloAssoCartDTO->setInitialAmount((int)$reservation['totals']['total_amount']); // Identique pour un paiement unique
-        $this->helloAssoCartDTO->setItemName("Réservation pour {$eventName}");
+        $this->helloAssoCartDTO->setItemName("Réservation pour $eventName");
 
         // URLs de redirection pour le processus de paiement
         $this->helloAssoCartDTO->setBackUrl($baseUrl . '/reservation/confirmation'); // URL pour revenir au panier

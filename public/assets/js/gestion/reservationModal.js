@@ -45,6 +45,13 @@ async function refreshModalContent(modal, reservationId) {
         // Restaurer le HTML et remplir la modale
         modalBody.innerHTML = originalModalBodyHtml;
 
+        // Mettre à jour le titre avec le numéro de réservation
+        const modalTitle = modal.querySelector('.modal-title');
+        if (modalTitle) {
+            const reservationNumber = String(reservation.id).padStart(5, '0');
+            modalTitle.textContent = `Détails de la réservation ARA-${reservationNumber}`;
+        }
+
         // Stocker les IDs importants sur la modale pour un accès facile
         modal.dataset.eventSessionId = reservation.eventSession.id;
         modal.dataset.piscineId = reservation.event.piscineId;

@@ -210,7 +210,7 @@ class ReservationDataValidationService
             );
             if (!$totalCapacityLimitWithCurrentlyReservation['success']) {
                 $result['success'] = false;
-                $result['errors']['limit'] = 'Le nombre de place souhaitée dépasse la capacité de la piscine.';
+                $result['errors']['limit'] = 'Le nombre de place souhaitée dépasse la capacité de la piscine (' . $totalCapacityLimitWithCurrentlyReservation['remainingPlaces'] . ' place(s) restante(s) ).';
             }
 
             if (!$result['success']) {

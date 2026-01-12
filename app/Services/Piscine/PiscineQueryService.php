@@ -21,11 +21,11 @@ class PiscineQueryService
         //On récupère le nombre de places actuellement réservées (et validées).
         $NbSpectator = $reservationDetailRepository->countBySession($sessionId);
 
-        if ($NbSpectator >= $piscine->getMaxPlaces()) {
+        if ($NbSpectator['total'] >= $piscine->getMaxPlaces()) {
             return ['success' => false, 'limitReached' => true, 'limit' => 0];
         }
 
-        return ['success' => true, 'limitReached' => false, 'limit' => $piscine->getMaxPlaces() - $NbSpectator];
+        return ['success' => true, 'limitReached' => false, 'limit' => $piscine->getMaxPlaces() - $NbSpectator['total']];
     }
 
 

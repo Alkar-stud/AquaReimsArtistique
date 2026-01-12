@@ -7,6 +7,7 @@ use app\Controllers\AbstractController;
 use app\Models\Reservation\Reservation;
 use app\Repository\Reservation\ReservationDetailRepository;
 use app\Repository\Reservation\ReservationRepository;
+use app\Services\Event\EventQueryService;
 use app\Services\Reservation\ReservationQueryService;
 use DateMalformedStringException;
 use DateTime;
@@ -16,16 +17,19 @@ class ReservationEntranceController extends AbstractController
     private ReservationRepository $reservationRepository;
     private ReservationQueryService $reservationQueryService;
     private ReservationDetailRepository $reservationDetailRepository;
+    private EventQueryService $eventQueryService;
 
     public function __construct(
         ReservationRepository $reservationRepository,
         ReservationQueryService $reservationQueryService,
         ReservationDetailRepository $reservationDetailRepository,
+        EventQueryService $eventQueryService,
     ) {
         parent::__construct(false);
         $this->reservationRepository = $reservationRepository;
         $this->reservationQueryService = $reservationQueryService;
         $this->reservationDetailRepository = $reservationDetailRepository;
+        $this->eventQueryService = $eventQueryService;
     }
 
     /**
@@ -63,10 +67,26 @@ class ReservationEntranceController extends AbstractController
         $searchQuery = $_GET['q'] ?? '';
 
         if (empty(trim($searchQuery))) {
+            //On récupère les séances du jour avec le nombre de personnes arrivées
+            $events = $this->eventQueryService->getAllEventsWithRelations(true);
+
+            //On récupère le nombre de spectateurs par session
+            $nbSpectatorsPerSession = $this->reservationQueryService->getNbSpectatorsPerSession($events);
+            $sessions = $events[0]->getSessions();
+
+            $todaySessions = [];
+            foreach($sessions as $session) {
+                $todaySessions[$session->getId()]['name'] = $session->getSessionName();
+                $todaySessions[$session->getId()]['total'] = $nbSpectatorsPerSession[$session->getId()]['qty'];
+                $todaySessions[$session->getId()]['entered'] = $nbSpectatorsPerSession[$session->getId()]['entered'];
+
+            }
+
             $this->render('/entrance-search', [
                 'searchQuery' => '',
                 'reservations' => [],
-                'single' => false
+                'single' => false,
+                'todaySessions' => $todaySessions,
             ], "Recherche d'entrée");
             return;
         }
@@ -83,7 +103,7 @@ class ReservationEntranceController extends AbstractController
         $this->render('/entrance-search', [
             'searchQuery' => $searchQuery,
             'reservations' => $result['reservations'],
-            'single' => $result['single']
+            'single' => $result['single'],
         ], "Recherche d'entrée");
     }
 

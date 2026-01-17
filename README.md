@@ -44,7 +44,18 @@ Exécution:
 
 ## Envoi des emails récapitulatifs
 
-Ce projet permet l'envoi automatique d'emails récapitulatifs aux participants.
+Ce projet permet l'envoi automatique d'emails récapitulatifs aux participants dont la période d'inscription est terminée.
+
+### Conditions d'envoi
+
+Un email récapitulatif final est envoyé automatiquement aux réservations qui remplissent **toutes** les conditions suivantes :
+
+- ✅ **Réservation active** : `is_canceled = 0` (non annulée)
+- ✅ **Session à venir** : La date de début de la session (`event_start_at`) est dans le futur
+- ✅ **Inscriptions closes** : La date de clôture des inscriptions (`close_registration_at`) est dépassée
+- ✅ **Email non déjà envoyé** : Le template `final_summary` n'a pas encore été envoyé pour cette réservation
+
+*Note : La requête vérifie la date de clôture la plus récente de l'événement via la table `event_inscription_date`.*
 
 ### Configuration
 
@@ -61,13 +72,18 @@ php bin/send-recap-email 50
 ```
 
 **Paramètres :**
-- `limit` (optionnel) : nombre maximum d'emails à envoyer (défaut: 100)
+- `limit` (optionnel) : nombre maximum d'emails à envoyer par exécution (défaut: 100)
 
 **Exemple de configuration CRON :**
 ```bash
-# Tous les jours à 2h du matin, envoyer 200 emails max
-0 2 * * * cd /var/www/project && /usr/bin/php bin/send-recap-email 200 >> /var/log/project/recap-email.log 2>&1
+# Tous les jours à 2h du matin, envoyer 200 emails maximum
+0 2 * * * cd /var/www/project && /usr/bin/php bin/send-recap-email 200 >> /var/log/project/storage/log/recap-email.log 2>&1
 ```
+
+**Avantages :**
+- ✅ Pas de token de sécurité à gérer
+- ✅ Accès direct au serveur
+- ✅ Logs facilités
 
 #### 2. Via route HTTP (avec token de sécurité)
 
@@ -88,10 +104,21 @@ curl "https://votre-domaine.com/reservations/send-final-recap?token=VOTRE_TOKEN&
 0 2 * * * wget -q -O - "https://votre-domaine.com/reservations/send-final-recap?token=VOTRE_TOKEN&limit=200" >> /var/log/project/recap-email.log 2>&1
 ```
 
+**Avantages :**
+- ✅ Pas besoin d'accès SSH au serveur
+- ✅ Peut être déclenché depuis un service externe (webhook, monitoring)
+
 ### Sécurité
 
-- **CLI** : Aucun token requis (accès serveur nécessaire)
+- **CLI** : Aucun token requis (nécessite un accès serveur)
 - **HTTP** : Token obligatoire pour éviter les déclenchements non autorisés
+
+### Contenu de l'email
+
+L'email récapitulatif final inclut :
+- 📄 **PDF récapitulatif** en pièce jointe
+- 🔲 **QR Code d'entrée** intégré dans le corps du mail (image inline)
+- 📝 Informations complètes de la réservation
 
 ### Retour de la commande
 
@@ -99,3 +126,19 @@ La commande affiche :
 - Le nombre d'emails envoyés avec succès
 - Le nombre d'erreurs rencontrées
 - Code de sortie : `0` en cas de succès, `1` en cas d'erreur
+
+**Exemple de sortie :**
+```
+Début de l'envoi des emails récapitulatifs...
+Limite d'envoi : 100
+Nombre d'emails envoyés : 42
+Nombre d'erreurs : 0
+Processus terminé avec succès.
+```
+
+### Limitation et performance
+
+- ⏱️ **Délai entre envois** : 1 seconde (respect des limites SMTP)
+- 📊 **Traitement par lot** : Utilisation de la limite pour éviter la surcharge
+- 🔄 **Exécution répétable** : Seules les réservations non traitées sont concernées
+

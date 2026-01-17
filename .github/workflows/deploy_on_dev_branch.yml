@@ -7,11 +7,25 @@ on:
   workflow_dispatch:  # Permet de déclencher le workflow manuellement
   
 jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Installer PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+      - name: Installer les dépendances Composer
+        run: composer install -n --prefer-dist
+      - name: Lancer les tests PHPUnit
+        run: php bin/phpunit
+        
   deploy:
+    needs: test
     runs-on: ubuntu-latest
     steps:
     - name: Checkout code
-      uses: actions/checkout@v2
+      uses: actions/checkout@v4
 
     - name: Install SSH Key
       uses: webfactory/ssh-agent@v0.5.3

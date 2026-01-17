@@ -322,27 +322,33 @@ class ReservationRepository extends AbstractRepository
     public function findForFinalRecap(int $limit = 100, $templateEmailId = null): array
     {
         $limit = max(1, $limit);
+
         $sql = "SELECT r.* FROM reservation r
-                JOIN event_session es ON es.id = r.event_session
-                JOIN event e ON e.id = r.event
-                LEFT JOIN (
-                  SELECT event, MAX(close_registration_at) AS close_at
-                  FROM event_inscription_date
-                  GROUP BY event
-                ) eid ON eid.event = r.event
-                WHERE r.is_canceled = 0
-                  AND es.event_start_at > NOW()
-                  AND eid.close_at <= NOW()
-                ORDER BY r.id
-                LIMIT $limit
+            JOIN event_session es ON es.id = r.event_session
+            JOIN event e ON e.id = r.event
+            LEFT JOIN (
+              SELECT event, MAX(close_registration_at) AS close_at
+              FROM event_inscription_date
+              GROUP BY event
+            ) eid ON eid.event = r.event
+            LEFT JOIN reservation_mail_sent rms 
+              ON rms.reservation = r.id 
+              AND rms.mail_template = :templateEmailId
+            WHERE r.is_canceled = 0
+              AND es.event_start_at > NOW()
+              AND eid.close_at <= NOW()
+              AND rms.id IS NULL
+            ORDER BY r.id
+            LIMIT $limit
     ";
 
-        $rows = $this->query($sql, []);
+        $params = ['templateEmailId' => $templateEmailId];
+        $rows = $this->query($sql, $params);
+
         if (empty($rows)) return [];
 
         $list = array_map([$this, 'hydrate'], $rows);
 
-        // On hydrate les relations utiles pour l’email (événement, session, enfants…)
         foreach ($list as $r) {
             $this->hydrateOptionalRelations($r, true, true, true, true);
         }

@@ -18,7 +18,8 @@ class BuildLink
 
     public static function buildBasicLink(string $uri = ''): string
     {
-        $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' || $_SERVER['SERVER_PORT'] == 443) ? "https://" : "http://";
+        $serverPort = $_SERVER['SERVER_PORT'] ?? 80;
+        $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' || $serverPort == 443) ? "https://" : "http://";
         $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
         return $protocol . $host . $uri;
     }

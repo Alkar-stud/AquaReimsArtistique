@@ -31,6 +31,12 @@ if (isset($_ENV['DB_HOST']) && $_ENV['DB_HOST'] === 'localhost') {
     $_ENV['DB_HOST'] = '127.0.0.1';
 }
 
+// Chargement de la configuration de la base de données
+require_once __DIR__ . '/../config/database.php';
+
+// Chargement de la configuration de l'application (constantes depuis la BDD)
+require_once __DIR__ . '/../config/app.php';
+
 $limit = isset($argv[1]) && is_numeric($argv[1]) ? (int)$argv[1] : 100;
 
 $cmd = new SendRecapEmailCommand();

@@ -90,7 +90,18 @@ class MailService
         }
 
         try {
+            // Réinitialisation complète pour éviter les problèmes de connexion SMTP entre envois
             $this->mailer->clearAddresses();
+            $this->mailer->clearAllRecipients();
+            $this->mailer->clearAttachments();
+            $this->mailer->clearCustomHeaders();
+            $this->mailer->clearReplyTos();
+
+            // Fermer la connexion SMTP si elle est ouverte (évite "nested MAIL command")
+            if ($this->mailer->smtpConnect()) {
+                $this->mailer->smtpClose();
+            }
+
             $this->mailer->addAddress($recipientEmail);
             $this->mailer->isHTML(true);
             $this->mailer->Subject = $subject;
@@ -215,8 +226,17 @@ class MailService
         }
 
         try {
+            // Réinitialisation complète pour éviter les problèmes de connexion SMTP entre envois
             $this->mailer->clearAddresses();
+            $this->mailer->clearAllRecipients();
             $this->mailer->clearAttachments();
+            $this->mailer->clearCustomHeaders();
+            $this->mailer->clearReplyTos();
+
+            // Fermer la connexion SMTP si elle est ouverte (évite "nested MAIL command")
+            if ($this->mailer->smtpConnect()) {
+                $this->mailer->smtpClose();
+            }
 
             $this->mailer->addAddress($recipientEmail);
             $this->mailer->isHTML(true);

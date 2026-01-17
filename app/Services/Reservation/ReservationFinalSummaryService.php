@@ -77,7 +77,7 @@ final class ReservationFinalSummaryService
             try {
                 $ok = $this->mailPrepareService->sendReservationConfirmationEmail($reservation, 'final_summary',$pdfPath);
                 if ($ok) {
-                    // Log d’envoi (comme dans le contrôleur de gestion)
+                    // Log d'envoi (comme dans le contrôleur de gestion)
                     $this->mailService->recordMailSent($reservation,'final_summary');
 
                     // Nettoyer le fichier temporaire du PDF après envoi
@@ -89,6 +89,10 @@ final class ReservationFinalSummaryService
                     $failed++;
                     $errors[] = ['reservationId' => $reservation->getId(), 'error' => 'send returned false'];
                 }
+
+                // Délai de 2 secondes entre chaque envoi pour respecter les limites SMTP
+                // (appliqué même en cas d'échec pour éviter le rate limiting)
+                sleep(2);
             } catch (Throwable $e) {
                 // Nettoyage en cas d'erreur
                 if (is_file($pdfPath)) {

@@ -2,6 +2,8 @@
 
 namespace app\Utils;
 
+use RuntimeException;
+
 class BuildLink
 {
     /**
@@ -18,9 +20,13 @@ class BuildLink
 
     public static function buildBasicLink(string $uri = ''): string
     {
+        if (!isset($_SERVER['HTTP_HOST']) && !defined('HOST_SITE')) {
+            throw new RuntimeException('Unable to determine host: HTTP_HOST header and HOST_SITE constant are not defined');
+        }
+
+        $host = $_SERVER['HTTP_HOST'] ?? HOST_SITE;
         $serverPort = $_SERVER['SERVER_PORT'] ?? 80;
         $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' || $serverPort == 443) ? "https://" : "http://";
-        $host = $_SERVER['HTTP_HOST'] ?? HOST_SITE;
 
         return $protocol . $host . $uri;
     }

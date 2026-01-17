@@ -40,7 +40,7 @@ Tables et colonnes:
 
 Exécution:
 - Via un script ou une tâche cron: `php bin/anonymize`
-- Exemple : `0 3 1 * * /usr/bin/php /var/www/project/bin/anonymize.php >> /var/log/project/anonymize.log 2>&1`
+- Exemple : `0 3 1 * * /usr/bin/php /var/www/project/bin/anonymize >> /var/log/project/storage/log/anonymize.log 2>&1`
 
 ## Envoi des emails récapitulatifs
 
@@ -76,8 +76,8 @@ php bin/send-recap-email 50
 
 **Exemple de configuration CRON :**
 ```bash
-# Tous les jours à 2h du matin, envoyer 200 emails maximum
-0 2 * * * cd /var/www/project && /usr/bin/php bin/send-recap-email 200 >> /var/log/project/storage/log/recap-email.log 2>&1
+# Toutes les 10 minutes entre minuit et 5h du matin, envoyer 200 emails maximum
+*/10 0-4 * * * cd /var/www/project && /usr/bin/php bin/send-recap-email 200 >> /var/log/project/storage/log/recap-email.log 2>&1
 ```
 
 **Avantages :**
@@ -100,8 +100,8 @@ curl "https://votre-domaine.com/reservations/send-final-recap?token=VOTRE_TOKEN&
 
 **Configuration CRON avec wget :**
 ```bash
-# Tous les jours à 2h du matin
-0 2 * * * wget -q -O - "https://votre-domaine.com/reservations/send-final-recap?token=VOTRE_TOKEN&limit=200" >> /var/log/project/recap-email.log 2>&1
+# Toutes les 10 minutes entre minuit et 5h du matin
+*/10 0-4 * * * wget -q -O - "https://votre-domaine.com/reservations/send-final-recap?token=VOTRE_TOKEN&limit=200" >> /var/log/project/storage/log/recap-email.log 2>&1
 ```
 
 **Avantages :**

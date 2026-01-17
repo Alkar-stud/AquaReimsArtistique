@@ -101,8 +101,13 @@ class SendRecapEmailCommand
      *
      * @param int $limit Nombre maximum d'emails à envoyer
      */
-    public function execute(int $limit = 100): int
+    public function execute(int $limit = 100, $HOST_SITE = ''): int
     {
+        // Définir la constante URL_SITE si elle n'existe pas et que $URL_SITE n'est pas vide
+        if (!empty($HOST_SITE) && !defined('HOST_SITE')) {
+            define('HOST_SITE', $HOST_SITE);
+        }
+
         echo "Début de l'envoi des emails récapitulatifs...\n";
         echo "Limite d'envoi : $limit\n";
 

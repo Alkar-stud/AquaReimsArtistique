@@ -20,7 +20,8 @@ class BuildLink
     {
         $serverPort = $_SERVER['SERVER_PORT'] ?? 80;
         $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' || $serverPort == 443) ? "https://" : "http://";
-        $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+        $host = $_SERVER['HTTP_HOST'] ?? HOST_SITE;
+
         return $protocol . $host . $uri;
     }
 

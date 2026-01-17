@@ -40,4 +40,4 @@ require_once __DIR__ . '/../config/app.php';
 $limit = isset($argv[1]) && is_numeric($argv[1]) ? (int)$argv[1] : 100;
 
 $cmd = new SendRecapEmailCommand();
-exit($cmd->execute($limit));
+exit($cmd->execute($limit, HOST_SITE));

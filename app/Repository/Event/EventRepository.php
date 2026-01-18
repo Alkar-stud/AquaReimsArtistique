@@ -193,9 +193,10 @@ class EventRepository extends AbstractRepository
      * Retourne tous les événements à venir ou passés ordonnés par date de début
      *
      * @param bool|null $isUpComing
+     * @param int $delay
      * @return array
      */
-    public function findAllSortByDate(?bool $isUpComing = null): array
+    public function findAllSortByDate(?bool $isUpComing = null, int $delay = 0): array
     {
         $sql = "SELECT e.*  FROM $this->tableName e
                  LEFT JOIN (
@@ -207,7 +208,8 @@ class EventRepository extends AbstractRepository
         $params = [];
         if ($isUpComing === true) {
             // Événements à venir : ceux dont la dernière session n'est pas passée,
-            $sql .= " WHERE s.last_session_date >= NOW()";
+            $sql .= " WHERE DATE_ADD(s.last_session_date, INTERVAL :delay SECOND) >= NOW()";
+            $params['delay'] = $delay;
         } elseif ($isUpComing === false) {
             // Événements passés : ceux dont la dernière session est passée.
             $sql .= " WHERE s.last_session_date < NOW()";

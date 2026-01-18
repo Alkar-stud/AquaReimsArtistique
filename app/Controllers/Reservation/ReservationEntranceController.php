@@ -18,6 +18,7 @@ class ReservationEntranceController extends AbstractController
     private ReservationQueryService $reservationQueryService;
     private ReservationDetailRepository $reservationDetailRepository;
     private EventQueryService $eventQueryService;
+    private int $delayIsComing = 10800; // 10800 = 3h
 
     public function __construct(
         ReservationRepository $reservationRepository,
@@ -66,34 +67,36 @@ class ReservationEntranceController extends AbstractController
     {
         $searchQuery = $_GET['q'] ?? '';
 
-        if (empty(trim($searchQuery))) {
-            //On récupère les séances du jour avec le nombre de personnes arrivées
-            $events = $this->eventQueryService->getAllEventsWithRelations(true);
+        // Récupérer les sessions du jour dans tous les cas
+        $events = $this->eventQueryService->getAllEventsWithRelations(true, $this->delayIsComing);
+        $todaySessions = [];
 
-            //On récupère le nombre de spectateurs par session
+        if (!empty($events)) {
             $nbSpectatorsPerSession = $this->reservationQueryService->getNbSpectatorsPerSession($events);
             $sessions = $events[0]->getSessions();
 
-            $todaySessions = [];
             foreach($sessions as $session) {
-                $todaySessions[$session->getId()]['name'] = $session->getSessionName();
-                $todaySessions[$session->getId()]['total'] = $nbSpectatorsPerSession[$session->getId()]['qty'];
-                $todaySessions[$session->getId()]['entered'] = $nbSpectatorsPerSession[$session->getId()]['entered'];
-
+                $todaySessions[$session->getId()] = [
+                    'name' => $session->getSessionName(),
+                    'total' => $nbSpectatorsPerSession[$session->getId()]['qty'],
+                    'entered' => $nbSpectatorsPerSession[$session->getId()]['entered'],
+                ];
             }
+        }
 
+        if (empty(trim($searchQuery))) {
             $this->render('/entrance-search', [
                 'searchQuery' => '',
                 'reservations' => [],
                 'single' => false,
                 'todaySessions' => $todaySessions,
+                'noUpcomingEvents' => empty($events),
             ], "Recherche d'entrée");
             return;
         }
 
         $result = $this->reservationQueryService->searchForEntrance($searchQuery);
 
-        // Si un seul résultat, redirection automatique
         if ($result['single'] && !empty($result['reservations'])) {
             $reservation = $result['reservations'][0];
             header('Location: /entrance?token=' . $reservation->getToken());
@@ -104,6 +107,7 @@ class ReservationEntranceController extends AbstractController
             'searchQuery' => $searchQuery,
             'reservations' => $result['reservations'],
             'single' => $result['single'],
+            'todaySessions' => $todaySessions,
         ], "Recherche d'entrée");
     }
 

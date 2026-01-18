@@ -46,12 +46,13 @@ class EventQueryService
      * Récupère tous les événements avec leurs relations chargées
      *
      * @param bool|null $isUpComing
+     * @param int $delay
      * @return Event[]
      */
-    public function getAllEventsWithRelations(?bool $isUpComing = null): array
+    public function getAllEventsWithRelations(?bool $isUpComing = null, int $delay = 0): array
     {
         // Récupérer tous les événements de base
-        $events = $this->eventRepository->findAllSortByDate($isUpComing);
+        $events = $this->eventRepository->findAllSortByDate($isUpComing, $delay);
         if (empty($events)) {
             return [];
         }

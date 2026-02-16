@@ -34,6 +34,7 @@ class MenuBuilder
                 $menuItems[] = $this->createItem('Utilisateurs', '/gestion/users', $uri === '/gestion/users');
                 $menuItems[] = $this->createDropdown('Configuration', [
                     $this->createItem('Configs', '/gestion/configs', $uri === '/gestion/configs'),
+                    $this->createItem('Commandes', '/gestion/commands', $uri === '/gestion/commands'),
                     $this->createItem('Pages/menu (à venir)', '/gestion/pages', $uri === '/gestion/pages'),
                     $this->createItem('Messages d\'erreur (à venir)', '/gestion/erreurs', $uri === '/gestion/erreurs'),
                 ], str_starts_with($uri, '/gestion/configs'));

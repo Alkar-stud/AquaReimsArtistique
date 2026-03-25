@@ -27,13 +27,14 @@ class MenuBuilder
             $menuItems[] = $this->createItem('Page d\'accueil', '/gestion/accueil', $uri === '/gestion/accueil');
             $menuItems[] = $this->createItem('Tarifs', '/gestion/tarifs', $uri === '/gestion/tarifs');
             $menuItems[] = $this->createItem('Nageuses', '/gestion/swimmers-groups', str_starts_with($uri, '/gestion/swimmers'));
-            $menuItems[] = $this->createItem('Piscines', '/gestion/piscines', $uri === '/gestion/piscines');
+            $menuItems[] = $this->createItem('Lieux', '/gestion/piscines', $uri === '/gestion/piscines');
             $menuItems[] = $this->createItem('Mails', '/gestion/mails_templates', $uri === '/gestion/mails_templates');
 
             if ($userRoleLevel <= 1) {
                 $menuItems[] = $this->createItem('Utilisateurs', '/gestion/users', $uri === '/gestion/users');
                 $menuItems[] = $this->createDropdown('Configuration', [
                     $this->createItem('Configs', '/gestion/configs', $uri === '/gestion/configs'),
+                    $this->createItem('Commandes', '/gestion/commands', $uri === '/gestion/commands'),
                     $this->createItem('Pages/menu (à venir)', '/gestion/pages', $uri === '/gestion/pages'),
                     $this->createItem('Messages d\'erreur (à venir)', '/gestion/erreurs', $uri === '/gestion/erreurs'),
                 ], str_starts_with($uri, '/gestion/configs'));

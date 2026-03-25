@@ -25,6 +25,86 @@ $checkoutIntentId = $_GET['checkoutIntentId'] ?? null;
 
     <h2 class="mb-4">Récapitulatif de votre réservation</h2>
 
+    <!-- FAQ Section -->
+    <div class="accordion mb-4" id="faqAccordion">
+        <div class="accordion-item">
+            <h2 class="accordion-header" id="faqHeading">
+                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faqCollapse" aria-expanded="false" aria-controls="faqCollapse">
+                    <i class="bi bi-question-circle me-2"></i> <strong>Aide : Que puis-je faire sur cette page ?</strong>
+                </button>
+            </h2>
+            <div id="faqCollapse" class="accordion-collapse collapse" aria-labelledby="faqHeading" data-bs-parent="#faqAccordion">
+                <div class="accordion-body">
+                    <h5>Questions fréquentes</h5>
+
+                    <div class="mb-3">
+                        <strong>Comment ai-je accédé à cette page ?</strong>
+                        <p class="mb-1">Vous avez reçu un lien personnalisé dans votre email de confirmation de commande. Ce lien vous permet de consulter et modifier votre réservation.</p>
+                    </div>
+
+                    <div class="mb-3">
+                        <strong>📝 Puis-je modifier les informations des participants ?</strong>
+                        <p class="mb-1">Oui ! Vous pouvez modifier à tout moment :</p>
+                        <ul class="mb-1">
+                            <li>Les coordonnées du réservant (nom, prénom, email, téléphone)</li>
+                            <li>Les noms et prénoms de tous les participants</li>
+                        </ul>
+                        <p class="mb-1 text-muted"><small>Les modifications sont automatiquement enregistrées après quelques secondes de saisie.</small></p>
+                    </div>
+
+                    <div class="mb-3">
+                        <strong>🎫 Puis-je ajouter des compléments à ma réservation ?</strong>
+                        <p class="mb-1">Oui ! Si des compléments sont disponibles pour votre événement, vous les trouverez dans la section "Ajouter des compléments". Cliquez simplement sur le bouton "Ajouter" pour les inclure dans votre commande.</p>
+                    </div>
+
+                    <div class="mb-3">
+                        <strong>➕ Puis-je augmenter la quantité d'un complément déjà commandé ?</strong>
+                        <p class="mb-1">Oui ! Utilisez les boutons <kbd>+</kbd> et <kbd>-</kbd> dans la section "Compléments" pour ajuster les quantités de vos articles selon vos besoins (dans la limite des stocks disponibles).</p>
+                    </div>
+
+                    <div class="mb-3">
+                        <strong>🎟️ J'ai un code promotionnel, comment l'utiliser ?</strong>
+                        <p class="mb-1">Dans la section "Ajouter des compléments", vous trouverez un champ "Vous avez un code ?". Saisissez votre code et cliquez sur "Valider le code" pour bénéficier de l'offre associée.</p>
+                    </div>
+
+                    <div class="mb-3">
+                        <strong>💝 Comment faire un don à l'association ?</strong>
+                        <p class="mb-1">Un curseur vous permet d'ajouter un don à votre commande. Vous pouvez :</p>
+                        <ul class="mb-1">
+                            <li>Ajuster le montant avec le curseur ou saisir directement une valeur</li>
+                            <li>Utiliser le bouton "Arrondir" pour arrondir votre total à l'euro supérieur</li>
+                        </ul>
+                        <p class="mb-1 text-muted"><small>Le don est facultatif et soutient les activités de l'association.</small></p>
+                    </div>
+
+                    <div class="mb-3">
+                        <strong>💳 Comment payer le solde restant ?</strong>
+                        <p class="mb-1">Si un montant reste à payer, un bouton "Payer avec HelloAsso" apparaîtra automatiquement. Cliquez dessus pour effectuer votre paiement sécurisé en ligne.</p>
+                    </div>
+
+                    <div class="mb-3">
+                        <strong>❌ Puis-je annuler ma réservation ?</strong>
+                        <p class="mb-1">Oui, un bouton "Annuler la réservation" est disponible en bas de page. L'annulation est possible jusqu'à la date limite indiquée en haut de la page.</p>
+                    </div>
+
+                    <div class="mb-3">
+                        <strong>⏰ Jusqu'à quand puis-je modifier ma réservation ?</strong>
+                        <p class="mb-1">La date limite de modification est indiquée en haut de page sous le numéro d'enregistrement. Passé ce délai, les modifications ne seront plus possibles.</p>
+                    </div>
+
+                    <div class="mb-3">
+                        <strong>🔒 Mes données sont-elles sécurisées ?</strong>
+                        <p class="mb-1">Oui, votre lien est personnel et sécurisé. Toutes les modifications sont enregistrées de manière sécurisée et les paiements sont gérés par HelloAsso, une plateforme de paiement certifiée.</p>
+                    </div>
+
+                    <div class="alert alert-info mt-3">
+                        <i class="bi bi-info-circle"></i> <strong>Besoin d'aide ?</strong> Si vous rencontrez un problème, contactez-nous en répondant à l'email de confirmation que vous avez reçu.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <fieldset {{! !$canBeModified ? 'disabled' : '' !}}>
         <legend class="fs-5">Numéro d'enregistrement : <b>ARA-{{ str_pad($reservation->getId(), 5, '0', STR_PAD_LEFT) }}</b></legend>
         {% if ($reservation->getTokenExpireAt()) %}

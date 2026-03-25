@@ -35,6 +35,7 @@ readonly class MailPrepareService
      * @param string $recipientEmail
      * @param string $username
      * @param string $resetLink
+     * @param DateTimeInterface $expiresAt
      * @return bool
      */
     public function sendPasswordNewAccount(string $recipientEmail, string $username, string $resetLink, DatetimeInterface $expiresAt): bool

@@ -36,7 +36,7 @@
                 <form action="/gestion/piscines/add" method="POST">
                     <div class="modal-body">
                         <div class="mb-3">
-                            <label for="add-label" class="form-label">Nom de la piscine</label>
+                            <label for="add-label" class="form-label">Nom</label>
                             <input type="text" name="label" id="add-label" class="form-control" required>
                         </div>
                         <div class="mb-3">
@@ -136,7 +136,7 @@
         <table class="table align-middle">
             <thead>
             <tr>
-                <th>Nom de la piscine</th>
+                <th>Nom</th>
                 <th>Adresse</th>
                 <th>Capacité</th>
                 <th style="width: 220px;">Places numérotées</th>

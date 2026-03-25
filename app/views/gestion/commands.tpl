@@ -44,7 +44,7 @@
                     data-url="{{ $command['url'] }}"
                     data-name="{{ $command['name'] }}"
                     >
-                    <i class="bi bi-play-circle"></i> Exécuter
+                    <i class="bi bi-play-circle"></i>&nbsp;Exécuter
                     </button>
                 </div>
             </div>

@@ -14,7 +14,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // Cherche un input dans la même card
             const card = btn.closest('.card');
             let extraData = {};
-            const recapInput = card.querySelector('.recap-limit-input');
+            const recapInput = card.querySelector('.command-input');
             if (recapInput) {
                 const value = parseInt(recapInput.value, 10);
                 if (isNaN(value) || value < 1 || value > 100) {
@@ -31,7 +31,7 @@ document.addEventListener('DOMContentLoaded', () => {
             buttonLoading(btn, true);
 
             try {
-                const data = await apiPost(url);
+                const data = await apiPost(url, extraData);
 
                 if (data.success) {
                     let html = `<div class="alert alert-success">Commande exécutée avec succès</div>`;

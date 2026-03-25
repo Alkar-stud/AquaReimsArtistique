@@ -10,9 +10,12 @@ use Exception;
 
 class CommandsController extends AbstractController
 {
-    public function __construct()
+    private ReservationFinalSummaryService $reservationFinalSummaryService;
+
+    public function __construct(ReservationFinalSummaryService $reservationFinalSummaryService)
     {
         parent::__construct(false);
+        $this->reservationFinalSummaryService = $reservationFinalSummaryService;
     }
 
     #[Route('/gestion/commands', name: 'app_gestion_commands')]
@@ -73,6 +76,37 @@ class CommandsController extends AbstractController
                 'error' => $e->getMessage()
             ], 500);
         }
+    }
+
+    #[Route('/gestion/commands/send-recap-email', name: 'app_gestion_commands_send_recap', methods: ['POST'])]
+    public function sendRecapEmail(): void
+    {
+        $this->checkIfCurrentUserIsAllowedToManagedThis(1);
+
+        // Récupération de la limite depuis le corps de la requête JSON
+        $json = json_decode(file_get_contents('php://input'), true);
+        $limit = (int)($json['limit'] ?? 100);
+        
+        $limit = $limit > 0 ? $limit : 100;
+
+        try {
+            $result = $this->reservationFinalSummaryService->sendFinalEmail($limit, true);
+            
+            // On formate les données pour l'affichage en liste dans la modale
+            $displayData = [
+                'Réservations traitées' => $result['attempted'] ?? 0,
+                'Emails envoyés' => $result['sent'] ?? 0,
+                'Échecs d\'envoi' => $result['failed'] ?? 0,
+            ];
+
+            $this->json(['success' => true, 'data' => $displayData]);
+        } catch (Exception $e) {
+            $this->json([
+                'success' => false,
+                'error' => $e->getMessage()
+            ], 500);
+        }
+
     }
 
 }

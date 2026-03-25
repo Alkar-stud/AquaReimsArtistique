@@ -1,5 +1,5 @@
 # Utiliser une image de base avec Apache
-FROM php:8.2-apache
+FROM php:8.4-apache
 
 
 RUN apt-get update && apt-get install -y \
@@ -39,8 +39,6 @@ COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
 # Définit le répertoire de travail
 WORKDIR /var/www/html
-
-RUN pecl install mongodb && docker-php-ext-enable mongodb
 
 # Copie les fichiers de l'application mais ignore les fichiers inutiles
 COPY . .

@@ -17,6 +17,27 @@
                         {{! $command['info'] !}}
                     </div>
                     {% endif %}
+                    {% if isset($command['input']) %}
+                    <div class="mb-3">
+                        <label for="input-{{ $command['name'] | escape('html_attr') }}" class="form-label">
+                            {% if $command['input']['type'] == 'number' %}
+                            Nombre à traiter (max {{ $command['input']['max'] }})
+                            {% else %}
+                            Paramètre
+                            {% endif %}
+                        </label>
+                        <input
+                                type="{{ $command['input']['type'] }}"
+                                class="form-control command-input"
+                                id="input-{{ $command['name'] | escape('html_attr') }}"
+                                name="input-{{ $command['name'] | escape('html_attr') }}"
+                                {% if isset($command['input']['max']) %}max="{{ $command['input']['max'] }}"{% endif %}
+                                {% if isset($command['input']['min']) %}min="{{ $command['input']['min'] }}"{% endif %}
+                                {% if isset($command['input']['placeholder']) %}placeholder="{{ $command['input']['placeholder'] }}"{% endif %}
+                                {% if isset($command['input']['value']) %}value="{{ $command['input']['value'] }}"{% endif %}
+                        >
+                    </div>
+                    {% endif %}
                 </div>
                 <div class="card-footer">
                     <button class="btn {{ $command['danger'] ? 'btn-danger' : 'btn-primary' }} w-100 execute-command"

@@ -11,6 +11,19 @@ document.addEventListener('DOMContentLoaded', () => {
             const url = btn.dataset.url;
             const name = btn.dataset.name;
 
+            // Cherche un input dans la même card
+            const card = btn.closest('.card');
+            let extraData = {};
+            const recapInput = card.querySelector('.recap-limit-input');
+            if (recapInput) {
+                const value = parseInt(recapInput.value, 10);
+                if (isNaN(value) || value < 1 || value > 100) {
+                    alert('Veuillez saisir un nombre valide entre 1 et 100.');
+                    return;
+                }
+                extraData.limit = value;
+            }
+
             if (!confirm(`Voulez-vous vraiment exécuter : ${name} ?`)) {
                 return;
             }

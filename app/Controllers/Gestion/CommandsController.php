@@ -4,6 +4,9 @@ namespace app\Controllers\Gestion;
 
 use app\Attributes\Route;
 use app\Controllers\AbstractController;
+use app\Services\Anonymize\AnonymizeDataService;
+use app\Services\Reservation\ReservationFinalSummaryService;
+use Exception;
 
 class CommandsController extends AbstractController
 {
@@ -35,11 +38,41 @@ class CommandsController extends AbstractController
                 'danger' => false,
                 'info' => "Période de rétention : <strong>{$retentionPeriod}</strong><br>Données concernées : commandes reçues avant le <strong>{$thresholdFormatted}</strong>"
             ],
+            [
+                'name' => 'Envoi de mails récapitulatif',
+                'description' => 'Envoi le mail `final_summary` aux réservations concernées, par paquet de 100 maximum',
+                'url' => '/gestion/commands/send-recap-email',
+                'icon' => 'bi-send',
+                'danger' => true,
+                'input' => ['type' => 'number', 'max' => 100, 'value' => 10],
+            ],
         ];
 
         $this->render('/gestion/commands', [
             'commands' => $commands
         ], 'Gestion des commandes');
+    }
+
+    #[Route('/gestion/commands/anonymize', name: 'app_gestion_commands_anonymize', methods: ['POST'])]
+    public function anonymize(): void
+    {
+        $this->checkIfCurrentUserIsAllowedToManagedThis(1);
+
+        try {
+            $retentionPeriod = $_ENV['PERSONAL_DATA_RETENTION_DAYS'] ?? 'P3Y';
+            $anonymizer = new AnonymizeDataService($retentionPeriod);
+            $result = $anonymizer->run();
+
+            $this->json([
+                'success' => true,
+                'data' => $result
+            ]);
+        } catch (Exception $e) {
+            $this->json([
+                'success' => false,
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 
 }

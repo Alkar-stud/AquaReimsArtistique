@@ -19,7 +19,7 @@
                     {% endif %}
                 </div>
                 <div class="card-footer">
-                    <buttonclass="btn {{ $command['danger'] ? 'btn-danger' : 'btn-primary' }} w-100 execute-command"
+                    <button class="btn {{ $command['danger'] ? 'btn-danger' : 'btn-primary' }} w-100 execute-command"
                     data-url="{{ $command['url'] }}"
                     data-name="{{ $command['name'] }}"
                     >

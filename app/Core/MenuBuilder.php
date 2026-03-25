@@ -27,7 +27,7 @@ class MenuBuilder
             $menuItems[] = $this->createItem('Page d\'accueil', '/gestion/accueil', $uri === '/gestion/accueil');
             $menuItems[] = $this->createItem('Tarifs', '/gestion/tarifs', $uri === '/gestion/tarifs');
             $menuItems[] = $this->createItem('Nageuses', '/gestion/swimmers-groups', str_starts_with($uri, '/gestion/swimmers'));
-            $menuItems[] = $this->createItem('Piscines', '/gestion/piscines', $uri === '/gestion/piscines');
+            $menuItems[] = $this->createItem('Lieux', '/gestion/piscines', $uri === '/gestion/piscines');
             $menuItems[] = $this->createItem('Mails', '/gestion/mails_templates', $uri === '/gestion/mails_templates');
 
             if ($userRoleLevel <= 1) {

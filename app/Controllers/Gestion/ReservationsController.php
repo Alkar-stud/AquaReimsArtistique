@@ -19,6 +19,7 @@ use app\Services\Payment\HelloAssoService;
 use app\Services\Payment\PaymentWebhookService;
 use app\Services\Pdf\PdfGenerationService;
 use app\Services\Reservation\ReservationQueryService;
+use app\Services\Reservation\ReservationFinalSummaryService;
 use app\Services\Reservation\ReservationDeletionService;
 use app\Services\Reservation\ReservationTokenService;
 use app\Services\Reservation\ReservationUpdateService;
@@ -42,6 +43,7 @@ class ReservationsController extends AbstractController
     private ReservationQueryService $reservationQueryService;
     private MailService $mailService;
     private MailPrepareService $mailPrepareService;
+    private ReservationFinalSummaryService $reservationFinalSummaryService;
     private DataHelper $dataHelper;
     private EventPiscineService $EventPiscineService;
 
@@ -59,6 +61,7 @@ class ReservationsController extends AbstractController
         ReservationQueryService $reservationQueryService,
         MailService $mailService,
         MailPrepareService $mailPrepareService,
+        ReservationFinalSummaryService $reservationFinalSummaryService,
         DataHelper $dataHelper,
         EventPiscineService $EventPiscineService,
     )
@@ -77,6 +80,7 @@ class ReservationsController extends AbstractController
         $this->reservationQueryService = $reservationQueryService;
         $this->mailService = $mailService;
         $this->mailPrepareService = $mailPrepareService;
+        $this->reservationFinalSummaryService = $reservationFinalSummaryService;
         $this->dataHelper = $dataHelper;
         $this->EventPiscineService = $EventPiscineService;
     }
@@ -490,10 +494,15 @@ class ReservationsController extends AbstractController
             $this->json(['success' => false, 'message' => 'Réservation non trouvée.'], 404);
         }
 
-        //On essaie d'envoyer le mail demandé
-        $returnEmailSent = $this->mailPrepareService->sendReservationConfirmationEmail($reservation, $data['templateCode']);
-        //On enregistre l'envoi
-        $this->mailService->recordMailSent($reservation, $data['templateCode']);
+        // Si c'est un récap final, on passe par le service dédié pour avoir le PDF
+        if ($data['templateCode'] === 'final_summary') {
+            $returnEmailSent = $this->reservationFinalSummaryService->sendForReservation($reservation);
+        } else {
+            // Cas général
+            $returnEmailSent = $this->mailPrepareService->sendReservationConfirmationEmail($reservation, $data['templateCode']);
+            //On enregistre l'envoi
+            $this->mailService->recordMailSent($reservation, $data['templateCode']);
+        }
 
         if (!$returnEmailSent) {
             $this->json(['success' => false, 'message' => 'Mail non envoyé']);

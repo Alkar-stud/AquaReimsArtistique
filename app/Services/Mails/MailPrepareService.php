@@ -59,11 +59,12 @@ readonly class MailPrepareService
      * @param Reservation $reservation
      * @param string $mailTemplate
      * @param string|null $pdfPath
+     * @param array|null $params
      * @return bool
      */
-    public function sendReservationConfirmationEmail(Reservation $reservation, string $mailTemplate = 'paiement_confirme', ?string $pdfPath = null): bool
+    public function sendReservationConfirmationEmail(Reservation $reservation, string $mailTemplate = 'paiement_confirme', ?string $pdfPath = null, ?array $params = null): bool
     {
-        $params = $this->buildReservationEmailParams($reservation, $mailTemplate == 'final_summary');
+        $params = $params ?? $this->buildReservationEmailParams($reservation, $mailTemplate == 'final_summary');
         $tpl = $this->templateService->render($mailTemplate, $params);
         if (!$tpl) {
             return false;

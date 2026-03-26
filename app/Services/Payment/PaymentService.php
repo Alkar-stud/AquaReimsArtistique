@@ -7,7 +7,6 @@ use app\Models\Reservation\Reservation;
 use app\Repository\Reservation\ReservationRepository;
 use app\Services\Reservation\ReservationDataPersist;
 use app\Services\Reservation\ReservationSessionService;
-use app\Services\Reservation\ReservationTempWriter;
 use app\Utils\BuildLink;
 use Exception;
 
@@ -15,7 +14,6 @@ class PaymentService
 {
     private HelloAssoCartDTO $helloAssoCartDTO;
     private HelloAssoService $helloAssoService;
-    private ReservationTempWriter $reservationWriter;
     private ReservationSessionService $reservationSessionService;
     private ReservationDataPersist $reservationDataPersist;
     private ReservationRepository $reservationRepository;
@@ -24,7 +22,6 @@ class PaymentService
     public function __construct(
         HelloAssoCartDTO          $helloAssoCartDTO,
         HelloAssoService          $helloAssoService,
-        ReservationTempWriter     $reservationWriter,
         ReservationSessionService $reservationSessionService,
         ReservationDataPersist    $reservationDataPersist,
         ReservationRepository     $reservationRepository,
@@ -33,7 +30,6 @@ class PaymentService
     {
         $this->helloAssoCartDTO = $helloAssoCartDTO;
         $this->helloAssoService = $helloAssoService;
-        $this->reservationWriter = $reservationWriter;
         $this->reservationSessionService = $reservationSessionService;
         $this->reservationDataPersist = $reservationDataPersist;
         $this->reservationRepository = $reservationRepository;
@@ -88,7 +84,6 @@ class PaymentService
 
         //On sauvegarde le checkoutIntentId
         if ($result['success']) {
-            $this->reservationWriter->updateReservationByPrimaryId($reservationTemp['reservation']->getId(), ['checkout_intent_id' => $result['checkoutIntentId']]);
             //Puis, on ajoute à la session pour les retrouver après
             $this->reservationSessionService->setReservationSession('checkoutIntentId', $result['checkoutIntentId']);
             $this->reservationSessionService->setReservationSession('redirectUrl', $result['redirectUrl']);

@@ -1,6 +1,7 @@
 <?php
 namespace app\Services\Reservation;
 
+use app\Models\Reservation\Reservation;
 use app\Repository\Mail\MailTemplateRepository;
 use app\Repository\Reservation\ReservationRepository;
 use app\Services\Mails\MailPrepareService;
@@ -65,38 +66,17 @@ final class ReservationFinalSummaryService
                 continue;
             }
 
-            //On récupère le texte à mettre dans le mail
-            $params = $this->mailPrepareService->buildReservationEmailParams($reservation, true);
-
-            //On génère le PDF à mettre en PJ et on récupère le binaire pour ensuite l'attacher au mail
-            $pdf = $this->pdfGenerationService->generateUnitPdf('RecapFinal', $reservation->getId(), $params);
-
-            // Créer un fichier temporaire
-            $pdfPath = sys_get_temp_dir() . '/recap_' . $reservation->getId() . '_' . uniqid() . '.pdf';
-            file_put_contents($pdfPath, $pdf->Output('S'));
             try {
-                $ok = $this->mailPrepareService->sendReservationConfirmationEmail($reservation, 'final_summary',$pdfPath);
+                $ok = $this->sendForReservation($reservation);
                 if ($ok) {
-                    // Log d'envoi (comme dans le contrôleur de gestion)
-                    $this->mailService->recordMailSent($reservation,'final_summary');
-
-                    // Nettoyer le fichier temporaire du PDF après envoi
-                    if ($pdfPath && is_file($pdfPath)) {
-                        @unlink($pdfPath);
-                    }
                     $sent++;
                 } else {
                     $failed++;
                     $errors[] = ['reservationId' => $reservation->getId(), 'error' => 'send returned false'];
                 }
-
                 // Délai de 1 seconde entre chaque envoi pour respecter les limites SMTP
                 sleep(1);
             } catch (Throwable $e) {
-                // Nettoyage en cas d'erreur
-                if (is_file($pdfPath)) {
-                    @unlink($pdfPath);
-                }
                 $failed++;
                 $errors[] = ['reservationId' => $reservation->getId(), 'error' => $e->getMessage()];
             }
@@ -108,5 +88,36 @@ final class ReservationFinalSummaryService
             'failed' => $failed,
             'errors' => $errors,
         ];
+    }
+
+    /**
+     * Envoie le mail récapitulatif final pour une seule réservation (avec PDF et log)
+     *
+     * @param Reservation $reservation
+     * @return bool
+     */
+    public function sendForReservation(Reservation $reservation): bool
+    {
+        // Préparation des paramètres (QR codes inclus)
+        $params = $this->mailPrepareService->buildReservationEmailParams($reservation, true);
+
+        // Génération du PDF RecapFinal
+        $pdf = $this->pdfGenerationService->generateUnitPdf('RecapFinal', $reservation->getId(), $params);
+        $pdfPath = sys_get_temp_dir() . '/recap_' . $reservation->getId() . '_' . uniqid() . '.pdf';
+        file_put_contents($pdfPath, $pdf->Output('S'));
+
+        try {
+            $ok = $this->mailPrepareService->sendReservationConfirmationEmail($reservation, $this->finalSummaryTemplate, $pdfPath, $params);
+            
+            if ($ok) {
+                $this->mailService->recordMailSent($reservation, $this->finalSummaryTemplate);
+            }
+            
+            return $ok;
+        } finally {
+            if (is_file($pdfPath)) {
+                @unlink($pdfPath);
+            }
+        }
     }
 }

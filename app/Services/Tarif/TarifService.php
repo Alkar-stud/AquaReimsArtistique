@@ -59,6 +59,22 @@ class TarifService
 
 
     /**
+     * Vérifie si au moins un tarif de la liste a un code d'accès.
+     *
+     * @param array $tarifs Les tarifs à vérifier.
+     * @return bool
+     */
+    public function hasAccessCodeInTariffs(array $tarifs): bool
+    {
+        foreach ($tarifs as $tarif) {
+            if ($tarif->getAccessCode() !== null && $tarif->getAccessCode() !== '') {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
      * Valide un code d'accès pour un tarif spécial et retourne les informations du tarif.
      *
      * @param int $eventId

@@ -79,7 +79,8 @@
         {% endif %}
 
         <hr>
-<!--
+
+        {% if $hasAccessCode %}
         <div class="mb-3">
             <label for="specialCode" class="form-label">Vous avez un code ?</label>
             <div id="specialCodeHelp" class="visually-hidden">
@@ -110,7 +111,7 @@
         </div>
 
         <div id="specialTarifContainer"></div>
--->
+        {% endif %}
         <br>
 
         <div class="row">

@@ -22,3 +22,12 @@
     {% endif %}
 
 </div>
+
+{% if ($_ENV['APP_DEBUG'] == "true") %}
+Ici pour la suite, on a déjà enregistré ça&nbsp;:
+{% php %}
+echo '<pre>';
+print_r($reservation);
+echo '</pre>';
+{% endphp %}
+{% endif %}

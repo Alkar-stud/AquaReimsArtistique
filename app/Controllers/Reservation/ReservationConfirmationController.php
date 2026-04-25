@@ -98,6 +98,7 @@ class ReservationConfirmationController extends AbstractController
         $session['reservation']->setTotalAmount($totalAmount);
         $this->reservationTempRepository->update($session['reservation']);
 
+        $donationCents = ($session['donation'] ?? 0);
 
         $this->render('reservation/confirmation', [
             'reservation'   => $session,
@@ -108,6 +109,7 @@ class ReservationConfirmationController extends AbstractController
             'tarifs'        => $tarifsById,
             'eventSession'  => $eventSession,
             'swimmer'       => $swimmer,
+            'donationCents' => $donationCents,
         ], 'Réservations');
     }
 
@@ -162,9 +164,8 @@ class ReservationConfirmationController extends AbstractController
 
         $totalAmount = $detailsSubtotal + $complementsSubtotal;
 
-
         //On récupère si un don a été ajouté au moment de la confirmation
-        $donation = isset($_GET['donation']) ? (float)$_GET['donation'] : 0;
+        $donation = isset($_POST['donation']) ? (float)$_POST['donation'] : 0;
         $donationCents = (int)round($donation * 100);
         $totalAmount += $donationCents;
 
@@ -197,6 +198,7 @@ class ReservationConfirmationController extends AbstractController
         // Si tout s'est bien passé, on affiche la page de paiement avec l'URL de redirection
         $this->render('reservation/payment', [
             'redirectUrl' => $paymentResult['redirectUrl'],
+            'reservation'          => $_SESSION,
         ], 'Paiement de votre réservation');
     }
 

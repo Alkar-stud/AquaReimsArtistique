@@ -63,7 +63,7 @@ class PaymentRecordService
         // On ne met à jour (en ajoutant) que pour les paiements complémentaires.
         //On met $reservation totalAmountPaid à la bonne valeur, car $payment->getAmountPaid() peut être supérieur en cas de don.
         //Dans ce cas, on enregistre la différence ailleurs.
-        if ($typePayment === 'add') {
+        if ($typePayment === 'add' || $typePayment === 'new') {
             $reservation = $this->reservationRepository->findById($reservationId);
             if ($reservation->getTotalAmount() < ($reservation->getTotalAmountPaid() + $payment->getAmountPaid()))
             {

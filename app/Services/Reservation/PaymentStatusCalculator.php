@@ -3,13 +3,28 @@
 namespace app\Services\Reservation;
 
 use app\Models\Reservation\Reservation;
+use app\Services\Payment\DonationService;
 
 class PaymentStatusCalculator
 {
+    private DonationService $donationService;
+    public function __construct(
+        DonationService $donationService
+    )
+    {
+        $this->donationService = $donationService;
+    }
     public function calculate(Reservation $reservation): array
     {
         $totalAmount = $reservation->getTotalAmount();
         $totalAmountPaid = $reservation->getTotalAmountPaid();
+        //On ajoute l'éventuel don au total payé
+        $donationCents = $this->donationService->totalAmountOfDonation($reservation->getPayments());
+
+        //Dans le cas d'une relance du mail, le don n'est pas compris dans $totalAmountPaid, on ne l'ajoute donc que dans le cas d'un renvoi manuel
+        if ($totalAmountPaid != ($totalAmount + $donationCents)) {
+            $totalAmountPaid += $donationCents;
+        }
 
         if ($totalAmountPaid >= $totalAmount) {
             return [

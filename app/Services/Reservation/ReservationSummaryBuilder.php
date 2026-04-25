@@ -3,9 +3,18 @@
 namespace app\Services\Reservation;
 
 use app\Models\Reservation\Reservation;
+use app\Services\Payment\DonationService;
 
 class ReservationSummaryBuilder
 {
+    private DonationService $donationService;
+    public function __construct(
+        DonationService $donationService
+    ) {
+        $this->donationService = $donationService;
+    }
+
+
     private function buildDetailsRecap(Reservation $reservation): array
     {
         $html = '';
@@ -88,13 +97,7 @@ class ReservationSummaryBuilder
     {
         $html = '';
         $text = '';
-        $donationCents = 0;
-
-        foreach ($reservation->getPayments() as $payment) {
-            if ($payment->getPartOfDonation()) {
-                $donationCents += $payment->getPartOfDonation();
-            }
-        }
+        $donationCents = $this->donationService->totalAmountOfDonation($reservation->getPayments());
 
         if ($donationCents <= 0) {
             return ['html' => $html, 'text' => $text];

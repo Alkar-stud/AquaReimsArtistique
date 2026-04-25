@@ -93,7 +93,7 @@ class ReservationSummaryBuilder
         return ['html' => $html, 'text' => $text];
     }
 
-    private function buildDonationRecap(Reservation $reservation): array
+    public function buildDonationRecap(Reservation $reservation): array
     {
         $html = '';
         $text = '';

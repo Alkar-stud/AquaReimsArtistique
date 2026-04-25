@@ -375,6 +375,10 @@ $checkoutIntentId = $_GET['checkoutIntentId'] ?? null;
                     <strong id="total-paid-amount">
                         {{ number_format($reservation->getTotalAmountPaid() / 100, 2, ',', ' ') }} €
                     </strong>
+                    <!-- Si déjà un don existant -->
+                    {% if (!empty($donationRecap) && $donationRecap > 0) %}
+                        + Don : <strong>{{ number_format($donationRecap / 100, 2, ',', ' ') }} €</strong>
+                    {% endif %}
                 </div>
 
                 <hr>

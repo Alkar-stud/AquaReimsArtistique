@@ -106,6 +106,9 @@ export function initPaymentManager() {
                 const newDonationEuros = (currentDonationCents + donationToAddCents) / 100;
                 donationAmountInput.value = newDonationEuros.toFixed(2);
                 donationSlider.value = newDonationEuros;
+                // Notifie les autres modules (ex: confirmation.js) qu'on a modifié l'input en JS
+                donationAmountInput.dispatchEvent(new Event('input', { bubbles: true }));
+
                 updatePaymentUI();
                 updateRoundUpButtonVisibility();
             }

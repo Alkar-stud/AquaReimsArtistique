@@ -161,11 +161,22 @@ class ReservationConfirmationController extends AbstractController
         $complementsSubtotal = $complementSummary['subtotal'];
 
         $totalAmount = $detailsSubtotal + $complementsSubtotal;
+
+
+        //On récupère si un don a été ajouté au moment de la confirmation
+        $donation = isset($_GET['donation']) ? (float)$_GET['donation'] : 0;
+        $donationCents = (int)round($donation * 100);
+        $totalAmount += $donationCents;
+
+        // On met en session le montant du don
+        $this->reservationSessionService->setReservationSession('donation', $donationCents);
+
         //On sauvegarde en session
         $this->reservationSessionService->setReservationSession('totals', [
             'details_subtotal'     => $detailsSubtotal,
             'complements_subtotal' => $complementsSubtotal,
-            'total_amount'         => $totalAmount
+            'total_amount'         => $totalAmount,
+            'donation'             => $donationCents,
             ]);
 
 

@@ -96,7 +96,7 @@ class PaymentRecordService
                 $this->reservationRepository->updateSingleField($reservationId, 'total_amount_paid', $newTotalPaid);
                 //Puis le paiement avant de l'insérer
                 $payment->setPartOfDonation($partOfDonation);
-                $payment->setAmountPaid($reservation->getTotalAmount());
+                //$payment->setAmountPaid($reservation->getTotalAmount());
             }
         }
 

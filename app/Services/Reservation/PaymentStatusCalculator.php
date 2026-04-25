@@ -19,14 +19,12 @@ class PaymentStatusCalculator
     {
         $totalAmount = $reservation->getTotalAmount();
         $totalAmountPaid = $reservation->getTotalAmountPaid();
-        //On ajoute l'éventuel don au total payé
-        $donationCents = $this->donationService->totalAmountOfDonation($reservation->getPayments());
 
         if ($totalAmountPaid >= $totalAmount) {
             return [
                 'label' => 'Total payé :',
                 'labelHtml' => '<strong style="color: green;">Total payé :</strong>',
-                'amount' => $totalAmountPaid + $donationCents,
+                'amount' => $totalAmountPaid,
                 'color' => 'green',
             ];
         }

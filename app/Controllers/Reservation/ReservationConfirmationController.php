@@ -98,6 +98,7 @@ class ReservationConfirmationController extends AbstractController
         $session['reservation']->setTotalAmount($totalAmount);
         $this->reservationTempRepository->update($session['reservation']);
 
+        $donationCents = ($session['donation'] ?? 0);
 
         $this->render('reservation/confirmation', [
             'reservation'   => $session,
@@ -108,6 +109,7 @@ class ReservationConfirmationController extends AbstractController
             'tarifs'        => $tarifsById,
             'eventSession'  => $eventSession,
             'swimmer'       => $swimmer,
+            'donationCents' => $donationCents,
         ], 'Réservations');
     }
 
@@ -161,11 +163,21 @@ class ReservationConfirmationController extends AbstractController
         $complementsSubtotal = $complementSummary['subtotal'];
 
         $totalAmount = $detailsSubtotal + $complementsSubtotal;
+
+        //On récupère si un don a été ajouté au moment de la confirmation
+        $donation = isset($_POST['donation']) ? (float)$_POST['donation'] : 0;
+        $donationCents = (int)round($donation * 100);
+        $totalAmount += $donationCents;
+
+        // On met en session le montant du don
+        $this->reservationSessionService->setReservationSession('donation', $donationCents);
+
         //On sauvegarde en session
         $this->reservationSessionService->setReservationSession('totals', [
             'details_subtotal'     => $detailsSubtotal,
             'complements_subtotal' => $complementsSubtotal,
-            'total_amount'         => $totalAmount
+            'total_amount'         => $totalAmount,
+            'donation'             => $donationCents,
             ]);
 
 
@@ -186,6 +198,7 @@ class ReservationConfirmationController extends AbstractController
         // Si tout s'est bien passé, on affiche la page de paiement avec l'URL de redirection
         $this->render('reservation/payment', [
             'redirectUrl' => $paymentResult['redirectUrl'],
+            'reservation'          => $_SESSION,
         ], 'Paiement de votre réservation');
     }
 

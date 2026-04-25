@@ -77,12 +77,27 @@ class PaymentRecordService
             }
 
             $reservation->setTotalAmountPaid($newTotalPaid);
-            //Ajout donc on doit vérifier de nouveau la commande
+            //Ajout donc on doit vérifier manuellement de nouveau la commande
             $reservation->setIsChecked(false);
 
             $this->reservationRepository->update($reservation);
 
             //$this->reservationRepository->updateSingleField($reservationId, 'total_amount_paid', $newTotalPaid);
+        }
+        // Maintenant que le don est ajouté dès la réservation initiale,
+        // on gère aussi ici en le retirant du total amount paid et en l'ajoutant en tant que don dans payment et en déduisant de amount_paid
+        if ($typePayment === 'new') {
+            $reservation = $this->reservationRepository->findById($reservationId);
+            if ($reservation->getTotalAmountPaid() > $reservation->getTotalAmount()){
+                $partOfDonation = $reservation->getTotalAmountPaid() - $reservation->getTotalAmount();
+
+                //On met à jour la réservation
+                $newTotalPaid = $reservation->getTotalAmount();
+                $this->reservationRepository->updateSingleField($reservationId, 'total_amount_paid', $newTotalPaid);
+                //Puis le paiement avant de l'insérer
+                $payment->setPartOfDonation($partOfDonation);
+                //$payment->setAmountPaid($reservation->getTotalAmount());
+            }
         }
 
         $id = $this->reservationPaymentRepository->insert($payment);

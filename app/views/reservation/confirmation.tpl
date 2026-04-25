@@ -97,10 +97,50 @@
     </ul>
     {% endif %}
 
+    <!-- Avant la section du don, ajouter un conteneur avec les données -->
+    <div class="container-fluid" id="reservation-data-container" data-base-due-cents="{{ (int)($grandTotal) }}">
+        <!-- Toujours visible: Don -->
+        <div class="mb-3 text-end">
+            <label for="donation-slider" class="form-label fs-6 fw-normal">
+                Faire un don à l'association :
+            </label>
+            <div class="d-inline-block align-middle">
+                <label for="donation-amount-input" class="visually-hidden">Montant du don</label>
+                <input
+                        type="number"
+                        id="donation-amount-input"
+                        min="0"
+                        step="0.1"
+                        value="{{ number_format(($donationCents ?? 0) / 100, 2, '.', '') }}"
+                        class="form-control form-control-sm"
+                        style="width: 90px; display: inline-block;"
+                        name="donation"
+                        form="confirmForm"
+                > €
+                <button type="button" id="round-up-donation-btn" class="btn btn-outline-secondary btn-sm d-none ms-2" title="Arrondir à l'euro supérieur" style="font-size: 0.7rem; padding: 0.1rem 0.3rem;">
+                    Arrondir
+                </button>
+            </div>
+            <div class="donation-slider-container ms-auto">
+                <input
+                        type="range"
+                        class="form-range"
+                        min="0"
+                        max="{{ $maxDonationEuros }}"
+                        step="0.1"
+                        value="{{ number_format(($donationCents ?? 0) / 100, 2, '.', '') }}"
+                        id="donation-slider"
+                >
+            </div>
+            <small class="form-text text-muted"></small>
+        </div>
+
     <ul class="list-group mb-4">
         <li class="list-group-item d-flex justify-content-between align-items-center">
             <span><strong>Total à payer</strong></span>
-            <strong>{{ number_format($grandTotal / 100, 2, ',', ' ') }} €</strong>
+            <strong id="total-amount">
+                {{ number_format(($grandTotal + ($donationCents ?? 0)) / 100, 2, ',', ' ') }} €
+            </strong>
         </li>
     </ul>
 
@@ -108,7 +148,7 @@
         Merci de vérifier vos informations {{ $grandTotal == 0 ? 'avant d’enregistrer votre réservation' : 'avant paiement' }}.
     </div>
 
-    <form id="confirmForm" action="/reservation/payment" method="get" class="mt-3" aria-describedby="confirm-hint">
+    <form id="confirmForm" action="/reservation/payment" method="POST" class="mt-3" aria-describedby="confirm-hint">
         <div class="row">
             <!-- order-x pour position x en mobile et order-mg-x pour desktop -->
             <!-- afin que le bouton principal soit à droite en desktop -->
@@ -125,6 +165,8 @@
     </form>
 </div>
 <br>
+
+<script type="module" src="/assets/js/reservations/confirmation.js"></script>
 
 {% if ($_ENV['APP_DEBUG'] == "true") %}
 Ici pour la suite, on a déjà enregistré ça&nbsp;:

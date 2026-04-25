@@ -113,6 +113,9 @@ class PaymentService
         $this->helloAssoCartDTO->setTotalAmount((int)$reservation['totals']['total_amount']);
         $this->helloAssoCartDTO->setInitialAmount((int)$reservation['totals']['total_amount']); // Identique pour un paiement unique
         $this->helloAssoCartDTO->setItemName("Réservation pour $eventName");
+        //Don le don
+        $donationCents = (int)($reservation['totals']['donation'] ?? 0);
+        $this->helloAssoCartDTO->setContainsDonation($donationCents > 0);
 
         // URLs de redirection pour le processus de paiement
         $this->helloAssoCartDTO->setBackUrl($baseUrl . '/reservation/confirmation'); // URL pour revenir au panier

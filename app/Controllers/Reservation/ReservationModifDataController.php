@@ -8,6 +8,7 @@ use app\Controllers\AbstractController;
 use app\Models\Reservation\Reservation;
 use app\Repository\Reservation\ReservationRepository;
 use app\Repository\Tarif\TarifRepository;
+use app\Services\Payment\DonationService;
 use app\Services\Payment\PaymentService;
 use app\Services\Reservation\ReservationQueryService;
 use app\Services\Reservation\ReservationUpdateService;
@@ -23,6 +24,7 @@ class ReservationModifDataController extends AbstractController
     private TarifRepository $tarifRepository;
     private TarifService $tarifService;
     private PaymentService $paymentService;
+    private DonationService $donationService;
 
     public function __construct(
         ReservationRepository $reservationRepository,
@@ -31,6 +33,7 @@ class ReservationModifDataController extends AbstractController
         TarifRepository $tarifRepository,
         TarifService $tarifService,
         PaymentService $paymentService,
+        DonationService $donationService,
     )
     {
         parent::__construct(true); // route publique
@@ -40,6 +43,7 @@ class ReservationModifDataController extends AbstractController
         $this->tarifRepository = $tarifRepository;
         $this->tarifService = $tarifService;
         $this->paymentService = $paymentService;
+        $this->donationService = $donationService;
     }
 
     /**
@@ -87,6 +91,9 @@ class ReservationModifDataController extends AbstractController
         // Calcul du montant total de la commande (en centimes) pour le calcul du don
         $grandTotal = $readyForView['totals']['total_amount'] ?? $reservation->getTotalAmount();
 
+        //On récupère le montant du don si un don est déjà fait
+        $donationRecap = $this->donationService->totalAmountOfDonation($reservation->getPayments());
+
         // Calcul du don maximum (en euros, formaté pour l'attribut HTML)
         // (total / 100 pour passer en euros) * (pourcentage / 100)
         $maxDonationEuros = number_format(($grandTotal / 100) * (DONATION_SLIDER_MAX_PERCENTAGE / 100), 2, '.', '');
@@ -98,6 +105,7 @@ class ReservationModifDataController extends AbstractController
             'amountDue' => $amountDue,
             'availableComplements' => $availableComplements,
             'maxDonationEuros' => $maxDonationEuros,
+            'donationRecap' => $donationRecap
         ], 'Récapitulatif de la réservation');
 
     }

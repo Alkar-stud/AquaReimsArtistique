@@ -3,10 +3,19 @@
 namespace app\Services\Reservation;
 
 use app\Models\Reservation\Reservation;
+use app\Services\Payment\DonationService;
 
 class ReservationSummaryBuilder
 {
-    public function buildDetailsRecap(Reservation $reservation): array
+    private DonationService $donationService;
+    public function __construct(
+        DonationService $donationService
+    ) {
+        $this->donationService = $donationService;
+    }
+
+
+    private function buildDetailsRecap(Reservation $reservation): array
     {
         $html = '';
         $text = '';
@@ -51,7 +60,7 @@ class ReservationSummaryBuilder
         return ['html' => $html, 'text' => $text];
     }
 
-    public function buildComplementsRecap(Reservation $reservation): array
+    private function buildComplementsRecap(Reservation $reservation): array
     {
         $html = '';
         $text = '';
@@ -84,14 +93,41 @@ class ReservationSummaryBuilder
         return ['html' => $html, 'text' => $text];
     }
 
+    public function buildDonationRecap(Reservation $reservation): array
+    {
+        $html = '';
+        $text = '';
+        $donationCents = $this->donationService->totalAmountOfDonation($reservation->getPayments());
+
+        if ($donationCents <= 0) {
+            return ['html' => $html, 'text' => $text];
+        }
+
+        $donationFormatted = number_format($donationCents / 100, 2, ',', ' ') . ' €';
+
+        $html .= '<h4 style="margin-top: 15px; margin-bottom: 5px;">Don</h4>';
+        $html .= '<table cellpadding="5" cellspacing="0" style="width: 100%; border-collapse: collapse;">';
+        $html .= '<tr>';
+        $html .= '<td style="border-bottom: 1px solid #ddd;">Don à l\'association</td>';
+        $html .= '<td style="border-bottom: 1px solid #ddd; text-align: right;"><strong>' . $donationFormatted . '</strong></td>';
+        $html .= '</tr>';
+        $html .= '</table>';
+
+        $text .= "\nDon\n";
+        $text .= "Don à l'association : " . $donationFormatted . "\n";
+
+        return ['html' => $html, 'text' => $text];
+    }
+
     public function buildFullRecap(Reservation $reservation): array
     {
         $details = $this->buildDetailsRecap($reservation);
         $complements = $this->buildComplementsRecap($reservation);
+        $donation = $this->buildDonationRecap($reservation);
 
         return [
-            'html' => $details['html'] . $complements['html'],
-            'text' => $details['text'] . $complements['text'],
+            'html' => $details['html'] . $complements['html'] . $donation['html'],
+            'text' => $details['text'] . $complements['text'] . $donation['text'],
         ];
     }
 }

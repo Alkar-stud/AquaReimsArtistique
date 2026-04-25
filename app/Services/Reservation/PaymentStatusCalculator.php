@@ -7,14 +7,6 @@ use app\Services\Payment\DonationService;
 
 class PaymentStatusCalculator
 {
-    private DonationService $donationService;
-    public function __construct(
-        DonationService $donationService
-    )
-    {
-        $this->donationService = $donationService;
-    }
-
     public function calculate(Reservation $reservation): array
     {
         $totalAmount = $reservation->getTotalAmount();

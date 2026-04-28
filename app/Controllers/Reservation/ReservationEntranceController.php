@@ -4,19 +4,15 @@ namespace app\Controllers\Reservation;
 
 use app\Attributes\Route;
 use app\Controllers\AbstractController;
-use app\Models\Reservation\Reservation;
-use app\Repository\Reservation\ReservationDetailRepository;
 use app\Repository\Reservation\ReservationRepository;
 use app\Services\Event\EventQueryService;
 use app\Services\Reservation\ReservationEntranceAccessService;
 use app\Services\Reservation\ReservationQueryService;
-use DateTime;
 
 class ReservationEntranceController extends AbstractController
 {
     private ReservationRepository $reservationRepository;
     private ReservationQueryService $reservationQueryService;
-    private ReservationDetailRepository $reservationDetailRepository;
     private EventQueryService $eventQueryService;
     private ReservationEntranceAccessService $reservationEntranceAccessService;
     private int $delayIsComing = 10800; // 10800 = 3h
@@ -24,14 +20,12 @@ class ReservationEntranceController extends AbstractController
     public function __construct(
         ReservationRepository            $reservationRepository,
         ReservationQueryService          $reservationQueryService,
-        ReservationDetailRepository      $reservationDetailRepository,
         EventQueryService                $eventQueryService,
         ReservationEntranceAccessService $reservationEntranceAccessService,
     ) {
         parent::__construct(false);
         $this->reservationRepository =              $reservationRepository;
         $this->reservationQueryService =            $reservationQueryService;
-        $this->reservationDetailRepository =        $reservationDetailRepository;
         $this->eventQueryService =                  $eventQueryService;
         $this->reservationEntranceAccessService =   $reservationEntranceAccessService;
     }
@@ -49,23 +43,22 @@ class ReservationEntranceController extends AbstractController
         }
 
         $reservation = $this->reservationRepository->findByField('token', $reservationToken, true, true, false);
-        $accessCheck = $this->canModifyReservation($reservation);
-        //On compare le nombre de détails avec entered_at == null au nombre de details avec entered_at == not null
-        $everyOneInReservation = $this->reservationQueryService->everyOneInReservationIsHere($reservation);
+
+        // Vérification de l'accès temporel
+        $accessCheck = $this->reservationEntranceAccessService->canModifyReservation($reservation);
 
         $this->render('/entrance/entrance', [
             'reservation' => $reservation,
-            'everyOneIsPresent' => $everyOneInReservation,
+            'everyOneIsPresent' => $accessCheck['everyOneInReservation'] ?? null,
             'canModify' => $accessCheck['allowed'],
             'accessMessage' => $accessCheck['message'] ?? null,
             'availableAt' => $accessCheck['availableAt'] ?? null,
         ], 'Réservations');
     }
 
-    #[Route('/entrance/scan', name: 'app_entrance', methods: ['GET'])]
+    #[Route('/entrance/scan', name: 'app_entrance_scan', methods: ['GET'])]
     public function reservationEntranceScan(): void
     {
-
         $this->render('/entrance/entrance-scanner', [
             'searchQuery' => '',
         ], 'Réservations');
@@ -75,7 +68,7 @@ class ReservationEntranceController extends AbstractController
      * @return void
      */
     #[Route('/entrance/search', name: 'app_entrance_search', methods: ['GET'])]
-    public function search(): void
+    public function reservationEntranceSearch(): void
     {
         $searchQuery = $_GET['q'] ?? '';
 
@@ -115,7 +108,7 @@ class ReservationEntranceController extends AbstractController
             exit;
         }
 
-        $this->render('/entrance-search', [
+        $this->render('/entrance/entrance-search', [
             'searchQuery' => $searchQuery,
             'reservations' => $result['reservations'],
             'single' => $result['single'],
@@ -141,17 +134,13 @@ class ReservationEntranceController extends AbstractController
         }
 
         // Vérification de l'accès temporel
-        $accessCheck = $this->canModifyReservation($reservation);
-
+        $accessCheck = $this->reservationEntranceAccessService->canModifyReservation($reservation);
         if (!$accessCheck['allowed']) {
-            $this->json([
-                'success' => false,
-                'message' => $accessCheck['message'],
-                'availableAt' => $accessCheck['availableAt'] ?? null
-            ], 403);
+            $this->json($accessCheck, 403);
             return;
         }
 
+        //On récupère les données
         $data = json_decode(file_get_contents('php://input'), true) ?? [];
         $complement = $data['complement'] ?? null;
         $participant = $data['participant'] ?? null;
@@ -163,36 +152,15 @@ class ReservationEntranceController extends AbstractController
         }
 
         if ($complement !== null) {
-            $value = $complement ? date('Y-m-d H:i:s') : null;
-            $this->reservationRepository->updateSingleField($reservation->getId(), 'complements_given_at', $value);
-            $this->reservationRepository->updateSingleField($reservation->getId(), 'complements_given_by', $value == null ? null:$this->currentUser->getId());
-
-            $userName = $value !== null ? $this->currentUser->getDisplayName() : null;
-
-            $this->json([
-                'success' => true,
-                'message' => 'Mise à jour effectuée',
-                'complements_given_at' => $value,
-                'user_name' => $userName
-            ]);
+            $this->json(
+                $this->reservationEntranceAccessService->checkComplementForEntrance($reservation, $complement, $this->currentUser)
+            );
         }
 
         if ($participant !== null) {
-            $value = $isPresent ? date('Y-m-d H:i:s') : null;
-            $this->reservationDetailRepository->updateSingleField($participant, 'entered_at', $value);
-            $this->reservationDetailRepository->updateSingleField($participant, 'entry_validate_by', $value == null ? null:$this->currentUser->getId());
-            //On compare le nombre de détails avec entered_at == null au nombre de details avec entered_at == not null
-            $reservation = $this->reservationRepository->findById($id);
-            $everyOneInReservation = $this->reservationQueryService->everyOneInReservationIsHere($reservation);
-
-            $userName = $value !== null ? $this->currentUser->getDisplayName() : null;
-
-            $this->json([
-                'success' => true,
-                'message' => 'Mise à jour effectuée',
-                'everyOneInReservation' => $everyOneInReservation,
-                'user_name' => $userName
-            ]);
+            $this->json(
+                $this->reservationEntranceAccessService->checkParticipantForEntrance($reservation, $participant, $this->currentUser, $isPresent)
+                );
         }
 
         if ($isChecked !== null) {
@@ -202,29 +170,5 @@ class ReservationEntranceController extends AbstractController
 
         $this->json(['success' => false, 'message' => 'Erreur inconnue']);
     }
-
-    /**
-     * @param Reservation $reservation
-     * @return array|true[]
-     */
-    private function canModifyReservation(Reservation $reservation): array
-    {
-        {
-            $eventStart = $this->reservationEntranceAccessService->getEventStartDateTime($reservation);
-            if ($eventStart === null) {
-                return ['allowed' => false, 'message' => 'Session non trouvée.'];
-            }
-
-            $availableAt = $this->reservationEntranceAccessService->getModificationAvailableAt($eventStart);
-            $now = new DateTime();
-
-            if (!$this->reservationEntranceAccessService->isModificationAllowed($now, $availableAt)) {
-                return $this->reservationEntranceAccessService->buildAccessDeniedResponse($availableAt);
-            }
-
-            return ['allowed' => true];
-        }
-    }
-
 
 }

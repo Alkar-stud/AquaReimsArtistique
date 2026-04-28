@@ -3,11 +3,51 @@
 namespace app\Services\Reservation;
 
 use app\Models\Reservation\Reservation;
+use app\Models\User\User;
+use app\Repository\Reservation\ReservationDetailRepository;
+use app\Repository\Reservation\ReservationRepository;
 use DateTime;
-use DateTimeInterface;
 
 class ReservationEntranceAccessService
 {
+    private ReservationRepository $reservationRepository;
+    private ReservationQueryService $reservationQueryService;
+    private ReservationDetailRepository $reservationDetailRepository;
+
+    public function __construct(
+        ReservationRepository $reservationRepository,
+        ReservationQueryService $reservationQueryService,
+        ReservationDetailRepository $reservationDetailRepository,
+    )
+    {
+        $this->reservationRepository = $reservationRepository;
+        $this->reservationQueryService = $reservationQueryService;
+        $this->reservationDetailRepository = $reservationDetailRepository;
+    }
+
+    /**
+     * @param Reservation $reservation
+     * @return array|true[]
+     */
+    public function canModifyReservation(Reservation $reservation): array
+    {
+        $eventStart = $this->getEventStartDateTime($reservation);
+        if ($eventStart === null) {
+            return ['allowed' => false, 'message' => 'Session non trouvée.'];
+        }
+
+        $availableAt = $this->getModificationAvailableAt($eventStart);
+        $now = new DateTime();
+
+        if (!$this->isModificationAllowed($now, $availableAt)) {
+            return $this->buildAccessDeniedResponse($availableAt);
+        }
+
+        //On compare le nombre de détails avec entered_at == null au nombre de details avec entered_at == not null
+        $everyOneInReservation = $this->reservationQueryService->everyOneInReservationIsHere($reservation);
+
+        return ['allowed' => true, 'everyOneInReservation' => $everyOneInReservation];
+    }
 
     /**
      * Donne la date et l'heure de début de l'événement à partir d'une réservation.
@@ -15,7 +55,7 @@ class ReservationEntranceAccessService
      * @param Reservation $reservation
      * @return DateTime|null L'objet DateTime de début de l'événement, ou null s'il est introuvable.
      */
-    public function getEventStartDateTime(Reservation $reservation): ?DateTime
+    private function getEventStartDateTime(Reservation $reservation): ?DateTime
     {
         $eventSession = $reservation->getEventSessionObject();
         if (!$eventSession) {
@@ -31,7 +71,7 @@ class ReservationEntranceAccessService
      * @param DateTime $eventStart L'heure de début de l'événement.
      * @return DateTime L'objet DateTime représentant la période pendant laquelle les modifications sont disponibles.
      */
-    public function getModificationAvailableAt(DateTime $eventStart): DateTime
+    private function getModificationAvailableAt(DateTime $eventStart): DateTime
     {
         return (clone $eventStart)->modify('-2 hours');
     }
@@ -43,7 +83,7 @@ class ReservationEntranceAccessService
      * @param DateTime $availableAt L'objet DateTime lorsque des modifications sont disponibles.
      * @return bool True Si la modification est autorisée, false sinon.
      */
-    public function isModificationAllowed(DateTime $now, DateTime $availableAt): bool
+    private function isModificationAllowed(DateTime $now, DateTime $availableAt): bool
     {
         return $now >= $availableAt;
     }
@@ -54,12 +94,87 @@ class ReservationEntranceAccessService
      * @param DateTime $availableAt L'objet DateTime lorsque des modifications sont disponibles.
      * @return array Un tableau associatif contenant des informations de refus d'accès.
      */
-    public function buildAccessDeniedResponse(DateTime $availableAt): array
+    private function buildAccessDeniedResponse(DateTime $availableAt): array
     {
         return [
             'allowed' => false,
             'message' => 'Les modifications ne sont pas encore autorisées. Accessible 2h avant l\'ouverture des portes.',
             'availableAt' => $availableAt->format('d/m/Y à H:i'),
+        ];
+    }
+
+    /**
+     * Pour vérifier les compléments
+     *
+     * @param Reservation $reservation
+     * @param bool $complement
+     * @param User $currentUser
+     * @return array
+     */
+    public function checkComplementForEntrance(Reservation $reservation, bool $complement, User $currentUser): array
+    {
+        $value = $complement ? date('Y-m-d H:i:s') : null;
+        $this->reservationRepository->updateSingleField($reservation->getId(), 'complements_given_at', $value);
+        $this->reservationRepository->updateSingleField($reservation->getId(), 'complements_given_by', $value == null ? null:$currentUser->getId());
+
+        $userName = $value !== null ? $currentUser->getDisplayName() : null;
+
+        return $this->buildUpdateComplementResponse($value, $userName);
+    }
+
+    /**
+     * Construit un tableau de réponse d'ajout de vérification de complément
+     *
+     * @param string|null $value
+     * @param string|null $userName
+     * @return array Un tableau associatif contenant des informations.
+     */
+    private function buildUpdateComplementResponse(?string $value, ?string $userName): array
+    {
+        return [
+            'success' => true,
+            'message' => 'Mise à jour effectuée',
+            'complements_given_at' => $value,
+            'user_name' => $userName
+        ];
+    }
+
+    /**
+     * Pour vérifier les participants
+     *
+     * @param Reservation $reservation
+     * @param int $participant
+     * @param User $currentUser
+     * @param bool $isPresent
+     * @return array
+     */
+    public function checkParticipantForEntrance(Reservation $reservation, int $participant, User $currentUser, bool $isPresent): array
+    {
+        $value = $isPresent ? date('Y-m-d H:i:s') : null;
+        $this->reservationDetailRepository->updateSingleField($participant, 'entered_at', $value);
+        $this->reservationDetailRepository->updateSingleField($participant, 'entry_validate_by', $value == null ? null:$currentUser->getId());
+        //On compare le nombre de détails avec entered_at == null au nombre de details avec entered_at == not null
+        $everyOneInReservation = $this->reservationQueryService->everyOneInReservationIsHere($reservation);
+
+        $userName = $value !== null ? $currentUser->getDisplayName() : null;
+
+        return $this->buildUpdateParticipantResponse($everyOneInReservation, $userName);
+    }
+
+    /**
+     * Construit un tableau de réponse d'ajout de vérification de complément
+     *
+     * @param bool $everyOneInReservation
+     * @param string|null $userName
+     * @return array Un tableau associatif contenant des informations.
+     */
+    private function buildUpdateParticipantResponse(bool $everyOneInReservation, ?string $userName): array
+    {
+        return [
+            'success' => true,
+            'message' => 'Mise à jour effectuée',
+            'everyOneInReservation' => $everyOneInReservation,
+            'user_name' => $userName
         ];
     }
 

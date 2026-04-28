@@ -8,8 +8,8 @@ use app\Models\Reservation\Reservation;
 use app\Repository\Reservation\ReservationDetailRepository;
 use app\Repository\Reservation\ReservationRepository;
 use app\Services\Event\EventQueryService;
+use app\Services\Reservation\ReservationEntranceAccessService;
 use app\Services\Reservation\ReservationQueryService;
-use DateMalformedStringException;
 use DateTime;
 
 class ReservationEntranceController extends AbstractController
@@ -18,19 +18,22 @@ class ReservationEntranceController extends AbstractController
     private ReservationQueryService $reservationQueryService;
     private ReservationDetailRepository $reservationDetailRepository;
     private EventQueryService $eventQueryService;
+    private ReservationEntranceAccessService $reservationEntranceAccessService;
     private int $delayIsComing = 10800; // 10800 = 3h
 
     public function __construct(
-        ReservationRepository $reservationRepository,
-        ReservationQueryService $reservationQueryService,
-        ReservationDetailRepository $reservationDetailRepository,
-        EventQueryService $eventQueryService,
+        ReservationRepository            $reservationRepository,
+        ReservationQueryService          $reservationQueryService,
+        ReservationDetailRepository      $reservationDetailRepository,
+        EventQueryService                $eventQueryService,
+        ReservationEntranceAccessService $reservationEntranceAccessService,
     ) {
         parent::__construct(false);
-        $this->reservationRepository = $reservationRepository;
-        $this->reservationQueryService = $reservationQueryService;
-        $this->reservationDetailRepository = $reservationDetailRepository;
-        $this->eventQueryService = $eventQueryService;
+        $this->reservationRepository =              $reservationRepository;
+        $this->reservationQueryService =            $reservationQueryService;
+        $this->reservationDetailRepository =        $reservationDetailRepository;
+        $this->eventQueryService =                  $eventQueryService;
+        $this->reservationEntranceAccessService =   $reservationEntranceAccessService;
     }
 
     /**
@@ -50,12 +53,21 @@ class ReservationEntranceController extends AbstractController
         //On compare le nombre de détails avec entered_at == null au nombre de details avec entered_at == not null
         $everyOneInReservation = $this->reservationQueryService->everyOneInReservationIsHere($reservation);
 
-        $this->render('entrance', [
+        $this->render('/entrance/entrance', [
             'reservation' => $reservation,
             'everyOneIsPresent' => $everyOneInReservation,
             'canModify' => $accessCheck['allowed'],
             'accessMessage' => $accessCheck['message'] ?? null,
             'availableAt' => $accessCheck['availableAt'] ?? null,
+        ], 'Réservations');
+    }
+
+    #[Route('/entrance/scan', name: 'app_entrance', methods: ['GET'])]
+    public function reservationEntranceScan(): void
+    {
+
+        $this->render('/entrance/entrance-scanner', [
+            'searchQuery' => '',
         ], 'Réservations');
     }
 
@@ -85,7 +97,7 @@ class ReservationEntranceController extends AbstractController
         }
 
         if (empty(trim($searchQuery))) {
-            $this->render('/entrance-search', [
+            $this->render('/entrance/entrance-search', [
                 'searchQuery' => '',
                 'reservations' => [],
                 'single' => false,
@@ -197,31 +209,21 @@ class ReservationEntranceController extends AbstractController
      */
     private function canModifyReservation(Reservation $reservation): array
     {
-        $eventSession = $reservation->getEventSessionObject();
-        if (!$eventSession) {
-            return ['allowed' => false, 'message' => 'Session non trouvée.'];
+        {
+            $eventStart = $this->reservationEntranceAccessService->getEventStartDateTime($reservation);
+            if ($eventStart === null) {
+                return ['allowed' => false, 'message' => 'Session non trouvée.'];
+            }
+
+            $availableAt = $this->reservationEntranceAccessService->getModificationAvailableAt($eventStart);
+            $now = new DateTime();
+
+            if (!$this->reservationEntranceAccessService->isModificationAllowed($now, $availableAt)) {
+                return $this->reservationEntranceAccessService->buildAccessDeniedResponse($availableAt);
+            }
+
+            return ['allowed' => true];
         }
-
-        $eventStart = $eventSession->getOpeningDoorsAt();
-
-        $now = new DateTime();
-        // Convertir DateTimeInterface en DateTime pour pouvoir le cloner et le modifier
-        $eventStartDateTime = DateTime::createFromInterface($eventStart);
-        try {
-            $twoHoursBefore = (clone $eventStartDateTime)->modify('-2 hours');
-        } catch (DateMalformedStringException $e) {
-
-        }
-
-        if ($now < $twoHoursBefore) {
-            return [
-                'allowed' => false,
-                'message' => 'Les modifications ne sont pas encore autorisées. Accessible 2h avant l\'ouverture des portes.',
-                'availableAt' => $twoHoursBefore->format('d/m/Y à H:i')
-            ];
-        }
-
-        return ['allowed' => true];
     }
 
 

@@ -3,6 +3,7 @@ import {formatTime} from "./components/utils.js";
 
 document.addEventListener('DOMContentLoaded', () => {
 
+    const scanAgainBtn = document.getElementById('scan-again-btn');
     const toggleComplementsBtn = document.querySelector('[data-action="toggle-complements"]');
     const reservationId = document.querySelector('[data-reservation-id]')?.dataset.reservationId;
     const participantItems = document.querySelectorAll('[data-action="toggle-participant"]');
@@ -45,6 +46,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 checkReservationCheckbox.checked = false;
                 checkReservationCheckbox.disabled = false;
             }
+        });
+    }
+
+    /*
+     * Section pour le clic pour relancer le scan
+     */
+    if (scanAgainBtn) {
+        scanAgainBtn.addEventListener('click', async () => {
+            //On redirige vers la page
+            window.location.href = '/entrance/scan';
         });
     }
 

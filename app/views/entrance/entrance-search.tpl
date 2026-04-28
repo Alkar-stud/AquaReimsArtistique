@@ -2,20 +2,10 @@
     <div class="mb-3 sticky-reservation-header shadow-sm px-2 py-2">
         <h5 class="mb-2">Rechercher une réservation</h5>
 
-        <form method="GET" action="/entrance/search" class="mb-4">
-            <div class="input-group">
-                <input type="text"
-                       name="q"
-                       id="search-input"
-                       class="form-control"
-                       placeholder="Nom ou numéro de réservation..."
-                       value="{{ $searchQuery }}"
-                       autofocus>
-                <button class="btn btn-primary" type="submit">
-                    <i class="fas fa-search"></i> Rechercher
-                </button>
-            </div>
-        </form>
+        {% include 'partials/search-form.tpl' %}
+    </div>
+    <div>
+        <button class="btn btn-primary" id="scan-again-btn">Scanner un autre billet</button>
     </div>
     {% if isset($noUpcomingEvents) && $noUpcomingEvents %}
     <div class="alert alert-info">Aucune séance à venir dans les prochaines heures.
@@ -72,3 +62,5 @@
     {% endif %}
     {% endif %}
 </div>
+
+<script type="module" src="/assets/js/entrance.js"></script>

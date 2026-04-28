@@ -49,7 +49,7 @@ RUN chown -R www-data:www-data /var/www/html
 USER www-data
 
 # Installe les dépendances
-#RUN composer install --no-scripts --optimize-autoloader --ignore-platform-req=ext-mongodb
+#RUN composer install --no-scripts --optimize-autoloader
 RUN composer install --no-scripts --optimize-autoloader
 RUN composer dump-autoload
 

@@ -5,6 +5,8 @@ use app\Enums\LogType;
 use app\Services\Log\Handler\FileLogHandler;
 use app\Services\Log\Handler\LogHandlerInterface;
 use Throwable;
+use app\Services\Event\EventCatalogService;
+use app\Services\Event\AlertNotifier;
 
 final class Logger implements LoggerInterface
 {
@@ -70,6 +72,50 @@ final class Logger implements LoggerInterface
     public function critical(string $channel, string $message, array $context = []): void { $this->log('CRITICAL', $channel, $message, $context); }
     public function alert(string $channel, string $message, array $context = []): void { $this->log('ALERT', $channel, $message, $context); }
     public function emergency(string $channel, string $message, array $context = []): void { $this->log('EMERGENCY', $channel, $message, $context); }
+
+    /**
+     * Enregistre un événement métier identifié par son code.
+     * Le catalogue décide du niveau, du channel et si une notification doit être envoyée.
+     * @param string $code
+     * @param array $context
+     */
+    public function event(string $code, array $context = []): void
+    {
+        try {
+            $catalog = new EventCatalogService();
+            $def = $catalog->getDefinition($code);
+
+            if ($def === null) {
+                // Evénement inconnu -> logguer en WARNING sur application
+                $this->warning(LogType::APPLICATION->value, 'unknown_event', array_merge(['event_code' => $code], $context));
+                return;
+            }
+
+            $level = strtoupper($def->getLevel());
+            $channel = $def->getChannel() ?: LogType::APPLICATION->value;
+
+            $message = $code;
+            $descr = $def->getDescription();
+            if ($descr) {
+                $message .= ' - ' . $descr;
+            }
+
+            // Appel standard aux handlers
+            $this->log($level, $channel, $message, $context);
+
+            // Notification si nécessaire et si le rate-limit l'autorise
+            if ($def->isNotifiable() && $catalog->shouldNotify($code)) {
+                try {
+                    $notifier = new AlertNotifier();
+                    $notifier->notify($def, $context);
+                } catch (Throwable) {
+                    // Ne pas laisser une notification casser le flux
+                }
+            }
+        } catch (Throwable) {
+            // Silencieux : on ne doit pas casser l'application pour un problème de logging
+        }
+    }
 
     public function access(array $context): void
     {

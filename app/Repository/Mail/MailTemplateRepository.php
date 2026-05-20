@@ -136,7 +136,7 @@ class MailTemplateRepository extends AbstractRepository
             ->setSubject($data['subject'])
             ->setBodyHtml($data['body_html'])
             ->setBodyText($data['body_text'])
-            ->setRequiresResumeAttachment($data['requires_resume_attachment']);
+            ->setRequiresResumeAttachment($data['requires_resume_attachment'] ?? false);
 
         return $template;
     }

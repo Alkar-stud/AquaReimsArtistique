@@ -2,8 +2,6 @@
 
 namespace app\Services\Event;
 
-use DateTimeImmutable;
-
 /**
  * Notificateur simple : envoie une notification texte via mail() si configuré,
  * ou écrit dans un fichier fallback.
@@ -21,7 +19,7 @@ final class AlertNotifier
         $this->fallbackFile = rtrim($storageDir, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . 'alerts.log';
 
         $this->toEmail = $_ENV['ALERT_EMAIL'] ?? null;
-        $this->fromEmail = $_ENV['MAIL_FROM_ADDRESS'] ?? null;
+        $this->fromEmail = $_ENV['ALERT_FROM'] ?? ($_ENV['MAIL_FROM_ADDRESS'] ?? null);
     }
 
     /**
@@ -46,13 +44,13 @@ final class AlertNotifier
         }
 
         // fallback -> écrire dans un fichier
-        $line = '[' . (new DateTimeImmutable())->format('Y-m-d H:i:s') . '] ' . $subject . "\n" . $body . "\n\n";
+        $line = '[' . (new \DateTimeImmutable())->format('Y-m-d H:i:s') . '] ' . $subject . "\n" . $body . "\n\n";
         @file_put_contents($this->fallbackFile, $line, FILE_APPEND | LOCK_EX);
     }
 
     private function buildBody(EventDefinition $def, array $context): string
     {
-        $ts = (new DateTimeImmutable())->format('Y-m-d H:i:s');
+        $ts = (new \DateTimeImmutable())->format('Y-m-d H:i:s');
         $lines = [];
         $lines[] = "Date: $ts";
         $lines[] = 'Environment: ' . ($_ENV['APP_ENV'] ?? 'local');
@@ -71,4 +69,3 @@ final class AlertNotifier
         return implode("\n", $lines);
     }
 }
-

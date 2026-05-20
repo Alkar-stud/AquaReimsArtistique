@@ -2,6 +2,8 @@
 
 namespace app\Services\Event;
 
+use DateTimeImmutable;
+
 /**
  * Service pour interroger le catalogue d'évènements et appliquer des règles simples
  * (décision de niveau, autorisation, et rate-limit pour notifications).
@@ -95,4 +97,3 @@ final class EventCatalogService
         @chmod($this->alertsStateFile, 0644);
     }
 }
-

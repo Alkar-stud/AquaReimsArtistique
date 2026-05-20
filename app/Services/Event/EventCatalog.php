@@ -97,6 +97,40 @@ final class EventCatalog
             'reservation.payment.failed' => new EventDefinition('reservation.payment.failed', 'reservation', 'ERROR', true, true, 'Paiement réservation échoué', true, 1800),
 
             // ------------------------------------------------------------
+            // Event / Manifestation (domain spécifique "Event" = manifestation)
+            // ------------------------------------------------------------
+            // Création / modification / suppression d'une manifestation (évènement public)
+            'event.create.requested' => new EventDefinition('event.create.requested', 'event', 'INFO', true, false, 'Création d\'une manifestation demandée', true, null),
+            'event.create.succeeded' => new EventDefinition('event.create.succeeded', 'event', 'INFO', true, false, 'Création de la manifestation effectuée', true, null),
+            'event.create.failed' => new EventDefinition('event.create.failed', 'event', 'ERROR', true, true, 'Échec lors de la création d\'une manifestation', true, 1800),
+
+            'event.update.requested' => new EventDefinition('event.update.requested', 'event', 'INFO', true, false, 'Demande de modification d\'une manifestation', true, null),
+            'event.update.succeeded' => new EventDefinition('event.update.succeeded', 'event', 'INFO', true, false, 'Modification de la manifestation effectuée', true, null),
+            'event.update.failed' => new EventDefinition('event.update.failed', 'event', 'ERROR', true, true, 'Échec lors de la modification d\'une manifestation', true, 1800),
+
+            // Suppression — cas particulier : si des inscriptions existent, c'est plus critique
+            'event.delete.requested' => new EventDefinition('event.delete.requested', 'event', 'NOTICE', true, false, 'Demande de suppression d\'une manifestation', true, null),
+            'event.delete.succeeded' => new EventDefinition('event.delete.succeeded', 'event', 'NOTICE', true, false, 'Manifestation supprimée', true, null),
+            'event.delete.blocked_with_registrations' => new EventDefinition('event.delete.blocked_with_registrations', 'event', 'WARNING', true, true, 'Suppression bloquée : des inscriptions existent', true, 3600),
+            'event.delete.failed' => new EventDefinition('event.delete.failed', 'event', 'ERROR', true, true, 'Échec lors de la suppression d\'une manifestation', true, 1800),
+
+            // Publication / visibilité
+            'event.publish' => new EventDefinition('event.publish', 'event', 'NOTICE', true, false, 'Manifestation publiée (visible aux utilisateurs)', true, null),
+            'event.unpublish' => new EventDefinition('event.unpublish', 'event', 'NOTICE', true, false, 'Manifestation dépubliée (retirée de la visibilité)', true, null),
+
+            // Gestion des inscriptions / capacités
+            'event.registration.opened' => new EventDefinition('event.registration.opened', 'event', 'INFO', true, false, 'Ouverture des inscriptions pour une manifestation', true, null),
+            'event.registration.closed' => new EventDefinition('event.registration.closed', 'event', 'INFO', true, false, 'Fermeture des inscriptions pour une manifestation', true, null),
+            'event.capacity.changed' => new EventDefinition('event.capacity.changed', 'event', 'NOTICE', true, false, 'Capacité (places) de la manifestation modifiée', true, null),
+            'event.capacity.reduced' => new EventDefinition('event.capacity.reduced', 'event', 'WARNING', true, true, 'Capacité réduite : impact possible sur inscriptions existantes', true, 3600),
+            'event.capacity.exceeded' => new EventDefinition('event.capacity.exceeded', 'event', 'CRITICAL', true, true, 'Capacité dépassée — incohérence détectée', true, 3600),
+
+            // Import / synchronisation d'évènements
+            'event.import.started' => new EventDefinition('event.import.started', 'event', 'INFO', true, false, 'Début d\'import de manifestations (batch)', false, null),
+            'event.import.completed' => new EventDefinition('event.import.completed', 'event', 'INFO', true, false, 'Import de manifestations terminé', false, null),
+            'event.import.failed' => new EventDefinition('event.import.failed', 'event', 'ERROR', true, true, 'Échec lors de l\'import des manifestations', false, 1800),
+
+            // ------------------------------------------------------------
             // Backoffice / Content management
             // ------------------------------------------------------------
             'application.admin.event_presentation.created' => new EventDefinition('application.admin.event_presentation.created', 'application', 'INFO', true, false, 'Présentation de la page d accueil créée', true, null),
@@ -147,4 +181,3 @@ final class EventCatalog
         return $all[$code] ?? null;
     }
 }
-

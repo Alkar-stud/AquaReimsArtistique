@@ -5,6 +5,7 @@ use app\Attributes\Route;
 use app\Controllers\AbstractController;
 use app\Models\User\User;
 use app\Repository\User\UserRepository;
+use app\Services\Log\Logger;
 use app\Services\Mails\MailPrepareService;
 use app\Services\Security\PasswordPolicyService;
 use app\Services\Security\TokenGenerateService;
@@ -68,6 +69,7 @@ class PasswordResetController extends AbstractController
                 $resetLink
             );
         } catch (Exception $e) {
+            Logger::get()->event('mail.smtp.failed', ['message' => $e->getMessage(), 'user_id' => $user->getId()]);
             error_log('Erreur critique du service Mail: ' . $e->getMessage());
         }
 

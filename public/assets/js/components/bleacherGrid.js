@@ -239,7 +239,7 @@ export function createBleacherGrid(container, plan, options = {}) {
                     status = 'closed';
                 } else if (seatData.pmr) {
                     tdClass = 'tdplacePMR';
-                    status = 'pmr';
+                    status = 'available';
                 } else if (seatData.vip) {
                     tdClass = 'tdplaceVIP';
                     status = 'vip';

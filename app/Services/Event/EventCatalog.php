@@ -54,12 +54,14 @@ final class EventCatalog
             'mail.user.password_modified.sent' => new EventDefinition('mail.user.password_modified.sent', 'mail', 'INFO', false, false, 'Mail de confirmation de changement de mot de passe envoyé', true, null),
             'mail.user.password_modified.failed' => new EventDefinition('mail.user.password_modified.failed', 'mail', 'ERROR', false, true, 'Échec d envoi du mail de confirmation de changement de mot de passe', false, 1800),
 
-            'mail.reservation.confirmation.sent' => new EventDefinition('mail.reservation.confirmation.sent', 'mail', 'INFO', false, false, 'Mail de confirmation de réservation envoyé', true, null),
-            'mail.reservation.confirmation.failed' => new EventDefinition('mail.reservation.confirmation.failed', 'mail', 'ERROR', false, true, 'Échec d envoi du mail de confirmation de réservation', false, 1800),
+            'mail.reservation.paiement_confirme.sent' => new EventDefinition('mail.reservation.confirmation.sent', 'mail', 'INFO', false, false, 'Mail de confirmation de réservation envoyé', true, null),
+            'mail.reservation.paiement_confirme.failed' => new EventDefinition('mail.reservation.confirmation.failed', 'mail', 'ERROR', false, true, 'Échec d envoi du mail de confirmation de réservation', false, 1800),
+            'mail.reservation.summary.sent' => new EventDefinition('mail.reservation.summary.sent', 'mail', 'INFO', false, false, 'Mail récapitulatif envoyé', true, null),
+            'mail.reservation.summary.failed' => new EventDefinition('mail.reservation.summary.failed', 'mail', 'ERROR', false, true, 'Échec d envoi du mail récapitulatif', false, 1800),
             'mail.reservation.final_summary.sent' => new EventDefinition('mail.reservation.final_summary.sent', 'mail', 'INFO', false, false, 'Mail récapitulatif final envoyé', true, null),
             'mail.reservation.final_summary.failed' => new EventDefinition('mail.reservation.final_summary.failed', 'mail', 'ERROR', false, true, 'Échec d envoi du mail récapitulatif final', false, 1800),
-            'mail.reservation.cancel_confirmation.sent' => new EventDefinition('mail.reservation.cancel_confirmation.sent', 'mail', 'INFO', false, false, 'Mail de confirmation d annulation envoyé', true, null),
-            'mail.reservation.cancel_confirmation.failed' => new EventDefinition('mail.reservation.cancel_confirmation.failed', 'mail', 'ERROR', false, true, 'Échec d envoi du mail de confirmation d annulation', false, 1800),
+            'mail.reservation.cancel_order.sent' => new EventDefinition('mail.reservation.cancel_confirmation.sent', 'mail', 'INFO', false, false, 'Mail de confirmation d annulation envoyé', true, null),
+            'mail.reservation.cancel_order.failed' => new EventDefinition('mail.reservation.cancel_confirmation.failed', 'mail', 'ERROR', false, true, 'Échec d envoi du mail de confirmation d annulation', false, 1800),
 
             'mail.template.missing' => new EventDefinition('mail.template.missing', 'mail', 'WARNING', false, false, 'Template mail introuvable', false, 3600),
             'mail.smtp.failed' => new EventDefinition('mail.smtp.failed', 'mail', 'ERROR', false, true, 'Échec d envoi SMTP', false, 1800),
@@ -125,10 +127,6 @@ final class EventCatalog
             'event.capacity.reduced' => new EventDefinition('event.capacity.reduced', 'event', 'WARNING', true, true, 'Capacité réduite : impact possible sur inscriptions existantes', true, 3600),
             'event.capacity.exceeded' => new EventDefinition('event.capacity.exceeded', 'event', 'CRITICAL', true, true, 'Capacité dépassée — incohérence détectée', true, 3600),
 
-            // Import / synchronisation d'évènements
-            'event.import.started' => new EventDefinition('event.import.started', 'event', 'INFO', true, false, 'Début d\'import de manifestations (batch)', false, null),
-            'event.import.completed' => new EventDefinition('event.import.completed', 'event', 'INFO', true, false, 'Import de manifestations terminé', false, null),
-            'event.import.failed' => new EventDefinition('event.import.failed', 'event', 'ERROR', true, true, 'Échec lors de l\'import des manifestations', false, 1800),
 
             // ------------------------------------------------------------
             // Backoffice / Content management

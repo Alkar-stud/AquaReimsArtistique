@@ -496,12 +496,23 @@ class ReservationsController extends AbstractController
 
         // Si c'est un récap final, on passe par le service dédié pour avoir le PDF
         if ($data['templateCode'] === 'final_summary') {
+            // TODO : à faire
             $returnEmailSent = $this->reservationFinalSummaryService->sendForReservation($reservation);
         } else {
+            //Cas général, nouvelle méthode
+            // TODO : à vérifier avec tous les mails autre que final_summary
+            $returnEmailSent = $this->mailService->send($data['templateCode'],
+                [
+                    'reservation' => $reservation,
+                ],
+                $reservation->getEmail(),
+                'reservation.' . $data['templateCode']
+            );
+
             // Cas général
-            $returnEmailSent = $this->mailPrepareService->sendReservationConfirmationEmail($reservation, $data['templateCode']);
+            //$returnEmailSent = $this->mailPrepareService->sendReservationConfirmationEmail($reservation, $data['templateCode']);
             //On enregistre l'envoi
-            $this->mailService->recordMailSent($reservation, $data['templateCode']);
+            //$this->mailService->recordMailSent($reservation, $data['templateCode']);
         }
 
         if (!$returnEmailSent) {

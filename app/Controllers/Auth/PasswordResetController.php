@@ -7,6 +7,7 @@ use app\Models\User\User;
 use app\Repository\User\UserRepository;
 use app\Services\Log\Logger;
 use app\Services\Mails\MailPrepareService;
+use app\Services\Mails\MailService;
 use app\Services\Security\PasswordPolicyService;
 use app\Services\Security\TokenGenerateService;
 use app\Utils\BuildLink;
@@ -20,14 +21,22 @@ class PasswordResetController extends AbstractController
     private PasswordPolicyService $passwordPolicyService;
     private BuildLink $buildLink;
     private string $successMessage = 'Si votre email est connu de notre système, vous allez recevoir sous peu un email vous permettant de changer votre mot de passe.';
+    private MailService $mailService;
 
-    public function __construct()
+    public function __construct(
+        TokenGenerateService $tokenGenerate,
+        UserRepository $userRepository,
+        PasswordPolicyService $passwordPolicyService,
+        BuildLink $buildLink,
+        MailService $mailService,
+    )
     {
         parent::__construct(true);
-        $this->tokenGenerate = new TokenGenerateService();
-        $this->userRepository = new UserRepository();
-        $this->passwordPolicyService = new PasswordPolicyService();
-        $this->buildLink = new BuildLink();
+        $this->tokenGenerate = $tokenGenerate;
+        $this->userRepository = $userRepository;
+        $this->passwordPolicyService = $passwordPolicyService;
+        $this->buildLink = $buildLink;
+        $this->mailService = $mailService;
     }
 
     // --- FORGOT PASSWORD (GET) ---
@@ -59,15 +68,31 @@ class PasswordResetController extends AbstractController
         // Sauvegarder le token et la date dans la BDD
         $this->userRepository->savePasswordResetToken($user->getId(), $token['token'], $token['expires_at_str']);
 
+        // Log de la création du token de mdp oublié
+        Logger::get()->event('security.password_reset.token_created', [
+            'username' => $user->getDisplayName(),
+            'user_id' => $user->getId()
+        ]);
+
         // Envoyer l'email avec le lien de réinitialisation
         $resetLink = $this->buildLink::buildResetLink('/reset-password', $token['token']);
 
         try {
-            (new MailPrepareService())->sendPasswordResetEmail(
+            //Nouvelle méthode
+            $this->mailService->send('password_reset',
+                [
+                    'username' => $user->getDisplayName(),
+                    'link' => $resetLink,
+            ],
                 $user->getEmail(),
-                $user->getDisplayName(),
-                $resetLink
+                'user.password_reset'
             );
+
+            //(new MailPrepareService())->sendPasswordResetEmail(
+//                $user->getEmail(),
+//                $user->getDisplayName(),
+//                $resetLink
+            //);
         } catch (Exception $e) {
             Logger::get()->event('mail.smtp.failed', ['message' => $e->getMessage(), 'user_id' => $user->getId()]);
             error_log('Erreur critique du service Mail: ' . $e->getMessage());

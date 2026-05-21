@@ -2,172 +2,82 @@
 
 namespace app\Services\Mails;
 
+use app\Models\Mail\MailTemplate;
 use app\Models\Reservation\Reservation;
+use app\Repository\Mail\MailTemplateRepository;
 use app\Services\Reservation\PaymentStatusCalculator;
 use app\Services\Reservation\ReservationSummaryBuilder;
 use app\Utils\BuildLink;
 use app\Utils\QRCode;
 use app\Utils\StringHelper;
 use DateTimeInterface;
+use Throwable;
 
 readonly class MailPrepareService
 {
+    //private MailService $mailService;
+    private MailTemplateKeyExtractor $mailTemplateKeyExtractor;
+    private MailTemplateRepository $mailTemplateRepository;
+    private MailTemplateRenderer $mailTemplateRenderer;
+    private ContextDataResolver $contextDataResolver;
+
     public function __construct(
-        private MailService $mailService = new MailService(),
+        //MailService $mailService,
+        MailTemplateRepository $mailTemplateRepository,
+        MailTemplateKeyExtractor $mailTemplateKeyExtractor,
+        MailTemplateRenderer $mailTemplateRenderer,
+        ContextDataResolver $contextDataResolver,
         private MailTemplateService $templateService = new MailTemplateService(),
         private ReservationSummaryBuilder $summaryBuilder = new ReservationSummaryBuilder(),
         private PaymentStatusCalculator $paymentCalculator = new PaymentStatusCalculator()
-    ) {}
-
-    /**
-     * @param string $recipientEmail
-     * @param string $username
-     * @param string $resetLink
-     * @return bool
-     */
-    public function sendPasswordResetEmail(string $recipientEmail, string $username, string $resetLink): bool
+    )
     {
-        $params = $this->buildPasswordResetParams($username, $resetLink);
-        return $this->sendTemplatedEmail($recipientEmail, 'password_reset', $params);
+        //$this->mailService = $mailService;
+        $this->mailTemplateRepository = $mailTemplateRepository;
+        $this->mailTemplateKeyExtractor = $mailTemplateKeyExtractor;
+        $this->mailTemplateRenderer = $mailTemplateRenderer;
+        $this->contextDataResolver = $contextDataResolver;
     }
 
     /**
-     * @param string $recipientEmail
-     * @param string $username
-     * @param string $resetLink
-     * @param DateTimeInterface $expiresAt
-     * @return bool
+     * Pour préparer un email à partir d'un template donné
+     *
+     * @param string $templateCode
+     * @param array $params
+     * @return MailTemplate|false
      */
-    public function sendPasswordNewAccount(string $recipientEmail, string $username, string $resetLink, DatetimeInterface $expiresAt): bool
+    public function prepareEmail(string $templateCode, array $params): MailTemplate|false
     {
-        $params = $this->buildNewAccountParams($username, $resetLink, $expiresAt);
-        return $this->sendTemplatedEmail($recipientEmail, 'new_account', $params);
-    }
-
-    /**
-     * @param string $recipientEmail
-     * @param string $username
-     * @return bool
-     */
-    public function sendPasswordModifiedEmail(string $recipientEmail, string $username): bool
-    {
-        $params = $this->buildPasswordModifiedParams($username);
-        return $this->sendTemplatedEmail($recipientEmail, 'password_modified', $params);
-    }
-
-    /**
-     * @param Reservation $reservation
-     * @param string $mailTemplate
-     * @param string|null $pdfPath
-     * @param array|null $params
-     * @return bool
-     */
-    public function sendReservationConfirmationEmail(Reservation $reservation, string $mailTemplate = 'paiement_confirme', ?string $pdfPath = null, ?array $params = null): bool
-    {
-        $params = $params ?? $this->buildReservationEmailParams($reservation, $mailTemplate == 'final_summary');
-        $tpl = $this->templateService->render($mailTemplate, $params);
-        if (!$tpl) {
+        // Récupérer le template
+        $template = $this->mailTemplateRepository->findByCode($templateCode);
+        if (!$template) {
             return false;
         }
 
-        // Nom du PDF pour la PJ
-        $pdfName = 'Recapitulatif_' . StringHelper::generateReservationNumber($reservation->getId()) . '.pdf';
+        // Résoudre les données du contexte
+        $replacements = $this->contextDataResolver->resolve($params, $template->getRequiresResumeAttachment());
 
-        // Préparer le chemin du QR code inline si besoin
-        $inlineImagePath = $params['qrcodeEntrance'] ?? null;
-        $tempFileToRemove = null;
-
-        // Si on reçoit du binaire, écrire dans un fichier temporaire
-        if (is_string($inlineImagePath) && $inlineImagePath !== '' && !is_file($inlineImagePath)) {
-            // On suppose que c'est un binaire ; écrire en fichier temporaire
-            $tmp = sys_get_temp_dir() . '/qrcode_' . uniqid() . '.png';
-            if (false === @file_put_contents($tmp, $inlineImagePath)) {
-                error_log(sprintf('Impossible d\'écrire le binaire QR code pour reservation id=%d', $reservation->getId()));
-                // fallback : envoyer sans image inline
-                return $this->sendTemplatedEmail($reservation->getEmail(), $mailTemplate, $params);
-            }
-            $inlineImagePath = $tmp;
-            $tempFileToRemove = $tmp;
-        }
-
-        // Si pas de fichier valide, fallback sur envoi sans image
-        if (!is_string($inlineImagePath) || !is_file($inlineImagePath)) {
-            error_log(sprintf('QR code manquant ou non accessible pour la réservation id=%d, envoi sans image.', $reservation->getId()));
-            return $this->sendTemplatedEmail($reservation->getEmail(), $mailTemplate, $params);
-        }
-
-        try {
-            return $this->mailService->sendMessageWithInlineImage(
-                $reservation->getEmail(),
-                $tpl->getSubject(),
-                $tpl->getBodyHtml(),
-                $tpl->getBodyText(),
-                $inlineImagePath,        // chemin du fichier PNG pour l'image inline
-                'qrcode_entrance',       // CID
-                'qrcode_entrance.png',   // Nom du fichier
-                $pdfPath,                // Chemin du PDF
-                $pdfName                 // Nom du PDF
-            );
-        } catch (\Throwable $e) {
-            error_log(sprintf('Erreur envoi mail pour reservation id=%d : %s', $reservation->getId(), $e->getMessage()));
-            return false;
-        } finally {
-            if ($tempFileToRemove && is_file($tempFileToRemove)) {
-                @unlink($tempFileToRemove);
-            }
-        }
+        // Rendre le template
+        return $this->mailTemplateRenderer->render($template, $replacements);
     }
+
 
     /**
-     * @param Reservation $reservation
-     * @param string $templateEmail
-     * @return bool
+     * Pour insérer les images dans le corps du mail
+     *
      */
-    public function sendCancelReservationConfirmationEmail(Reservation $reservation, string $templateEmail): bool
+    public function insertInlineImage(string $htmlBody, string $cid, string $imagePath): string
     {
-        $params = $this->buildCancelReservationParams($reservation);
-        return $this->sendTemplatedEmail($reservation->getEmail(), $templateEmail, $params);
+        // On suppose que le template contient une balise <img src="cid:..."> avec le CID spécifié
+        $imageTag = '<img src="cid:' . $cid . '" alt="Image" />';
+        return $htmlBody . $imageTag;
     }
 
-    /**
-     * @param string $username
-     * @param string $resetLink
-     * @return string[]
-     */
-    private function buildPasswordResetParams(string $username, string $resetLink): array
-    {
-        return [
-            'username' => $username,
-            'link' => $resetLink,
-        ];
-    }
 
-    /**
-     * @param string $username
-     * @param string $resetLink
-     * @return string[]
-     */
-    private function buildNewAccountParams(string $username, string $resetLink, DateTimeInterface $expiresAt): array
-    {
-        return [
-            'username' => $username,
-            'app_name' => $_ENV['APP_NAME'],
-            'link' => $resetLink,
-            'timeout_token_new_account' => $expiresAt->format('d/m/Y \à H\hi')
-        ];
-    }
 
-    /**
-     * @param string $username
-     * @return array
-     */
-    private function buildPasswordModifiedParams(string $username): array
-    {
-        return [
-            'username' => $username,
-            'email_club' => defined('EMAIL_CLUB') ? EMAIL_CLUB : '',
-        ];
-    }
+
+
+
 
     /**
      * @param Reservation $reservation
@@ -225,6 +135,164 @@ readonly class MailPrepareService
         ];
     }
 
+
+    /**
+     * @param string $recipientEmail
+     * @param string $username
+     * @param string $resetLink
+     * @return bool
+     */
+    public function sendPasswordResetEmail(string $recipientEmail, string $username, string $resetLink): bool
+    {
+        $params = $this->buildPasswordResetParams($username, $resetLink);
+        return $this->sendTemplatedEmail($recipientEmail, 'password_reset', $params);
+    }
+
+    /**
+     * @param string $recipientEmail
+     * @param string $username
+     * @param string $resetLink
+     * @param DateTimeInterface $expiresAt
+     * @return bool
+     */
+    public function sendPasswordNewAccount(string $recipientEmail, string $username, string $resetLink, DatetimeInterface $expiresAt): bool
+    {
+        $params = $this->buildNewAccountParams($username, $resetLink, $expiresAt);
+        return $this->sendTemplatedEmail($recipientEmail, 'new_account', $params);
+    }
+
+    /**
+     * @param string $recipientEmail
+     * @param string $username
+     * @return bool
+     */
+    public function sendPasswordModifiedEmail(string $recipientEmail, string $username): bool
+    {
+        $params = $this->buildPasswordModifiedParams($username);
+        return $this->sendTemplatedEmail($recipientEmail, 'password_modified', $params);
+    }
+
+    /**
+     * @param Reservation $reservation
+     * @param string $mailTemplate
+     * @param string|null $pdfPath
+     * @param array|null $params
+     * @return bool
+     */
+    public function sendReservationConfirmationEmail(
+        Reservation $reservation,
+        string $mailTemplate = 'paiement_confirme',
+        ?string $pdfPath = null,
+        ?array $params = null
+    ): bool
+    {
+        $params = $params ?? $this->buildReservationEmailParams($reservation, $mailTemplate == 'final_summary');
+        $tpl = $this->templateService->render($mailTemplate, $params);
+        if (!$tpl) {
+            return false;
+        }
+
+        // Nom du PDF pour la PJ
+        $pdfName = 'Recapitulatif_' . StringHelper::generateReservationNumber($reservation->getId()) . '.pdf';
+
+        // Préparer le chemin du QR code inline si besoin
+        $inlineImagePath = $params['qrcodeEntrance'] ?? null;
+        $tempFileToRemove = null;
+
+        // Si on reçoit du binaire, écrire dans un fichier temporaire
+        if (is_string($inlineImagePath) && $inlineImagePath !== '' && !is_file($inlineImagePath)) {
+            // On suppose que c'est un binaire ; écrire en fichier temporaire
+            $tmp = sys_get_temp_dir() . '/qrcode_' . uniqid() . '.png';
+            if (false === @file_put_contents($tmp, $inlineImagePath)) {
+                error_log(sprintf('Impossible d\'écrire le binaire QR code pour reservation id=%d', $reservation->getId()));
+                // fallback : envoyer sans image inline
+                return $this->sendTemplatedEmail($reservation->getEmail(), $mailTemplate, $params);
+            }
+            $inlineImagePath = $tmp;
+            $tempFileToRemove = $tmp;
+        }
+
+        // Si pas de fichier valide, fallback sur envoi sans image
+        if (!is_string($inlineImagePath) || !is_file($inlineImagePath)) {
+            error_log(sprintf('QR code manquant ou non accessible pour la réservation id=%d, envoi sans image.', $reservation->getId()));
+            return $this->sendTemplatedEmail($reservation->getEmail(), $mailTemplate, $params);
+        }
+
+        try {
+            return true;
+//return $this->mailService->sendMessageWithInlineImage(
+//  $reservation->getEmail(),
+//  $tpl->getSubject(),
+//  $tpl->getBodyHtml(),
+//  $tpl->getBodyText(),
+//  $inlineImagePath,        // chemin du fichier PNG pour l'image inline
+//  'qrcode_entrance',       // CID
+//  'qrcode_entrance.png',   // Nom du fichier
+//  $pdfPath,                // Chemin du PDF
+//  $pdfName                 // Nom du PDF
+//
+        } catch (Throwable $e) {
+            error_log(sprintf('Erreur envoi mail pour reservation id=%d : %s', $reservation->getId(), $e->getMessage()));
+            return false;
+        } finally {
+            if ($tempFileToRemove && is_file($tempFileToRemove)) {
+                @unlink($tempFileToRemove);
+            }
+        }
+    }
+
+    /**
+     * @param Reservation $reservation
+     * @param string $templateEmail
+     * @return bool
+     */
+    public function sendCancelReservationConfirmationEmail(Reservation $reservation, string $templateEmail): bool
+    {
+        $params = $this->buildCancelReservationParams($reservation);
+        return $this->sendTemplatedEmail($reservation->getEmail(), $templateEmail, $params);
+    }
+
+    /**
+     * @param string $username
+     * @param string $resetLink
+     * @return string[]
+     */
+    private function buildPasswordResetParams(string $username, string $resetLink): array
+    {
+        return [
+            'username' => $username,
+            'link' => $resetLink,
+        ];
+    }
+
+    /**
+     * @param string $username
+     * @param string $resetLink
+     * @param DateTimeInterface $expiresAt
+     * @return string[]
+     */
+    private function buildNewAccountParams(string $username, string $resetLink, DateTimeInterface $expiresAt): array
+    {
+        return [
+            'username' => $username,
+            'app_name' => $_ENV['APP_NAME'],
+            'link' => $resetLink,
+            'timeout_token_new_account' => $expiresAt->format('d/m/Y \à H\hi')
+        ];
+    }
+
+    /**
+     * @param string $username
+     * @return array
+     */
+    private function buildPasswordModifiedParams(string $username): array
+    {
+        return [
+            'username' => $username,
+            'email_club' => defined('EMAIL_CLUB') ? EMAIL_CLUB : '',
+        ];
+    }
+
     /**
      * @param Reservation $reservation
      * @return array
@@ -251,11 +319,13 @@ readonly class MailPrepareService
             return false;
         }
 
-        return $this->mailService->sendMessage(
-            $recipientEmail,
-            $tpl->getSubject(),
-            $tpl->getBodyHtml(),
-            $tpl->getBodyText()
-        );
+        return true;
+
+//return $this->mailService->sendMessage(
+//  $recipientEmail,
+//  $tpl->getSubject(),
+//  $tpl->getBodyHtml(),
+//  $tpl->getBodyText()
+//
     }
 }

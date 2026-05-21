@@ -3,9 +3,7 @@
 namespace app\Services\Mails;
 
 use app\Models\Reservation\Reservation;
-use app\Models\Reservation\ReservationMailSent;
 use app\Repository\Mail\MailTemplateRepository;
-use app\Repository\Reservation\ReservationMailSentRepository;
 use app\Services\Log\Logger;
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;
@@ -18,7 +16,8 @@ class MailService
     private bool $logOnly;
     private bool $debug;
     private MailTemplateRepository $mailTemplateRepository;
-    private ReservationMailSentRepository $reservationMailSentRepository;
+    private MailHistoryService $mailHistoryService;
+    private MailPrepareService $mailPrepareService;
 
     /**
      * Transport SMTP + log.
@@ -27,12 +26,15 @@ class MailService
      * @throws Exception
      */
     public function __construct(
+        MailHistoryService $mailHistoryService,
+        MailPrepareService $mailPrepareService,
         MailTemplateRepository $mailTemplateRepository = new MailTemplateRepository(),
-        ReservationMailSentRepository $reservationMailSentRepository = new ReservationMailSentRepository(),
     )
     {
+        $this->mailHistoryService = $mailHistoryService;
+        $this->mailPrepareService = $mailPrepareService;
         $this->mailTemplateRepository = $mailTemplateRepository;
-        $this->reservationMailSentRepository = $reservationMailSentRepository;
+
         $this->logOnly = (($_ENV['MAIL_MAILER'] ?? '') === 'log');
         $this->debug = (($_ENV['MAIL_DEBUG'] ?? 'false') === 'true');
 
@@ -58,23 +60,105 @@ class MailService
         }
 
         // Config SMTP
-        $this->mailer->isSMTP();
-        $this->mailer->Host = $_ENV['MAIL_HOST'];
-        $this->mailer->SMTPAuth = true;
-        $this->mailer->Username = $_ENV['MAIL_USERNAME'];
-        $this->mailer->Password = $_ENV['MAIL_PASSWORD'];
-        $this->mailer->SMTPSecure = $_ENV['MAIL_ENCRYPTION'];
-        $this->mailer->Port = (int)$_ENV['MAIL_PORT'];
+        $this->configSMTP();
+    }
 
-        if ($this->debug) {
-            $this->mailer->SMTPDebug = SMTP::DEBUG_SERVER;
 
-            $smtpLogger = new MailSmtpDebugLogger();
-            $this->mailer->Debugoutput = function (string $str, int $level) use ($smtpLogger) {
-                $smtpLogger->append($str, $level);
-            };
+    /**
+     * Pour recevoir toutes les demandes d'envoi de mail.
+     * Se charge de récupérer le template, de demander à le remplir et à envoyer
+     *
+     * @param string $templateCode
+     * @param array $contextData
+     * @param string $recipientEmail
+     * @param string $codeEventLog
+     * @return bool
+     * @throws Exception
+     */
+    public function send(string $templateCode, array $contextData, string $recipientEmail, string $codeEventLog = 'unexpected.send_attempt'): bool
+    {
+        // On le prépare
+        $email = $this->mailPrepareService->prepareEmail($templateCode, $contextData);
+
+        // Création du mail
+        $this->mailer = $this->createMailer($email, $recipientEmail);
+
+        // On insère les éventuels images inline
+        if (isset($contextData['pdfPath']) && isset($contextData['pdfName'])) {
+            //$this->mailPrepareService->insertInlineImage($email, $contextData['pdfPath'], $contextData['pdfName']);
+        }
+
+        // On attache les éventuelles PJ
+        if (isset($contextData['pdfPath']) && is_file($contextData['pdfPath']) && isset($contextData['pdfName'])) {
+            $this->mailer->addAttachment($contextData['pdfPath'], $contextData['pdfName']);
+        }
+
+        // On envoi le mail
+        try {
+            $this->mailer->send();
+            //On trace le mail selon s'il s'agit pour une réservation ou pas
+            if (isset($contextData['reservation'])) {
+                $this->mailHistoryService->recordMailSentForReservation(
+                    $contextData['reservation'],
+                    $email->getCode(),
+                    $email->getId()
+                );
+            } else {
+                $this->mailHistoryService->logMailSent([
+                    'templateCode' => $email->getCode(),
+                    'recipient' => $recipientEmail,
+                ],
+                    $codeEventLog,
+                    true
+                );
+            }
+            return true;
+        } catch (Exception $e) {
+            //On trace l'erreur
+            $this->mailHistoryService->logMailSent([
+                'templateCode' => $email->getCode(),
+                'recipient' => $recipientEmail,
+                'erreur' => "{$this->mailer->ErrorInfo} - $e"
+            ],
+                $codeEventLog,
+                false
+            );
+            error_log("Mailer Error: {$this->mailer->ErrorInfo} - $e");
+            return false;
         }
     }
+
+    /**
+     * Création du mail
+     *
+     * @param $email
+     * @param $recipientEmail
+     * @return PHPMailer
+     * @throws Exception
+     */
+    private function createMailer($email, $recipientEmail): PHPMailer
+    {
+        $this->mailer = new PHPMailer(true);
+        $this->mailer->CharSet = 'UTF-8';
+        $fromEmail = $_ENV['MAIL_FROM_ADDRESS'] ?? null;
+        $fromName = $_ENV['MAIL_FROM_NAME'] ?? 'Aqua Reims Artistique';
+        if (!$fromEmail) {
+            throw new Exception("MAIL_FROM_ADDRESS manquant.");
+        }
+        try {
+            $this->mailer->setFrom($fromEmail, $fromName);
+        } catch (Exception $e) {
+            throw new Exception("Erreur lors de la configuration de l'adresse d'expédition: " . $e->getMessage());
+        }
+
+        $this->resetMailer($recipientEmail, $email->getSubject(), $email->getBodyHtml(), $email->getBodyText());
+
+        $this->configSMTP();
+
+        return $this->mailer;
+    }
+
+
 
     /**
      * Envoi d’un message déjà préparé.
@@ -91,22 +175,7 @@ class MailService
 
         try {
             // Réinitialisation complète pour éviter les problèmes de connexion SMTP entre envois
-            $this->mailer->clearAddresses();
-            $this->mailer->clearAllRecipients();
-            $this->mailer->clearAttachments();
-            $this->mailer->clearCustomHeaders();
-            $this->mailer->clearReplyTos();
-
-            // Fermer la connexion SMTP si elle est ouverte (évite "nested MAIL command")
-            if ($this->mailer->smtpConnect()) {
-                $this->mailer->smtpClose();
-            }
-
-            $this->mailer->addAddress($recipientEmail);
-            $this->mailer->isHTML(true);
-            $this->mailer->Subject = $subject;
-            $this->mailer->Body    = $htmlBody ?? '';
-            $this->mailer->AltBody = $textBody ?? '';
+            $this->resetMailer($recipientEmail, $subject, $htmlBody, $textBody);
             $this->mailer->send();
             return true;
         } catch (Exception $e) {
@@ -144,36 +213,8 @@ class MailService
      */
     public function recordMailSent(Reservation $reservation, string $templateMailCode): bool
     {
-        $template = $this->mailTemplateRepository->findByCode($templateMailCode);
-        if (!$template) {
-            Logger::get()->warning('mail', 'record_failure', [
-                'message' => 'Mail template not found for recording.',
-                'reservation_id' => $reservation->getId(),
-                'template_code' => $templateMailCode
-            ]);
-            return false;
-        }
+        return $this->mailHistoryService->recordMailSentForReservation($reservation, $templateMailCode);
 
-        $mailSentRecord = new ReservationMailSent();
-        $mailSentRecord->setReservation($reservation->getId())
-            ->setMailTemplate($template->getId())
-            ->setSentAt(date('Y-m-d H:i:s'));
-
-        try {
-            $id = $this->reservationMailSentRepository->insert($mailSentRecord);
-            if ($id <= 0) {
-                throw new \RuntimeException('Échec insertion mail sent record.');
-            }
-            return true;
-        } catch (\Exception $e) {
-            Logger::get()->error('mail', 'record_failure', [
-                'message' => 'Failed to insert mail sent record.',
-                'reservation_id' => $reservation->getId(),
-                'template_code' => $templateMailCode,
-                'error' => $e->getMessage()
-            ]);
-            return false;
-        }
     }
 
     /**
@@ -227,22 +268,7 @@ class MailService
 
         try {
             // Réinitialisation complète pour éviter les problèmes de connexion SMTP entre envois
-            $this->mailer->clearAddresses();
-            $this->mailer->clearAllRecipients();
-            $this->mailer->clearAttachments();
-            $this->mailer->clearCustomHeaders();
-            $this->mailer->clearReplyTos();
-
-            // Fermer la connexion SMTP si elle est ouverte (évite "nested MAIL command")
-            if ($this->mailer->smtpConnect()) {
-                $this->mailer->smtpClose();
-            }
-
-            $this->mailer->addAddress($recipientEmail);
-            $this->mailer->isHTML(true);
-            $this->mailer->Subject = $subject;
-            $this->mailer->Body = $htmlBody ?? '';
-            $this->mailer->AltBody = $textBody ?? '';
+            $this->resetMailer($recipientEmail, $subject, $htmlBody, $textBody);
 
             // Image inline via CID: chemin fichier -> addEmbeddedImage, sinon binaire/data URI -> addStringEmbeddedImage
             if ($imageData && $cid) {
@@ -269,10 +295,59 @@ class MailService
 
             $this->mailer->send();
             return true;
-        } catch (\PHPMailer\PHPMailer\Exception $e) {
+        } catch (Exception $e) {
             error_log("Mailer Error: {$this->mailer->ErrorInfo} - $e");
             return false;
         }
+    }
+
+    /**
+     * @param string $recipientEmail
+     * @param string $subject
+     * @param string|null $htmlBody
+     * @param string|null $textBody
+     * @return void
+     * @throws Exception
+     */
+    private function resetMailer(string $recipientEmail, string $subject, ?string $htmlBody, ?string $textBody): void
+    {
+        $this->mailer->clearAddresses();
+        $this->mailer->clearAllRecipients();
+        $this->mailer->clearAttachments();
+        $this->mailer->clearCustomHeaders();
+        $this->mailer->clearReplyTos();
+
+        $this->mailer->addAddress($recipientEmail);
+        $this->mailer->isHTML(true);
+        $this->mailer->Subject = $subject;
+        $this->mailer->Body = $htmlBody ?? '';
+        $this->mailer->AltBody = $textBody ?? '';
+    }
+
+    /**
+     * Configuration du SMTP
+     *
+     * @return void
+     */
+    private function configSMTP(): void
+    {
+        $this->mailer->isSMTP();
+        $this->mailer->Host = $_ENV['MAIL_HOST'];
+        $this->mailer->SMTPAuth = true;
+        $this->mailer->Username = $_ENV['MAIL_USERNAME'];
+        $this->mailer->Password = $_ENV['MAIL_PASSWORD'];
+        $this->mailer->SMTPSecure = $_ENV['MAIL_ENCRYPTION'];
+        $this->mailer->Port = (int)$_ENV['MAIL_PORT'];
+
+        if ($this->debug) {
+            $this->mailer->SMTPDebug = SMTP::DEBUG_SERVER;
+
+            $smtpLogger = new MailSmtpDebugLogger();
+            $this->mailer->Debugoutput = function (string $str, int $level) use ($smtpLogger) {
+                $smtpLogger->append($str, $level);
+            };
+        }
+
     }
 
 }

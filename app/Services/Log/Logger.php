@@ -86,7 +86,7 @@ final class Logger implements LoggerInterface
             $def = $catalog->getDefinition($code);
 
             if ($def === null) {
-                // Evénement inconnu -> logguer en WARNING sur application
+                // Evénement inconnu -> loguer en WARNING sur application
                 $this->warning(LogType::APPLICATION->value, 'unknown_event', array_merge(['event_code' => $code], $context));
                 return;
             }
@@ -113,7 +113,7 @@ final class Logger implements LoggerInterface
                 }
             }
         } catch (Throwable) {
-            // Silencieux : on ne doit pas casser l'application pour un problème de logging
+            // silencieux : on ne doit pas casser l'application pour un problème de logging
         }
     }
 

@@ -95,23 +95,25 @@ class MailService
 
         // On envoi le mail
         try {
-            $this->mailer->send();
-            //On trace le mail selon s'il s'agit pour une réservation ou pas
+            //$this->mailer->send();
+            //On trace le mail dans la BDD selon s'il s'agit pour une réservation ou pas
             if (isset($contextData['reservation'])) {
                 $this->mailHistoryService->recordMailSentForReservation(
                     $contextData['reservation'],
                     $email->getCode(),
                     $email->getId()
                 );
-            } else {
-                $this->mailHistoryService->logMailSent([
-                    'templateCode' => $email->getCode(),
-                    'recipient' => $recipientEmail,
-                ],
-                    $codeEventLog,
-                    true
-                );
             }
+
+            //On trace le mail général
+            $this->mailHistoryService->logMailSent([
+                'templateCode' => $email->getCode(),
+                'recipient' => $recipientEmail,
+            ],
+                $codeEventLog,
+                true
+            );
+
             return true;
         } catch (Exception $e) {
             //On trace l'erreur

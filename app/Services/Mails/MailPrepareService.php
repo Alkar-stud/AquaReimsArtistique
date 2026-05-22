@@ -54,8 +54,11 @@ readonly class MailPrepareService
             return false;
         }
 
+        //Récupérer les clés nécessaires :
+        $keys = $this->mailTemplateKeyExtractor->extract($template);
+
         // Résoudre les données du contexte
-        $replacements = $this->contextDataResolver->resolve($params, $template->getRequiresResumeAttachment());
+        $replacements = $this->contextDataResolver->resolve($params, $keys, $template->getRequiresResumeAttachment());
 
         // Rendre le template
         return $this->mailTemplateRenderer->render($template, $replacements);

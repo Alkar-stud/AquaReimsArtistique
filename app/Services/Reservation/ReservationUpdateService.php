@@ -11,6 +11,7 @@ use app\Repository\Reservation\ReservationComplementRepository;
 use app\Repository\Reservation\ReservationRepository;
 use app\Repository\Tarif\TarifRepository;
 use app\Repository\Reservation\ReservationDetailRepository;
+use app\Services\Auth\UserSessionService;
 use app\Services\Log\Logger;
 use app\Services\Mails\MailService;
 use app\Services\Mails\MailPrepareService;
@@ -20,8 +21,10 @@ use TypeError;
 
 readonly class ReservationUpdateService
 {
+    private ReservationRepository $reservationRepository;
+
     public function __construct(
-        private ReservationRepository $reservationRepository,
+        ReservationRepository $reservationRepository,
         private ReservationDetailRepository $reservationDetailRepository,
         private ReservationComplementRepository $reservationComplementRepository,
         private TarifRepository $tarifRepository,
@@ -30,6 +33,7 @@ readonly class ReservationUpdateService
         private MailPrepareService $mailPrepareService,
     )
     {
+        $this->reservationRepository = $reservationRepository;
     }
 
     /**
@@ -344,6 +348,7 @@ readonly class ReservationUpdateService
      * Pour annuler une réservation et supprimer/modifier les éléments de la commande
      *
      * @param Reservation $reservation
+     * @param bool $isCanceled
      * @return bool|null
      */
     public function cancelReservation(Reservation $reservation, bool $isCanceled): bool|string
@@ -359,29 +364,90 @@ readonly class ReservationUpdateService
             if (!$this->reservationRepository->updateSingleField($reservation->getId(), 'is_canceled', $isCanceled)) {
                 throw new \RuntimeException('Échec de la mise à jour du statut d\'annulation de la réservation.');
             }
+
             if ($isCanceled) {
+                $templateEmail = 'cancel_order';
+
                 //On supprime les éventuelles places numérotées de la commande
                 if (!$this->reservationDetailRepository->updateSingleField($reservation->getId(), 'place_number', null)) {
+                    $code = 'reservation.' . $templateEmail . '.failed';
+                    Logger::get()->event(
+                        $code,
+                        [
+                            'reservation_id' => $reservation->getId(),
+                        ]
+                    );
                     throw new \RuntimeException('Erreur lors de la suppression des places numérotées.');
                 }
 
-                $templateEmail = 'cancel_order';
+                //On trace l'annulation de la commande
+                $code = 'reservation.' . $templateEmail . '.completed';
+                Logger::get()->event(
+                    $code,
+                    [
+                        'reservation_id' => $reservation->getId()
+                    ]
+                );
+
                 // Envoyer l'email de confirmation d'annulation
-                if (!$this->mailPrepareService->sendCancelReservationConfirmationEmail($reservation, $templateEmail)) {
+                if (!$this->mailService->send(
+                    $templateEmail,
+                    [
+                        'reservation' => $reservation,
+                    ],
+                    $reservation->getEmail(),
+                    'reservation.' . $templateEmail
+                )) {
+                    // On trace l'échec d'envoi du mail
+                    $code = 'mail.reservation.' . $templateEmail . '.failed';
+                    Logger::get()->event(
+                        $code,
+                        [
+                            'reservation_id' => $reservation->getId()
+                        ]
+                    );
                     throw new \RuntimeException('Échec de l\'envoi de l\'email d\'annulation.');
                 }
             } else {
                 $templateEmail = 'uncancel_order';
+                // On trace la réactivation de la commande
+                $code = 'reservation.' . $templateEmail . '.completed';
+                Logger::get()->event(
+                    $code,
+                    [
+                        'reservation_id' => $reservation->getId()
+                    ]
+                );
+
                 // Envoyer l'email de confirmation de réactivation
+                if (!$this->mailService->send(
+                    $templateEmail,
+                    [
+                        'reservation' => $reservation,
+                    ],
+                    $reservation->getEmail(),
+                    'reservation.' . $templateEmail
+                )) {
+                    // On trace l'échec d'envoi du mail
+                    $code = 'mail.reservation.' . $templateEmail . '.failed';
+                    Logger::get()->event(
+                        $code,
+                        [
+                            'reservation_id' => $reservation->getId()
+                        ]
+                    );
+                    throw new \RuntimeException('Échec de l\'envoi de l\'email de réactivation.');
+                }
+
+
+
                 if (!$this->mailPrepareService->sendCancelReservationConfirmationEmail($reservation, $templateEmail)) {
+                    // On trace l'échec d'envoi du mail
+
                     throw new \RuntimeException('Échec de l\'envoi de l\'email d\'annulation.');
                 }
-            }
 
-                // Enregistrer l'envoi de l'email
-                if (!$this->mailService->recordMailSent($reservation, $templateEmail)) {
-                    throw new \RuntimeException('Échec de l\'enregistrement de l\'envoi de l\'email d\'annulation.');
-                }
+            }
 
             // Commit si tout est OK
             $pdo->commit();
@@ -390,7 +456,7 @@ readonly class ReservationUpdateService
             if ($pdo->inTransaction()) {
                 $pdo->rollBack();
             }
-            Logger::get()->error('Cancel order', $e->getMessage(), ['Erreur lors de l\'annulation de la commande ' . $reservation->getId()]);
+            Logger::get()->error('Cancel order', $e->getMessage(), ['Erreur lors de l\'annulation de la commande ' . $reservation->getId() . '||' . $e]);
             return false;
         }
     }

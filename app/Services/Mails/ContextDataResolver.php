@@ -51,13 +51,12 @@ class ContextDataResolver
         $this->paymentStatusCalculator = $paymentStatusCalculator;
     }
 
-    public function resolve(array $contextData, bool $withAttachment = false): array
+    public function resolve(array $contextData, array $keys = [], bool $withAttachment = false): array
     {
         $resolved = [];
 
 
         // Gestion des objets
-
         if (isset($contextData['user']) && $contextData['user'] instanceof User) {
             $user = $contextData['user'];
             $resolved['username'] = $user->getUsername();
@@ -114,22 +113,22 @@ class ContextDataResolver
 
 
         // Gestion des clés simples
-        if (isset($contextData['SIGNATURE'])) {
+        if (in_array('SIGNATURE', $keys)) {
             $resolved['SIGNATURE'] = SIGNATURE;
         }
-        if (isset($contextData['email_club'])) {
+        if (isset($keys['email_club'])) {
             $resolved['email_club'] = EMAIL_CLUB;
         }
-        if (isset($contextData['email_gala'])) {
+        if (isset($keys['email_gala'])) {
             $resolved['email_gala'] = EMAIL_GALA;
         }
-        if (isset($contextData['app_name'])) {
+        if (isset($keys['app_name'])) {
             $resolved['app_name'] = $_ENV['APP_NAME'];
         }
-        if (isset($contextData['link'])) {
+        if (isset($keys['link'])) {
             $resolved['link'] = $contextData['link'];
         }
-        if (isset($contextData['username'])) {
+        if (isset($keys['username'])) {
             $resolved['username'] = $contextData['username'];
         }
 

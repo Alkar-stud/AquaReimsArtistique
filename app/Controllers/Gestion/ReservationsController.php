@@ -265,7 +265,7 @@ class ReservationsController extends AbstractController
 
         $data = $this->dataHelper->getAndCheckPostData(['reservationId']);
 
-        $reservation = $this->reservationRepository->findById((int)$data['reservationId'], false, false, false, true);
+        $reservation = $this->reservationRepository->findById((int)$data['reservationId'], true, true, false, true);
         if (!$reservation) {
             $this->json(['success' => false, 'message' => 'Réservation non trouvée.']);
         }

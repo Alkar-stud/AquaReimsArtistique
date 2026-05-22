@@ -8,6 +8,7 @@ class MailTemplateDataValidationService
     private ?string $subject = null;
     private ?string $body_html = null;
     private ?string $body_text = null;
+    private bool $requires_resume_attachment = false;
 
     /**
      * Validation pour l'ajout (code requis).
@@ -60,6 +61,7 @@ class MailTemplateDataValidationService
     public function getSubject(): ?string { return $this->subject; }
     public function getBodyHtml(): ?string { return $this->body_html; }
     public function getBodyText(): ?string { return $this->body_text; }
+    public function getRequiresResumeAttachment(): bool { return $this->requires_resume_attachment; }
 
     /**
      * @param array $data
@@ -70,6 +72,10 @@ class MailTemplateDataValidationService
         $this->subject = isset($data['subject']) ? trim((string)$data['subject']) : null;
         $this->body_html = (isset($data['body_html']) && trim((string)$data['body_html']) !== '') ? (string)$data['body_html'] : null;
         $this->body_text = (isset($data['body_text']) && trim((string)$data['body_text']) !== '') ? (string)$data['body_text'] : null;
+        if (array_key_exists('requires_resume_attachment', $data)) {
+            $value = filter_var($data['requires_resume_attachment'], FILTER_VALIDATE_BOOL, FILTER_NULL_ON_FAILURE);
+            $this->requires_resume_attachment = $value ?? false;
+        }
 
         return [];
     }

@@ -93,7 +93,7 @@ class MailTemplateRepository extends AbstractRepository
             'subject' => $mailTemplate->getSubject(),
             'body_html' => $mailTemplate->getBodyHtml(),
             'body_text' => $mailTemplate->getBodyText(),
-            'requires_resume_attachment' => $mailTemplate->getRequiresResumeAttachment(),
+            'requires_resume_attachment' => (int) $mailTemplate->getRequiresResumeAttachment(),
         ]);
         return $ok ? $this->getLastInsertId() : 0;
     }
@@ -119,7 +119,7 @@ class MailTemplateRepository extends AbstractRepository
             'subject' => $mailTemplate->getSubject(),
             'body_html' => $mailTemplate->getBodyHtml(),
             'body_text' => $mailTemplate->getBodyText(),
-            'requires_resume_attachment' => $mailTemplate->getRequiresResumeAttachment(),
+            'requires_resume_attachment' => (int) $mailTemplate->getRequiresResumeAttachment(),
         ]);
     }
 
@@ -136,7 +136,7 @@ class MailTemplateRepository extends AbstractRepository
             ->setSubject($data['subject'])
             ->setBodyHtml($data['body_html'])
             ->setBodyText($data['body_text'])
-            ->setRequiresResumeAttachment($data['requires_resume_attachment'] ?? false);
+            ->setRequiresResumeAttachment((bool)($data['requires_resume_attachment'] ?? false));
 
         return $template;
     }

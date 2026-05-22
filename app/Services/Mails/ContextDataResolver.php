@@ -102,8 +102,8 @@ class ContextDataResolver
                 if ($withAttachment) {
                     $resolved['attachments'] = [
                         [
-                            'path' => $contextData['pdfPath'],
-                            'filename' => $contextData['pdfName'],
+//                            'path' => $contextData['pdfPath'],
+//                            'filename' => $contextData['pdfName'],
                             'cid' => 'qrcode_entrance'
                         ]
                     ];

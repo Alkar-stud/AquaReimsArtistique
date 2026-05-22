@@ -66,8 +66,10 @@ readonly class MailPrepareService
 
         // On attache les éventuelles PJ
         if ($template->getRequiresResumeAttachment()) {
+            //On récupère le tableau de paramètres+valeur
+            $paramsToPdf = $this->buildReservationEmailParams($params['reservation'], true);
             // Génération du PDF RecapFinal
-            $pdf = $this->pdfGenerationService->generateUnitPdf('RecapFinal', $params['reservation']->getId(), $params);
+            $pdf = $this->pdfGenerationService->generateUnitPdf('RecapFinal', $params['reservation']->getId(), $paramsToPdf);
             $pdfName = 'recap_' . $params['reservation']->getId() . '_' . uniqid() . '.pdf';
             $pdfPath = sys_get_temp_dir() . '/' . $pdfName;
             file_put_contents($pdfPath, $pdf->Output('S'));

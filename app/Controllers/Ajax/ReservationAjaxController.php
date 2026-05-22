@@ -19,6 +19,7 @@ use app\Services\Event\EventQueryService;
 use app\Services\Swimmer\SwimmerQueryService;
 use app\Services\Tarif\TarifService;
 use PHPMailer\PHPMailer\Exception;
+use Throwable;
 
 class ReservationAjaxController extends AbstractController
 {
@@ -115,7 +116,7 @@ class ReservationAjaxController extends AbstractController
         $result = $this->reservationDataValidationService->validateDataPerStep($session['reservation'], $step, $input, $files);
 
         if (!$result['success']) {
-            // Construire un message synthétique (ex: première erreur)
+            // Construire un message synthétique (ex : première erreur)
             $errorMessage = 'Une erreur est survenue.';
             if (!empty($result['errors'])) {
                 // Récupérer la première valeur d'erreur
@@ -135,7 +136,6 @@ class ReservationAjaxController extends AbstractController
                 'errors'  => $result['errors'], // détails si besoin
             ], 200);
 
-            return;
         }
 
         //selon si place de la piscine sont numérotées au pas
@@ -190,7 +190,6 @@ class ReservationAjaxController extends AbstractController
 
         if (!$eventId || !$code) {
             $this->json(['success' => false, 'error' => 'Veuillez fournir un événement et un code.']);
-            return;
         }
 
         $result = $this->eventQueryService->validateAccessCode($eventId, $code);
@@ -318,14 +317,13 @@ class ReservationAjaxController extends AbstractController
         $tarifId = (int)($input['tarif_id'] ?? 0);
         if (!$tarifId) {
             $this->json(['success' => false, 'error' => 'Paramètre manquant']);
-            return;
         }
 
         //On va chercher le tarif correspondant s'il y en a un
         $tarifRepository = new TarifRepository();
         $result = $tarifRepository->findById($tarifId);
 
-        //Selon s'il y a des places assises ou non, on est dans reservation_detail ou reservation_complement
+        // selon s'il y a des places assises ou non, on est dans reservation_detail ou reservation_complement
         if ($result->getSeatCount() === null) {
             // Récupérer les détails actuels de la session
             $currentDetails = $this->reservationSessionService->getReservationTempSession()['reservation_complements'] ?? [];
@@ -360,7 +358,7 @@ class ReservationAjaxController extends AbstractController
                     $this->currentUser = $user;
                     $isAdmin = $this->authorizationService->hasPermission($this->currentUser, 'U');
                 }
-            } catch (\Throwable $e) {
+            } catch (Throwable $e) {
                 // Ignorer l'erreur si l'utilisateur ne peut être chargé, $isAdmin reste false
             }
         }
@@ -392,7 +390,6 @@ class ReservationAjaxController extends AbstractController
         $session = $this->reservationSessionService->getReservationTempSession();
         if (!$session['reservation']) {
             $this->json(['success' => false, 'error' => 'Session expirée.']);
-            return;
         }
 
         // Trouver un participant sans place et lui assigner la place {id}
@@ -407,7 +404,6 @@ class ReservationAjaxController extends AbstractController
 
         if (!$participantToUpdate) {
             $this->json(['success' => false, 'error' => 'Tous les participants ont déjà une place attribuée.']);
-            return;
         }
 
         // Mettre à jour la place et sauvegarder
@@ -415,19 +411,7 @@ class ReservationAjaxController extends AbstractController
         $this->reservationDetailTempRepository->update($participantToUpdate);
 
         // Récupérer le nouvel état complet des sièges
-        $seatStates = $this->reservationQueryService->getSeatStates($session['reservation']->getEventSession());
-
-        // Récupérer les participants mis à jour et vérifier si tous ont une place
-        $updatedParticipants = $this->reservationDetailTempRepository->findByFields(['reservation_temp' => $session['reservation']->getId()]);
-        $allSeated = empty(array_filter($updatedParticipants, fn($d) => empty($d->getPlaceNumber())));
-
-        // Renvoyer la réponse avec le nouvel état
-        $this->json([
-            'success' => true,
-            'seatStates' => $seatStates,
-            'participants' => array_map(fn($d) => $d->toArray(), $updatedParticipants),
-            'allParticipantsSeated' => $allSeated
-        ]);
+        $this->RetrieveNewCompleteStateOfSeats($session['reservation']);
     }
 
     #[Route('/reservation/etape5RemoveSeat/{id}', name: 'etape5_remove_seat', methods: ['POST'])]
@@ -436,7 +420,6 @@ class ReservationAjaxController extends AbstractController
         $session = $this->reservationSessionService->getReservationTempSession();
         if (!$session['reservation']) {
             $this->json(['success' => false, 'error' => 'Session expirée.']);
-            return;
         }
 
         // Trouver le participant qui a cette place et la retirer
@@ -450,13 +433,22 @@ class ReservationAjaxController extends AbstractController
         }
 
         // Récupérer le nouvel état complet des sièges
-        $seatStates = $this->reservationQueryService->getSeatStates($session['reservation']->getEventSession());
+        $this->RetrieveNewCompleteStateOfSeats($session['reservation']);
+    }
+
+    /**
+     * @param $reservation
+     * @return void
+     */
+    private function RetrieveNewCompleteStateOfSeats($reservation): void
+    {
+        $seatStates = $this->reservationQueryService->getSeatStates($reservation->getEventSession());
 
         // Récupérer les participants mis à jour et vérifier si tous ont une place
-        $updatedParticipants = $this->reservationDetailTempRepository->findByFields(['reservation_temp' => $session['reservation']->getId()]);
+        $updatedParticipants = $this->reservationDetailTempRepository->findByFields(['reservation_temp' => $reservation->getId()]);
         $allSeated = empty(array_filter($updatedParticipants, fn($d) => empty($d->getPlaceNumber())));
 
-        // Renvoyer la réponse
+        // Renvoyer la réponse avec le nouvel état
         $this->json([
             'success' => true,
             'seatStates' => $seatStates,

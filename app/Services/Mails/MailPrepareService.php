@@ -2,7 +2,6 @@
 
 namespace app\Services\Mails;
 
-use app\Models\Mail\MailTemplate;
 use app\Models\Reservation\Reservation;
 use app\Repository\Mail\MailTemplateRepository;
 use app\Services\Pdf\PdfGenerationService;
@@ -22,14 +21,14 @@ readonly class MailPrepareService
     private MailTemplateRepository $mailTemplateRepository;
     private MailTemplateRenderer $mailTemplateRenderer;
     private ContextDataResolver $contextDataResolver;
-//    private PdfGenerationService $pdfGenerationService;
+    private PdfGenerationService $pdfGenerationService;
 
     public function __construct(
         MailTemplateRepository $mailTemplateRepository,
         MailTemplateKeyExtractor $mailTemplateKeyExtractor,
         MailTemplateRenderer $mailTemplateRenderer,
         ContextDataResolver $contextDataResolver,
-  //      PdfGenerationService $pdfGenerationService,
+        PdfGenerationService $pdfGenerationService,
         private MailTemplateService $templateService,
         private ReservationSummaryBuilder $summaryBuilder,
         private PaymentStatusCalculator $paymentCalculator
@@ -39,7 +38,7 @@ readonly class MailPrepareService
         $this->mailTemplateKeyExtractor = $mailTemplateKeyExtractor;
         $this->mailTemplateRenderer = $mailTemplateRenderer;
         $this->contextDataResolver = $contextDataResolver;
-//        $this->pdfGenerationService = $pdfGenerationService;
+        $this->pdfGenerationService = $pdfGenerationService;
     }
 
     /**
@@ -65,6 +64,16 @@ readonly class MailPrepareService
         // Résoudre les données du contexte
         $replacements = $this->contextDataResolver->resolve($params, $keys, $template->getRequiresResumeAttachment());
 
+        // On attache les éventuelles PJ
+        if ($template->getRequiresResumeAttachment()) {
+            // Génération du PDF RecapFinal
+            $pdf = $this->pdfGenerationService->generateUnitPdf('RecapFinal', $params['reservation']->getId(), $params);
+            $pdfName = 'recap_' . $params['reservation']->getId() . '_' . uniqid() . '.pdf';
+            $pdfPath = sys_get_temp_dir() . '/' . $pdfName;
+            file_put_contents($pdfPath, $pdf->Output('S'));
+            $mailer->addAttachment($pdfPath, $pdfName);
+        }
+
        // Remplir le template
         $templateFilled =  $this->mailTemplateRenderer->render($template, $replacements);
 
@@ -77,21 +86,6 @@ readonly class MailPrepareService
                 error_log('MailPrepareService: image QR code non trouvée ou non accessible pour le mail, envoi sans image inline.');
             }
         }
-
-        /*
-        // On attache les éventuelles PJ
-        if (isset($contextData['pdfPath']) && is_file($contextData['pdfPath']) && isset($contextData['pdfName'])) {
-            $this->mailer->addAttachment($contextData['pdfPath'], $contextData['pdfName']);
-        }
-        // Nom du PDF pour la PJ si besoin
-        if ($email->getRequiresResumeAttachment() && isset($contextData['reservation'])) {
-            $pdfName = 'Recapitulatif_' . StringHelper::generateReservationNumber($contextData['reservation']->getId()) . '.pdf';
-        } else {
-            $pdfName = null;
-        }
-        */
-
-
 
         //On remplit le mail avec les données
         $mailer->addAddress($recipientEmail);
@@ -299,6 +293,7 @@ readonly class MailPrepareService
                 @unlink($tempFileToRemove);
             }
         }
+        return false;
     }
 
     /**

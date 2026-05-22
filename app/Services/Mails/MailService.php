@@ -91,6 +91,7 @@ class MailService
         // On envoi le mail
         try {
             $email->send();
+            //echo 'envoi du mail commenté !';
             //On trace le mail dans la BDD selon s'il s'agit pour une réservation ou pas
             if (isset($contextData['reservation'])) {
                 $this->mailHistoryService->recordMailSentForReservation(

@@ -10,6 +10,7 @@ use app\Repository\Reservation\ReservationDetailTempRepository;
 use app\Repository\Tarif\TarifRepository;
 use app\Repository\User\UserRepository;
 use app\Services\FlashMessageService;
+use app\Services\Mails\MailService;
 use app\Services\Piscine\PiscineQueryService;
 use app\Services\Reservation\ReservationQueryService;
 use app\Services\Reservation\ReservationSessionService;
@@ -17,6 +18,7 @@ use app\Services\DataValidation\ReservationDataValidationService;
 use app\Services\Event\EventQueryService;
 use app\Services\Swimmer\SwimmerQueryService;
 use app\Services\Tarif\TarifService;
+use PHPMailer\PHPMailer\Exception;
 
 class ReservationAjaxController extends AbstractController
 {
@@ -27,6 +29,7 @@ class ReservationAjaxController extends AbstractController
     private TarifService $tarifService;
     private ReservationDetailTempRepository $reservationDetailTempRepository;
     private PiscineQueryService $piscineQueryService;
+    private MailService $mailService;
     //Pour définir les steps existants
     private array $existingStep = [1, 2, 3, 4, 5, 6];
 
@@ -39,6 +42,7 @@ class ReservationAjaxController extends AbstractController
         TarifService $tarifService,
         ReservationDetailTempRepository $reservationDetailTempRepository,
         PiscineQueryService $piscineQueryService,
+        MailService $mailService,
     )
     {
         // On déclare la route comme publique pour éviter la redirection vers la page de login.
@@ -51,6 +55,7 @@ class ReservationAjaxController extends AbstractController
         $this->tarifService = $tarifService;
         $this->reservationDetailTempRepository = $reservationDetailTempRepository;
         $this->piscineQueryService = $piscineQueryService;
+        $this->mailService = $mailService;
     }
 
 
@@ -219,6 +224,7 @@ class ReservationAjaxController extends AbstractController
 
     /**
      * Pour renvoyer le mail de confirmation d'une commande
+     * @throws Exception
      */
     #[Route('/reservation/resend-confirmation', name: 'resend_confirmation', methods: ['POST'])]
     public function resendConfirmation(): void
@@ -228,9 +234,34 @@ class ReservationAjaxController extends AbstractController
         $email = trim($input['email'] ?? '');
         $eventId = (int)($input['event_id'] ?? 0);
 
-        $result = $this->reservationQueryService->resendConfirmationEmails($eventId, $email);
+        // On vérifie au niveau des envois si on peut envoyer de nouveau
+        $result = $this->reservationQueryService->getResendConfirmationCandidates($eventId, $email);
+        if (!$result['success']) {
+            $this->json($result);
+        }
 
-        $this->json($result);
+        foreach ($result['reservations'] as $reservation) {
+            $sent = $this->mailService->send(
+                'summary',
+                ['reservation' => $reservation],
+                $reservation->getEmail(),
+                'reservation.summary'
+            );
+
+            if (!$sent) {
+                $this->json([
+                    'success' => false,
+                    'error' => 'Erreur lors de l\'envoi du mail.'
+                ]);
+            }
+        }
+
+        $this->json([
+            'success' => true,
+            'not_resent_count' => $result['not_resent_count'],
+        ]);
+
+        //$result = $this->reservationQueryService->resendConfirmationEmails($eventId, $email);
     }
 
     //======================================================================

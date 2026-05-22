@@ -111,7 +111,6 @@ class ContextDataResolver
             }
         }
 
-
         // Gestion des clés simples
         if (in_array('SIGNATURE', $keys)) {
             $resolved['SIGNATURE'] = SIGNATURE;

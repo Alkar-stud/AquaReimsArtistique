@@ -5,6 +5,7 @@ namespace app\Services\Mails;
 use app\Models\Reservation\Reservation;
 use app\Repository\Mail\MailTemplateRepository;
 use app\Services\Log\Logger;
+use app\Utils\StringHelper;
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;
 use PHPMailer\PHPMailer\SMTP;
@@ -77,37 +78,30 @@ class MailService
      */
     public function send(string $templateCode, array $contextData, string $recipientEmail, string $codeEventLog = 'unexpected.send_attempt'): bool
     {
-        // On le prépare
-        $email = $this->mailPrepareService->prepareEmail($templateCode, $contextData);
-
         // Création du mail
-        $this->mailer = $this->createMailer($email, $recipientEmail);
+        $this->mailer = $this->createMailer();
 
-        // On insère les éventuels images inline
-        if (isset($contextData['pdfPath']) && isset($contextData['pdfName'])) {
-            //$this->mailPrepareService->insertInlineImage($email, $contextData['pdfPath'], $contextData['pdfName']);
-        }
+        // On prépare le mail
+        $email = $this->mailPrepareService->prepareEmail($this->mailer, $templateCode, $contextData, $recipientEmail);
 
-        // On attache les éventuelles PJ
-        if (isset($contextData['pdfPath']) && is_file($contextData['pdfPath']) && isset($contextData['pdfName'])) {
-            $this->mailer->addAttachment($contextData['pdfPath'], $contextData['pdfName']);
+        if (!$email) {
+            return false;
         }
 
         // On envoi le mail
         try {
-            //$this->mailer->send();
+            $email->send();
             //On trace le mail dans la BDD selon s'il s'agit pour une réservation ou pas
             if (isset($contextData['reservation'])) {
                 $this->mailHistoryService->recordMailSentForReservation(
                     $contextData['reservation'],
-                    $email->getCode(),
-                    $email->getId()
+                    $templateCode
                 );
             }
 
             //On trace le mail général
             $this->mailHistoryService->logMailSent([
-                'templateCode' => $email->getCode(),
+                'templateCode' => $templateCode,
                 'recipient' => $recipientEmail,
             ],
                 $codeEventLog,
@@ -118,7 +112,7 @@ class MailService
         } catch (Exception $e) {
             //On trace l'erreur
             $this->mailHistoryService->logMailSent([
-                'templateCode' => $email->getCode(),
+                'templateCode' => $templateCode,
                 'recipient' => $recipientEmail,
                 'erreur' => "{$this->mailer->ErrorInfo} - $e"
             ],
@@ -133,12 +127,10 @@ class MailService
     /**
      * Création du mail
      *
-     * @param $email
-     * @param $recipientEmail
      * @return PHPMailer
      * @throws Exception
      */
-    private function createMailer($email, $recipientEmail): PHPMailer
+    private function createMailer(): PHPMailer
     {
         $this->mailer = new PHPMailer(true);
         $this->mailer->CharSet = 'UTF-8';
@@ -153,7 +145,7 @@ class MailService
             throw new Exception("Erreur lors de la configuration de l'adresse d'expédition: " . $e->getMessage());
         }
 
-        $this->resetMailer($recipientEmail, $email->getSubject(), $email->getBodyHtml(), $email->getBodyText());
+        $this->resetMailer();
 
         $this->configSMTP();
 
@@ -304,14 +296,11 @@ class MailService
     }
 
     /**
-     * @param string $recipientEmail
-     * @param string $subject
-     * @param string|null $htmlBody
-     * @param string|null $textBody
+     * Reset du mailer pour éviter les problèmes de connexion SMTP entre envois, et réinitialisation des destinataires, pièces jointes, etc.
+     *
      * @return void
-     * @throws Exception
      */
-    private function resetMailer(string $recipientEmail, string $subject, ?string $htmlBody, ?string $textBody): void
+    private function resetMailer(): void
     {
         $this->mailer->clearAddresses();
         $this->mailer->clearAllRecipients();
@@ -319,11 +308,6 @@ class MailService
         $this->mailer->clearCustomHeaders();
         $this->mailer->clearReplyTos();
 
-        $this->mailer->addAddress($recipientEmail);
-        $this->mailer->isHTML(true);
-        $this->mailer->Subject = $subject;
-        $this->mailer->Body = $htmlBody ?? '';
-        $this->mailer->AltBody = $textBody ?? '';
     }
 
     /**

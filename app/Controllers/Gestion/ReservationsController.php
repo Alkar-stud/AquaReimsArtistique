@@ -12,7 +12,6 @@ use app\Repository\Reservation\ReservationTempRepository;
 use app\Services\Event\EventPiscineService;
 use app\Services\Event\EventQueryService;
 use app\Services\Log\Logger;
-use app\Services\Mails\MailPrepareService;
 use app\Services\Mails\MailService;
 use app\Services\Pagination\PaginationService;
 use app\Services\Payment\HelloAssoService;
@@ -43,7 +42,6 @@ class ReservationsController extends AbstractController
     private ReservationTokenService $reservationTokenService;
     private ReservationQueryService $reservationQueryService;
     private MailService $mailService;
-    private MailPrepareService $mailPrepareService;
     private ReservationFinalSummaryService $reservationFinalSummaryService;
     private DataHelper $dataHelper;
     private EventPiscineService $EventPiscineService;
@@ -61,7 +59,6 @@ class ReservationsController extends AbstractController
         ReservationTokenService $reservationTokenService,
         ReservationQueryService $reservationQueryService,
         MailService $mailService,
-        MailPrepareService $mailPrepareService,
         ReservationFinalSummaryService $reservationFinalSummaryService,
         DataHelper $dataHelper,
         EventPiscineService $EventPiscineService,
@@ -80,7 +77,6 @@ class ReservationsController extends AbstractController
         $this->reservationTokenService = $reservationTokenService;
         $this->reservationQueryService = $reservationQueryService;
         $this->mailService = $mailService;
-        $this->mailPrepareService = $mailPrepareService;
         $this->reservationFinalSummaryService = $reservationFinalSummaryService;
         $this->dataHelper = $dataHelper;
         $this->EventPiscineService = $EventPiscineService;
@@ -490,7 +486,7 @@ class ReservationsController extends AbstractController
         }
 
         // Si c'est un récap final, on passe par le service dédié pour avoir le PDF
-        if ($data['templateCode'] === 'final_summary') {
+        if ($data['templateCode'] === 'final_summarya') {
             // TODO : à faire
             $returnEmailSent = $this->reservationFinalSummaryService->sendForReservation($reservation);
         } else {
@@ -503,10 +499,6 @@ class ReservationsController extends AbstractController
                 'reservation.' . $data['templateCode']
             );
 
-            // Cas général
-            //$returnEmailSent = $this->mailPrepareService->sendReservationConfirmationEmail($reservation, $data['templateCode']);
-            //On enregistre l'envoi
-            //$this->mailService->recordMailSent($reservation, $data['templateCode']);
         }
 
         if (!$returnEmailSent) {

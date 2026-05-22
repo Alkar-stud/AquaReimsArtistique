@@ -89,7 +89,7 @@ class ContextDataResolver
             $resolved['UrlModifData'] = $buildLink->buildResetLink('/modifData', $reservation->getToken());
 
             // Génération du QR code pour modification (fichier temporaire pour PDF)
-            if (isset($resolved['qrcodeEntranceInMail']) || $withAttachment) {
+            if (in_array('qrcodeEntranceInMail', $keys) || $withAttachment) {
                 $qrCodeUrlEntrance = $buildLink->buildResetLink('/entrance', $reservation->getToken());
                 // Génération du QR code d'entrée : on retourne un chemin de fichier (pour l'inline)
                 $qrcodeEntrancePath = QRCode::generate($qrCodeUrlEntrance, 250, 10);

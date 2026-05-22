@@ -18,6 +18,7 @@ use app\Repository\Reservation\ReservationMailSentRepository;
 use app\Repository\Reservation\ReservationRepository;
 use app\Repository\Reservation\ReservationTempRepository;
 use app\Services\Mails\MailPrepareService;
+use app\Services\Mails\MailService;
 use app\Services\Piscine\PiscineQueryService;
 use app\Utils\StringHelper;
 use DateTime;
@@ -26,32 +27,35 @@ class ReservationQueryService
 {
     private ReservationRepository $reservationRepository;
     private EventRepository $eventRepository;
-    private MailPrepareService $mailPrepareService;
+    //private MailPrepareService $mailPrepareService;
     private ReservationPriceCalculator $priceCalculator;
     private ReservationComplementRepository $reservationComplementRepository;
     private ReservationDetailRepository $reservationDetailRepository;
     private ReservationDetailTempRepository $reservationDetailTempRepository;
     private PiscineQueryService $piscineQueryService;
+    private MailService $mailService;
 
     public function __construct(
         ReservationRepository $reservationRepository,
         EventRepository $eventRepository,
-        MailPrepareService $mailPrepareService,
+        //MailPrepareService $mailPrepareService,
         ReservationPriceCalculator $priceCalculator,
         ReservationComplementRepository $reservationComplementRepository,
         ReservationDetailRepository $reservationDetailRepository,
         ReservationDetailTempRepository $reservationDetailTempRepository,
         PiscineQueryService $piscineQueryService,
+        MailService $mailService,
     )
     {
         $this->reservationRepository = $reservationRepository;
         $this->eventRepository = $eventRepository;
-        $this->mailPrepareService = $mailPrepareService;
+        //$this->mailPrepareService = $mailPrepareService;
         $this->priceCalculator = $priceCalculator;
         $this->reservationComplementRepository = $reservationComplementRepository;
         $this->reservationDetailRepository = $reservationDetailRepository;
         $this->reservationDetailTempRepository = $reservationDetailTempRepository;
         $this->piscineQueryService = $piscineQueryService;
+        $this->mailService = $mailService;
     }
 
     /**
@@ -146,10 +150,17 @@ class ReservationQueryService
             }
 
             //On envoie le mail
-            $sent = $this->mailPrepareService->sendReservationConfirmationEmail($reservation);
+            $sent = $this->mailService->send(
+                'summary',
+                ['reservation' => $reservation],
+                $reservation->getEmail(),
+                'reservation.summary'
+            );
+            //$sent = $this->mailPrepareService->sendReservationConfirmationEmail($reservation);
             if (!$sent) {
                 return ['success' => false, 'error' => 'Erreur lors de l\'envoi du mail.'];
             }
+            /*
             //On récupère le MailTemplate
             $mailTemplateRepository = new MailTemplateRepository();
             $mailTemplatePaiementConfirme = $mailTemplateRepository->findByCode('paiement_confirme');
@@ -165,6 +176,7 @@ class ReservationQueryService
             if ($insertId === 0) {
                 return ['success' => false, 'error' => 'Échec d\'insertion en BDD.'];
             }
+            */
         }
 
         if ($NbMailNotResent > 0) {

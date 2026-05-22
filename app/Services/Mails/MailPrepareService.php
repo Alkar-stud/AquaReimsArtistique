@@ -5,63 +5,113 @@ namespace app\Services\Mails;
 use app\Models\Mail\MailTemplate;
 use app\Models\Reservation\Reservation;
 use app\Repository\Mail\MailTemplateRepository;
+use app\Services\Pdf\PdfGenerationService;
 use app\Services\Reservation\PaymentStatusCalculator;
 use app\Services\Reservation\ReservationSummaryBuilder;
 use app\Utils\BuildLink;
 use app\Utils\QRCode;
 use app\Utils\StringHelper;
 use DateTimeInterface;
+use PHPMailer\PHPMailer\Exception;
+use PHPMailer\PHPMailer\PHPMailer;
 use Throwable;
 
 readonly class MailPrepareService
 {
-    //private MailService $mailService;
     private MailTemplateKeyExtractor $mailTemplateKeyExtractor;
     private MailTemplateRepository $mailTemplateRepository;
     private MailTemplateRenderer $mailTemplateRenderer;
     private ContextDataResolver $contextDataResolver;
+//    private PdfGenerationService $pdfGenerationService;
 
     public function __construct(
-        //MailService $mailService,
         MailTemplateRepository $mailTemplateRepository,
         MailTemplateKeyExtractor $mailTemplateKeyExtractor,
         MailTemplateRenderer $mailTemplateRenderer,
         ContextDataResolver $contextDataResolver,
-        private MailTemplateService $templateService = new MailTemplateService(),
-        private ReservationSummaryBuilder $summaryBuilder = new ReservationSummaryBuilder(),
-        private PaymentStatusCalculator $paymentCalculator = new PaymentStatusCalculator()
+  //      PdfGenerationService $pdfGenerationService,
+        private MailTemplateService $templateService,
+        private ReservationSummaryBuilder $summaryBuilder,
+        private PaymentStatusCalculator $paymentCalculator
     )
     {
-        //$this->mailService = $mailService;
         $this->mailTemplateRepository = $mailTemplateRepository;
         $this->mailTemplateKeyExtractor = $mailTemplateKeyExtractor;
         $this->mailTemplateRenderer = $mailTemplateRenderer;
         $this->contextDataResolver = $contextDataResolver;
+//        $this->pdfGenerationService = $pdfGenerationService;
     }
 
     /**
      * Pour préparer un email à partir d'un template donné
      *
+     * @param PHPMailer $mailer
      * @param string $templateCode
      * @param array $params
-     * @return MailTemplate|false
+     * @param string $recipientEmail
+     * @return array|false
+     * @throws Exception
      */
-    public function prepareEmail(string $templateCode, array $params): MailTemplate|false
+    public function prepareEmail(PHPMailer $mailer, string $templateCode, array $params, string $recipientEmail): PHPMailer|false
     {
         // Récupérer le template
         $template = $this->mailTemplateRepository->findByCode($templateCode);
         if (!$template) {
             return false;
         }
-
         //Récupérer les clés nécessaires :
         $keys = $this->mailTemplateKeyExtractor->extract($template);
 
         // Résoudre les données du contexte
         $replacements = $this->contextDataResolver->resolve($params, $keys, $template->getRequiresResumeAttachment());
 
-        // Rendre le template
-        return $this->mailTemplateRenderer->render($template, $replacements);
+       // Remplir le template
+        $templateFilled =  $this->mailTemplateRenderer->render($template, $replacements);
+
+        // On insère les éventuelles images inline dans le $templateFilled
+        if (isset($replacements['qrcodeEntranceInMail']) && isset($replacements['qrcodeEntrance'])) {
+            //$this->insertInlineImage($templateFilled, $replacements);
+            if (is_file($replacements['qrcodeEntrance'])) {
+                $mailer->addEmbeddedImage($replacements['qrcodeEntrance'], 'qrcode_entrance', 'qrcode_entrance.png');
+            } else {
+                error_log('MailPrepareService: image QR code non trouvée ou non accessible pour le mail, envoi sans image inline.');
+            }
+        }
+
+        /*
+        // On attache les éventuelles PJ
+        if (isset($contextData['pdfPath']) && is_file($contextData['pdfPath']) && isset($contextData['pdfName'])) {
+            $this->mailer->addAttachment($contextData['pdfPath'], $contextData['pdfName']);
+        }
+        // Nom du PDF pour la PJ si besoin
+        if ($email->getRequiresResumeAttachment() && isset($contextData['reservation'])) {
+            $pdfName = 'Recapitulatif_' . StringHelper::generateReservationNumber($contextData['reservation']->getId()) . '.pdf';
+        } else {
+            $pdfName = null;
+        }
+        */
+
+
+
+        //On remplit le mail avec les données
+        $mailer->addAddress($recipientEmail);
+        $mailer->isHTML(true);
+        $mailer->Subject = $templateFilled->getSubject();
+        $mailer->Body = $templateFilled->getBodyHtml() ?? '';
+        $mailer->AltBody = $templateFilled->getBodyText() ?? '';
+
+/*
+        echo '<pre>';
+        print_r($templateFilled);
+        echo "\n";
+        print_r($replacements);
+        echo "\n";
+        var_dump($mailer);
+        echo "\n";
+        die;
+*/
+
+        return $mailer;
     }
 
 
@@ -69,11 +119,30 @@ readonly class MailPrepareService
      * Pour insérer les images dans le corps du mail
      *
      */
-    public function insertInlineImage(string $htmlBody, string $cid, string $imagePath): string
+    public function insertInlineImage(MailTemplate $templateFilled, array $replacements): string
     {
-        // On suppose que le template contient une balise <img src="cid:..."> avec le CID spécifié
-        $imageTag = '<img src="cid:' . $cid . '" alt="Image" />';
-        return $htmlBody . $imageTag;
+        //écrire en fichier temporaire
+         $tmp = sys_get_temp_dir() . '/qrcode_' . uniqid() . '.png';
+
+
+    }
+
+    /**
+     * Pour préparer le mail final_summary
+     *
+     */
+    public function buildRecapSummaryEmailParam(Reservation $reservation): array
+    {
+        // Préparation des paramètres (QR codes inclus)
+        $params = $this->buildReservationEmailParams($reservation, true);
+/*
+        // Génération du PDF RecapFinal
+        $pdf = $this->pdfGenerationService->generateUnitPdf('RecapFinal', $reservation->getId(), $params);
+        $pdfPath = sys_get_temp_dir() . '/recap_' . $reservation->getId() . '_' . uniqid() . '.pdf';
+        file_put_contents($pdfPath, $pdf->Output('S'));
+*/
+        return [''];
+
     }
 
 
@@ -222,18 +291,18 @@ readonly class MailPrepareService
         }
 
         try {
-            return true;
+
 //return $this->mailService->sendMessageWithInlineImage(
-//  $reservation->getEmail(),
-//  $tpl->getSubject(),
-//  $tpl->getBodyHtml(),
-//  $tpl->getBodyText(),
-//  $inlineImagePath,        // chemin du fichier PNG pour l'image inline
-//  'qrcode_entrance',       // CID
-//  'qrcode_entrance.png',   // Nom du fichier
-//  $pdfPath,                // Chemin du PDF
-//  $pdfName                 // Nom du PDF
-//
+//$reservation->getEmail(),
+//$tpl->getSubject(),
+//$tpl->getBodyHtml(),
+//$tpl->getBodyText(),
+//$inlineImagePath,        // chemin du fichier PNG pour l'image inline
+//'qrcode_entrance',       // CID
+//'qrcode_entrance.png',   // Nom du fichier
+//$pdfPath,                // Chemin du PDF
+//$pdfName                 // Nom du PDF
+//);
         } catch (Throwable $e) {
             error_log(sprintf('Erreur envoi mail pour reservation id=%d : %s', $reservation->getId(), $e->getMessage()));
             return false;

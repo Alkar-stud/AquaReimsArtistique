@@ -45,7 +45,7 @@
                     </div>
 
                     <div class="tarif-includes">
-                        ({{ $tarif->getSeatCount() }} place{{ $tarif->getSeatCount() > 1 ? 's':'' }} incluse{{ $tarif->getSeatCount() > 1 ? 's':'' }})
+                        ({{ $tarif->getSeatCount() }} place{{ $tarif->getSeatCount() > 1 ? 's':'' }})
                     </div>
 
                     <div class="text small text-muted">

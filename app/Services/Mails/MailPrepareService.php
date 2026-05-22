@@ -116,18 +116,6 @@ readonly class MailPrepareService
 
 
     /**
-     * Pour insérer les images dans le corps du mail
-     *
-     */
-    public function insertInlineImage(MailTemplate $templateFilled, array $replacements): string
-    {
-        //écrire en fichier temporaire
-         $tmp = sys_get_temp_dir() . '/qrcode_' . uniqid() . '.png';
-
-
-    }
-
-    /**
      * Pour préparer le mail final_summary
      *
      */

@@ -26,6 +26,7 @@ use app\Services\Reservation\ReservationUpdateService;
 use app\Utils\DataHelper;
 use app\Utils\DurationHelper;
 use Exception;
+use InvalidArgumentException;
 use Throwable;
 
 class ReservationsController extends AbstractController
@@ -181,7 +182,6 @@ class ReservationsController extends AbstractController
 
         if (!$reservation) {
             $this->json(['error' => 'Réservation non trouvée'], 404);
-            return;
         }
 
         $this->json($reservation->toArray());
@@ -197,7 +197,6 @@ class ReservationsController extends AbstractController
 
         if (!$reservation) {
             $this->json(['error' => 'Réservation temporaire non trouvée'], 404);
-            return;
         }
 
         $this->json($reservation->toArray());
@@ -212,13 +211,11 @@ class ReservationsController extends AbstractController
         $reservation = $this->reservationTempRepository->findById($id);
         if (!$reservation) {
             $this->json(['success' => false, 'message' => 'Réservation temporaire non trouvée.'], 404);
-            return;
         }
 
         // Ajout de la vérification du statut de verrouillage
         if ($reservation->isLocked()) {
             $this->json(['success' => false, 'message' => 'Impossible de supprimer une réservation temporaire qui est verrouillée.'], 403);
-            return;
         }
 
         try {
@@ -231,9 +228,9 @@ class ReservationsController extends AbstractController
             // Log de l'erreur pour le débogage
             error_log("Erreur lors de la suppression de la réservation temporaire ID $id : " . $e->getMessage());
             // Message d'erreur générique pour l'utilisateur
-            $this->json(['success' => false, 'message' => 'Une erreur serveur est survenue lors de la suppression de la réservation temporaire.'], 500);
+            $this->json(['success' => false, 'message' => 'Une erreur serveur est survenue lors de la suppression de la réservation temporaire.' . $e], 500);
         } catch (Throwable $e) {
-            $this->json(['success' => false, 'message' => 'Une erreur serveur est survenue lors de la suppression de la réservation temporaire.'], 500);
+            $this->json(['success' => false, 'message' => 'Une erreur serveur est survenue lors de la suppression de la réservation temporaire.' . $e], 500);
         }
     }
 
@@ -302,7 +299,7 @@ class ReservationsController extends AbstractController
             } else {
                 $this->json(['success' => false, 'message' => 'La mise à jour de la place a échoué.'], 500);
             }
-        } catch (\InvalidArgumentException $e) {
+        } catch (InvalidArgumentException $e) {
             $this->json(['success' => false, 'message' => $e->getMessage()], 404);
         }
     }
@@ -339,7 +336,6 @@ class ReservationsController extends AbstractController
         $reservation = $this->reservationRepository->findById($id);
         if (!$reservation) {
             $this->json(['success' => false, 'message' => 'Réservation non trouvée.'], 404);
-            return;
         }
         try {
             $this->reservationDeletionService->deleteReservation($id);
@@ -350,9 +346,9 @@ class ReservationsController extends AbstractController
             // Log de l'erreur pour le débogage
             error_log("Erreur lors de la suppression de la réservation ID $id : " . $e->getMessage());
             // Message d'erreur générique pour l'utilisateur
-            $this->json(['success' => false, 'message' => 'Une erreur serveur est survenue lors de la suppression de la réservation.'], 500);
+            $this->json(['success' => false, 'message' => 'Une erreur serveur est survenue lors de la suppression de la réservation.' . $e], 500);
         } catch (Throwable $e) {
-            $this->json(['success' => false, 'message' => 'Une erreur serveur est survenue lors de la suppression de la réservation.'], 500);
+            $this->json(['success' => false, 'message' => 'Une erreur serveur est survenue lors de la suppression de la réservation.' . $e], 500);
         }
 
 
@@ -393,7 +389,6 @@ class ReservationsController extends AbstractController
         $payment = $this->reservationPaymentRepository->findById($data['paymentId']);
         if (!$payment) {
             $this->json(['success' => false, 'message' => 'Paiement non trouvé.'], 404);
-            return;
         }
 
         //Si le paiement était en type 'man' on gère différemment, car pas passé par HelloAsso.
@@ -500,7 +495,6 @@ class ReservationsController extends AbstractController
             $returnEmailSent = $this->reservationFinalSummaryService->sendForReservation($reservation);
         } else {
             //Cas général, nouvelle méthode
-            // TODO : à vérifier avec tous les mails autre que final_summary
             $returnEmailSent = $this->mailService->send($data['templateCode'],
                 [
                     'reservation' => $reservation,

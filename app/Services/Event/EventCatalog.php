@@ -93,15 +93,11 @@ final class EventCatalog
             'reservation.complement.added' => new EventDefinition('reservation.complement.added', 'reservation', 'INFO', false, false, 'Complément ajouté à une réservation', true, null),
             'reservation.complement.updated' => new EventDefinition('reservation.complement.updated', 'reservation', 'INFO', false, false, 'Complément mis à jour', true, null),
             'reservation.complement.deleted' => new EventDefinition('reservation.complement.deleted', 'reservation', 'INFO', false, false, 'Complément supprimé', true, null),
+            'reservation.complement.entrance.checked' => new EventDefinition('reservation.complement.entrance.checked', 'reservation', 'INFO', true, false, 'Complément vérifié à l\'entrée', true, null),
             'reservation.detail.updated' => new EventDefinition('reservation.detail.updated', 'reservation', 'INFO', false, false, 'Participant de réservation mis à jour', true, null),
+            'reservation.detail.entrance.attendance_marked' => new EventDefinition('reservation.detail.entrance.attendance_marked', 'reservation', 'INFO', true, false, 'Présence d\'un participant marquée à l\'entrée', true, null),
             'reservation.contact.updated' => new EventDefinition('reservation.contact.updated', 'reservation', 'INFO', false, false, 'Coordonnées de réservation mises à jour', true, null),
-
-            'reservation.email.confirmation.sent' => new EventDefinition('reservation.email.confirmation.sent', 'reservation', 'INFO', false, false, 'Mail de confirmation de réservation envoyé', true, null),
-            'reservation.email.confirmation.failed' => new EventDefinition('reservation.email.confirmation.failed', 'reservation', 'ERROR', false, true, 'Échec d envoi du mail de confirmation de réservation', false, 1800),
-            'reservation.email.final_summary.sent' => new EventDefinition('reservation.email.final_summary.sent', 'reservation', 'INFO', false, false, 'Mail récapitulatif final envoyé pour une réservation', true, null),
-            'reservation.email.final_summary.failed' => new EventDefinition('reservation.email.final_summary.failed', 'reservation', 'ERROR', false, true, 'Échec d envoi du mail récapitulatif final', false, 1800),
-            'reservation.email.cancel_confirmation.sent' => new EventDefinition('reservation.email.cancel_confirmation.sent', 'reservation', 'INFO', false, false, 'Mail de confirmation d annulation de réservation envoyé', true, null),
-            'reservation.email.cancel_confirmation.failed' => new EventDefinition('reservation.email.cancel_confirmation.failed', 'reservation', 'ERROR', false, true, 'Échec d envoi du mail de confirmation d annulation de réservation', false, 1800),
+            'reservation.entrance.checked' => new EventDefinition('reservation.entrance.checked', 'reservation', 'INFO', true, false, 'Réservation marquée comme vérifiée à l\'entrée', true, null),
 
             'reservation.temp.cleaned' => new EventDefinition('reservation.temp.cleaned', 'reservation', 'INFO', false, false, 'Nettoyage de session temporaire réservation', true, null),
             'reservation.payment.failed' => new EventDefinition('reservation.payment.failed', 'reservation', 'ERROR', true, true, 'Paiement réservation échoué', true, 1800),

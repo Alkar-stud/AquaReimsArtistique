@@ -142,6 +142,7 @@ final class EventCatalog
             'application.admin.event_presentation.created' => new EventDefinition('application.admin.event_presentation.created', 'application', 'INFO', true, false, 'Présentation de la page d accueil créée', true, null),
             'application.admin.event_presentation.updated' => new EventDefinition('application.admin.event_presentation.updated', 'application', 'INFO', true, false, 'Présentation de la page d accueil mise à jour', true, null),
             'application.admin.event_presentation.deleted' => new EventDefinition('application.admin.event_presentation.deleted', 'application', 'NOTICE', true, false, 'Présentation de la page d accueil supprimée', true, null),
+            'application.admin.event_presentation.upload.succeeded' => new EventDefinition('application.admin.event_presentation.upload.succeeded', 'application', 'INFO', true, false, 'Upload d image pour la page d accueil réussi', true, null),
 
             'application.admin.tarif.created' => new EventDefinition('application.admin.tariff.created', 'application', 'INFO', true, false, 'Tarif créé', true, null),
             'application.admin.tarif.updated' => new EventDefinition('application.admin.tariff.updated', 'application', 'INFO', true, false, 'Tarif mis à jour', true, null),

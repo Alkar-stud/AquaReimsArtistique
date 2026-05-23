@@ -143,21 +143,32 @@ final class EventCatalog
             'application.admin.event_presentation.updated' => new EventDefinition('application.admin.event_presentation.updated', 'application', 'INFO', true, false, 'Présentation de la page d accueil mise à jour', true, null),
             'application.admin.event_presentation.deleted' => new EventDefinition('application.admin.event_presentation.deleted', 'application', 'NOTICE', true, false, 'Présentation de la page d accueil supprimée', true, null),
 
-            'application.admin.tariff.created' => new EventDefinition('application.admin.tariff.created', 'application', 'INFO', true, false, 'Tarif créé', true, null),
-            'application.admin.tariff.updated' => new EventDefinition('application.admin.tariff.updated', 'application', 'INFO', true, false, 'Tarif mis à jour', true, null),
-            'application.admin.tariff.deleted' => new EventDefinition('application.admin.tariff.deleted', 'application', 'NOTICE', true, false, 'Tarif supprimé', true, null),
+            'application.admin.tarif.created' => new EventDefinition('application.admin.tariff.created', 'application', 'INFO', true, false, 'Tarif créé', true, null),
+            'application.admin.tarif.updated' => new EventDefinition('application.admin.tariff.updated', 'application', 'INFO', true, false, 'Tarif mis à jour', true, null),
+            'application.admin.tarif.deleted' => new EventDefinition('application.admin.tariff.deleted', 'application', 'NOTICE', true, false, 'Tarif supprimé', true, null),
 
             'application.admin.mail_template.created' => new EventDefinition('application.admin.mail_template.created', 'application', 'INFO', true, false, 'Template mail créé', true, null),
             'application.admin.mail_template.updated' => new EventDefinition('application.admin.mail_template.updated', 'application', 'INFO', true, false, 'Template mail mis à jour', true, null),
             'application.admin.mail_template.deleted' => new EventDefinition('application.admin.mail_template.deleted', 'application', 'NOTICE', true, false, 'Template mail supprimé', true, null),
 
             'application.admin.config.created' => new EventDefinition('application.admin.config.created', 'application', 'NOTICE', true, false, 'Configuration créée', true, null),
-            'application.admin.config.updated' => new EventDefinition('application.admin.config.updated', 'application', 'NOTICE', true, false, 'Configuration mise à jour', true, null),
-            'application.admin.config.deleted' => new EventDefinition('application.admin.config.deleted', 'application', 'WARNING', true, false, 'Configuration supprimée', true, null),
+            'application.admin.config.updated' => new EventDefinition('application.admin.config.updated', 'application', 'WARNING', true, false, 'Configuration mise à jour', true, null),
+            'application.admin.config.deleted' => new EventDefinition('application.admin.config.deleted', 'application', 'CRITICAL', true, false, 'Configuration supprimée', true, null),
 
             'application.admin.swimmer.created' => new EventDefinition('application.admin.swimmer.created', 'application', 'INFO', true, false, 'Nageur créé', true, null),
             'application.admin.swimmer.updated' => new EventDefinition('application.admin.swimmer.updated', 'application', 'INFO', true, false, 'Nageur mis à jour', true, null),
             'application.admin.swimmer.deleted' => new EventDefinition('application.admin.swimmer.deleted', 'application', 'NOTICE', true, false, 'Nageur supprimé', true, null),
+
+            'application.admin.piscine.created' => new EventDefinition('application.admin.piscine.created', 'application', 'INFO', true, false, 'Piscine créée', true, null),
+            'application.admin.piscine.updated' => new EventDefinition('application.admin.piscine.updated', 'application', 'INFO', true, false, 'Piscine mise à jour', true, null),
+            'application.admin.piscine.deleted' => new EventDefinition('application.admin.piscine.deleted', 'application', 'NOTICE', true, false, 'Piscine supprimée', true, null),
+            'application.admin.piscine.gradins.attribute.updated' => new EventDefinition('application.admin.piscine.gradins.attribute.updated', 'application', 'INFO', true, false, 'Attribut de gradin mis à jour', true, null),
+            'application.admin.piscine.gradins.zone.created' => new EventDefinition('application.admin.piscine.gradins.zone.created', 'application', 'INFO', true, false, 'Zone de gradins créée', true, null),
+            'application.admin.piscine.gradins.zone.updated' => new EventDefinition('application.admin.piscine.gradins.zone.updated', 'application', 'INFO', true, false, 'Zone de gradins mise à jour', true, null),
+            'application.admin.piscine.gradins.zone.deleted' => new EventDefinition('application.admin.piscine.gradins.zone.deleted', 'application', 'NOTICE', true, false, 'Zone de gradins supprimée', true, null),
+            'application.admin.piscine.gradins.place.created' => new EventDefinition('application.admin.piscine.gradins.place.created', 'application', 'INFO', true, false, 'Place de gradins créée', true, null),
+            'application.admin.piscine.gradins.place.updated' => new EventDefinition('application.admin.piscine.gradins.place.updated', 'application', 'INFO', true, false, 'Place de gradins mise à jour', true, null),
+            'application.admin.piscine.gradins.place.deleted' => new EventDefinition('application.admin.piscine.gradins.place.deleted', 'application', 'NOTICE', true, false, 'Place de gradins supprimée', true, null),
 
             // ------------------------------------------------------------
             // Database / Filesystem / Application errors

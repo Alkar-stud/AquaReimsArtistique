@@ -7,6 +7,7 @@ use app\Controllers\AbstractController;
 use app\Models\Config;
 use app\Repository\ConfigRepository;
 use app\Services\DataValidation\ConfigDataValidationService;
+use app\Services\Log\Logger;
 
 class ConfigController extends AbstractController
 {
@@ -51,6 +52,15 @@ class ConfigController extends AbstractController
             ->setConfigValue($this->configDataValidationService->getConfigValue() ?? '')
             ->setConfigType($this->configDataValidationService->getConfigType() ?? null);
         $configId = $this->configRepository->insert($config);
+        //On log l'event
+        Logger::get()->event(
+            'application.admin.config.created',
+            [
+                'config_id' => $configId,
+                'config_key' => $config->getConfigKey(),
+                'config_value' => $config->getConfigValue(),
+
+            ]);
         $this->flashMessageService->setFlashMessage('success', "Configuration ajoutée.");
         //on récupère le contexte
         $context = htmlspecialchars($_POST['context']) ?? 'desktop';
@@ -84,6 +94,15 @@ class ConfigController extends AbstractController
                 ->setConfigValue($this->configDataValidationService->getConfigValue() ?? $config->getConfigValue())
                 ->setConfigType($this->configDataValidationService->getConfigType() ?? $config->getConfigType());
             $this->configRepository->update($config);
+            //On log l'event
+            Logger::get()->event(
+                'application.admin.config.updated',
+                [
+                    'config_id' => $config->getId(),
+                    'config_key' => $config->getConfigKey(),
+                    'config_value' => $config->getConfigValue(),
+
+                ]);
             $this->flashMessageService->setFlashMessage('success', "Configuration modifiée.");
         }
         $this->redirectWithAnchor('/gestion/configs');
@@ -98,6 +117,12 @@ class ConfigController extends AbstractController
 
         $configId = (int)($_POST['config_id'] ?? 0);
         $this->configRepository->delete($configId);
+        //On log l'event
+        Logger::get()->event(
+            'application.admin.config.deleted',
+            [
+                'config_id' => $configId
+            ]);
         $this->flashMessageService->setFlashMessage('success', "Configuration supprimée.");
         $this->redirect('/gestion/configs');
     }

@@ -4,6 +4,8 @@ namespace app\Services\Log;
 use app\Enums\LogType;
 use app\Services\Log\Handler\FileLogHandler;
 use app\Services\Log\Handler\LogHandlerInterface;
+use app\Utils\Normalize;
+use app\Utils\Sanitize;
 use Throwable;
 use app\Services\Event\EventCatalogService;
 use app\Services\Event\AlertNotifier;
@@ -41,7 +43,7 @@ final class Logger implements LoggerInterface
 
     public function log(string $level, string $channel, string $message, array $context = []): void
     {
-        $normalizedChannel = $this->normalizeChannel($channel);
+        $normalizedChannel = Normalize::normalizeChannel($channel);
         $finalMessage = $this->buildRichMessage($normalizedChannel, $message, $context);
         $now = microtime(true);
 
@@ -57,21 +59,18 @@ final class Logger implements LoggerInterface
             'method' => $_SERVER['REQUEST_METHOD'] ?? null,
             'uri' => strtok($_SERVER['REQUEST_URI'] ?? '/', '?'),
             'ua' => $_SERVER['HTTP_USER_AGENT'] ?? null,
-            'context' => $this->sanitize($context),
+            'context' => Sanitize::sanitizeLog($context, $this->maskedKeys),
         ];
         foreach ($this->handlers as $h) {
             try { $h->handle($record); } catch (Throwable) { /* ignore */ }
         }
     }
 
-    public function debug(string $channel, string $message, array $context = []): void { $this->log('DEBUG', $channel, $message, $context); }
-    public function info(string $channel, string $message, array $context = []): void { $this->log('INFO', $channel, $message, $context); }
     public function notice(string $channel, string $message, array $context = []): void { $this->log('NOTICE', $channel, $message, $context); }
     public function warning(string $channel, string $message, array $context = []): void { $this->log('WARNING', $channel, $message, $context); }
     public function error(string $channel, string $message, array $context = []): void { $this->log('ERROR', $channel, $message, $context); }
     public function critical(string $channel, string $message, array $context = []): void { $this->log('CRITICAL', $channel, $message, $context); }
-    public function alert(string $channel, string $message, array $context = []): void { $this->log('ALERT', $channel, $message, $context); }
-    public function emergency(string $channel, string $message, array $context = []): void { $this->log('EMERGENCY', $channel, $message, $context); }
+
 
     /**
      * Enregistre un événement métier identifié par son code.
@@ -119,12 +118,23 @@ final class Logger implements LoggerInterface
 
     public function access(array $context): void
     {
-        $this->info(LogType::ACCESS->value, 'request', $context);
+        //On log l'event
+        Logger::get()->event(
+            'access.request',
+            [
+                'request', $context
+            ]);
     }
 
     public function db(string $operation, string $table, array $context): void
     {
-        $this->info(LogType::DATABASE->value, $operation, array_merge(['table' => $table], $context));
+        //On log l'event
+        Logger::get()->event(
+            'database.query.info',
+            [
+                'operation' => $operation,
+                array_merge(['table' => $table], $context)
+            ]);
     }
 
     public function security(string $event, array $context): void
@@ -151,7 +161,7 @@ final class Logger implements LoggerInterface
                 $method = $_SERVER['REQUEST_METHOD'] ?? 'UNK';
                 $uri = $context['route'] ?? strtok($_SERVER['REQUEST_URI'] ?? '/', '?');
                 $status = $context['status'] ?? '???';
-                // Format: GET /gestion/logs
+                // Format : GET /gestion/logs
                 return "$method $uri -> $status";
 
             case LogType::URL->value:
@@ -172,57 +182,4 @@ final class Logger implements LoggerInterface
         }
     }
 
-    private function sanitize(array $context): array
-    {
-        $out = [];
-        foreach ($context as $k => $v) {
-            $lk = strtolower((string)$k);
-            if (in_array($lk, $this->maskedKeys, true)) {
-                $out[$k] = '[MASKED]';
-                continue;
-            }
-            if (is_string($v)) {
-                $out[$k] = mb_strlen($v) > 512 ? (mb_substr($v, 0, 512) . '...') : $v;
-            } elseif ($v instanceof Throwable) {
-                $out[$k] = ['ex'=>get_class($v),'msg'=>$v->getMessage(),'file'=>$v->getFile().':'.$v->getLine()];
-            } else {
-                $out[$k] = $v;
-            }
-        }
-        return $out;
-    }
-
-    private function normalizeChannel(?string $channel): string
-    {
-        $candidate = trim((string)$channel);
-        if ($candidate === '') {
-            return LogType::APPLICATION->value;
-        }
-
-        foreach (LogType::cases() as $case) {
-            if (strcasecmp($candidate, $case->value) === 0) {
-                return $case->value;
-            }
-        }
-
-        $aliases = [
-            'database'    => LogType::DATABASE->value,
-            'sql'         => LogType::SQL_ERROR->value,
-            'sql_error'   => LogType::SQL_ERROR->value,
-            'sql-error'   => LogType::SQL_ERROR->value,
-            'http'        => LogType::URL->value,
-            'request'     => LogType::ACCESS->value,
-            'app'         => LogType::APPLICATION->value,
-            'application' => LogType::APPLICATION->value,
-            'security'    => LogType::SECURITY->value,
-            'url_error'   => LogType::URL_ERROR->value,
-            'url-error'   => LogType::URL_ERROR->value,
-        ];
-        $lk = strtolower($candidate);
-        if (isset($aliases[$lk])) {
-            return $aliases[$lk];
-        }
-
-        return LogType::APPLICATION->value;
-    }
 }

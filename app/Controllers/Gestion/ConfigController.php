@@ -100,7 +100,6 @@ class ConfigController extends AbstractController
                     'config_id' => $config->getId(),
                     'config_key' => $config->getConfigKey(),
                     'config_value' => $config->getConfigValue(),
-
                 ]);
             $this->flashMessageService->setFlashMessage('success', "Configuration modifiée.");
         }

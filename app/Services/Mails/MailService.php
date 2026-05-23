@@ -5,7 +5,6 @@ namespace app\Services\Mails;
 use app\Models\Reservation\Reservation;
 use app\Repository\Mail\MailTemplateRepository;
 use app\Services\Log\Logger;
-use app\Utils\StringHelper;
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;
 use PHPMailer\PHPMailer\SMTP;
@@ -154,51 +153,6 @@ class MailService
     }
 
 
-
-    /**
-     * Envoi d’un message déjà préparé.
-     */
-    public function sendMessage(string $recipientEmail, string $subject, ?string $htmlBody = null, ?string $textBody = null): bool
-    {
-        // Log en debug, ou en mode logOnly sans envoyer
-        if ($this->debug || $this->logOnly) {
-            $this->logMessage($recipientEmail, $subject, $htmlBody, $textBody);
-        }
-        if ($this->logOnly) {
-            return true;
-        }
-
-        try {
-            // Réinitialisation complète pour éviter les problèmes de connexion SMTP entre envois
-            $this->resetMailer($recipientEmail, $subject, $htmlBody, $textBody);
-            $this->mailer->send();
-            return true;
-        } catch (Exception $e) {
-            error_log("Mailer Error: {$this->mailer->ErrorInfo} - $e");
-            return false;
-        }
-    }
-
-    private function logMessage(string $to, string $subject, ?string $html, ?string $text): void
-    {
-        $logger = Logger::get();
-
-        $context = [
-            'to' => $to,
-            'subject' => $subject,
-            'html' => $html,
-            'text' => $text,
-            'log_only' => $this->logOnly,
-            'debug' => $this->debug,
-        ];
-
-        if ($this->logOnly) {
-            $logger->info('mail', 'log_only', $context);
-        } else {
-            $logger->debug('mail', 'prepared', $context);
-        }
-    }
-
     /**
      * Enregistre l'envoi d'un email pour une réservation.
      *
@@ -226,74 +180,6 @@ class MailService
             'final_summary',
             'paiement_relance_1',
         ]);
-    }
-
-    /**
-     * Envoi d'un mail avec image inline (CID) et optionnellement un PDF en PJ.
-     * - $imageData peut être un chemin de fichier PNG ou des données binaires (ou data URI).
-     *
-     * @param string $recipientEmail
-     * @param string $subject
-     * @param string|null $htmlBody
-     * @param string|null $textBody
-     * @param string|null $imageData
-     * @param string|null $cid
-     * @param string $filename
-     * @param string|null $pdfPath
-     * @param string $pdfName
-     * @return bool
-     */
-    public function sendMessageWithInlineImage(
-        string $recipientEmail,
-        string $subject,
-        ?string $htmlBody,
-        ?string $textBody,
-        ?string $imageData = null,
-        ?string $cid = null,
-        string $filename = 'image.png',
-        ?string $pdfPath = null,
-        string $pdfName = 'document.pdf'
-    ): bool {
-        if ($this->debug || $this->logOnly) {
-            $this->logMessage($recipientEmail, $subject, $htmlBody, $textBody);
-        }
-        if ($this->logOnly) {
-            return true;
-        }
-
-        try {
-            // Réinitialisation complète pour éviter les problèmes de connexion SMTP entre envois
-            $this->resetMailer($recipientEmail, $subject, $htmlBody, $textBody);
-
-            // Image inline via CID: chemin fichier -> addEmbeddedImage, sinon binaire/data URI -> addStringEmbeddedImage
-            if ($imageData && $cid) {
-                if (is_file($imageData)) {
-                    // Chemin fichier
-                    $this->mailer->addEmbeddedImage($imageData, $cid, '', 'base64', 'image/png', 'inline');
-                } else {
-                    // Binaire ou data URI
-                    $binary = $imageData;
-                    if (str_starts_with($imageData, 'data:image/')) {
-                        $comma = strpos($imageData, ',');
-                        $binary = $comma !== false ? base64_decode(substr($imageData, $comma + 1)) : '';
-                    }
-                    if ($binary !== '') {
-                        $this->mailer->addStringEmbeddedImage($binary, $cid, '', 'base64', 'image/png', 'inline');
-                    }
-                }
-            }
-
-            // Pièce jointe PDF
-            if ($pdfPath && is_file($pdfPath)) {
-                $this->mailer->addAttachment($pdfPath, $pdfName);
-            }
-
-            $this->mailer->send();
-            return true;
-        } catch (Exception $e) {
-            error_log("Mailer Error: {$this->mailer->ErrorInfo} - $e");
-            return false;
-        }
     }
 
     /**

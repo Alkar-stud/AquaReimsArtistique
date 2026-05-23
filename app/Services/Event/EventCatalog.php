@@ -221,6 +221,7 @@ final class EventCatalog
             // ------------------------------------------------------------
             'database.query.failed' => new EventDefinition('database.query.failed', 'database', 'ERROR', true, true, 'Requête SQL échouée', false, 1800),
             'database.query.slow' => new EventDefinition('database.query.slow', 'database', 'NOTICE', false, false, 'Requête SQL lente', false, null),
+            'database.query.info' => new EventDefinition('database.query.info', 'database', 'INFO', false, false, 'Requête SQL', false, null),
 
             'filesystem.delete.failed' => new EventDefinition('filesystem.delete.failed', 'filesystem', 'ERROR', false, false, 'Échec suppression fichier', false, 3600),
             'filesystem.upload.failed' => new EventDefinition('filesystem.upload.failed', 'filesystem', 'ERROR', false, false, 'Échec upload fichier', false, 3600),

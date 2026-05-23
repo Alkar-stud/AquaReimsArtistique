@@ -87,15 +87,14 @@ abstract class AbstractController
 
         $this->authorizationService = new AuthorizationService();
 
-        // Journaliser la requête dans le channel "url" (maintenant que l'utilisateur est connu)
-        Logger::get()->info(
-            LogType::URL->value,
-            'request',
+        // Journaliser la requête dans le channel "url"
+        //On log l'event
+        Logger::get()->event(
+            'access.request',
             [
                 'uri' => strtok($_SERVER['REQUEST_URI'] ?? '/', '?'),
                 'method' => $_SERVER['REQUEST_METHOD'] ?? 'GET',
-            ]
-        );
+            ]);
     }
 
     /**

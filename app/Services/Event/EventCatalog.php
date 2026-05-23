@@ -228,6 +228,7 @@ final class EventCatalog
 
             'application.template.render_failed' => new EventDefinition('application.template.render_failed', 'application', 'ERROR', true, false, 'Erreur rendu template', false, 1800),
             'application.uncaught_exception' => new EventDefinition('application.uncaught_exception', 'application', 'CRITICAL', true, true, 'Exception non gérée', true, 3600),
+            'application.unknown_event' => new EventDefinition('application.unknown_event', 'application', 'CRITICAL', true, true, 'Évènement inconnu', true, 3600),
 
             // ------------------------------------------------------------
             // Access / URL

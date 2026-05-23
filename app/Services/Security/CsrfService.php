@@ -76,10 +76,13 @@ final class CsrfService
         unset($_SESSION[self::SESSION_KEY][$context]);
 
         if (!$ok) {
-            Logger::get()->security('csrf_fail', [
-                'reason'  => 'token_mismatch_or_missing',
-                'context' => $context,
-            ]);
+            //On log l'event
+            Logger::get()->event(
+                'security.csrf.invalid',
+                [
+                    'reason'  => 'token_mismatch_or_missing',
+                    'context' => $context,
+                ]);
         }
 
         return $ok;

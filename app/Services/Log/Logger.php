@@ -66,7 +66,6 @@ final class Logger implements LoggerInterface
         }
     }
 
-    public function notice(string $channel, string $message, array $context = []): void { $this->log('NOTICE', $channel, $message, $context); }
     public function warning(string $channel, string $message, array $context = []): void { $this->log('WARNING', $channel, $message, $context); }
     public function error(string $channel, string $message, array $context = []): void { $this->log('ERROR', $channel, $message, $context); }
     public function critical(string $channel, string $message, array $context = []): void { $this->log('CRITICAL', $channel, $message, $context); }
@@ -85,8 +84,13 @@ final class Logger implements LoggerInterface
             $def = $catalog->getDefinition($code);
 
             if ($def === null) {
-                // Evénement inconnu -> loguer en WARNING sur application
-                $this->warning(LogType::APPLICATION->value, 'unknown_event', array_merge(['event_code' => $code], $context));
+                // Evénement inconnu -> loguer en CRITICAL sur application
+                //On log l'event
+                Logger::get()->event(
+                    'application.unknown_event',
+                    [
+                        array_merge(['event_code' => $code], $context)
+                    ]);
                 return;
             }
 
@@ -137,10 +141,6 @@ final class Logger implements LoggerInterface
             ]);
     }
 
-    public function security(string $event, array $context): void
-    {
-        $this->warning(LogType::SECURITY->value, $event, $context);
-    }
 
     private function buildRichMessage(string $channel, string $message, array $context): string
     {

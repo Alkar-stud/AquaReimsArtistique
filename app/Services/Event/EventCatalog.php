@@ -233,7 +233,7 @@ final class EventCatalog
             // Access / URL
             // ------------------------------------------------------------
             'access.request' => new EventDefinition('access.request', 'access', 'INFO', false, false, 'Requête HTTP (access log)', false, null),
-            'url.not_found' => new EventDefinition('url.not_found', 'url', 'NOTICE', false, false, 'Erreur 404', false, null),
+            'url.not_found' => new EventDefinition('url.not_found', 'url_error', 'NOTICE', false, false, 'Erreur 404', false, null),
         ];
 
         return $map;

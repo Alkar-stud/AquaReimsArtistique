@@ -647,7 +647,7 @@ class ReservationRepository extends AbstractRepository
         $params['q_name'] = $q;
         $params['q_firstname'] = $q;
 
-        $sql = "SELECT * FROM $this->tableName";
+        $sql = "SELECT $this->tableName.* FROM $this->tableName";
 
         if ($isComing) {
             // Joindre avec event_session pour vérifier la date

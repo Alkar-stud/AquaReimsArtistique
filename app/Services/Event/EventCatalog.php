@@ -76,31 +76,69 @@ final class EventCatalog
             // ------------------------------------------------------------
             // Reservation
             // ------------------------------------------------------------
+            // Persistance / création réservation
             'reservation.persist.started' => new EventDefinition('reservation.persist.started', 'reservation', 'INFO', true, false, 'Début de persistance d une réservation', true, null),
             'reservation.persist.completed' => new EventDefinition('reservation.persist.completed', 'reservation', 'INFO', true, false, 'Persistance de réservation terminée avec succès', true, null),
             'reservation.persist.failed' => new EventDefinition('reservation.persist.failed', 'reservation', 'ERROR', true, true, 'Échec de persistance d une réservation', true, 1800),
 
-            'reservation.manual_payment.marked' => new EventDefinition('reservation.manual_payment.marked', 'reservation', 'NOTICE', true, false, 'Réservation marquée payée manuellement', true, null),
-            'reservation.token.updated' => new EventDefinition('reservation.token.updated', 'reservation', 'INFO', true, false, 'Token de réservation modifié', true, null),
+            // Gestion des paiements
+            'reservation.manual_payment.marked' => new EventDefinition('reservation.manual_payment.marked', 'reservation', 'WARNING', true, false, 'Réservation marquée payée manuellement', true, null),
+            'reservation.payment.refreshed' => new EventDefinition('reservation.payment.refreshed', 'reservation', 'INFO', true, false, 'État du paiement actualisé', true, null),
+            'reservation.payment.refresh.failed' => new EventDefinition('reservation.payment.refresh.failed', 'reservation', 'WARNING', true, false, 'Échec de l\'actualisation du paiement', true, 1800),
+            'reservation.payment.refunded' => new EventDefinition('reservation.payment.refunded', 'reservation', 'WARNING', true, false, 'Remboursement traité', true, null),
+            'reservation.payment.refund.failed' => new EventDefinition('reservation.payment.refund.failed', 'reservation', 'ERROR', true, true, 'Échec du remboursement', true, 1800),
+            'reservation.payment.failed' => new EventDefinition('reservation.payment.failed', 'reservation', 'ERROR', true, true, 'Paiement réservation échoué', true, 1800),
+
+            // Token et réinitialisation
+            'reservation.token.updated' => new EventDefinition('reservation.token.updated', 'reservation', 'WARNING', true, false, 'Token de réservation modifié', true, null),
             'reservation.token.update.failed' => new EventDefinition('reservation.token.update.failed', 'reservation', 'ERROR', true, true, 'Échec de mise à jour du token de réservation', false, 1800),
+            'reservation.token.reinitialized' => new EventDefinition('reservation.token.reinitialized', 'reservation', 'WARNING', true, false, 'Token de réservation réinitialisé', true, null),
+            'reservation.token.reinit.failed' => new EventDefinition('reservation.token.reinit.failed', 'reservation', 'ERROR', true, true, 'Échec de la réinitialisation du token', true, 1800),
 
+            // Annulation et réactivation
             'reservation.cancel_order.requested' => new EventDefinition('reservation.cancel.requested', 'reservation', 'INFO', true, false, 'Demande d annulation de réservation', true, null),
-            'reservation.cancel_order.failed' => new EventDefinition('reservation.cancel.failed', 'reservation', 'WARNING', true, false, 'Demande d annulation de réservation échouée.', true, null),
-            'reservation.cancel_order.completed' => new EventDefinition('reservation.cancel.completed', 'reservation', 'NOTICE', true, false, 'Réservation annulée', true, null),
+            'reservation.cancel_order.failed' => new EventDefinition('reservation.cancel.failed', 'reservation', 'ERROR', true, false, 'Demande d annulation de réservation échouée.', true, null),
+            'reservation.cancel_order.completed' => new EventDefinition('reservation.cancel.completed', 'reservation', 'WARNING', true, false, 'Réservation annulée', true, null),
             'reservation.uncancel_order.requested' => new EventDefinition('reservation.uncancel.requested', 'reservation', 'INFO', true, false, 'Demande de réactivation de la réservation', true, null),
-            'reservation.uncancel_order.completed' => new EventDefinition('reservation.uncancel.completed', 'reservation', 'NOTICE', true, false, 'Réservation réactivée', true, null),
+            'reservation.uncancel_order.completed' => new EventDefinition('reservation.uncancel.completed', 'reservation', 'WARNING', true, false, 'Réservation réactivée', true, null),
 
+            // Mise à jour et suppression de réservation
+            'reservation.updated' => new EventDefinition('reservation.updated', 'reservation', 'INFO', true, false, 'Réservation mise à jour', true, null),
+            'reservation.update.failed' => new EventDefinition('reservation.update.failed', 'reservation', 'ERROR', true, false, 'Échec de mise à jour de réservation', true, 1800),
+            'reservation.deleted' => new EventDefinition('reservation.deleted', 'reservation', 'CRITICAL', true, false, 'Réservation supprimée', true, null),
+            'reservation.delete.failed' => new EventDefinition('reservation.delete.failed', 'reservation', 'ERROR', true, true, 'Échec de suppression de réservation', true, 1800),
+
+            // Gestion des réservations temporaires
+            'reservation.temp.locked' => new EventDefinition('reservation.temp.locked', 'reservation', 'INFO', true, false, 'Réservation temporaire verrouillée', true, null),
+            'reservation.temp.unlocked' => new EventDefinition('reservation.temp.unlocked', 'reservation', 'INFO', true, false, 'Réservation temporaire déverrouillée', true, null),
+            'reservation.temp.lock.failed' => new EventDefinition('reservation.temp.lock.failed', 'reservation', 'ERROR', true, false, 'Échec du verrouillage de la réservation temporaire', true, 1800),
+            'reservation.temp.deleted' => new EventDefinition('reservation.temp.deleted', 'reservation', 'NOTICE', true, false, 'Réservation temporaire supprimée', true, null),
+            'reservation.temp.delete.failed' => new EventDefinition('reservation.temp.delete.failed', 'reservation', 'ERROR', true, true, 'Échec de suppression de réservation temporaire', true, 1800),
+            'reservation.temp.cleaned' => new EventDefinition('reservation.temp.cleaned', 'reservation', 'INFO', false, false, 'Nettoyage de session temporaire réservation', true, null),
+
+            // Compléments
             'reservation.complement.added' => new EventDefinition('reservation.complement.added', 'reservation', 'INFO', false, false, 'Complément ajouté à une réservation', true, null),
             'reservation.complement.updated' => new EventDefinition('reservation.complement.updated', 'reservation', 'INFO', false, false, 'Complément mis à jour', true, null),
             'reservation.complement.deleted' => new EventDefinition('reservation.complement.deleted', 'reservation', 'INFO', false, false, 'Complément supprimé', true, null),
             'reservation.complement.entrance.checked' => new EventDefinition('reservation.complement.entrance.checked', 'reservation', 'INFO', true, false, 'Complément vérifié à l\'entrée', true, null),
+
+            // Détails de participants
             'reservation.detail.updated' => new EventDefinition('reservation.detail.updated', 'reservation', 'INFO', false, false, 'Participant de réservation mis à jour', true, null),
             'reservation.detail.entrance.attendance_marked' => new EventDefinition('reservation.detail.entrance.attendance_marked', 'reservation', 'INFO', true, false, 'Présence d\'un participant marquée à l\'entrée', true, null),
-            'reservation.contact.updated' => new EventDefinition('reservation.contact.updated', 'reservation', 'INFO', false, false, 'Coordonnées de réservation mises à jour', true, null),
-            'reservation.entrance.checked' => new EventDefinition('reservation.entrance.checked', 'reservation', 'INFO', true, false, 'Réservation marquée comme vérifiée à l\'entrée', true, null),
 
-            'reservation.temp.cleaned' => new EventDefinition('reservation.temp.cleaned', 'reservation', 'INFO', false, false, 'Nettoyage de session temporaire réservation', true, null),
-            'reservation.payment.failed' => new EventDefinition('reservation.payment.failed', 'reservation', 'ERROR', true, true, 'Paiement réservation échoué', true, 1800),
+            // Places et sièges
+            'reservation.seat.updated' => new EventDefinition('reservation.seat.updated', 'reservation', 'INFO', true, false, 'Place d\'un participant mise à jour', true, null),
+            'reservation.seat.update.failed' => new EventDefinition('reservation.seat.update.failed', 'reservation', 'ERROR', true, false, 'Échec de mise à jour de place', true, 1800),
+
+            // Contact et vérification
+            'reservation.contact.updated' => new EventDefinition('reservation.contact.updated', 'reservation', 'INFO', false, false, 'Coordonnées de réservation mises à jour', true, null),
+            'reservation.entrance.checked' => new EventDefinition('reservation.entrance.checked', 'reservation', 'NOTICE', true, false, 'Réservation marquée comme vérifiée à l\'entrée', true, null),
+            'reservation.checked.toggled' => new EventDefinition('reservation.checked.toggled', 'reservation', 'NOTICE', true, false, 'Statut de vérification togglé', true, null),
+            'reservation.checked.toggle.failed' => new EventDefinition('reservation.checked.toggle.failed', 'reservation', 'ERROR', true, false, 'Échec de la bascule du statut', true, 1800),
+
+            // Communications
+            'reservation.email.sent' => new EventDefinition('reservation.email.sent', 'reservation', 'INFO', true, false, 'Email de réservation envoyé', true, null),
+            'reservation.email.send.failed' => new EventDefinition('reservation.email.send.failed', 'reservation', 'ERROR', true, true, 'Échec d\'envoi d\'email de réservation', true, 1800),
 
             // ------------------------------------------------------------
             // Event / Manifestation (domain spécifique "Event" = manifestation)

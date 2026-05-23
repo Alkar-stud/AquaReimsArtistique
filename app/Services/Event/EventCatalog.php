@@ -86,7 +86,7 @@ final class EventCatalog
             'reservation.payment.refreshed' => new EventDefinition('reservation.payment.refreshed', 'reservation', 'INFO', true, false, 'État du paiement actualisé', true, null),
             'reservation.payment.refresh.failed' => new EventDefinition('reservation.payment.refresh.failed', 'reservation', 'WARNING', true, false, 'Échec de l\'actualisation du paiement', true, 1800),
             'reservation.payment.refunded' => new EventDefinition('reservation.payment.refunded', 'reservation', 'WARNING', true, false, 'Remboursement traité', true, null),
-            'reservation.payment.refund.failed' => new EventDefinition('reservation.payment.refund.failed', 'reservation', 'ERROR', true, true, 'Échec du remboursement', true, 1800),
+            'reservation.payment.refund.failed' => new EventDefinition('reservation.payment.refund.failed', 'reservation', 'WARNING', true, true, 'Échec du remboursement', true, 1800),
             'reservation.payment.failed' => new EventDefinition('reservation.payment.failed', 'reservation', 'ERROR', true, true, 'Paiement réservation échoué', true, 1800),
 
             // Token et réinitialisation
@@ -106,7 +106,7 @@ final class EventCatalog
             'reservation.updated' => new EventDefinition('reservation.updated', 'reservation', 'INFO', true, false, 'Réservation mise à jour', true, null),
             'reservation.update.failed' => new EventDefinition('reservation.update.failed', 'reservation', 'ERROR', true, false, 'Échec de mise à jour de réservation', true, 1800),
             'reservation.deleted' => new EventDefinition('reservation.deleted', 'reservation', 'CRITICAL', true, false, 'Réservation supprimée', true, null),
-            'reservation.delete.failed' => new EventDefinition('reservation.delete.failed', 'reservation', 'ERROR', true, true, 'Échec de suppression de réservation', true, 1800),
+            'reservation.delete.failed' => new EventDefinition('reservation.delete.failed', 'reservation', 'WARNING', true, true, 'Échec de suppression de réservation', true, 1800),
 
             // Gestion des réservations temporaires
             'reservation.temp.locked' => new EventDefinition('reservation.temp.locked', 'reservation', 'INFO', true, false, 'Réservation temporaire verrouillée', true, null),
@@ -198,6 +198,11 @@ final class EventCatalog
             'application.admin.swimmer.created' => new EventDefinition('application.admin.swimmer.created', 'application', 'INFO', true, false, 'Nageur créé', true, null),
             'application.admin.swimmer.updated' => new EventDefinition('application.admin.swimmer.updated', 'application', 'INFO', true, false, 'Nageur mis à jour', true, null),
             'application.admin.swimmer.deleted' => new EventDefinition('application.admin.swimmer.deleted', 'application', 'NOTICE', true, false, 'Nageur supprimé', true, null),
+
+            'application.admin.swimmer.group.created' => new EventDefinition('application.admin.swimmer.group.created', 'application', 'INFO', true, false, 'Groupe créé', true, null),
+            'application.admin.swimmer.group.updated' => new EventDefinition('application.admin.swimmer.group.updated', 'application', 'INFO', true, false, 'Groupe mis à jour', true, null),
+            'application.admin.swimmer.group.deleted' => new EventDefinition('application.admin.swimmer.group.deleted', 'application', 'NOTICE', true, false, 'Groupe supprimé', true, null),
+            'application.admin.swimmer.group.deleted.failed' => new EventDefinition('application.admin.swimmer.group.deleted.failed', 'application', 'WARNING', true, false, 'Échec de suppression du groupe, non vide', true, null),
 
             'application.admin.piscine.created' => new EventDefinition('application.admin.piscine.created', 'application', 'INFO', true, false, 'Piscine créée', true, null),
             'application.admin.piscine.updated' => new EventDefinition('application.admin.piscine.updated', 'application', 'INFO', true, false, 'Piscine mise à jour', true, null),

@@ -5,6 +5,7 @@ namespace app\Controllers\Gestion;
 use app\Attributes\Route;
 use app\Controllers\AbstractController;
 use app\Repository\Tarif\TarifRepository;
+use app\Services\Csv\BaseCsv;
 use app\Services\Pdf\PdfGenerationService;
 use app\Services\Reservation\ReservationQueryService;
 use app\Utils\DataHelper;
@@ -80,7 +81,7 @@ class ExportsController extends AbstractController
             $filename = 'export_reservations_' . $slugPart . '_' . date('Ymd_His') . '.csv';
 
             // Génération mémoire
-            $baseCsv = new \app\Services\Csv\BaseCsv();
+            $baseCsv = new BaseCsv();
             $csvContent = $baseCsv->generateContent($headerFields, $reservations);
 
             // Headers téléchargement

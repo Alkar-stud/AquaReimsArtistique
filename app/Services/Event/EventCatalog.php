@@ -141,9 +141,9 @@ final class EventCatalog
             'application.admin.event_presentation.upload.succeeded' => new EventDefinition('application.admin.event_presentation.upload.succeeded', 'application', 'INFO', true, false, 'Upload d image pour la page d accueil réussi', true, null),
 
             'application.admin.reservation.export.pdf.succeeded' => new EventDefinition('application.admin.reservation.export.pdf.succeeded', 'application', 'WARNING', true, false, 'Export PDF des réservations réussi', true, null),
-            'application.admin.reservation.export.pdf.failed' => new EventDefinition('application.admin.reservation.export.pdf.failed', 'application', 'WARNING', true, false, 'Échec de l export PDF des réservations', true, 1800),
+            'application.admin.reservation.export.pdf.failed' => new EventDefinition('application.admin.reservation.export.pdf.failed', 'application', 'ERROR', true, false, 'Échec de l export PDF des réservations', true, 1800),
             'application.admin.reservation.export.csv.succeeded' => new EventDefinition('application.admin.reservation.export.csv.succeeded', 'application', 'WARNING', true, false, 'Export CSV des réservations réussi', true, null),
-            'application.admin.reservation.export.csv.failed' => new EventDefinition('application.admin.reservation.export.csv.failed', 'application', 'WARNING', true, false, 'Échec de l export CSV des réservations', true, 1800),
+            'application.admin.reservation.export.csv.failed' => new EventDefinition('application.admin.reservation.export.csv.failed', 'application', 'ERROR', true, false, 'Échec de l export CSV des réservations', true, 1800),
 
             'application.admin.tarif.created' => new EventDefinition('application.admin.tariff.created', 'application', 'INFO', true, false, 'Tarif créé', true, null),
             'application.admin.tarif.updated' => new EventDefinition('application.admin.tariff.updated', 'application', 'INFO', true, false, 'Tarif mis à jour', true, null),

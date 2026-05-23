@@ -16,7 +16,6 @@ class DataHelper
 
         //On vérifie que c'est bien un tableau
         if (!is_array($data)) {
-            $this->json(['success' => false, 'message' => 'Données invalides.']);
             return null;
         }
 
@@ -28,7 +27,6 @@ class DataHelper
         //On vérifie si la ou les clés recherchées sont contenues dans $data
         foreach ($keyToCheck as $key) {
             if (!is_string($key) || !array_key_exists($key, $data)) {
-                $this->json(['success' => false, 'message' => 'Données manquantes.']);
                 return null;
             }
         }

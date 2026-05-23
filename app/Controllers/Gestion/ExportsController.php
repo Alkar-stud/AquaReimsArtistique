@@ -6,6 +6,7 @@ use app\Attributes\Route;
 use app\Controllers\AbstractController;
 use app\Repository\Tarif\TarifRepository;
 use app\Services\Csv\BaseCsv;
+use app\Services\Log\Logger;
 use app\Services\Pdf\PdfGenerationService;
 use app\Services\Reservation\ReservationQueryService;
 use app\Utils\DataHelper;
@@ -44,8 +45,22 @@ class ExportsController extends AbstractController
 
             // On envoie le PDF construit au navigateur.
             $pdf->Output('I', $this->PdfGenerationService->getFilenameForPdf($pdfType,$sessionId) . '.pdf');
+            //On log l'event
+            Logger::get()->event(
+                'application.admin.reservation.export.pdf.succeeded',
+            [
+                'session' => $sessionId,
+                'paramètres : ' => $pdfType
+            ]);
             exit;
         } catch (Exception $e) {
+            //On log l'event
+            Logger::get()->event(
+                'application.admin.reservation.export.pdf.failed',
+                [
+                    'session' => $sessionId,
+                    'error' => 'Erreur lors de la génération du PDF : ' . $e
+                ]);
             http_response_code(404);
             die("Erreur lors de la génération du PDF : " . $e->getMessage());
         }
@@ -93,8 +108,24 @@ class ExportsController extends AbstractController
             header('Expires: 0');
 
             echo $csvContent;
+            Logger::get()->event(
+                'application.admin.reservation.export.csv.succeeded',
+            [
+                'session' => $sessionId,
+                'paramètres : ' => $checkedFields,
+                'tarifs : ' => $selectedTarifIds
+            ]);
             exit;
         } catch (Exception $e) {
+            //On log l'event
+            Logger::get()->event(
+                'application.admin.reservation.export.csv.failed',
+                [
+                    'error' => 'Erreur lors de la génération du CSV : ' . $e,
+                    'session' => $sessionId,
+                    'paramètres : ' => $checkedFields,
+                    'tarifs : ' => $selectedTarifIds
+                ]);
             http_response_code(400);
             echo "Erreur lors de la génération du CSV : " . $e->getMessage();
         }

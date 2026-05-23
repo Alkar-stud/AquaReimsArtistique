@@ -3,7 +3,6 @@
 namespace app\Services\Event;
 
 use app\Repository\Event\EventInscriptionDateRepository;
-use app\Repository\Event\EventPresentationsRepository;
 use app\Repository\Event\EventRepository;
 use app\Repository\Event\EventSessionRepository;
 use app\Repository\Event\EventTarifRepository;
@@ -16,7 +15,6 @@ class EventCreateService
 {
     private EventRepository $eventRepository;
     private EventInscriptionDateRepository $eventInscriptionDateRepository;
-    private EventPresentationsRepository $eventPresentationsRepository;
     private EventSessionRepository $eventSessionRepository;
     private EventTarifRepository $eventTarifRepository;
     private EventDataValidationService $eventDataValidationService;
@@ -24,14 +22,12 @@ class EventCreateService
     public function __construct(
         EventRepository $eventRepository,
         EventInscriptionDateRepository $eventInscriptionDateRepository,
-        EventPresentationsRepository $eventPresentationsRepository,
         EventSessionRepository $eventSessionRepository,
         EventTarifRepository $eventTarifRepository,
         EventDataValidationService $eventDataValidationService,
     ) {
         $this->eventRepository = $eventRepository;
         $this->eventInscriptionDateRepository = $eventInscriptionDateRepository;
-        $this->eventPresentationsRepository = $eventPresentationsRepository;
         $this->eventSessionRepository = $eventSessionRepository;
         $this->eventTarifRepository = $eventTarifRepository;
         $this->eventDataValidationService = $eventDataValidationService;
@@ -93,11 +89,6 @@ class EventCreateService
             // On relance l'exception pour que le contrôleur puisse la gérer.
             throw new Exception("Une erreur est survenue lors de l'ajout de l'événement : " . $e->getMessage(), 0, $e);
         }
-    }
-
-    public function createPresentationForEVent($eventId): array
-    {
-        return ['messageType' => 'info', 'message' => "Ceci n'est pas encore implémenté."];
     }
 
 }

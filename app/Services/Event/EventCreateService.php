@@ -8,6 +8,7 @@ use app\Repository\Event\EventRepository;
 use app\Repository\Event\EventSessionRepository;
 use app\Repository\Event\EventTarifRepository;
 use app\Services\DataValidation\EventDataValidationService;
+use app\Services\Log\Logger;
 use Exception;
 use Throwable;
 
@@ -77,6 +78,15 @@ class EventCreateService
             }
 
             $this->eventRepository->commit();
+
+            //On log l'event
+            Logger::get()->event(
+                'event.create.succeeded',
+                [
+                    'event_id' => $eventId,
+                    'event_name' => $event->getName(),
+                ]);
+
             return $eventId;
         } catch (Throwable $e) {
             $this->eventRepository->rollBack();

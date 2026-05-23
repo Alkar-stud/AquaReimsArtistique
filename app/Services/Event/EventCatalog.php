@@ -115,7 +115,7 @@ final class EventCatalog
             'event.create.failed' => new EventDefinition('event.create.failed', 'event', 'ERROR', true, true, 'Échec lors de la création d\'une manifestation', true, 1800),
 
             'event.update.requested' => new EventDefinition('event.update.requested', 'event', 'INFO', true, false, 'Demande de modification d\'une manifestation', true, null),
-            'event.update.succeeded' => new EventDefinition('event.update.succeeded', 'event', 'INFO', true, false, 'Modification de la manifestation effectuée', true, null),
+            'event.update.succeeded' => new EventDefinition('event.update.succeeded', 'event', 'NOTICE', true, false, 'Modification de la manifestation effectuée', true, null),
             'event.update.failed' => new EventDefinition('event.update.failed', 'event', 'ERROR', true, true, 'Échec lors de la modification d\'une manifestation', true, 1800),
 
             // Suppression — cas particulier : si des inscriptions existent, c'est plus critique

@@ -8,7 +8,6 @@ use app\Models\User\User;
 use app\Repository\User\RoleRepository;
 use app\Repository\User\UserRepository;
 use app\Services\Log\Logger;
-use app\Services\Mails\MailPrepareService;
 use app\Services\Mails\MailService;
 use app\Services\Security\TokenGenerateService;
 use app\Services\DataValidation\UserDataValidationService;

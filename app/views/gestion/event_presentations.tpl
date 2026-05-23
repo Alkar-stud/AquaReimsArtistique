@@ -81,16 +81,16 @@
                 <div class="modal-body">
                     <div class="row mb-3">
                         <div class="row mb-3">
-                            <div class="col-md-4">
-                                <label for="add_event" class="form-label">Gala associé</label>
-                                <select name="event" id="add_event" class="form-select" required>
-                                    <option value="0">Aucun gala associé</option>
-                                    {% foreach $events as $event %}
-                                    <option value="{{ $event->getId() }}" data-event-id="{{ $event->getId() }}">
-                                        {{ $event->getName() }}
-                                    </option>
-                                    {% endforeach %}
-                                </select>
+                             <div class="col-md-4">
+                                 <label for="add_event" class="form-label">Gala associé</label>
+                                 <select name="event" id="add_event" class="form-select" required>
+                                     <option value="">-- Sélectionner un gala --</option>
+                                     {% foreach $events as $event %}
+                                     <option value="{{ $event->getId() }}" data-event-id="{{ $event->getId() }}">
+                                         {{ $event->getName() }}
+                                     </option>
+                                     {% endforeach %}
+                                 </select>
                             </div>
                             <div class="col-md-4">
                                 <label for="add_display_until" class="form-label">Afficher jusqu'au</label>
@@ -138,7 +138,7 @@
                         <div class="col-md-4">
                             <label for="event-{{ $item->getId() }}" class="form-label">Gala associé</label>
                             <select name="event" id="event-{{ $item->getId() }}" class="form-select" required>
-                                <option value="0">Aucun gala associé</option>
+                                <option value="">-- Sélectionner un gala --</option>
                                 {% foreach $events as $event %}
                                 <option value="{{ $event->getId() }}" {{ $item->getEventId() == $event->getId() ? 'selected' : '' }}>
                                     {{ $event->getName() }}

@@ -6,6 +6,7 @@ use app\Attributes\Route;
 use app\Controllers\AbstractController;
 use app\Repository\Reservation\ReservationRepository;
 use app\Services\Event\EventQueryService;
+use app\Services\Log\Logger;
 use app\Services\Reservation\ReservationEntranceAccessService;
 use app\Services\Reservation\ReservationQueryService;
 
@@ -164,6 +165,13 @@ class ReservationEntranceController extends AbstractController
 
         if ($isChecked !== null) {
             $this->reservationRepository->updateSingleField($reservation->getId(), 'is_checked', true);
+            //On log l'event
+            Logger::get()->event(
+                'reservation.entrance.checked',
+                [
+                    'reservation_id' => $reservation->getId(),
+                    'entry_validate_by_user_id' => $this->currentUser->getId()
+                ]);
             $this->json(['success' => true, 'message' => 'Réservation marquée comme vérifiée']);
         }
 

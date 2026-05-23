@@ -7,6 +7,7 @@ use app\Controllers\AbstractController;
 use app\Models\Piscine\Piscine;
 use app\Repository\Piscine\PiscineRepository;
 use app\Services\DataValidation\PiscineDataValidationService;
+use app\Services\Log\Logger;
 use app\Services\Piscine\SeatingPlanService;
 
 class PiscineController extends AbstractController
@@ -57,7 +58,13 @@ class PiscineController extends AbstractController
             ->setMaxPlaces($this->piscineDataValidationService->getMaxPlaces())
             ->setNumberedSeats($this->piscineDataValidationService->getNumberedSeats());
 
-        $this->piscineRepository->insert($piscine);
+        $piscineId = $this->piscineRepository->insert($piscine);
+        //On log l'event
+        Logger::get()->event(
+            'application.admin.piscine.created',
+            [
+                'piscine_id' => $piscineId
+            ]);
         $this->flashMessageService->setFlashMessage('success', "Piscine ajoutée.");
         $this->redirect('/gestion/piscines');
     }
@@ -89,6 +96,12 @@ class PiscineController extends AbstractController
             ->setNumberedSeats($this->piscineDataValidationService->getNumberedSeats());
 
         $this->piscineRepository->update($piscine);
+        //On log l'event
+        Logger::get()->event(
+            'application.admin.piscine.updated',
+            [
+                'piscine_id' => $piscine->getId()
+            ]);
         $this->flashMessageService->setFlashMessage('success', "Piscine modifiée.");
         $this->redirect('/gestion/piscines');
     }
@@ -108,6 +121,12 @@ class PiscineController extends AbstractController
         }
 
         $this->piscineRepository->delete($piscineId);
+        //On log l'event
+        Logger::get()->event(
+            'application.admin.piscine.deleted',
+            [
+                'piscine_id' => $piscineId
+            ]);
         $this->flashMessageService->setFlashMessage('success', "Piscine supprimée.");
         $this->redirect('/gestion/piscines');
     }
@@ -135,7 +154,14 @@ class PiscineController extends AbstractController
 
         //On tente de mettre à jour
         $this->seatingPlanService->updateAttribute($seatId, $attribute, $value);
-
+        //On log l'event
+        Logger::get()->event(
+            'application.admin.piscine.gradins.attribute.updated',
+            [
+                'seat_id' => $seatId,
+                'attribute' => $attribute,
+                'value' => $value
+            ]);
 
         $this->json([
             'success'  => true,

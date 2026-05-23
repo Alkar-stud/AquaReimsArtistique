@@ -186,6 +186,7 @@ final class EventCatalog
             'application.admin.tarif.created' => new EventDefinition('application.admin.tariff.created', 'application', 'INFO', true, false, 'Tarif créé', true, null),
             'application.admin.tarif.updated' => new EventDefinition('application.admin.tariff.updated', 'application', 'INFO', true, false, 'Tarif mis à jour', true, null),
             'application.admin.tarif.deleted' => new EventDefinition('application.admin.tariff.deleted', 'application', 'NOTICE', true, false, 'Tarif supprimé', true, null),
+            'application.admin.tarif.deleted.failed' => new EventDefinition('application.admin.tariff.deleted.failed', 'application', 'NOTICE', true, false, 'Échec de suppression du tarif, utilisé dans des event', true, null),
 
             'application.admin.mail_template.created' => new EventDefinition('application.admin.mail_template.created', 'application', 'INFO', true, false, 'Template mail créé', true, null),
             'application.admin.mail_template.updated' => new EventDefinition('application.admin.mail_template.updated', 'application', 'INFO', true, false, 'Template mail mis à jour', true, null),

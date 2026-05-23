@@ -16,7 +16,7 @@ use PDOException;
  */
 final class DbLogHandler implements LogHandlerInterface
 {
-    private const LEVELS = [
+    private const array LEVELS = [
         'DEBUG' => 100,
         'INFO' => 200,
         'NOTICE' => 250,

@@ -485,21 +485,14 @@ class ReservationsController extends AbstractController
             $this->json(['success' => false, 'message' => 'Réservation non trouvée.'], 404);
         }
 
-        // Si c'est un récap final, on passe par le service dédié pour avoir le PDF
-        if ($data['templateCode'] === 'final_summarya') {
-            // TODO : à faire
-            $returnEmailSent = $this->reservationFinalSummaryService->sendForReservation($reservation);
-        } else {
-            //Cas général, nouvelle méthode
-            $returnEmailSent = $this->mailService->send($data['templateCode'],
-                [
-                    'reservation' => $reservation,
-                ],
-                $reservation->getEmail(),
-                'reservation.' . $data['templateCode']
-            );
-
-        }
+        //On envoie le mail
+        $returnEmailSent = $this->mailService->send($data['templateCode'],
+            [
+                'reservation' => $reservation,
+            ],
+            $reservation->getEmail(),
+            'reservation.' . $data['templateCode']
+        );
 
         if (!$returnEmailSent) {
             $this->json(['success' => false, 'message' => 'Mail non envoyé']);

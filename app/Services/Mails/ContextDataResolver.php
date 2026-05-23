@@ -55,7 +55,6 @@ class ContextDataResolver
     {
         $resolved = [];
 
-
         // Gestion des objets
         if (isset($contextData['user']) && $contextData['user'] instanceof User) {
             $user = $contextData['user'];
@@ -115,19 +114,19 @@ class ContextDataResolver
         if (in_array('SIGNATURE', $keys)) {
             $resolved['SIGNATURE'] = SIGNATURE;
         }
-        if (isset($keys['email_club'])) {
+        if (in_array('email_club', $keys)) {
             $resolved['email_club'] = EMAIL_CLUB;
         }
-        if (isset($keys['email_gala'])) {
+        if (in_array('email_gala', $keys)) {
             $resolved['email_gala'] = EMAIL_GALA;
         }
-        if (isset($keys['app_name'])) {
+        if (in_array('app_name', $keys)) {
             $resolved['app_name'] = $_ENV['APP_NAME'];
         }
-        if (isset($keys['link'])) {
+        if (in_array('link', $keys)) {
             $resolved['link'] = $contextData['link'];
         }
-        if (isset($keys['username'])) {
+        if (in_array('username', $keys)) {
             $resolved['username'] = $contextData['username'];
         }
 

@@ -88,11 +88,6 @@ class PasswordResetController extends AbstractController
                 'user.password_reset'
             );
 
-            //(new MailPrepareService())->sendPasswordResetEmail(
-//                $user->getEmail(),
-//                $user->getDisplayName(),
-//                $resetLink
-            //);
         } catch (Exception $e) {
             Logger::get()->event('mail.smtp.failed', ['message' => $e->getMessage(), 'user_id' => $user->getId()]);
             error_log('Erreur critique du service Mail: ' . $e->getMessage());

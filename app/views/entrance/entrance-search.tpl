@@ -11,9 +11,9 @@
     <div class="alert alert-info">Aucune séance à venir dans les prochaines heures.
     </div>
     {% else %}
-    <div>Séances aujourd'hui : <br>
+    <div>Séances à venir : <br>
         {% foreach $todaySessions as $session %}
-        {{ $session['name'] }} : {{ $session['entered'] }} personnes entrée(s) / reste(s) {{ $session['total'] - $session['entered'] }}.
+        {{ $session['name'] }} ({{ $session['datetime'] }}) : {{ $session['entered'] }} personnes entrée(s) / reste(s) {{ $session['total'] - $session['entered'] }}.
         <br>
         {% endforeach %}
     </div>

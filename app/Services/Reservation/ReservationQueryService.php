@@ -340,7 +340,7 @@ class ReservationQueryService
             return ['single' => false, 'reservations' => []];
         }
 
-        $reservations = $this->reservationRepository->findByNameOrId($q, 10);
+        $reservations = $this->reservationRepository->findByNameOrId($q, 10, true);
 
         return [
             'single' => count($reservations) === 1,

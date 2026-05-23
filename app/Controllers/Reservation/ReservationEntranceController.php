@@ -83,6 +83,7 @@ class ReservationEntranceController extends AbstractController
             foreach($sessions as $session) {
                 $todaySessions[$session->getId()] = [
                     'name' => $session->getSessionName(),
+                    'datetime' => $session->getEventStartAt()->format('d/m/Y à H:i'),
                     'total' => $nbSpectatorsPerSession[$session->getId()]['qty'],
                     'entered' => $nbSpectatorsPerSession[$session->getId()]['entered'],
                 ];
@@ -130,14 +131,12 @@ class ReservationEntranceController extends AbstractController
         $reservation = $this->reservationRepository->findById($id, true, true);
         if (!$reservation) {
             $this->json(['success' => false, 'message' => 'Réservation non trouvée.'], 404);
-            return;
         }
 
         // Vérification de l'accès temporel
         $accessCheck = $this->reservationEntranceAccessService->canModifyReservation($reservation);
         if (!$accessCheck['allowed']) {
             $this->json($accessCheck, 403);
-            return;
         }
 
         //On récupère les données

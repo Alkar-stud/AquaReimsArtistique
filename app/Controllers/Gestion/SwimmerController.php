@@ -8,6 +8,7 @@ use app\Models\Swimmer\Swimmer;
 use app\Repository\Swimmer\SwimmerGroupRepository;
 use app\Repository\Swimmer\SwimmerRepository;
 use app\Services\DataValidation\SwimmerDataValidationService;
+use app\Services\Log\Logger;
 
 class SwimmerController extends AbstractController
 {
@@ -79,7 +80,15 @@ class SwimmerController extends AbstractController
         $swimmer = new Swimmer();
         $swimmer->setName($this->swimmerDataValidationService->getName())
             ->setGroup($this->swimmerDataValidationService->getGroup());
-        $this->swimmerRepository->insert($swimmer);
+        $swimmerId = $this->swimmerRepository->insert($swimmer);
+        //On log l'event
+        Logger::get()->event(
+            'application.admin.swimmer.created',
+            [
+                'swimmer_id' => $swimmerId,
+                'name' => $swimmer->getName(),
+                'new_group_id' => $swimmer->getGroup(),
+            ]);
         $this->flashMessageService->setFlashMessage('success', "Nageu.r.se ajouté.e");
         $this->redirect('/gestion/swimmers/' . $swimmer->getGroup());
     }
@@ -112,6 +121,15 @@ class SwimmerController extends AbstractController
             ->setGroup($this->swimmerDataValidationService->getGroup());
 
         $this->swimmerRepository->update($swimmer);
+        //On log l'event
+        Logger::get()->event(
+            'application.admin.swimmer.updated',
+            [
+                'swimmer_id' => $swimmer->getId(),
+                'name' => $swimmer->getName(),
+                'origin_group_id' => $originGroupId,
+                'new_group_id' => $swimmer->getGroup(),
+            ]);
         $this->flashMessageService->setFlashMessage('success', "Nageu.r.se modifié.e et/ou déplacé.e.");
         $originGroupId !== $swimmer->getGroup() ? $group = $originGroupId: $group = $swimmer->getGroup();
         $context = htmlspecialchars($_POST['context']) ?? 'desktop';
@@ -136,7 +154,14 @@ class SwimmerController extends AbstractController
         }
 
         $this->swimmerRepository->delete($swimmerId);
-
+        //On log l'event
+        Logger::get()->event(
+            'application.admin.swimmer.deleted',
+            [
+                'swimmer_id' => $swimmerId,
+                'name' => $swimmer->getName(),
+                'new_group_id' => $swimmer->getGroup(),
+            ]);
         $this->flashMessageService->setFlashMessage('success', "Nageu.r.se supprimé.e.");
         $this->redirect('/gestion/swimmers/' . $swimmer->getGroup() );
     }

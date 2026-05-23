@@ -61,7 +61,7 @@ class ContextDataResolver
             $resolved['username'] = $user->getUsername();
             $resolved['email'] = $user->getEmail();
             $resolved['displayName'] = $user->getDisplayName();
-            $resolved['timeout_token_new_account'] = $user->getPasswordResetExpiresAt();
+            $resolved['timeout_token_new_account'] = $user->getPasswordResetExpiresAt()->format('d/m/Y \à H\hi');
         }
 
         if (isset($contextData['reservation']) && $contextData['reservation'] instanceof Reservation) {

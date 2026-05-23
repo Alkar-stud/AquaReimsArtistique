@@ -30,7 +30,7 @@ final class EventCatalog
             'security.user.update.requested' => new EventDefinition('security.user.update.requested', 'security', 'INFO', true, false, 'Mise à jour d un compte demandée', true, null),
             'security.user.update.succeeded' => new EventDefinition('security.user.update.succeeded', 'security', 'INFO', true, false, 'Compte utilisateur mis à jour', true, null),
             'security.user.delete.requested' => new EventDefinition('security.user.delete.requested', 'security', 'NOTICE', true, false, 'Suppression d un compte demandée', true, null),
-            'security.user.delete.succeeded' => new EventDefinition('security.user.delete.succeeded', 'security', 'NOTICE', true, false, 'Compte utilisateur supprimé', true, null),
+            'security.user.delete.succeeded' => new EventDefinition('security.user.delete.succeeded', 'security', 'CRITICAL', true, false, 'Compte utilisateur supprimé', true, null),
 
             'security.password_reset.requested' => new EventDefinition('security.password_reset.requested', 'security', 'INFO', true, false, 'Demande de réinitialisation de mot de passe', false, null),
             'security.password_reset.token_created' => new EventDefinition('security.password_reset.token_created', 'security', 'INFO', true, false, 'Token de réinitialisation généré', false, null),

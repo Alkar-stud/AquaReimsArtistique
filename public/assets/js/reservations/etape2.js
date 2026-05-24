@@ -6,7 +6,8 @@ import { showFlashMessage } from '../components/ui.js';
 import {
     validateNameAndFirstname,
     validateEmailField,
-    validatePhoneField
+    validatePhoneField,
+    setState
 } from '../components/formContactValidator.js';
 
 // Met seulement aria-invalid et, si fourni, un message personnalisé.
@@ -163,6 +164,62 @@ function submitEtape2(name, firstname, email, phone, eventId, eventSessionId, rg
                     window.location.href = data.redirect;
                     return;
                 }
+                // Mapper les erreurs aux champs
+                if (data.errors && typeof data.errors === 'object') {
+                    const nameInput = document.getElementById('name');
+                    const firstnameInput = document.getElementById('firstname');
+                    const emailInput = document.getElementById('email');
+                    const phoneInput = document.getElementById('phone');
+                    const rgpdInput = document.getElementById('rgpd_consent');
+
+                    // ✅ Mapping avec variantes de clés
+                    const fieldInputMap = {
+                        // Variantes pour 'nom'
+                        'name': nameInput,
+                        'nom': nameInput,
+
+                        // Variantes pour 'prénom'
+                        'firstname': firstnameInput,
+                        'prénom': firstnameInput,
+                        'first_name': firstnameInput,
+
+                        // Email
+                        'email': emailInput,
+
+                        // Téléphone
+                        'phone': phoneInput,
+                        'tel': phoneInput,
+                        'telephone': phoneInput,
+
+                        // RGPD
+                        'rgpd_consent': rgpdInput,
+                        'rgpd': rgpdInput
+                    };
+
+                    // Réinitialiser les états d'erreur avant d'afficher les nouvelles
+                    [nameInput, firstnameInput, emailInput, phoneInput].forEach(inp => {
+                        if (inp) setState(inp, true, '');
+                    });
+
+                    let firstErrorField = null;
+                    let hasFieldErrors = false;
+
+                    // Parcourir les erreurs et les affecter aux champs
+                    for (const fieldName in data.errors) {
+                        const input = fieldInputMap[fieldName];
+                        if (input) {
+                            setState(input, false, data.errors[fieldName]);
+                            input.classList.add('is-invalid');
+                            if (!firstErrorField) {
+                                firstErrorField = input;
+                            }
+                            hasFieldErrors = true;
+                        }
+                    }
+
+
+                }
+
                 let errorHtml = '<ul>';
                 if (data.errors && typeof data.errors === 'object') {
                     for (const key in data.errors) {

@@ -7,7 +7,8 @@ use app\Models\User\Role;
 use app\Models\User\User;
 use app\Repository\User\RoleRepository;
 use app\Repository\User\UserRepository;
-use app\Services\Mails\MailPrepareService;
+use app\Services\Log\Logger;
+use app\Services\Mails\MailService;
 use app\Services\Security\TokenGenerateService;
 use app\Services\DataValidation\UserDataValidationService;
 use app\Utils\BuildLink;
@@ -18,14 +19,21 @@ class UserController extends AbstractController
     private UserRepository $userRepository;
     private RoleRepository $roleRepository;
     private UserDataValidationService $userDataValidationService;
+    private MailService $mailService;
     private Role $role;
 
-    public function __construct()
+    public function __construct(
+        UserRepository $userRepository,
+        RoleRepository $roleRepository,
+        UserDataValidationService $userDataValidationService,
+        MailService $mailService
+    )
     {
         parent::__construct(false);
-        $this->userRepository = new UserRepository();
-        $this->roleRepository = new RoleRepository();
-        $this->userDataValidationService = new UserDataValidationService();
+        $this->userRepository = $userRepository;
+        $this->roleRepository = $roleRepository;
+        $this->userDataValidationService = $userDataValidationService;
+        $this->mailService = $mailService;
     }
 
     #[Route('/gestion/users', name: 'app_gestion_users')]
@@ -67,17 +75,31 @@ class UserController extends AbstractController
             ->setPasswordResetToken($resetTokenData['token'])
             ->setPasswordResetExpiresAt($resetTokenData['expires_at_str']);
 
-        $this->userRepository->insert($newUser);
+        $newUserId = $this->userRepository->insert($newUser);
+        $newUser->setId($newUserId);
+        //On log l'event
+        Logger::get()->event('security.user.create.succeeded',
+            [
+                'user_id' => $newUser->getId(),
+                'username' => $newUser->getUsername(),
+                'mail' => $newUser->getEmail()
+            ]);
+
 
         // Envoyer l'email
         try {
             $buildLink = new buildLink();
             $resetLink = $buildLink->buildResetLink('/reset-password', $resetTokenData['token']);
-            (new MailPrepareService())->sendPasswordNewAccount(
+
+            $this->mailService->send(
+                'new_account',
+                [
+                    'user' => $newUser,
+                    'username' => $newUser->getUsername(),
+                    'link' => $resetLink,
+                ],
                 $newUser->getEmail(),
-                $newUser->getDisplayName(),
-                $resetLink,
-                $newUser->getPasswordResetExpiresAt()
+                'user.new_account'
             );
 
         } catch (Exception $e) {
@@ -110,6 +132,14 @@ class UserController extends AbstractController
             ->setIsActif($this->userDataValidationService->getIsActive())
             ->setSessionId(null);
         $this->userRepository->update($user);
+        //On log l'event
+        Logger::get()->event('security.user.update.succeeded',
+            [
+                'user_id' => $user->getId(),
+                'username' => $user->getUsername(),
+                'mail' => $user->getEmail()
+            ]);
+
 
         $this->flashMessageService->setFlashMessage('success','Utilisateur modifié.');
 
@@ -131,6 +161,11 @@ class UserController extends AbstractController
         }
 
         $this->userRepository->delete($userId);
+        //On log l'event
+        Logger::get()->event('security.user.delete.succeeded',
+            [
+                'user_id' => $userId
+            ]);
         $this->flashMessageService->setFlashMessage('success', "Utilisateur supprimé.");
         $this->redirect('/gestion/users');
     }

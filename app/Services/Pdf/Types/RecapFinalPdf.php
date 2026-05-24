@@ -66,7 +66,7 @@ final readonly class RecapFinalPdf implements PdfTypeInterface
         $pdf->SetFont('Arial', 'B', 10);
         $pdf->Cell(34, 6, mb_convert_encoding($data['params']['DateEvent'], 'ISO-8859-1', 'UTF-8'), 0, 0, 'L');
         $pdf->SetFont('Arial', '', 10);
-        $pdf->Cell(34, 6,mb_convert_encoding('à la piscine : ', 'ISO-8859-1', 'UTF-8'), 0, 0, 'L');
+        $pdf->Cell(34, 6,mb_convert_encoding('à la : ', 'ISO-8859-1', 'UTF-8'), 0, 0, 'L');
         $pdf->Ln(8);
         $pdf->SetFont('Arial', 'I', 10);
         $pdf->Cell(180, 6, mb_convert_encoding($reservation->getEventObject()->getPiscine()->getLabel() . ' située au ' . $reservation->getEventObject()->getPiscine()->getAddress(), 'ISO-8859-1', 'UTF-8'), 0, 0, 'L');

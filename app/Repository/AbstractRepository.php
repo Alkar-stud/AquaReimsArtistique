@@ -4,6 +4,7 @@ namespace app\Repository;
 
 use app\Services\Log\Logger;
 use app\Traits\HasPdoConnection;
+use app\Utils\Sanitize;
 use PDOException;
 use PDOStatement;
 
@@ -94,16 +95,16 @@ abstract class AbstractRepository
             return $result;
         } catch (PDOException $e) {
             $this->lastError = $e->getMessage();
-            Logger::get()->error(
-                'SQL Error',
-                $e->getMessage(),
+            //On log l'event
+            Logger::get()->event(
+                'database.query.failed',
                 [
                     'table' => $this->tableName,
                     'query' => $this->sanitizeSql($sql),
                     'params' => $this->sanitizeParams($params),
                     'error' => $e->getMessage(),
-                ]
-            );
+                ]);
+
             if ($_ENV['APP_DEBUG'] === 'true') {
                 echo 'Erreur SQL : ' . $e->getMessage() . "\n";
                 echo 'Requête : ' . $this->sanitizeSql($sql) . "\n";
@@ -139,16 +140,16 @@ abstract class AbstractRepository
             return $result;
         } catch (PDOException $e) {
             $this->lastError = $e->getMessage();
-            Logger::get()->error(
-                'SQL Error',
-                $e->getMessage(),
+            //On log l'event
+            Logger::get()->event(
+                'database.query.failed',
                 [
                     'table' => $this->tableName,
                     'query' => $this->sanitizeSql($sql),
                     'params' => $this->sanitizeParams($params),
                     'error' => $e->getMessage(),
-                ]
-            );
+                ]);
+
             $this->logQuery($operation, $sql, $params, $startTime, $affectedRows);
             return false;
         }
@@ -161,7 +162,7 @@ abstract class AbstractRepository
     private function sanitizeSql(string $sql): string
     {
         // Remplacer les valeurs sensibles par des placeholders
-        return preg_replace('/\s+/', ' ', trim($sql));
+        return Sanitize::sanitizeSql($sql);
     }
 
     /**
@@ -171,16 +172,7 @@ abstract class AbstractRepository
     private function sanitizeParams(array $params): array
     {
         // Masquer les mots de passe et données sensibles
-        $sanitized = [];
-        foreach ($params as $key => $value) {
-            if (in_array(strtolower($key), ['password', 'token', 'secret'])) {
-                $sanitized[$key] = '[MASKED]';
-            } else {
-                $sanitized[$key] = is_string($value) && strlen($value) > 100 ?
-                    substr($value, 0, 100) . '...' : $value;
-            }
-        }
-        return $sanitized;
+        return Sanitize::sanitizeParams($params);
     }
 
     /**

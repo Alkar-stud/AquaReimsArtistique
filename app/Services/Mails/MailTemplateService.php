@@ -8,9 +8,13 @@ use DateMalformedStringException;
 
 readonly class MailTemplateService
 {
+    private MailTemplateRepository $templateRepository;
     public function __construct(
-        private MailTemplateRepository $templateRepository = new MailTemplateRepository()
-    ) {}
+        MailTemplateRepository $templateRepository,
+    )
+    {
+        $this->templateRepository = $templateRepository;
+    }
 
     /**
      * Charge un template par code et remplace {placeholders}.

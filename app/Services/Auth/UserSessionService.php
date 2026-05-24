@@ -76,4 +76,16 @@ readonly class UserSessionService
     {
         return $_SESSION['user']['id'] ?? null;
     }
+
+    /**
+     * Récupère le user connecté
+     */
+    public function getUser(): ?User
+    {
+        if (!$this->isAuthenticated()) {
+            return null;
+        }
+        $userRepository = new UserRepository();
+        return $userRepository->findById($_SESSION['user']['id']);
+    }
 }

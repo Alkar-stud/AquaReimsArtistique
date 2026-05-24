@@ -9,8 +9,8 @@ use app\Repository\Event\EventPresentationsRepository;
 use app\Repository\Event\EventRepository;
 use app\Repository\Event\EventSessionRepository;
 use app\Services\DataValidation\EventPresentationDataValidationService;
+use app\Services\Log\Logger;
 use app\Services\UploadService;
-use DateTime;
 use Exception;
 use Throwable;
 
@@ -77,23 +77,34 @@ class EventPresentationsController extends AbstractController
         $this->checkIfCurrentUserIsAllowedToManagedThis(2, 'accueil');
 
         if (!isset($_FILES['upload'])) {
-            parent::json(['error' => ['message' => 'Aucun fichier envoyé.']], 400);
-            return;
+             parent::json(['error' => ['message' => 'Aucun fichier envoyé.']], 400);
         }
 
         try {
             $displayUntil = $_GET['displayUntil'] ?? null;
             $url = $this->uploadService->handleImageUpload($_FILES['upload'], $displayUntil);
-
+            //On log l'event
+            Logger::get()->event(
+                'application.admin.event_presentation.upload.succeeded',
+                [
+                    'picture' => $_FILES['upload']
+                ]);
             // On génère un nouveau token pour le formulaire qui a initié la requête
             $newCsrfToken = $this->csrfService->getToken($this->getCsrfContext());
 
             parent::json(['url' => $url, 'csrfToken' => $newCsrfToken]);
-        } catch (Exception $e) {
-            error_log('CKEditor Upload Error: ' . $e->getMessage()); // Log pour le debug
-            parent::json(['error' => ['message' => "Erreur lors de l'upload: " . $e->getMessage()]], 500);
-        }
-    }
+         } catch (Exception $e) {
+             //On log l'event d'échec
+             Logger::get()->event(
+                 'application.admin.event_presentation.upload.failed',
+                 [
+                     'picture' => $_FILES['upload']['name'] ?? 'unknown',
+                     'error' => $e->getMessage()
+                 ]);
+             error_log('CKEditor Upload Error: ' . $e->getMessage()); // Log pour le debug
+             parent::json(['error' => ['message' => "Erreur lors de l'upload: " . $e->getMessage()]], 500);
+         }
+     }
 
     #[Route('/gestion/accueil/add', name: 'app_gestion_accueil_add', methods: ['POST'])]
     public function add(): void
@@ -116,7 +127,13 @@ class EventPresentationsController extends AbstractController
                 ->setIsDisplayed($this->eventPresentationDataValidationService->isDisplayed());
 
             // Insérer en base de données
-            $this->eventPresentationsRepository->insert($eventPresentations);
+            $eventPresentationsId = $this->eventPresentationsRepository->insert($eventPresentations);
+            //On log l'event
+            Logger::get()->event(
+                'application.admin.event_presentation.created',
+                [
+                    'event_presentations_id' => $eventPresentationsId
+                ]);
             $this->flashMessageService->setFlashMessage('success', "Le contenu a été ajouté avec succès.");
 
         } catch (Throwable $e) {
@@ -133,11 +150,17 @@ class EventPresentationsController extends AbstractController
 
         if (!isset($data['id'], $data['status'])) {
             $this->json(['success' => false, 'message' => 'Données invalides.']);
-            return;
         }
 
         try {
             $this->eventPresentationsRepository->updateStatus((int)$data['id'], (bool)$data['status']);
+            //On log l'event
+            Logger::get()->event(
+                'application.admin.event_presentation.updated',
+                [
+                    'event_presentations_id' => $data['id'],
+                    'action' => 'Le statut a été mis à jour avec succès.'
+                ]);
             $this->flashMessageService->setFlashMessage('success', "Le statut a été mis à jour avec succès.");
             // On génère et renvoie un nouveau token pour maintenir la session sécurisée
             $newCsrfToken = $this->csrfService->getToken($this->getCsrfContext());
@@ -178,6 +201,13 @@ class EventPresentationsController extends AbstractController
 
             // Insérer en base de données
             $this->eventPresentationsRepository->update($eventPresentations);
+            //On log l'event
+            Logger::get()->event(
+                'application.admin.event_presentation.updated',
+                [
+                    'event_presentations_id' => $eventPresentations->getId(),
+                    'action' => 'Le contenu a été modifié avec succès.'
+                ]);
             $this->flashMessageService->setFlashMessage('success', "Le contenu a été modifié avec succès.");
 
         } catch (Throwable $e) {
@@ -201,6 +231,12 @@ class EventPresentationsController extends AbstractController
         }
 
         $this->eventPresentationsRepository->delete($eventPresentationsId);
+        //On log l'event
+        Logger::get()->event(
+            'application.admin.event_presentation.deleted',
+            [
+                'event_presentations_id' => $eventPresentationsId
+            ]);
         $this->flashMessageService->setFlashMessage('success', "Le contenu a été supprimé avec succès.");
         $this->redirect('/gestion/accueil');
     }

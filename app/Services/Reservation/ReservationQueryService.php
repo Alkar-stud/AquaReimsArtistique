@@ -6,27 +6,23 @@ use app\Core\Paginator;
 use app\Models\Piscine\Piscine;
 use app\Models\Reservation\Reservation;
 use app\Models\Reservation\ReservationDetail;
-use app\Models\Reservation\ReservationMailSent;
 use app\Repository\Event\EventRepository;
-use app\Repository\Mail\MailTemplateRepository;
 use app\Repository\Piscine\PiscineGradinsPlacesRepository;
 use app\Repository\Piscine\PiscineGradinsZonesRepository;
 use app\Repository\Reservation\ReservationComplementRepository;
 use app\Repository\Reservation\ReservationDetailRepository;
 use app\Repository\Reservation\ReservationDetailTempRepository;
-use app\Repository\Reservation\ReservationMailSentRepository;
 use app\Repository\Reservation\ReservationRepository;
 use app\Repository\Reservation\ReservationTempRepository;
-use app\Services\Mails\MailPrepareService;
 use app\Services\Piscine\PiscineQueryService;
 use app\Utils\StringHelper;
 use DateTime;
+use PHPMailer\PHPMailer\Exception;
 
 class ReservationQueryService
 {
     private ReservationRepository $reservationRepository;
     private EventRepository $eventRepository;
-    private MailPrepareService $mailPrepareService;
     private ReservationPriceCalculator $priceCalculator;
     private ReservationComplementRepository $reservationComplementRepository;
     private ReservationDetailRepository $reservationDetailRepository;
@@ -36,7 +32,6 @@ class ReservationQueryService
     public function __construct(
         ReservationRepository $reservationRepository,
         EventRepository $eventRepository,
-        MailPrepareService $mailPrepareService,
         ReservationPriceCalculator $priceCalculator,
         ReservationComplementRepository $reservationComplementRepository,
         ReservationDetailRepository $reservationDetailRepository,
@@ -46,7 +41,6 @@ class ReservationQueryService
     {
         $this->reservationRepository = $reservationRepository;
         $this->eventRepository = $eventRepository;
-        $this->mailPrepareService = $mailPrepareService;
         $this->priceCalculator = $priceCalculator;
         $this->reservationComplementRepository = $reservationComplementRepository;
         $this->reservationDetailRepository = $reservationDetailRepository;
@@ -107,30 +101,35 @@ class ReservationQueryService
         ];
     }
 
+
     /**
-     * Renvoie les emails de confirmation pour un événement et un email donnés.
+     * Pour vérifier si on peut renvoyer un email de confirmation pour un événement et un email donnés. (pour éviter le spam))
      *
      * @param int $eventId
      * @param string $email
      * @return array
      */
-    public function resendConfirmationEmails(int $eventId, string $email): array
+    public function getResendConfirmationCandidates(int $eventId, string $email): array
     {
         if (empty($email) || empty($eventId)) {
             return ['success' => false, 'error' => 'Paramètres manquants.'];
         }
 
+        //On récupère l'event
         $event = $this->eventRepository->findById($eventId);
         if (!$event) {
             return ['success' => false, 'error' => 'Événement invalide.'];
         }
 
+        //On récupère les réservations
         $reservations = $this->reservationRepository->findByEmailAndEvent($email, $eventId, true, true, true);
+
         if (empty($reservations)) {
             return ['success' => false, 'error' => 'Aucune réservation avec cet email pour cet événement.'];
         }
 
-        $NbMailNotResent = 0;
+        $eligibleReservations = [];
+        $notResentCount = 0;
         foreach ($reservations as $reservation) {
             //On compte combien d'email ont été envoyé pour cette raison
             $confirmationSentCount = 0;
@@ -141,36 +140,22 @@ class ReservationQueryService
                 }
             }
             if ($confirmationSentCount >= 2) { // Original + 1 renvoi
-                $NbMailNotResent++;
+                $notResentCount++;
                 continue; // Limite atteinte, on passe au suivant
             }
 
-            //On envoie le mail
-            $sent = $this->mailPrepareService->sendReservationConfirmationEmail($reservation);
-            if (!$sent) {
-                return ['success' => false, 'error' => 'Erreur lors de l\'envoi du mail.'];
-            }
-            //On récupère le MailTemplate
-            $mailTemplateRepository = new MailTemplateRepository();
-            $mailTemplatePaiementConfirme = $mailTemplateRepository->findByCode('paiement_confirme');
+            $eligibleReservations[] = $reservation;
 
-            //On inscrit dans la table le mail envoyé
-            $reservationMailSent = new ReservationMailSent();
-            $reservationMailSent->setMailTemplate($mailTemplatePaiementConfirme->getId())
-                                ->setReservation($reservation->getId())
-                                ->setSentAt((new DateTime())->format('Y-m-d H:i:s'));
-
-            $reservationMailSentRepository = new ReservationMailSentRepository();
-            $insertId = $reservationMailSentRepository->insert($reservationMailSent);
-            if ($insertId === 0) {
-                return ['success' => false, 'error' => 'Échec d\'insertion en BDD.'];
-            }
         }
 
-        if ($NbMailNotResent > 0) {
+        if ($notResentCount > 0) {
             return ['success' => false, 'error' => 'Au moins 1 mail n\'a pas été renvoyé car cela avait déjà été fait (vérifiez vos spams).'];
         }
-        return ['success' => true];
+        return [
+            'success' => true,
+            'reservations' => $eligibleReservations,
+            'not_resent_count' => $notResentCount,
+        ];
     }
 
 
@@ -355,7 +340,7 @@ class ReservationQueryService
             return ['single' => false, 'reservations' => []];
         }
 
-        $reservations = $this->reservationRepository->findByNameOrId($q, 10);
+        $reservations = $this->reservationRepository->findByNameOrId($q, 10, true);
 
         return [
             'single' => count($reservations) === 1,

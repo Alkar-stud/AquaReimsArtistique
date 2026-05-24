@@ -8,6 +8,7 @@ use app\Repository\Event\EventRepository;
 use app\Repository\Event\EventSessionRepository;
 use app\Repository\Event\EventTarifRepository;
 use app\Repository\Reservation\ReservationRepository;
+use app\Services\Log\Logger;
 use app\Services\Reservation\ReservationDeletionService;
 use Exception;
 use Throwable;
@@ -50,11 +51,23 @@ class EventDeletionService
      */
     public function deleteEvent($eventId): void
     {
+        //On log l'event
+        Logger::get()->event(
+            'event.delete.requested',
+            [
+                'event_id' => $eventId
+            ]);
         // Début de la transaction pour tout mettre à jour
         $this->eventRepository->beginTransaction();
         try {
             //On vérifie s'il y a déjà des réservations non annulées, dans ce cas, on bloque la suppression.
             if ($this->reservationRepository->hasReservations($eventId)) {
+                //On log l'event
+                Logger::get()->event(
+                    'event.delete.blocked_with_registrations',
+                    [
+                        'event_id' => $eventId
+                    ]);
                 throw new Exception("Suppression impossible, car des réservations actives existent pour cet événement.");
             }
             // Récupération de la liste des réservations annulées à supprimer pour cette event
@@ -76,8 +89,20 @@ class EventDeletionService
             $this->eventRepository->delete($eventId);
             //Fin de la transaction
             $this->eventRepository->commit();
-
+            //On log l'event
+            Logger::get()->event(
+                'event.delete.succeeded',
+                [
+                    'event_id' => $eventId
+                ]);
         } catch (Throwable $e) {
+            //On log l'event
+            Logger::get()->event(
+                'event.delete.succeeded',
+                [
+                    'event_id' => $eventId,
+                    'erreur' => $e
+                ]);
             $this->eventRepository->rollBack();
             throw $e;
         }

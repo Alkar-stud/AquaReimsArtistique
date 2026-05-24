@@ -14,14 +14,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Si ce conteneur n'existe pas, on n'est pas sur la bonne page. On ne fait rien.
     if (!reservationDataContainer) {
-        console.log('reservationDataContainer not found. Exiting modifData.js');
+        console.error('reservationDataContainer not found. Exiting modifData.js');
         return;
     }
 
     const paymentCheckContainer = document.getElementById('payment-check-container');
 
     if (paymentCheckContainer) {
-        console.log('Payment check container found. Initializing payment check handler.');
         initPaymentCheckHandler({
             containerSelector: '#payment-check-container',
             spinnerSelector: '#payment-check-spinner',

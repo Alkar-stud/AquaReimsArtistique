@@ -87,15 +87,14 @@ abstract class AbstractController
 
         $this->authorizationService = new AuthorizationService();
 
-        // Journaliser la requête dans le channel "url" (maintenant que l'utilisateur est connu)
-        Logger::get()->info(
-            LogType::URL->value,
-            'request',
+        // Journaliser la requête dans le channel "url"
+        //On log l'event
+        Logger::get()->event(
+            'access.request',
             [
                 'uri' => strtok($_SERVER['REQUEST_URI'] ?? '/', '?'),
                 'method' => $_SERVER['REQUEST_METHOD'] ?? 'GET',
-            ]
-        );
+            ]);
     }
 
     /**
@@ -133,7 +132,7 @@ abstract class AbstractController
         //$data['load_ckeditor'] = $data['is_gestion_page'] && (str_starts_with($uri, '/gestion/mails_templates') || str_starts_with($uri, '/gestion/accueil'));
         // Charge CKEditor sur /gestion/mails_templates[/...] et /gestion/accueil[/...]
         $data['load_ckeditor'] = $data['is_gestion_page']
-            && (bool)preg_match('#^/gestion/(mails_templates|accueil)(/|$)#', $uri);
+            && preg_match('#^/gestion/(mails_templates|accueil)(/|$)#', $uri);
 
         // Centralisation de la récupération des messages flash
         $data['flash_message'] = $this->flashMessageService->getFlashMessage();
@@ -266,7 +265,7 @@ abstract class AbstractController
      * - Régénère l'ID de session périodiquement et le persiste en base.
      * - Recharge l'utilisateur courant.
      *
-     * Effets de bord:
+     * Effets de bord :
      * - Met à jour `$_SESSION['user']`.
      * - Peut rediriger vers `/login` et terminer le script.
      *
@@ -316,7 +315,7 @@ abstract class AbstractController
      * Supprime la session actuelle, enregistre un message flash et redirige vers `/login`.
      * Optionnellement, mémorise l'URL courante pour y revenir après connexion.
      *
-     * Effets de bord:
+     * Effets de bord :
      * - Vide `$_SESSION`, détruit et redémarre la session.
      * - Définit un message flash.
      * - Envoie un en-tête `Location` et termine le script.
@@ -350,7 +349,7 @@ abstract class AbstractController
     /**
      * Applique les paramètres de sécurité et de cookie de la session selon l'environnement.
      *
-     * Effets de bord:
+     * Effets de bord :
      * - Modifie les directives INI des sessions.
      * - Définit le nom de session et les paramètres de cookie.
      *

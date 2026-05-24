@@ -635,9 +635,10 @@ class ReservationRepository extends AbstractRepository
      *
      * @param string $searchQuery
      * @param int|null $limit
+     * @param bool $isComing
      * @return Reservation[]
      */
-    public function findByNameOrId(string $searchQuery, ?int $limit = null): array
+    public function findByNameOrId(string $searchQuery, ?int $limit = null, bool $isComing = false): array
     {
         $params = [];
         $q = '%' . trim($searchQuery) . '%';
@@ -646,12 +647,24 @@ class ReservationRepository extends AbstractRepository
         $params['q_name'] = $q;
         $params['q_firstname'] = $q;
 
-        $sql = "SELECT * FROM $this->tableName 
-            WHERE (CAST(id AS CHAR) LIKE :q_id 
-                   OR name LIKE :q_name 
-                   OR firstname LIKE :q_firstname)
-              AND is_canceled = 0
-            ORDER BY created_at";
+        $sql = "SELECT $this->tableName.* FROM $this->tableName";
+
+        if ($isComing) {
+            // Joindre avec event_session pour vérifier la date
+            $sql .= " INNER JOIN event_session es ON $this->tableName.event_session = es.id";
+        }
+
+        $sql .= " WHERE (CAST($this->tableName.id AS CHAR) LIKE :q_id 
+                   OR $this->tableName.name LIKE :q_name 
+                   OR $this->tableName.firstname LIKE :q_firstname)
+              AND $this->tableName.is_canceled = 0";
+
+        if ($isComing) {
+            // Filtrer pour ne garder que les réservations avec une date >= aujourd'hui (comparaison des dates uniquement)
+            $sql .= " AND DATE(es.event_start_at) >= CURDATE()";
+        }
+
+        $sql .= " ORDER BY $this->tableName.created_at";
 
         if ($limit !== null) {
             $sql .= " LIMIT $limit";

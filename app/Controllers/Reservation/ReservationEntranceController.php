@@ -6,6 +6,7 @@ use app\Attributes\Route;
 use app\Controllers\AbstractController;
 use app\Repository\Reservation\ReservationRepository;
 use app\Services\Event\EventQueryService;
+use app\Services\Log\Logger;
 use app\Services\Reservation\ReservationEntranceAccessService;
 use app\Services\Reservation\ReservationQueryService;
 
@@ -83,6 +84,7 @@ class ReservationEntranceController extends AbstractController
             foreach($sessions as $session) {
                 $todaySessions[$session->getId()] = [
                     'name' => $session->getSessionName(),
+                    'datetime' => $session->getEventStartAt()->format('d/m/Y à H:i'),
                     'total' => $nbSpectatorsPerSession[$session->getId()]['qty'],
                     'entered' => $nbSpectatorsPerSession[$session->getId()]['entered'],
                 ];
@@ -130,14 +132,12 @@ class ReservationEntranceController extends AbstractController
         $reservation = $this->reservationRepository->findById($id, true, true);
         if (!$reservation) {
             $this->json(['success' => false, 'message' => 'Réservation non trouvée.'], 404);
-            return;
         }
 
         // Vérification de l'accès temporel
         $accessCheck = $this->reservationEntranceAccessService->canModifyReservation($reservation);
         if (!$accessCheck['allowed']) {
             $this->json($accessCheck, 403);
-            return;
         }
 
         //On récupère les données
@@ -165,6 +165,13 @@ class ReservationEntranceController extends AbstractController
 
         if ($isChecked !== null) {
             $this->reservationRepository->updateSingleField($reservation->getId(), 'is_checked', true);
+            //On log l'event
+            Logger::get()->event(
+                'reservation.entrance.checked',
+                [
+                    'reservation_id' => $reservation->getId(),
+                    'entry_validate_by_user_id' => $this->currentUser->getId()
+                ]);
             $this->json(['success' => true, 'message' => 'Réservation marquée comme vérifiée']);
         }
 

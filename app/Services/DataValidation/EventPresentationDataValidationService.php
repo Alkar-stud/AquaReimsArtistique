@@ -22,10 +22,10 @@ class EventPresentationDataValidationService
         try {
             // --- Validation de l'événement associé ---
             $eventId = filter_var($postData['event'] ?? 0, FILTER_VALIDATE_INT);
-            if ($eventId === false) {
-                return "L'événement associé est invalide.";
+            if ($eventId === false || $eventId <= 0) {
+                return "L'événement associé est obligatoire et doit être valide.";
             }
-            $this->eventId = $eventId > 0 ? $eventId : null;
+            $this->eventId = $eventId;
 
             // --- Validation de la date de fin d'affichage ---
             if (empty($postData['display_until'])) {

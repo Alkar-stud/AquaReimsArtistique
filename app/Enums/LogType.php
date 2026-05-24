@@ -8,6 +8,7 @@ enum LogType: string
     case DATABASE = 'db';        // INSERT, UPDATE, DELETE
     case URL = 'url';           // URLs demandées
     case APPLICATION = 'application'; //erreurs retournées par l'application
+    case MAIL = 'mail'; //erreurs de mail
     case URL_ERROR = 'url_error'; //URLs qui donnent 404
     case SQL_ERROR = 'sql_errors'; //erreurs SQL
     case SECURITY = 'security'; //erreurs de sécurité

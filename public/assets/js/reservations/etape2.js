@@ -216,8 +216,6 @@ function submitEtape2(name, firstname, email, phone, eventId, eventSessionId, rg
                             hasFieldErrors = true;
                         }
                     }
-
-
                 }
 
                 let errorHtml = '<ul>';

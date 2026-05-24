@@ -48,11 +48,6 @@ final class AlertNotifier
         // fallback -> écrire dans un fichier
         $line = '[' . (new DateTimeImmutable())->format('Y-m-d H:i:s') . '] ' . $subject . "\n" . $body . "\n\n";
         $resultFile = file_put_contents($this->fallbackFile, $line, FILE_APPEND | LOCK_EX);
-        echo '<pre>';
-        print_r($line);
-        echo "<hr>\n";
-        var_dump($resultFile);
-        die;
     }
 
     private function buildBody(EventDefinition $def, array $context): string

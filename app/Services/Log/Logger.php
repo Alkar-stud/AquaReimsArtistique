@@ -33,7 +33,7 @@ final class Logger implements LoggerInterface
     public static function get(): self
     {
         if (!self::$instance) {
-            // Fallback minimal: fichier dans storage/log
+            // Fallback minimal : fichier dans storage/log
             $fileHandler = new FileLogHandler(__DIR__ . '/../../../storage/log');
             $masked = (require __DIR__ . '/../../../config/security.php')['sensitive_data_keys'] ?? ['password','token','secret'];
             self::$instance = new self([$fileHandler], $masked);
@@ -66,10 +66,7 @@ final class Logger implements LoggerInterface
         }
     }
 
-    public function warning(string $channel, string $message, array $context = []): void { $this->log('WARNING', $channel, $message, $context); }
     public function error(string $channel, string $message, array $context = []): void { $this->log('ERROR', $channel, $message, $context); }
-    public function critical(string $channel, string $message, array $context = []): void { $this->log('CRITICAL', $channel, $message, $context); }
-
 
     /**
      * Enregistre un événement métier identifié par son code.

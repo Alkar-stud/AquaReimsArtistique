@@ -76,15 +76,14 @@ final class ErrorHandler
         if (in_array($err['type'] ?? 0, $fatalTypes, true)) {
             LoggingBootstrap::ensureInitialized();
 
-            Logger::get()->critical(
-                LogType::APPLICATION->value,
-                'fatal_error',
+            //On log l'event
+            Logger::get()->event(
+                'application.fatal_error',
                 [
                     'type' => $err['type'],
                     'message' => $err['message'],
                     'file' => $err['file'] . ':' . $err['line'],
-                ]
-            );
+                ]);
 
             if (!headers_sent()) {
                 $this->respond500('Fatal error');

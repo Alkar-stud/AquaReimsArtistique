@@ -155,8 +155,8 @@ final class EventCatalog
             // Suppression — cas particulier : si des inscriptions existent, c'est plus critique
             'event.delete.requested' => new EventDefinition('event.delete.requested', 'event', 'NOTICE', true, false, 'Demande de suppression d\'une manifestation', true, null),
             'event.delete.succeeded' => new EventDefinition('event.delete.succeeded', 'event', 'NOTICE', true, false, 'Manifestation supprimée', true, null),
-            'event.delete.blocked_with_registrations' => new EventDefinition('event.delete.blocked_with_registrations', 'event', 'WARNING', true, true, 'Suppression bloquée : des inscriptions existent', true, 3600),
-            'event.delete.failed' => new EventDefinition('event.delete.failed', 'event', 'ERROR', true, true, 'Échec lors de la suppression d\'une manifestation', true, 1800),
+            'event.delete.blocked_with_registrations' => new EventDefinition('event.delete.blocked_with_registrations', 'event', 'WARNING', true, false, 'Suppression bloquée : des inscriptions existent', true, 3600),
+            'event.delete.failed' => new EventDefinition('event.delete.failed', 'event', 'ERROR', true, false, 'Échec lors de la suppression d\'une manifestation', true, 1800),
 
             // Publication / visibilité
             'event.publish' => new EventDefinition('event.publish', 'event', 'NOTICE', true, false, 'Manifestation publiée (visible aux utilisateurs)', true, null),
@@ -165,7 +165,7 @@ final class EventCatalog
             // Gestion des inscriptions / capacités
             'event.registration.opened' => new EventDefinition('event.registration.opened', 'event', 'INFO', true, false, 'Ouverture des inscriptions pour une manifestation', true, null),
             'event.registration.closed' => new EventDefinition('event.registration.closed', 'event', 'INFO', true, false, 'Fermeture des inscriptions pour une manifestation', true, null),
-            'event.capacity.changed' => new EventDefinition('event.capacity.changed', 'event', 'NOTICE', true, false, 'Capacité (places) de la manifestation modifiée', true, null),
+            'event.capacity.changed' => new EventDefinition('event.capacity.changed', 'event', 'NOTICE', true, true, 'Capacité (places) de la manifestation modifiée', true, null),
             'event.capacity.reduced' => new EventDefinition('event.capacity.reduced', 'event', 'WARNING', true, true, 'Capacité réduite : impact possible sur inscriptions existantes', true, 3600),
             'event.capacity.exceeded' => new EventDefinition('event.capacity.exceeded', 'event', 'CRITICAL', true, true, 'Capacité dépassée — incohérence détectée', true, 3600),
 

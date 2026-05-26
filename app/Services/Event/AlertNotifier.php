@@ -2,7 +2,10 @@
 
 namespace app\Services\Event;
 
+use app\Services\Mails\SystemMailer;
 use DateTimeImmutable;
+use PHPMailer\PHPMailer\Exception;
+use Throwable;
 
 /**
  * Notificateur simple : envoie une notification texte via mail() si configuré,
@@ -14,7 +17,9 @@ final class AlertNotifier
     private ?string $toEmail;
     private ?string $fromEmail;
 
-    public function __construct(string $storageDir = null)
+    public function __construct(
+        string $storageDir = null,
+    )
     {
         $storageDir = $storageDir ?? __DIR__ . '/../../../storage/log';
         if (!is_dir($storageDir)) { @mkdir($storageDir, 0755, true); }
@@ -30,24 +35,43 @@ final class AlertNotifier
      *
      * @param EventDefinition $def
      * @param array $context
+     * @throws Exception
      */
     public function notify(EventDefinition $def, array $context = []): void
     {
+        // On ajoute le user connecté s'il y en a un dans le contexte
+        $context['user_id'] = $_SESSION['user']['id'] ?? null;
+
         $subject = '[' . strtoupper($def->getLevel()) . '] ' . $def->getCode();
         $body = $this->buildBody($def, $context);
 
         if ($this->toEmail && $this->fromEmail) {
+            // Tenter d'envoyer via SystemMailer (PHPMailer configuré depuis env)
+            $sent = false;
+            if (!empty($this->toEmail)) {
+                try {
+                    $sysMailer = new SystemMailer();
+                    $sent = $sysMailer->send($this->toEmail, $subject, $body);
+                } catch (Throwable $e) {
+                    error_log('AlertNotifier: SystemMailer failed: ' . $e->getMessage());
+                    $sent = false;
+                }
+
+                if ($sent) {
+                    return; // succès, on ne fait rien d'autre
+                }
+            }
             $headers = 'From: ' . $this->fromEmail . "\r\n" . 'Content-Type: text/plain; charset=UTF-8';
             // Utiliser mail(); si échoue fallback
             $ok = @mail($this->toEmail, $subject, $body, $headers);
             if ($ok) {
-                return;
+                //return;
             }
         }
 
         // fallback -> écrire dans un fichier
         $line = '[' . (new DateTimeImmutable())->format('Y-m-d H:i:s') . '] ' . $subject . "\n" . $body . "\n\n";
-        $resultFile = file_put_contents($this->fallbackFile, $line, FILE_APPEND | LOCK_EX);
+        @file_put_contents($this->fallbackFile, $line, FILE_APPEND | LOCK_EX);
     }
 
     private function buildBody(EventDefinition $def, array $context): string

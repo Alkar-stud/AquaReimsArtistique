@@ -129,6 +129,12 @@ class ContextDataResolver
         if (in_array('username', $keys)) {
             $resolved['username'] = $contextData['username'];
         }
+        if (in_array('subject', $keys)) {
+            $resolved['subject'] = $contextData['subject'];
+        }
+        if (in_array('content_mail', $keys)) {
+            $resolved['content_mail'] = $contextData['content_mail'];
+        }
 
         return $resolved;
     }

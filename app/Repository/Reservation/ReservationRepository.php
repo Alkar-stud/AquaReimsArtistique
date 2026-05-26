@@ -909,7 +909,7 @@ class ReservationRepository extends AbstractRepository
     }
 
     /**
-     * On fait pareil pour vérifier s'il y a des réservations active pour un event
+     * Pour vérifier s'il y a des réservations active pour un event
      * @param int $eventId
      * @return bool
      */

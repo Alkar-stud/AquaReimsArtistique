@@ -30,7 +30,7 @@ final class EventCatalog
             'security.user.update.requested' => new EventDefinition('security.user.update.requested', 'security', 'INFO', true, false, 'Mise à jour d un compte demandée', true, null),
             'security.user.update.succeeded' => new EventDefinition('security.user.update.succeeded', 'security', 'INFO', true, false, 'Compte utilisateur mis à jour', true, null),
             'security.user.delete.requested' => new EventDefinition('security.user.delete.requested', 'security', 'NOTICE', true, false, 'Suppression d un compte demandée', true, null),
-            'security.user.delete.succeeded' => new EventDefinition('security.user.delete.succeeded', 'security', 'CRITICAL', true, false, 'Compte utilisateur supprimé', true, null),
+            'security.user.delete.succeeded' => new EventDefinition('security.user.delete.succeeded', 'security', 'CRITICAL', true, true, 'Compte utilisateur supprimé', true, null),
 
             'security.password_reset.requested' => new EventDefinition('security.password_reset.requested', 'security', 'INFO', true, false, 'Demande de réinitialisation de mot de passe', false, null),
             'security.password_reset.token_created' => new EventDefinition('security.password_reset.token_created', 'security', 'INFO', true, false, 'Token de réinitialisation généré', false, null),
@@ -105,7 +105,7 @@ final class EventCatalog
             // Mise à jour et suppression de réservation
             'reservation.updated' => new EventDefinition('reservation.updated', 'reservation', 'INFO', true, false, 'Réservation mise à jour', true, null),
             'reservation.update.failed' => new EventDefinition('reservation.update.failed', 'reservation', 'ERROR', true, false, 'Échec de mise à jour de réservation', true, 1800),
-            'reservation.deleted' => new EventDefinition('reservation.deleted', 'reservation', 'CRITICAL', true, false, 'Réservation supprimée', true, null),
+            'reservation.deleted' => new EventDefinition('reservation.deleted', 'reservation', 'CRITICAL', true, true, 'Réservation supprimée', true, null),
             'reservation.delete.failed' => new EventDefinition('reservation.delete.failed', 'reservation', 'WARNING', true, true, 'Échec de suppression de réservation', true, 1800),
 
             // Gestion des réservations temporaires
@@ -113,7 +113,7 @@ final class EventCatalog
             'reservation.temp.unlocked' => new EventDefinition('reservation.temp.unlocked', 'reservation', 'INFO', true, false, 'Réservation temporaire déverrouillée', true, null),
             'reservation.temp.lock.failed' => new EventDefinition('reservation.temp.lock.failed', 'reservation', 'ERROR', true, false, 'Échec du verrouillage de la réservation temporaire', true, 1800),
             'reservation.temp.deleted' => new EventDefinition('reservation.temp.deleted', 'reservation', 'NOTICE', true, false, 'Réservation temporaire supprimée', true, null),
-            'reservation.temp.delete.failed' => new EventDefinition('reservation.temp.delete.failed', 'reservation', 'ERROR', true, true, 'Échec de suppression de réservation temporaire', true, 1800),
+            'reservation.temp.delete.failed' => new EventDefinition('reservation.temp.delete.failed', 'reservation', 'ERROR', true, false, 'Échec de suppression de réservation temporaire', true, 1800),
             'reservation.temp.cleaned' => new EventDefinition('reservation.temp.cleaned', 'reservation', 'INFO', false, false, 'Nettoyage de session temporaire réservation', true, null),
 
             // Compléments
@@ -146,17 +146,17 @@ final class EventCatalog
             // Création / modification / suppression d'une manifestation (évènement public)
             'event.create.requested' => new EventDefinition('event.create.requested', 'event', 'INFO', true, false, 'Création d\'une manifestation demandée', true, null),
             'event.create.succeeded' => new EventDefinition('event.create.succeeded', 'event', 'INFO', true, false, 'Création de la manifestation effectuée', true, null),
-            'event.create.failed' => new EventDefinition('event.create.failed', 'event', 'ERROR', true, true, 'Échec lors de la création d\'une manifestation', true, 1800),
+            'event.create.failed' => new EventDefinition('event.create.failed', 'event', 'ERROR', true, false, 'Échec lors de la création d\'une manifestation', true, 1800),
 
-            'event.update.requested' => new EventDefinition('event.update.requested', 'event', 'INFO', true, false, 'Demande de modification d\'une manifestation', true, null),
+            'event.update.requested' => new EventDefinition('event.update.requested', 'event', 'INFO', true, true, 'Demande de modification d\'une manifestation', true, null),
             'event.update.succeeded' => new EventDefinition('event.update.succeeded', 'event', 'NOTICE', true, false, 'Modification de la manifestation effectuée', true, null),
             'event.update.failed' => new EventDefinition('event.update.failed', 'event', 'ERROR', true, true, 'Échec lors de la modification d\'une manifestation', true, 1800),
 
             // Suppression — cas particulier : si des inscriptions existent, c'est plus critique
             'event.delete.requested' => new EventDefinition('event.delete.requested', 'event', 'NOTICE', true, false, 'Demande de suppression d\'une manifestation', true, null),
-            'event.delete.succeeded' => new EventDefinition('event.delete.succeeded', 'event', 'NOTICE', true, false, 'Manifestation supprimée', true, null),
+            'event.delete.succeeded' => new EventDefinition('event.delete.succeeded', 'event', 'NOTICE', true, true, 'Manifestation supprimée', true, null),
             'event.delete.blocked_with_registrations' => new EventDefinition('event.delete.blocked_with_registrations', 'event', 'WARNING', true, true, 'Suppression bloquée : des inscriptions existent', true, 3600),
-            'event.delete.failed' => new EventDefinition('event.delete.failed', 'event', 'ERROR', true, true, 'Échec lors de la suppression d\'une manifestation', true, 1800),
+            'event.delete.failed' => new EventDefinition('event.delete.failed', 'event', 'ERROR', true, false, 'Échec lors de la suppression d\'une manifestation', true, 1800),
 
             // Publication / visibilité
             'event.publish' => new EventDefinition('event.publish', 'event', 'NOTICE', true, false, 'Manifestation publiée (visible aux utilisateurs)', true, null),
@@ -165,7 +165,7 @@ final class EventCatalog
             // Gestion des inscriptions / capacités
             'event.registration.opened' => new EventDefinition('event.registration.opened', 'event', 'INFO', true, false, 'Ouverture des inscriptions pour une manifestation', true, null),
             'event.registration.closed' => new EventDefinition('event.registration.closed', 'event', 'INFO', true, false, 'Fermeture des inscriptions pour une manifestation', true, null),
-            'event.capacity.changed' => new EventDefinition('event.capacity.changed', 'event', 'NOTICE', true, false, 'Capacité (places) de la manifestation modifiée', true, null),
+            'event.capacity.changed' => new EventDefinition('event.capacity.changed', 'event', 'NOTICE', true, true, 'Capacité (places) de la manifestation modifiée', true, null),
             'event.capacity.reduced' => new EventDefinition('event.capacity.reduced', 'event', 'WARNING', true, true, 'Capacité réduite : impact possible sur inscriptions existantes', true, 3600),
             'event.capacity.exceeded' => new EventDefinition('event.capacity.exceeded', 'event', 'CRITICAL', true, true, 'Capacité dépassée — incohérence détectée', true, 3600),
 
@@ -194,7 +194,7 @@ final class EventCatalog
 
             'application.admin.config.created' => new EventDefinition('application.admin.config.created', 'application', 'NOTICE', true, false, 'Configuration créée', true, null),
             'application.admin.config.updated' => new EventDefinition('application.admin.config.updated', 'application', 'WARNING', true, false, 'Configuration mise à jour', true, null),
-            'application.admin.config.deleted' => new EventDefinition('application.admin.config.deleted', 'application', 'CRITICAL', true, false, 'Configuration supprimée', true, null),
+            'application.admin.config.deleted' => new EventDefinition('application.admin.config.deleted', 'application', 'CRITICAL', true, true, 'Configuration supprimée', true, null),
 
             'application.admin.swimmer.created' => new EventDefinition('application.admin.swimmer.created', 'application', 'INFO', true, false, 'Nageur créé', true, null),
             'application.admin.swimmer.updated' => new EventDefinition('application.admin.swimmer.updated', 'application', 'INFO', true, false, 'Nageur mis à jour', true, null),

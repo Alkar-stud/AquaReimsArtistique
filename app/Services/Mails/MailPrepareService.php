@@ -96,44 +96,8 @@ readonly class MailPrepareService
         $mailer->Body = $templateFilled->getBodyHtml() ?? '';
         $mailer->AltBody = $templateFilled->getBodyText() ?? '';
 
-/*
-        echo '<pre>';
-        print_r($templateFilled);
-        echo "\n";
-        print_r($replacements);
-        echo "\n";
-        var_dump($mailer);
-        echo "\n";
-        die;
-*/
-
         return $mailer;
     }
-
-
-    /**
-     * Pour préparer le mail final_summary
-     *
-     */
-    public function buildRecapSummaryEmailParam(Reservation $reservation): array
-    {
-        // Préparation des paramètres (QR codes inclus)
-        $params = $this->buildReservationEmailParams($reservation, true);
-/*
-        // Génération du PDF RecapFinal
-        $pdf = $this->pdfGenerationService->generateUnitPdf('RecapFinal', $reservation->getId(), $params);
-        $pdfPath = sys_get_temp_dir() . '/recap_' . $reservation->getId() . '_' . uniqid() . '.pdf';
-        file_put_contents($pdfPath, $pdf->Output('S'));
-*/
-        return [''];
-
-    }
-
-
-
-
-
-
 
     /**
      * @param Reservation $reservation

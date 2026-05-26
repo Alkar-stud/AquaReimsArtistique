@@ -35,7 +35,7 @@ final class DbLogHandler implements LogHandlerInterface
      * Constructeur. Aucun argument requis ; on lira la config si présente.
      * @param array|null $options (optionnel) map pour surcharger les seuils
      */
-    public function __construct(array $options = null)
+    public function __construct(?array $options = null)
     {
         $configFile = __DIR__ . '/../../../config/logging.php';
         $cfg = [];
@@ -102,11 +102,16 @@ final class DbLogHandler implements LogHandlerInterface
             $stmt->bindValue(':method', $method);
             $stmt->bindValue(':duration_ms', $duration === null ? null : $duration);
             $stmt->bindValue(':request_id', $request_id);
-            $stmt->execute();
+            $result = $stmt->execute();
+
+            if (!$result) {
+                $errorInfo = $stmt->errorInfo();
+                error_log('DbLogHandler execute failed: ' . json_encode($errorInfo));
+            }
         } catch (PDOException $e) {
-            // Ne pas propager l'erreur ; on échoue silencieusement (fichier garde l'historique)
+            error_log('DbLogHandler PDOException: ' . $e->getMessage() . ' -- ' . json_encode($record, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
         } catch (\Throwable $e) {
-            // Ignorer toute autre erreur pour garder la robustesse
+            error_log('DbLogHandler Throwable: ' . $e->getMessage() . ' -- ' . json_encode($record, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
         }
     }
 

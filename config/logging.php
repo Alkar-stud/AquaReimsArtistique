@@ -18,6 +18,7 @@ return [
     // Overrides par channel — si défini, ce niveau remplace le global pour ce channel
     'channel_min_levels' => [
         'application' => 'INFO',
+        'event'    => 'WARNING',
         'reservation' => 'WARNING',
         'database'    => 'ERROR',
         'security'    => 'WARNING',

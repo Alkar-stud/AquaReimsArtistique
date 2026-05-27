@@ -13,7 +13,7 @@ final class EventCatalogService
     private string $storageDir;
     private string $alertsStateFile;
 
-    public function __construct(string $storageDir = null)
+    public function __construct(?string $storageDir = null)
     {
         $this->storageDir = $storageDir ?? __DIR__ . '/../../../storage/log';
         if (!is_dir($this->storageDir)) {

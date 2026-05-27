@@ -37,15 +37,30 @@ class ReservationEntranceController extends AbstractController
     #[Route('/entrance', name: 'app_entrance', methods: ['GET'])]
     public function reservationEntrance(): void
     {
-        $reservationToken = (string)($_GET['token'] ?? '');
-        if (empty($reservationToken)) {
-            $this->render('errors/404', [], 'Accès refusé');
+        $reservationToken = trim((string)($_GET['token'] ?? ''));
+        if ($reservationToken === '') {
+            $this->render('/entrance/entrance-search', [
+                ...$this->getEntranceSearchViewData(),
+                'searchQuery' => '',
+                'searchError' => "Lien d'acces invalide: token manquant.",
+                'reservations' => [],
+                'single' => false,
+            ], "Recherche d'entrée");
             return;
         }
 
         $reservation = $this->reservationRepository->findByField('token', $reservationToken, true, true, false);
 
-
+        if (!$reservation) {
+            $this->render('/entrance/entrance-search', [
+                ...$this->getEntranceSearchViewData(),
+                'searchQuery' => '',
+                'searchError' => "Le lien d'acces est invalide ou la reservation n'existe plus.",
+                'reservations' => [],
+                'single' => false,
+            ], "Recherche d'entrée");
+            return;
+        }
 
         // Vérification de l'accès temporel
         $accessCheck = $this->reservationEntranceAccessService->canModifyReservation($reservation);
@@ -75,32 +90,14 @@ class ReservationEntranceController extends AbstractController
     {
         $searchQuery = $_GET['q'] ?? '';
         $trimmedSearchQuery = trim($searchQuery);
-
-        // Récupérer les sessions du jour dans tous les cas
-        $events = $this->eventQueryService->getAllEventsWithRelations(true, $this->delayIsComing);
-        $todaySessions = [];
-
-        if (!empty($events)) {
-            $nbSpectatorsPerSession = $this->reservationQueryService->getNbSpectatorsPerSession($events);
-            $sessions = $events[0]->getSessions();
-
-            foreach($sessions as $session) {
-                $todaySessions[$session->getId()] = [
-                    'name' => $session->getSessionName(),
-                    'datetime' => $session->getEventStartAt()->format('d/m/Y à H:i'),
-                    'total' => $nbSpectatorsPerSession[$session->getId()]['qty'],
-                    'entered' => $nbSpectatorsPerSession[$session->getId()]['entered'],
-                ];
-            }
-        }
+        $entranceSearchViewData = $this->getEntranceSearchViewData();
 
         if ($trimmedSearchQuery === '') {
             $this->render('/entrance/entrance-search', [
                 'searchQuery' => '',
                 'reservations' => [],
                 'single' => false,
-                'todaySessions' => $todaySessions,
-                'noUpcomingEvents' => empty($events),
+                ...$entranceSearchViewData,
             ], "Recherche d'entrée");
             return;
         }
@@ -111,8 +108,7 @@ class ReservationEntranceController extends AbstractController
                 'searchError' => 'Saisissez au moins 2 caractères, ou 1 chiffre pour rechercher un numéro de réservation.',
                 'reservations' => [],
                 'single' => false,
-                'todaySessions' => $todaySessions,
-                'noUpcomingEvents' => empty($events),
+                ...$entranceSearchViewData,
             ], "Recherche d'entrée");
             return;
         }
@@ -129,8 +125,36 @@ class ReservationEntranceController extends AbstractController
             'searchQuery' => $trimmedSearchQuery,
             'reservations' => $result['reservations'],
             'single' => $result['single'],
-            'todaySessions' => $todaySessions,
+            ...$entranceSearchViewData,
         ], "Recherche d'entrée");
+    }
+
+    /**
+     * Données communes de la vue de recherche d'entrée.
+     */
+    private function getEntranceSearchViewData(): array
+    {
+        $events = $this->eventQueryService->getAllEventsWithRelations(true, $this->delayIsComing);
+        $todaySessions = [];
+
+        if (!empty($events)) {
+            $nbSpectatorsPerSession = $this->reservationQueryService->getNbSpectatorsPerSession($events);
+            $sessions = $events[0]->getSessions();
+
+            foreach ($sessions as $session) {
+                $todaySessions[$session->getId()] = [
+                    'name' => $session->getSessionName(),
+                    'datetime' => $session->getEventStartAt()->format('d/m/Y à H:i'),
+                    'total' => $nbSpectatorsPerSession[$session->getId()]['qty'],
+                    'entered' => $nbSpectatorsPerSession[$session->getId()]['entered'],
+                ];
+            }
+        }
+
+        return [
+            'todaySessions' => $todaySessions,
+            'noUpcomingEvents' => empty($events),
+        ];
     }
 
     /**

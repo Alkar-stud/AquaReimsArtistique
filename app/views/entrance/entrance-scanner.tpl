@@ -15,6 +15,8 @@
 
 {% include 'partials/search-form.tpl' %}
 
+<div id="scan-feedback" class="alert alert-warning d-none" role="alert"></div>
+
 <video id="preview" autoplay></video>
 
 <script>
@@ -33,7 +35,27 @@
     const codeReader = new ZXing.BrowserQRCodeReader();
     const preview = document.getElementById('preview');
     const scanAgainButton = document.getElementById('scanAgain');
+    const scanFeedback = document.getElementById('scan-feedback');
     let stream = null;
+
+    function showScanFeedback(message, type = 'warning') {
+        if (!scanFeedback) {
+            return;
+        }
+
+        scanFeedback.className = `alert alert-${type}`;
+        scanFeedback.textContent = message;
+        scanFeedback.classList.remove('d-none');
+    }
+
+    function clearScanFeedback() {
+        if (!scanFeedback) {
+            return;
+        }
+
+        scanFeedback.textContent = '';
+        scanFeedback.className = 'alert alert-warning d-none';
+    }
 
     function stopScan() {
         if (stream) {
@@ -76,6 +98,8 @@
     // Fonction pour démarrer le scan
     async function startScan() {
         try {
+            clearScanFeedback();
+
             // Arrêter le flux existant si présent
             if (stream) {
                 stream.getTracks().forEach(track => track.stop());
@@ -101,7 +125,7 @@
                             return;
                         }
 
-                        console.warn('QR code ignoré: format ou domaine non autorisé.');
+                        showScanFeedback('QR code invalide ou hors domaine. Veuillez scanner un QR de réservation généré par l’application.');
                     }
                     if (error) {
                         console.error("Erreur de détection :", error);
@@ -109,7 +133,7 @@
                 }
             );
         } catch (error) {
-            alert("Impossible d'accéder à la caméra : " + error.message);
+            showScanFeedback("Impossible d'accéder à la caméra : " + error.message, 'danger');
         }
     }
 

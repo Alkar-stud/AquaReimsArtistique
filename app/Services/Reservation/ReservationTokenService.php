@@ -42,7 +42,7 @@ class ReservationTokenService
     {
         //Si on doit modifier le token, on le génère
         if ($newToken) {
-            $newToken = $this->tokenGenerateService->generateToken(32);
+            $newToken = $this->tokenGenerateService->generateToken((int)NB_CARACTERE_TOKEN);
             $reservation->setToken($newToken['token']);
         }
 

@@ -37,7 +37,7 @@ final class CsrfService
         $this->ensureSessionStarted();
         $_SESSION[self::SESSION_KEY] ??= [];
         if (empty($_SESSION[self::SESSION_KEY][$context])) {
-            $tokenData = $this->tokenGenerate->generateToken(32);
+            $tokenData = $this->tokenGenerate->generateToken((int)NB_CARACTERE_TOKEN);
 
             if ($tokenData === null) {
                 Logger::get()->error('security', 'Failed to generate CSRF token due to lack of secure randomness source.', [

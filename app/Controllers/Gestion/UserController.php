@@ -57,7 +57,7 @@ class UserController extends AbstractController
 
         $tokenGenerateService = new TokenGenerateService();
         // Générer mot de passe aléatoire (on récupère la chaîne du token)
-        $randomPasswordData = $tokenGenerateService->generateToken(12);
+        $randomPasswordData = $tokenGenerateService->generateToken(16);
         //on le hash
         $hashedPassword = password_hash($randomPasswordData['token'], PASSWORD_DEFAULT, ['cost' => (int)$_ENV['BCRYPT_ROUNDS']]);
 

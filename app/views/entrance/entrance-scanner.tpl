@@ -35,6 +35,44 @@
     const scanAgainButton = document.getElementById('scanAgain');
     let stream = null;
 
+    function stopScan() {
+        if (stream) {
+            stream.getTracks().forEach(track => track.stop());
+            stream = null;
+        }
+        codeReader.reset();
+    }
+
+    function buildSafeEntranceUrl(scannedText) {
+        const text = (scannedText || '').trim();
+        if (!text) {
+            return null;
+        }
+
+        // Autoriser un token brut hexadécimal (format actuel des tokens de réservation).
+        if (/^[a-f0-9]{64}$/i.test(text)) {
+            return '/entrance?token=' + encodeURIComponent(text);
+        }
+
+        try {
+            const url = new URL(text, window.location.origin);
+
+            // Un QR ne doit rediriger que vers l'application et uniquement sur /entrance.
+            if (url.origin !== window.location.origin || url.pathname !== '/entrance') {
+                return null;
+            }
+
+            const token = url.searchParams.get('token');
+            if (!token) {
+                return null;
+            }
+
+            return '/entrance?token=' + encodeURIComponent(token);
+        } catch {
+            return null;
+        }
+    }
+
     // Fonction pour démarrer le scan
     async function startScan() {
         try {
@@ -56,8 +94,14 @@
                 preview,
                 (result, error) => {
                     if (result) {
-                        // Rediriger vers le lien du QR code
-                        window.location.href = result.text;
+                        const safeUrl = buildSafeEntranceUrl(result.text);
+                        if (safeUrl) {
+                            stopScan();
+                            window.location.href = safeUrl;
+                            return;
+                        }
+
+                        console.warn('QR code ignoré: format ou domaine non autorisé.');
                     }
                     if (error) {
                         console.error("Erreur de détection :", error);
@@ -73,5 +117,7 @@
     startScan();
 
     // Bouton pour relancer le scan
-    scanAgainButton.addEventListener('click', startScan);
+    if (scanAgainButton) {
+        scanAgainButton.addEventListener('click', startScan);
+    }
 </script>

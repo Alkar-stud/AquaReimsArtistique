@@ -158,6 +158,14 @@ class ReservationEntranceAccessService
      */
     public function checkParticipantForEntrance(Reservation $reservation, int $participant, User $currentUser, bool $isPresent): array
     {
+        $detail = $this->reservationDetailRepository->findById($participant, false, false, false);
+        if (!$detail || $detail->getReservation() !== $reservation->getId()) {
+            return [
+                'success' => false,
+                'message' => 'Participant invalide ou ne correspondant pas à cette réservation.',
+            ];
+        }
+
         $value = $isPresent ? date('Y-m-d H:i:s') : null;
         $this->reservationDetailRepository->updateSingleField($participant, 'entered_at', $value);
         $this->reservationDetailRepository->updateSingleField($participant, 'entry_validate_by', $value == null ? null:$currentUser->getId());

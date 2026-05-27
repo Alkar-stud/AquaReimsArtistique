@@ -20,7 +20,11 @@
     {% endif %}
 
     {% if $searchQuery != '' %}
-    {% if count($reservations) == 0 %}
+    {% if isset($searchError) && $searchError != '' %}
+    <div class="alert alert-warning">
+        {{ $searchError }}
+    </div>
+    {% elseif count($reservations) == 0 %}
     <div class="alert alert-warning">
         Aucune réservation trouvée pour "<strong>{{ $searchQuery }}</strong>"
     </div>

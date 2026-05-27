@@ -640,12 +640,13 @@ class ReservationRepository extends AbstractRepository
      */
     public function findByNameOrId(string $searchQuery, ?int $limit = null, bool $isComing = false): array
     {
-        $params = [];
-        $q = '%' . trim($searchQuery) . '%';
+        $searchQuery = trim($searchQuery);
+        if ($searchQuery === '') {
+            return [];
+        }
 
-        $params['q_id'] = $q;
-        $params['q_name'] = $q;
-        $params['q_firstname'] = $q;
+        $params = [];
+        $isNumericSearch = ctype_digit($searchQuery);
 
         $sql = "SELECT $this->tableName.* FROM $this->tableName";
 
@@ -654,10 +655,19 @@ class ReservationRepository extends AbstractRepository
             $sql .= " INNER JOIN event_session es ON $this->tableName.event_session = es.id";
         }
 
-        $sql .= " WHERE (CAST($this->tableName.id AS CHAR) LIKE :q_id 
-                   OR $this->tableName.name LIKE :q_name 
-                   OR $this->tableName.firstname LIKE :q_firstname)
-              AND $this->tableName.is_canceled = 0";
+        if ($isNumericSearch) {
+            // Une recherche purement numérique correspond à un numéro de réservation exact.
+            $sql .= " WHERE $this->tableName.id = :reservationId AND $this->tableName.is_canceled = 0";
+            $params['reservationId'] = (int)$searchQuery;
+        } else {
+            $q = '%' . $searchQuery . '%';
+            $params['q_name'] = $q;
+            $params['q_firstname'] = $q;
+
+            $sql .= " WHERE ($this->tableName.name LIKE :q_name 
+                       OR $this->tableName.firstname LIKE :q_firstname)
+                  AND $this->tableName.is_canceled = 0";
+        }
 
         if ($isComing) {
             // Filtrer pour ne garder que les réservations avec une date >= aujourd'hui (comparaison des dates uniquement)

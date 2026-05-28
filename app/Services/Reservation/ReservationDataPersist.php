@@ -108,6 +108,12 @@ readonly class ReservationDataPersist
                 $reservation->setPayments($this->reservationPaymentRepository->findByReservation($newReservationId));
             }
 
+            // Nettoyer les données temporaires
+            $this->cleanupTemporaryData($reservationTemp);
+
+            // Commit si tout est OK
+            $pdo->commit();
+
             //Envoyer le mail de réservation
             if (!$this->mailService->send(
                 'paiement_confirme',
@@ -117,12 +123,6 @@ readonly class ReservationDataPersist
             )) {
                 throw new RuntimeException('Échec de l\'envoi de l\'email de confirmation.');
             }
-
-            // Nettoyer les données temporaires
-            $this->cleanupTemporaryData($reservationTemp);
-
-            // Commit si tout est OK
-            $pdo->commit();
 
             // Relecture hydratée complète
             return $this->reservationRepository->findById($newReservationId, true, true, true);

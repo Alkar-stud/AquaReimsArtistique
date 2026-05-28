@@ -5,7 +5,7 @@ namespace app\Controllers\Install;
 
 use app\Attributes\Route;
 use app\Repository\User\UserRepository;
-use app\Services\Mails\MailPrepareService;
+use app\Services\Mails\MailService;
 use app\Traits\HasPdoConnection;
 use app\Utils\BuildLink;
 use DateTime;
@@ -18,14 +18,18 @@ class MigrationController
 {
     use HasPdoConnection;
     private BuildLink $buildLink;
+    private MailService $mailService;
 
     private const string MIGRATIONS_TABLE = 'migrations';
     private string $migrationPath = __DIR__ . '/../../../database/migrations/';
-
-    public function __construct()
+    public function __construct(
+            BuildLink $buildLink,
+            MailService $mailService,
+    )
     {
         $this->initPdo();
-        $this->buildLink = new BuildLink();
+        $this->buildLink = $buildLink;
+        $this->mailService = $mailService;
     }
 
     #[Route('/install', name: 'app_install')]
@@ -138,7 +142,7 @@ class MigrationController
 
 
     /**
-     * Nettoyage simplifié: enlève commentaires ligne (--, #) et blocs /* ... *\/ puis découpe sur ';'.
+     * Nettoyage simplifié : enlève commentaires ligne (--, #) et blocs /* ... *\/ puis découpe sur ';'.
      * Ne gère pas les cas complexes (procédures avec ';' interne, quotes imbriquées).
      * Suffisant pour des fichiers de migrations simples.
      */
@@ -179,7 +183,7 @@ class MigrationController
 
             // Toggle quotes (ignore si précédé par backslash)
             if ($ch === "'" && !$inDouble) {
-                // si précédent est backslash, il peut être une échappement, mais MySQL utilise souvent '' ; on gère backslash simple
+                // si précédent est backslash, il peut être un échappement, mais MySQL utilise souvent '' ; on gère backslash simple
                 if ($prev !== '\\') {
                     $inSingle = !$inSingle;
                 }
@@ -389,7 +393,15 @@ class MigrationController
 
         try {
             $resetLink = $this->buildLink->buildResetLink('/reset-password', $token);
-            (new MailPrepareService())->sendPasswordResetEmail($email, $displayName, $resetLink);
+            //On envoi le mail
+            $this->mailService->send('password_reset',
+                    [
+                            'username' => $user->getDisplayName(),
+                            'link' => $resetLink,
+                    ],
+                    $user->getEmail(),
+                    'user.password_reset'
+            );
         } catch (Exception $e) {
             error_log('Erreur lors de l\'envoi de l\'email de réinitialisation : ' . $e->getMessage());
         }

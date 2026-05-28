@@ -78,7 +78,7 @@ class PasswordResetController extends AbstractController
         $resetLink = $this->buildLink::buildResetLink('/reset-password', $token['token']);
 
         try {
-            //Nouvelle méthode
+            //On envoi le mail
             $this->mailService->send('password_reset',
                 [
                     'username' => $user->getDisplayName(),
@@ -87,7 +87,6 @@ class PasswordResetController extends AbstractController
                 $user->getEmail(),
                 'user.password_reset'
             );
-
         } catch (Exception $e) {
             Logger::get()->event('mail.smtp.failed', ['message' => $e->getMessage(), 'user_id' => $user->getId()]);
             error_log('Erreur critique du service Mail: ' . $e->getMessage());

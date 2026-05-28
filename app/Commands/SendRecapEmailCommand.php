@@ -90,8 +90,6 @@ class SendRecapEmailCommand
         $this->reservationFinalSummaryService = new ReservationFinalSummaryService(
             $reservationRepository,
             $mailTemplateRepository,
-            $mailPrepareService,
-            $pdfGenerationService,
             $mailService
         );
     }
@@ -112,7 +110,7 @@ class SendRecapEmailCommand
         echo "Limite d'envoi : $limit\n";
 
         try {
-            $result = $this->reservationFinalSummaryService->sendFinalEmail($limit, true);
+            $result = $this->reservationFinalSummaryService->sendFinalEmail($limit);
 
             echo "Nombre d'emails envoyés : " . ($result['sent'] ?? 0) . "\n";
             echo "Nombre d'erreurs : " . ($result['failed'] ?? 0) . "\n";

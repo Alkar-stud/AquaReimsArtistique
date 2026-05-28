@@ -98,6 +98,11 @@ async function refreshModalContent(modal, reservationId) {
                 const el = event.target.closest('.PlaceNameDisplay');
                 if (!el) return;
 
+                // Ignorer le clic si l'élément est disabled (read-only)
+                if (el.hasAttribute('disabled')) {
+                    return;
+                }
+
                 const placeId = el.dataset.placeId;
                 const detailId = el.dataset.detailId;
                 const modalEl = el.closest('.modal');

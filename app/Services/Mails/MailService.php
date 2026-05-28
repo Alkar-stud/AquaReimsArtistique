@@ -69,7 +69,7 @@ class MailService
      * Se charge de récupérer le template, de demander à le remplir et à envoyer
      *
      * @param string $templateCode
-     * @param array $contextData
+     * @param array $contextData | Peut contenir des données de réservation (clé 'reservation' pour l'onjet Reservation), de l'utilisateur(clé 'user' pour l'onjet User), ou tout autre info nécessaire pour remplir le template.
      * @param string $recipientEmail
      * @param string $codeEventLog
      * @return bool

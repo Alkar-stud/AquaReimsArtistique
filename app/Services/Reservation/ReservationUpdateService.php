@@ -11,11 +11,10 @@ use app\Repository\Reservation\ReservationComplementRepository;
 use app\Repository\Reservation\ReservationRepository;
 use app\Repository\Tarif\TarifRepository;
 use app\Repository\Reservation\ReservationDetailRepository;
-use app\Services\Auth\UserSessionService;
 use app\Services\Log\Logger;
 use app\Services\Mails\MailService;
-use app\Services\Mails\MailPrepareService;
 use InvalidArgumentException;
+use RuntimeException;
 use Throwable;
 use TypeError;
 
@@ -30,7 +29,6 @@ readonly class ReservationUpdateService
         private TarifRepository $tarifRepository,
         private ReservationPriceCalculator $priceCalculator,
         private MailService $mailService,
-        private MailPrepareService $mailPrepareService,
     )
     {
         $this->reservationRepository = $reservationRepository;
@@ -362,14 +360,14 @@ readonly class ReservationUpdateService
 
             // Met à jour le statut d'annulation
             if (!$this->reservationRepository->updateSingleField($reservation->getId(), 'is_canceled', $isCanceled)) {
-                throw new \RuntimeException('Échec de la mise à jour du statut d\'annulation de la réservation.');
+                throw new RuntimeException('Échec de la mise à jour du statut d\'annulation de la réservation.');
             }
 
             if ($isCanceled) {
                 $templateEmail = 'cancel_order';
 
                 //On supprime les éventuelles places numérotées de la commande
-                if (!$this->reservationDetailRepository->updateSingleField($reservation->getId(), 'place_number', null)) {
+                if (!$this->reservationDetailRepository->cancelByReservation($reservation->getId())) {
                     $code = 'reservation.' . $templateEmail . '.failed';
                     Logger::get()->event(
                         $code,
@@ -377,7 +375,7 @@ readonly class ReservationUpdateService
                             'reservation_id' => $reservation->getId(),
                         ]
                     );
-                    throw new \RuntimeException('Erreur lors de la suppression des places numérotées.');
+                    throw new RuntimeException('Erreur lors de la suppression des places numérotées.');
                 }
 
                 //On trace l'annulation de la commande
@@ -406,7 +404,7 @@ readonly class ReservationUpdateService
                             'reservation_id' => $reservation->getId()
                         ]
                     );
-                    throw new \RuntimeException('Échec de l\'envoi de l\'email d\'annulation.');
+                    throw new RuntimeException('Échec de l\'envoi de l\'email d\'annulation.');
                 }
             } else {
                 $templateEmail = 'uncancel_order';
@@ -436,17 +434,8 @@ readonly class ReservationUpdateService
                             'reservation_id' => $reservation->getId()
                         ]
                     );
-                    throw new \RuntimeException('Échec de l\'envoi de l\'email de réactivation.');
+                    throw new RuntimeException('Échec de l\'envoi de l\'email de réactivation.');
                 }
-
-
-
-                if (!$this->mailPrepareService->sendCancelReservationConfirmationEmail($reservation, $templateEmail)) {
-                    // On trace l'échec d'envoi du mail
-
-                    throw new \RuntimeException('Échec de l\'envoi de l\'email d\'annulation.');
-                }
-
             }
 
             // Commit si tout est OK

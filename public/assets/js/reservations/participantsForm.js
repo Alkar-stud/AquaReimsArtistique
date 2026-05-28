@@ -85,6 +85,9 @@ function updateUI(containerEl, reservationData, isReadOnly = false) {
         .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 
+    // Vérifier si la piscine a des places numérotées
+    const hasNumberedSeats = reservationData.event?.numberedSeats === true;
+
     // On groupe les participants par tarif.
     const participantsByTarif = (reservationData.details || []).reduce((acc, detail) => {
         const tarifId = detail.tarifId || detail.tarif; // Gère les deux formats de données
@@ -104,21 +107,41 @@ function updateUI(containerEl, reservationData, isReadOnly = false) {
         let participantsHtml = '';
 
         group.participants.forEach(p => {
-            const placeCol = p.placeNumber ? `
-                <div class="col-12 col-md-3 d-flex align-items-center">
-                    <div class="input-group input-group-sm w-100">
-                        Place :&nbsp;
-                        <span class="PlaceNameDisplay"
-                            data-place-id="${esc(p.placeId ?? p.place_id ?? p.placeNumber ?? '')}"
-                            data-detail-id="${p.id}"
-                            aria-label="Numéro de place ${esc(p.fullPlaceName)}"
-                            role="button"
-                            tabindex="0">
-                            ${esc(p.fullPlaceName)}
-                        </span>
+            // Colonne Place : ne l'afficher que si la piscine a des places numérotées
+            let placeCol = '';
+            if (hasNumberedSeats) {
+                // Déterminer le contenu de la place
+                const hasPlace = p.placeNumber || p.place_id || p.placeId;
+                const placeBadgeContent = hasPlace
+                    ? esc(p.fullPlaceName)
+                    : '<span class="text-muted fst-italic">Non attribuée</span>';
+                const placeBadgeClass = hasPlace
+                    ? 'd-inline-flex align-items-center px-2 py-1 border rounded bg-body-tertiary text-primary fw-semibold shadow-sm'
+                    : 'd-inline-flex align-items-center px-2 py-1 border border-warning rounded bg-warning-subtle text-warning fw-semibold shadow-sm';
+
+                // En mode read-only, ajouter une classe pour griser le bouton
+                const readOnlyClass = isReadOnly ? 'opacity-50' : '';
+                const readOnlyAttrs = isReadOnly ? 'disabled' : '';
+
+                placeCol = `
+                    <div class="col-12 col-md-3">
+                        <div class="input-group input-group-sm w-100">
+                            <span class="input-group-text">Place</span>
+                            <span class="PlaceNameDisplay ${placeBadgeClass} ${readOnlyClass} form-control d-inline-flex align-items-center"
+                                data-place-id="${esc(p.placeId ?? p.place_id ?? p.placeNumber ?? '0')}"
+                                data-detail-id="${p.id}"
+                                title="${hasPlace ? 'Cliquer pour changer la place' : 'Cliquer pour assigner une place'}"
+                                aria-label="${hasPlace ? `Numéro de place ${esc(p.fullPlaceName)}` : 'Place non attribuée'}"
+                                role="button"
+                                tabindex="${isReadOnly ? '-1' : '0'}"
+                                ${readOnlyAttrs}
+                                style="cursor: ${isReadOnly ? 'not-allowed' : 'pointer'};">
+                                ${placeBadgeContent}
+                            </span>
+                        </div>
                     </div>
-                </div>
-            ` : '';
+                `;
+            }
 
             participantsHtml += `
                 <div class="row g-2 mb-2 participant-row">

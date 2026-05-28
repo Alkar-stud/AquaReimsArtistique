@@ -28,7 +28,7 @@ class ConfigDataValidationService
         if (!preg_match('/^[A-Z0-9_]+$/', $this->config_key)) {
             return "La clé ne doit contenir que des lettres majuscules, chiffres ou '_', sans espaces ni caractères spéciaux.";
         }
-        if (empty($this->config_value)) {
+        if (empty($this->config_value) && $this->config_value != 0) {
             return "La valeur de configuration est obligatoire.";
         }
 

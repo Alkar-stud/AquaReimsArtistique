@@ -77,7 +77,6 @@ class ReservationCheckPaymentController extends AbstractController
         $checkoutIntentId = $input['checkoutIntentId'] ?? null;
         if (!$checkoutIntentId) {
             $this->json(['success' => false, 'error' => 'checkoutId manquant']);
-            return;
         }
 
         // Vérifier dans la BDD si un paiement avec cet ID a été enregistré (par le webhook)
@@ -105,7 +104,6 @@ class ReservationCheckPaymentController extends AbstractController
         $checkoutIntentId = $input['checkoutIntentId'] ?? null;
         if (!$checkoutIntentId) {
             $this->json(['success' => false, 'error' => 'checkoutId manquant']);
-            return;
         }
 
         $result = $this->paymentWebhookService->checkCheckoutIntentState($checkoutIntentId);

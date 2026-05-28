@@ -16,7 +16,7 @@ export async function toggleCancelStatus(options) {
     // Message de confirmation adapté à l'action
     const confirmationMessage = newStatus
         ? "Êtes-vous sûr de vouloir annuler cette réservation ?\nCette action est irréversible."
-        : "Êtes-vous sûr de vouloir réactiver cette réservation ?";
+        : "Êtes-vous sûr de vouloir réactiver cette réservation ?\nIl faut penser à réattribuer des places si nécessaire";
 
     if (!confirm(confirmationMessage)) {
         return;

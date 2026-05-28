@@ -367,7 +367,7 @@ readonly class ReservationUpdateService
                 $templateEmail = 'cancel_order';
 
                 //On supprime les éventuelles places numérotées de la commande
-                if (!$this->reservationDetailRepository->updateSingleField($reservation->getId(), 'place_number', null)) {
+                if (!$this->reservationDetailRepository->cancelByReservation($reservation->getId())) {
                     $code = 'reservation.' . $templateEmail . '.failed';
                     Logger::get()->event(
                         $code,

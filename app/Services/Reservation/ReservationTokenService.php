@@ -4,7 +4,6 @@ namespace app\Services\Reservation;
 
 use app\Models\Reservation\Reservation;
 use app\Repository\Reservation\ReservationRepository;
-use app\Services\Mails\MailPrepareService;
 use app\Services\Mails\MailService;
 use app\Services\Security\TokenGenerateService;
 use PHPMailer\PHPMailer\Exception;
@@ -14,19 +13,16 @@ class ReservationTokenService
 {
     private ReservationRepository $reservationRepository;
     private TokenGenerateService $tokenGenerateService;
-    private MailPrepareService $mailPrepareService;
     private MailService $mailService;
 
     public function __construct(
         ReservationRepository $reservationRepository,
         TokenGenerateService $tokenGenerateService,
-        MailPrepareService $mailPrepareService,
         MailService $mailService,
     )
     {
         $this->reservationRepository = $reservationRepository;
         $this->tokenGenerateService = $tokenGenerateService;
-        $this->mailPrepareService = $mailPrepareService;
         $this->mailService = $mailService;
     }
 

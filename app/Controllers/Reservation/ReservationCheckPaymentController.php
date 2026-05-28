@@ -9,6 +9,7 @@ use app\Repository\Reservation\ReservationPaymentRepository;
 use app\Repository\Reservation\ReservationRepository;
 use app\Services\Payment\PaymentWebhookService;
 use app\Utils\HelloAssoDebugJson;
+use PHPMailer\PHPMailer\Exception;
 
 class ReservationCheckPaymentController extends AbstractController
 {
@@ -25,6 +26,9 @@ class ReservationCheckPaymentController extends AbstractController
         $this->reservationRepository = $reservationRepository;
     }
 
+    /**
+     * @throws Exception
+     */
     #[Route('/reservation/paymentCallback', name: 'app_reservation_paymentCallback', methods: ['POST'])]
     public function paymentCallback(): void
     {
@@ -92,6 +96,7 @@ class ReservationCheckPaymentController extends AbstractController
     /**
      * Vérifie l'état d'un paiement chez helloAsso
      * @return void
+     * @throws Exception
      */
     #[Route('/reservation/checkPaymentState', name: 'app_reservation_check_payment_state', methods: ['POST'])]
     public function checkPaymentState(): void

@@ -7,6 +7,7 @@ use app\Models\Reservation\ReservationPayment;
 use app\Repository\Reservation\ReservationPaymentRepository;
 use app\Repository\Reservation\ReservationRepository;
 use app\Services\Reservation\ReservationProcessAndPersistService;
+use PHPMailer\PHPMailer\Exception;
 use RuntimeException;
 
 
@@ -41,6 +42,7 @@ class PaymentWebhookService
      *
      * @param object $payload Les données décodées du webhook.
      * @return void
+     * @throws Exception
      */
     public function handleWebhook(object $payload): void
     {
@@ -108,6 +110,7 @@ class PaymentWebhookService
      *
      * @param int $checkoutId
      * @return array
+     * @throws Exception
      */
     public function checkCheckoutIntentState(int $checkoutId): array
     {

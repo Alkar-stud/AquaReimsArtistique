@@ -112,13 +112,15 @@ readonly class ReservationDataPersist
                 $reservation->setPayments($this->reservationPaymentRepository->findByReservation($newReservationId));
             }
 
-            // Envoyer l'email de confirmation
-            if (!$this->mailPrepareService->sendReservationConfirmationEmail($reservation)) {
+            //Envoyer le mail de réservation
+            if (!$this->mailService->send(
+                'paiement_confirme',
+                ['reservation' => $reservation],
+                $reservation->getEmail(),
+                'reservation.paiement_confirme'
+            )) {
                 throw new RuntimeException('Échec de l\'envoi de l\'email de confirmation.');
             }
-
-            // Enregistrer l'envoi de l'email
-            $this->mailService->recordMailSent($reservation, 'paiement_confirme');
 
             // Nettoyer les données temporaires
             $this->cleanupTemporaryData($reservationTemp);

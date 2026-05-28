@@ -27,7 +27,6 @@ readonly class MailPrepareService
         MailTemplateRenderer $mailTemplateRenderer,
         ContextDataResolver $contextDataResolver,
         PdfGenerationService $pdfGenerationService,
-        private MailTemplateService $templateService,
         private ReservationSummaryBuilder $summaryBuilder,
         private PaymentStatusCalculator $paymentCalculator
     )

@@ -195,7 +195,8 @@ class Reservation extends AbstractModel
             'event' => $eventObject ? [
                 'id' => $eventObject->getId(),
                 'name' => $eventObject->getName(),
-                'piscineId' => $eventObject->getPlace() // Ajout de l'ID de la piscine
+                'piscineId' => $eventObject->getPlace(), // Ajout de l'ID de la piscine
+                'numberedSeats' => $eventObject->getPiscine() ? $eventObject->getPiscine()->getNumberedSeats() : false
             ] : null,
             'eventSession' => $eventSessionObject ? ['id' => $eventSessionObject->getId(), 'name' => $eventSessionObject->getSessionName()] : null,
             'swimmer' => $this->getSwimmer() ? [

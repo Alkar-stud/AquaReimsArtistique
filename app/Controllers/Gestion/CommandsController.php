@@ -90,7 +90,7 @@ class CommandsController extends AbstractController
         $limit = $limit > 0 ? $limit : 100;
 
         try {
-            $result = $this->reservationFinalSummaryService->sendFinalEmail($limit, true);
+            $result = $this->reservationFinalSummaryService->sendFinalEmail($limit);
             
             // On formate les données pour l'affichage en liste dans la modale
             $displayData = [

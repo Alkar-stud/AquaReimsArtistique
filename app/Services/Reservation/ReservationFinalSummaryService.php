@@ -4,9 +4,8 @@ namespace app\Services\Reservation;
 use app\Models\Reservation\Reservation;
 use app\Repository\Mail\MailTemplateRepository;
 use app\Repository\Reservation\ReservationRepository;
-use app\Services\Mails\MailPrepareService;
 use app\Services\Mails\MailService;
-use app\Services\Pdf\PdfGenerationService;
+use PHPMailer\PHPMailer\Exception;
 use Throwable;
 
 final class ReservationFinalSummaryService
@@ -14,21 +13,15 @@ final class ReservationFinalSummaryService
     private string $finalSummaryTemplate = 'final_summary';
     private ReservationRepository $reservationRepository;
     private MailTemplateRepository $mailTemplateRepository;
-    private MailPrepareService $mailPrepareService;
-    private PdfGenerationService $pdfGenerationService;
     private MailService $mailService;
 
     public function __construct(
         ReservationRepository $reservationRepository,
         MailTemplateRepository $mailTemplateRepository,
-        MailPrepareService $mailPrepareService,
-        PdfGenerationService $pdfGenerationService,
         MailService $mailService,
     ) {
         $this->reservationRepository = $reservationRepository;
         $this->mailTemplateRepository = $mailTemplateRepository;
-        $this->pdfGenerationService = $pdfGenerationService;
-        $this->mailPrepareService = $mailPrepareService;
         $this->mailService = $mailService;
     }
 
@@ -36,10 +29,9 @@ final class ReservationFinalSummaryService
      * Envoie le récap final pour les réservations concernées pour lesquelles il n'a pas encore été envoyé
      *
      * @param int $limit
-     * @param bool $withQRCode
      * @return array
      */
-    public function sendFinalEmail(int $limit = 100, bool $withQRCode = false): array
+    public function sendFinalEmail(int $limit = 100): array
     {
         //On va chercher le template final_summary
         $finalSummaryEmail = $this->mailTemplateRepository->findByCode($this->finalSummaryTemplate);
@@ -95,29 +87,20 @@ final class ReservationFinalSummaryService
      *
      * @param Reservation $reservation
      * @return bool
+     * @throws Exception
      */
     public function sendForReservation(Reservation $reservation): bool
     {
-        // Préparation des paramètres (QR codes inclus)
-        $params = $this->mailPrepareService->buildReservationEmailParams($reservation, true);
-
-        // Génération du PDF RecapFinal
-        $pdf = $this->pdfGenerationService->generateUnitPdf('RecapFinal', $reservation->getId(), $params);
-        $pdfPath = sys_get_temp_dir() . '/recap_' . $reservation->getId() . '_' . uniqid() . '.pdf';
-        file_put_contents($pdfPath, $pdf->Output('S'));
-
         try {
-            $ok = $this->mailPrepareService->sendReservationConfirmationEmail($reservation, $this->finalSummaryTemplate, $pdfPath, $params);
-            
-            if ($ok) {
-                $this->mailService->recordMailSent($reservation, $this->finalSummaryTemplate);
-            }
-            
-            return $ok;
-        } finally {
-            if (is_file($pdfPath)) {
-                @unlink($pdfPath);
-            }
+            return $this->mailService->send(
+                $this->finalSummaryTemplate,
+                ['reservation' => $reservation],
+                $reservation->getEmail(),
+                'reservation.' . $this->finalSummaryTemplate
+            );
+
+        } catch (Exception $e) {
+            throw new Exception("Erreur lors de l'envoi du mail pour la réservation ID {$reservation->getId()} : " . $e->getMessage());
         }
     }
 }

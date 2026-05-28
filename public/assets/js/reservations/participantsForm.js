@@ -108,12 +108,14 @@ function updateUI(containerEl, reservationData, isReadOnly = false) {
                 <div class="col-12 col-md-3 d-flex align-items-center">
                     <div class="input-group input-group-sm w-100">
                         Place :&nbsp;
-                        <span class="PlaceNameDisplay"
+                        <span class="PlaceNameDisplay d-inline-flex align-items-center px-2 py-1 border rounded bg-body-tertiary text-primary fw-semibold shadow-sm"
                             data-place-id="${esc(p.placeId ?? p.place_id ?? p.placeNumber ?? '')}"
                             data-detail-id="${p.id}"
+                            title="Cliquer pour modifier la place"
                             aria-label="Numéro de place ${esc(p.fullPlaceName)}"
                             role="button"
-                            tabindex="0">
+                            tabindex="0"
+                            style="cursor: pointer;">
                             ${esc(p.fullPlaceName)}
                         </span>
                     </div>

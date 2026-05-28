@@ -6,9 +6,9 @@ use app\Models\Reservation\Reservation;
 use app\Repository\Reservation\ReservationPaymentRepository;
 use app\Repository\Reservation\ReservationRepository;
 use app\Repository\Reservation\ReservationTempRepository;
-use app\Services\Mails\MailPrepareService;
 use app\Services\Mails\MailService;
 use app\Services\Payment\PaymentRecordService;
+use PHPMailer\PHPMailer\Exception;
 use RuntimeException;
 
 class ReservationProcessAndPersistService
@@ -17,7 +17,6 @@ class ReservationProcessAndPersistService
     private ReservationDataPersist $reservationDataPersist;
     private ReservationPaymentRepository $reservationPaymentRepository;
     private PaymentRecordService $paymentRecordService;
-    private MailPrepareService $mailPrepareService;
     private MailService $mailService;
     private ReservationTempRepository $reservationTempRepository;
 
@@ -26,7 +25,6 @@ class ReservationProcessAndPersistService
         ReservationDataPersist $reservationDataPersist,
         ReservationPaymentRepository $reservationPaymentRepository,
         PaymentRecordService $paymentRecordService,
-        MailPrepareService $mailPrepareService,
         MailService $mailService,
         ReservationTempRepository $reservationTempRepository,
     )
@@ -35,7 +33,6 @@ class ReservationProcessAndPersistService
         $this->reservationDataPersist = $reservationDataPersist;
         $this->reservationPaymentRepository = $reservationPaymentRepository;
         $this->paymentRecordService = $paymentRecordService;
-        $this->mailPrepareService = $mailPrepareService;
         $this->mailService = $mailService;
         $this->reservationTempRepository = $reservationTempRepository;
     }
@@ -74,6 +71,7 @@ class ReservationProcessAndPersistService
      * @param string $reservationId ID de la réservation SQL.
      * @param string $context
      * @return bool
+     * @throws Exception
      */
     public function processAndPersistReservationComplement(object $paymentData, string $reservationId, string $context): bool
     {

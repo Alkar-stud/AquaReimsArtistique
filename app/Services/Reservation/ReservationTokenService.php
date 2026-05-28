@@ -7,6 +7,8 @@ use app\Repository\Reservation\ReservationRepository;
 use app\Services\Mails\MailPrepareService;
 use app\Services\Mails\MailService;
 use app\Services\Security\TokenGenerateService;
+use PHPMailer\PHPMailer\Exception;
+use RuntimeException;
 
 class ReservationTokenService
 {
@@ -37,6 +39,7 @@ class ReservationTokenService
      * @param string|null $newDate
      * @param bool $sendEmail
      * @return Reservation
+     * @throws Exception
      */
     public function updateToken(Reservation $reservation, bool $newToken, ?string $newDate = null, bool $sendEmail = false): Reservation
     {
@@ -53,10 +56,15 @@ class ReservationTokenService
 
         //S'il faut envoyer un nouveau mail de confirmation suite au changement de token pour le lien modifData
         if ($sendEmail) {
-            //On prépare le mail et on envoie le mail
-            $this->mailPrepareService->sendReservationConfirmationEmail($reservation, 'summary');
-            //On enregistre l'envoi du mail dans la BDD
-            $this->mailService->recordMailSent($reservation, 'summary');
+            //Envoyer le mail de réservation
+            if (!$this->mailService->send(
+                'summary',
+                ['reservation' => $reservation],
+                $reservation->getEmail(),
+                'reservation.summary'
+            )) {
+                throw new RuntimeException('Échec de l\'envoi de l\'email');
+            }
         }
 
         //On met à jour Reservation

@@ -16,7 +16,6 @@ use app\Repository\Reservation\ReservationPaymentRepository;
 use app\Repository\Reservation\ReservationRepository;
 use app\Repository\Reservation\ReservationTempRepository;
 use app\Services\Log\Logger;
-use app\Services\Mails\MailPrepareService;
 use app\Services\Mails\MailService;
 use app\Services\Payment\PaymentRecordService;
 use app\Services\Security\TokenGenerateService;
@@ -37,7 +36,6 @@ readonly class ReservationDataPersist
     private ReservationPaymentRepository $reservationPaymentRepository;
     private UploadService $uploadService;
     private MailService $mailService;
-    private MailPrepareService $mailPrepareService;
     private ReservationTempRepository $reservationTempRepository;
 
     public function __construct(
@@ -51,7 +49,6 @@ readonly class ReservationDataPersist
         ReservationPaymentRepository $reservationPaymentRepository,
         UploadService $uploadService,
         MailService $mailService,
-        MailPrepareService $mailPrepareService,
         ReservationTempRepository $reservationTempRepository,
     ) {
         $this->tokenGenerateService = $tokenGenerateService;
@@ -64,7 +61,6 @@ readonly class ReservationDataPersist
         $this->reservationPaymentRepository = $reservationPaymentRepository;
         $this->uploadService = $uploadService;
         $this->mailService = $mailService;
-        $this->mailPrepareService = $mailPrepareService;
         $this->reservationTempRepository = $reservationTempRepository;
     }
 

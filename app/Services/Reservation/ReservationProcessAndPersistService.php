@@ -104,14 +104,14 @@ class ReservationProcessAndPersistService
         //On met à jour $reservation
         $reservation = $this->reservationRepository->findById($reservationId, true, true);
 
-        // Envoyer l'email de confirmation
-        if (!$this->mailPrepareService->sendReservationConfirmationEmail($reservation, 'paiement_confirme_add')) {
+        //Envoyer le mail de réservation
+        if (!$this->mailService->send(
+            'paiement_confirme_add',
+            ['reservation' => $reservation],
+            $reservation->getEmail(),
+            'reservation.paiement_confirme_add'
+        )) {
             throw new RuntimeException('Échec de l\'envoi de l\'email de confirmation.');
-        }
-
-        // Enregistrer l'envoi de l'email
-        if (!$this->mailService->recordMailSent($reservation, 'paiement_confirme_add')) {
-            throw new RuntimeException('Échec de l\'enregistrement de l\'envoi de l\'email de confirmation.');
         }
 
         return true;

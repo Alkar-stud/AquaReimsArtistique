@@ -438,15 +438,6 @@ readonly class ReservationUpdateService
                     );
                     throw new \RuntimeException('Échec de l\'envoi de l\'email de réactivation.');
                 }
-
-
-
-                if (!$this->mailPrepareService->sendCancelReservationConfirmationEmail($reservation, $templateEmail)) {
-                    // On trace l'échec d'envoi du mail
-
-                    throw new \RuntimeException('Échec de l\'envoi de l\'email d\'annulation.');
-                }
-
             }
 
             // Commit si tout est OK

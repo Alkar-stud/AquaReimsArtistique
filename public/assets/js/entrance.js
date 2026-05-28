@@ -129,7 +129,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
 
                 if (result.success) {
-console.log(result);
+
                     if (!isPresent) {
                         item.classList.add('list-group-item-success');
                         const icon = item.querySelector('.bi-circle');

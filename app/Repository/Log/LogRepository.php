@@ -3,6 +3,7 @@ namespace app\Repository\Log;
 
 use app\Enums\LogType;
 use app\Services\Log\Handler\FileLogHandler;
+use app\Utils\Normalize;
 use FilesystemIterator;
 use Generator;
 use RuntimeException;
@@ -70,7 +71,7 @@ class LogRepository
 
     private function readLogsDescending(): Generator
     {
-        // Max-heap: extrait toujours l’élément le plus "grand" (ici: le plus récent)
+        // Max-heap : extrait toujours l’élément le plus "grand" (ici : le plus récent)
         $heap = new class extends SplMaxHeap {
             protected function compare($a, $b): int
             {
@@ -79,7 +80,7 @@ class LogRepository
 
                 if ($aMs === $bMs) {
                     // Critère stable de repli pour éviter les regroupements
-                    return (int) (($a['_seq'] ?? 0) <=> ($b['_seq'] ?? 0));
+                    return (($a['_seq'] ?? 0) <=> ($b['_seq'] ?? 0));
                 }
                 return $aMs <=> $bMs;
             }
@@ -131,7 +132,7 @@ class LogRepository
 
                 $clean = $latestLog;
                 unset($clean['_src'], $clean['_seq']);
-                $clean['channel'] = $this->normalizeChannel($clean['channel'] ?? null);
+                $clean['channel'] = Normalize::normalizeChannel($clean['channel'] ?? null);
 
                 yield $clean;
 
@@ -170,10 +171,10 @@ class LogRepository
         if (!empty($filters['level'])) {
             $logLevel = strtoupper($logEntry['level'] ?? '');
             if (is_array($filters['level'])) {
-                // Le filtre est un tableau de niveaux (ex: ['WARNING', 'ERROR', ...])
+                // Le filtre est un tableau de niveaux (ex : ['WARNING', 'ERROR', ...]).
                 if (!in_array($logLevel, $filters['level'], true)) return false;
             } elseif (strcasecmp($logLevel, $filters['level']) !== 0) {
-                // Le filtre est une chaîne unique (comportement précédent)
+                // Le filtre est une chaîne unique (comportement précédent).
                 return false;
             }
         }
@@ -190,37 +191,4 @@ class LogRepository
         return true;
     }
 
-    private function normalizeChannel(?string $channel): string
-    {
-        $candidate = trim((string)$channel);
-        if ($candidate === '') {
-            return LogType::APPLICATION->value;
-        }
-
-        foreach (LogType::cases() as $case) {
-            if (strcasecmp($candidate, $case->value) === 0) {
-                return $case->value;
-            }
-        }
-
-        $aliases = [
-            'database'    => LogType::DATABASE->value,
-            'sql'         => LogType::SQL_ERROR->value,
-            'sql_error'   => LogType::SQL_ERROR->value,
-            'sql-error'   => LogType::SQL_ERROR->value,
-            'http'        => LogType::URL->value,
-            'request'     => LogType::ACCESS->value,
-            'app'         => LogType::APPLICATION->value,
-            'application' => LogType::APPLICATION->value,
-            'security'    => LogType::SECURITY->value,
-            'url_error'   => LogType::URL_ERROR->value,
-            'url-error'   => LogType::URL_ERROR->value,
-        ];
-        $lk = strtolower($candidate);
-        if (isset($aliases[$lk])) {
-            return $aliases[$lk];
-        }
-
-        return LogType::APPLICATION->value;
-    }
 }

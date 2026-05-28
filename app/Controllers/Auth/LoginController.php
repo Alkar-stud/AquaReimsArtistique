@@ -45,7 +45,8 @@ class LoginController extends AbstractController
             password_verify($password, $user->getPassword()) &&
             $user->getIsActif()
         ) {
-            Logger::get()->security('login_success', ['username' => $username, 'user_id' => $user->getId()]);
+            //On log l'évènement de login
+            Logger::get()->event('security.login.success', ['username' => $username, 'user_id' => $user->getId()]);
 
             if (password_needs_rehash($user->getPassword(), PASSWORD_DEFAULT, ['cost' => (int)$_ENV['BCRYPT_ROUNDS']])) {
                 $newHash = password_hash($password, PASSWORD_DEFAULT, ['cost' => (int)$_ENV['BCRYPT_ROUNDS']]);
@@ -62,7 +63,8 @@ class LoginController extends AbstractController
 
             $this->redirect($redirectUrl);
         } else {
-            Logger::get()->security('login_fail', ['username' => $username]);
+            // Échec d'authentification
+            Logger::get()->event('security.login.failed', ['username' => $username]);
         }
 
         $this->flashMessageService->setFlashMessage('danger', 'Identifiants incorrects.');

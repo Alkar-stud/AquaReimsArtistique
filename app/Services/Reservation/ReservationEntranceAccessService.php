@@ -6,6 +6,7 @@ use app\Models\Reservation\Reservation;
 use app\Models\User\User;
 use app\Repository\Reservation\ReservationDetailRepository;
 use app\Repository\Reservation\ReservationRepository;
+use app\Services\Log\Logger;
 use DateTime;
 
 class ReservationEntranceAccessService
@@ -116,7 +117,14 @@ class ReservationEntranceAccessService
         $value = $complement ? date('Y-m-d H:i:s') : null;
         $this->reservationRepository->updateSingleField($reservation->getId(), 'complements_given_at', $value);
         $this->reservationRepository->updateSingleField($reservation->getId(), 'complements_given_by', $value == null ? null:$currentUser->getId());
-
+        //On log l'event
+        Logger::get()->event(
+            'reservation.complement.entrance.checked',
+            [
+                'reservation_id' => $reservation->getId(),
+                'complements_given_by_user_id' => $currentUser->getId(),
+                'value' => $complement
+            ]);
         $userName = $value !== null ? $currentUser->getDisplayName() : null;
 
         return $this->buildUpdateComplementResponse($value, $userName);
@@ -150,11 +158,29 @@ class ReservationEntranceAccessService
      */
     public function checkParticipantForEntrance(Reservation $reservation, int $participant, User $currentUser, bool $isPresent): array
     {
+        $detail = $this->reservationDetailRepository->findById($participant, false, false, false);
+        if (!$detail || $detail->getReservation() !== $reservation->getId()) {
+            return [
+                'success' => false,
+                'message' => 'Participant invalide ou ne correspondant pas à cette réservation.',
+            ];
+        }
+
         $value = $isPresent ? date('Y-m-d H:i:s') : null;
         $this->reservationDetailRepository->updateSingleField($participant, 'entered_at', $value);
         $this->reservationDetailRepository->updateSingleField($participant, 'entry_validate_by', $value == null ? null:$currentUser->getId());
         //On compare le nombre de détails avec entered_at == null au nombre de details avec entered_at == not null
         $everyOneInReservation = $this->reservationQueryService->everyOneInReservationIsHere($reservation);
+
+        //On log l'event
+        Logger::get()->event(
+            'reservation.detail.entrance.attendance_marked',
+            [
+                'reservation_id' => $reservation->getId(),
+                'entry_validate_by_user_id' => $currentUser->getId(),
+                'participant_id' => $participant,
+                'value' => $isPresent
+            ]);
 
         $userName = $value !== null ? $currentUser->getDisplayName() : null;
 

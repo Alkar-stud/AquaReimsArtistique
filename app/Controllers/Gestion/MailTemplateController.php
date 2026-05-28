@@ -7,6 +7,7 @@ use app\Controllers\AbstractController;
 use app\Models\Mail\MailTemplate;
 use app\Repository\Mail\MailTemplateRepository;
 use app\Services\DataValidation\MailTemplateDataValidationService;
+use app\Services\Log\Logger;
 
 class MailTemplateController extends AbstractController
 {
@@ -60,8 +61,13 @@ class MailTemplateController extends AbstractController
             ->setBodyHtml($this->mailTemplateDataValidationService->getBodyHtml())
             ->setBodyText($this->mailTemplateDataValidationService->getBodyText());
 
-        $this->mailTemplateRepository->insert($this->mailTemplate);
-
+        $mailTemplateId = $this->mailTemplateRepository->insert($this->mailTemplate);
+        //On log l'event
+        Logger::get()->event(
+            'application.admin.mail_template.created',
+            [
+                'mail_template_id' => $mailTemplateId
+            ]);
         $this->flashMessageService->setFlashMessage('success', 'Le template a été ajouté.');
         $this->redirect('/gestion/mails_templates');
     }
@@ -95,7 +101,12 @@ class MailTemplateController extends AbstractController
             ->setBodyText($this->mailTemplateDataValidationService->getBodyText());
 
         $this->mailTemplateRepository->update($template);
-
+        //On log l'event
+        Logger::get()->event(
+            'application.admin.mail_template.updated',
+            [
+                'mail_template_id' => $template->getId()
+            ]);
         $this->flashMessageService->setFlashMessage('success', 'Le template a été modifié.');
         $this->redirect('/gestion/mails_templates');
     }
@@ -114,6 +125,12 @@ class MailTemplateController extends AbstractController
         if (!$this->mailTemplateRepository->delete($id)) {
             $this->flashMessageService->setFlashMessage('danger', 'Erreur lors de la suppression du template');
         } else {
+            //On log l'event
+            Logger::get()->event(
+                'application.admin.mail_template.deleted',
+                [
+                    'mail_template_id' => $id
+                ]);
             $this->flashMessageService->setFlashMessage('success', 'Le template a été supprimé.');
         }
 

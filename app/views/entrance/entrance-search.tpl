@@ -11,20 +11,26 @@
     <div class="alert alert-info">Aucune séance à venir dans les prochaines heures.
     </div>
     {% else %}
-    <div>Séances aujourd'hui : <br>
+    <div>Séances à venir : <br>
         {% foreach $todaySessions as $session %}
-        {{ $session['name'] }} : {{ $session['entered'] }} personnes entrée(s) / reste(s) {{ $session['total'] - $session['entered'] }}.
+        {{ $session['name'] }} ({{ $session['datetime'] }}) : {{ $session['entered'] }} personnes entrée(s) / reste(s) {{ $session['total'] - $session['entered'] }}.
         <br>
         {% endforeach %}
     </div>
     {% endif %}
 
+    {% if isset($searchError) && $searchError != '' %}
+    <div class="alert alert-warning">
+        {{ $searchError }}
+    </div>
+    {% endif %}
+
     {% if $searchQuery != '' %}
-    {% if count($reservations) == 0 %}
+    {% if !(isset($searchError) && $searchError != '') && count($reservations) == 0 %}
     <div class="alert alert-warning">
         Aucune réservation trouvée pour "<strong>{{ $searchQuery }}</strong>"
     </div>
-    {% else %}
+    {% elseif !(isset($searchError) && $searchError != '') %}
     <div class="alert alert-info">
         {{ count($reservations) }} réservation(s) trouvée(s)
     </div>

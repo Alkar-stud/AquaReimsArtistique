@@ -20,14 +20,12 @@ class ErrorController extends AbstractController
         $redirectUrl = str_starts_with($uri, '/gestion') ? '/gestion' : '/';
 
         // Log "url_error" pour les 404
-        Logger::get()->notice(
-            LogType::URL_ERROR->value,
-            'not_found',
+        Logger::get()->event(
+            'url.not_found',
             [
                 'uri' => $uri,
-                'method' => $_SERVER['REQUEST_METHOD'] ?? 'GET',
-            ]
-        );
+                'method' => $_SERVER['REQUEST_METHOD'] ?? 'GET'
+            ]);
 
         $this->render('errors/404', [
             'uri' => $uri,

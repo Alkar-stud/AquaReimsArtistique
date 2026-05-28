@@ -55,8 +55,6 @@ function ensureModalDOM() {
  * @param {object} seat - L'objet représentant le siège cliqué.
  */
 async function handleSeatClick(seat) {
-    // Pour l'instant, on affiche seulement en console.
-    console.log(`Place cliquée : ID ${seat.seatId}, pour le participant (detailId) : ${currentDetailId}`);
 
     try {
         await apiPost('/gestion/reservations/update-seat', {

@@ -12,20 +12,19 @@ use app\Repository\Reservation\ReservationTempRepository;
 use app\Services\Event\EventPiscineService;
 use app\Services\Event\EventQueryService;
 use app\Services\Log\Logger;
-use app\Services\Mails\MailPrepareService;
 use app\Services\Mails\MailService;
 use app\Services\Pagination\PaginationService;
 use app\Services\Payment\HelloAssoService;
 use app\Services\Payment\PaymentWebhookService;
 use app\Services\Pdf\PdfGenerationService;
 use app\Services\Reservation\ReservationQueryService;
-use app\Services\Reservation\ReservationFinalSummaryService;
 use app\Services\Reservation\ReservationDeletionService;
 use app\Services\Reservation\ReservationTokenService;
 use app\Services\Reservation\ReservationUpdateService;
 use app\Utils\DataHelper;
 use app\Utils\DurationHelper;
 use Exception;
+use InvalidArgumentException;
 use Throwable;
 
 class ReservationsController extends AbstractController
@@ -42,8 +41,6 @@ class ReservationsController extends AbstractController
     private ReservationTokenService $reservationTokenService;
     private ReservationQueryService $reservationQueryService;
     private MailService $mailService;
-    private MailPrepareService $mailPrepareService;
-    private ReservationFinalSummaryService $reservationFinalSummaryService;
     private DataHelper $dataHelper;
     private EventPiscineService $EventPiscineService;
 
@@ -60,8 +57,6 @@ class ReservationsController extends AbstractController
         ReservationTokenService $reservationTokenService,
         ReservationQueryService $reservationQueryService,
         MailService $mailService,
-        MailPrepareService $mailPrepareService,
-        ReservationFinalSummaryService $reservationFinalSummaryService,
         DataHelper $dataHelper,
         EventPiscineService $EventPiscineService,
     )
@@ -79,8 +74,6 @@ class ReservationsController extends AbstractController
         $this->reservationTokenService = $reservationTokenService;
         $this->reservationQueryService = $reservationQueryService;
         $this->mailService = $mailService;
-        $this->mailPrepareService = $mailPrepareService;
-        $this->reservationFinalSummaryService = $reservationFinalSummaryService;
         $this->dataHelper = $dataHelper;
         $this->EventPiscineService = $EventPiscineService;
     }
@@ -181,7 +174,6 @@ class ReservationsController extends AbstractController
 
         if (!$reservation) {
             $this->json(['error' => 'Réservation non trouvée'], 404);
-            return;
         }
 
         $this->json($reservation->toArray());
@@ -197,7 +189,6 @@ class ReservationsController extends AbstractController
 
         if (!$reservation) {
             $this->json(['error' => 'Réservation temporaire non trouvée'], 404);
-            return;
         }
 
         $this->json($reservation->toArray());
@@ -212,28 +203,45 @@ class ReservationsController extends AbstractController
         $reservation = $this->reservationTempRepository->findById($id);
         if (!$reservation) {
             $this->json(['success' => false, 'message' => 'Réservation temporaire non trouvée.'], 404);
-            return;
         }
 
         // Ajout de la vérification du statut de verrouillage
         if ($reservation->isLocked()) {
             $this->json(['success' => false, 'message' => 'Impossible de supprimer une réservation temporaire qui est verrouillée.'], 403);
-            return;
         }
 
         try {
             // Utilise la méthode existante deleteByIds du repository
             $this->reservationTempRepository->deleteByIds([$id]);
+            //On log l'event
+            Logger::get()->event(
+                'reservation.temp.deleted',
+                [
+                    'reservation_temp_id' => $id,
+                    'user_id' => $this->currentUser?->getId() ?? null,
+                ]);
             $this->flashMessageService->setFlashMessage('success', "La réservation temporaire a été supprimée avec succès.");
 
             $this->json(['success' => true]);
         } catch (Exception $e) {
             // Log de l'erreur pour le débogage
             error_log("Erreur lors de la suppression de la réservation temporaire ID $id : " . $e->getMessage());
+            Logger::get()->event(
+                'reservation.temp.delete.failed',
+                [
+                    'reservation_temp_id' => $id,
+                    'error' => $e->getMessage(),
+                ]);
             // Message d'erreur générique pour l'utilisateur
-            $this->json(['success' => false, 'message' => 'Une erreur serveur est survenue lors de la suppression de la réservation temporaire.'], 500);
+            $this->json(['success' => false, 'message' => 'Une erreur serveur est survenue lors de la suppression de la réservation temporaire.' . $e], 500);
         } catch (Throwable $e) {
-            $this->json(['success' => false, 'message' => 'Une erreur serveur est survenue lors de la suppression de la réservation temporaire.'], 500);
+            Logger::get()->event(
+                'reservation.temp.delete.failed',
+                [
+                    'reservation_temp_id' => $id,
+                    'error' => $e->getMessage(),
+                ]);
+            $this->json(['success' => false, 'message' => 'Une erreur serveur est survenue lors de la suppression de la réservation temporaire.' . $e], 500);
         }
     }
 
@@ -247,12 +255,29 @@ class ReservationsController extends AbstractController
 
         try {
             $this->reservationTempRepository->updateSingleField((int)$data['id'], 'is_locked', (bool)$data['isLocked']);
+
+            // Log de l'événement
+            $eventCode = (bool)$data['isLocked'] ? 'reservation.temp.locked' : 'reservation.temp.unlocked';
+            Logger::get()->event(
+                $eventCode,
+                [
+                    'reservation_temp_id' => (int)$data['id'],
+                    'is_locked' => (bool)$data['isLocked'],
+                ]);
+
             // On génère et renvoie un nouveau token pour maintenir la session sécurisée
             $newCsrfToken = $this->csrfService->getToken($this->getCsrfContext());
 
             parent::json(['success' => true, 'csrfToken' => $newCsrfToken]);
         } catch (Exception $e) {
             error_log("Erreur lors de la mise à jour du verrouillage : " . $e->getMessage());
+            Logger::get()->event(
+                'reservation.temp.lock.failed',
+                [
+                    'reservation_temp_id' => (int)$data['id'],
+                    'is_locked' => (bool)$data['isLocked'],
+                    'error' => $e->getMessage(),
+                ]);
             $this->json(['success' => false, 'message' => 'Erreur serveur.'], 500);
         }
     }
@@ -265,22 +290,51 @@ class ReservationsController extends AbstractController
 
         $data = $this->dataHelper->getAndCheckPostData(['reservationId']);
 
-        $reservation = $this->reservationRepository->findById((int)$data['reservationId'], false, false, false, true);
+        $reservation = $this->reservationRepository->findById((int)$data['reservationId'], true, true, false, true);
         if (!$reservation) {
             $this->json(['success' => false, 'message' => 'Réservation non trouvée.']);
         }
 
-        $return = $this->reservationUpdateService->handleUpdateReservationFields(
-            $reservation,
-            $data['typeField'] ?? '',
-            $data['id'] ?? null,
-            $data['tarifId'] ?? null,
-            $data['field'] ?? null,
-            $data['value'] ?? null,
-            $data['action'] ?? null
-        );
+        try {
+            $return = $this->reservationUpdateService->handleUpdateReservationFields(
+                $reservation,
+                $data['typeField'] ?? '',
+                $data['id'] ?? null,
+                $data['tarifId'] ?? null,
+                $data['field'] ?? null,
+                $data['value'] ?? null,
+                $data['action'] ?? null
+            );
 
-        $this->json($return);
+            if ($return['success'] ?? false) {
+                Logger::get()->event(
+                    'reservation.updated',
+                    [
+                        'reservation_id' => $reservation->getId(),
+                        'type_field' => $data['typeField'] ?? '',
+                        'field' => $data['field'] ?? '',
+                    ]);
+            } else {
+                Logger::get()->event(
+                    'reservation.update.failed',
+                    [
+                        'reservation_id' => $reservation->getId(),
+                        'type_field' => $data['typeField'] ?? '',
+                        'error' => $return['message'] ?? 'Unknown error',
+                    ]);
+            }
+
+            $this->json($return);
+        } catch (Exception $e) {
+            Logger::get()->event(
+                'reservation.update.failed',
+                [
+                    'reservation_id' => $reservation->getId(),
+                    'type_field' => $data['typeField'] ?? '',
+                    'error' => $e->getMessage(),
+                ]);
+            $this->json(['success' => false, 'message' => 'Erreur serveur.'], 500);
+        }
     }
 
     #[Route('/gestion/reservations/update-seat', name: 'app_gestion_reservations_update_seat', methods: ['POST'])]
@@ -298,11 +352,30 @@ class ReservationsController extends AbstractController
         try {
             $success = $this->reservationUpdateService->updateSeatForDetail($detailId, $newPlaceId);
             if ($success) {
+                Logger::get()->event(
+                    'reservation.seat.updated',
+                    [
+                        'detail_id' => $detailId,
+                        'new_place_id' => $newPlaceId,
+                    ]);
                 $this->json(['success' => true, 'message' => 'La place a été mise à jour avec succès.']);
             } else {
+                Logger::get()->event(
+                    'reservation.seat.update.failed',
+                    [
+                        'detail_id' => $detailId,
+                        'new_place_id' => $newPlaceId,
+                    ]);
                 $this->json(['success' => false, 'message' => 'La mise à jour de la place a échoué.'], 500);
             }
-        } catch (\InvalidArgumentException $e) {
+        } catch (InvalidArgumentException $e) {
+            Logger::get()->event(
+                'reservation.seat.update.failed',
+                [
+                    'detail_id' => $detailId,
+                    'new_place_id' => $newPlaceId,
+                    'error' => $e->getMessage(),
+                ]);
             $this->json(['success' => false, 'message' => $e->getMessage()], 404);
         }
     }
@@ -318,6 +391,12 @@ class ReservationsController extends AbstractController
 
         try {
             $this->reservationRepository->updateSingleField((int)$data['id'], 'is_checked', (bool)$data['status']);
+            Logger::get()->event(
+                'reservation.checked.toggled',
+                [
+                    'reservation_id' => (int)$data['id'],
+                    'is_checked' => (bool)$data['status'],
+                ]);
             $this->flashMessageService->setFlashMessage('success', "Le statut a été mis à jour avec succès.");
             // On génère et renvoie un nouveau token pour maintenir la session sécurisée
             $newCsrfToken = $this->csrfService->getToken($this->getCsrfContext());
@@ -325,6 +404,13 @@ class ReservationsController extends AbstractController
             parent::json(['success' => true, 'csrfToken' => $newCsrfToken]);
         } catch (Exception $e) {
             error_log("Erreur lors de la mise à jour du statut : " . $e->getMessage());
+            Logger::get()->event(
+                'reservation.checked.toggle.failed',
+                [
+                    'reservation_id' => (int)$data['id'],
+                    'is_checked' => (bool)$data['status'],
+                    'error' => $e->getMessage(),
+                ]);
             $this->json(['success' => false, 'message' => 'Erreur serveur.'], 500);
         }
     }
@@ -339,20 +425,36 @@ class ReservationsController extends AbstractController
         $reservation = $this->reservationRepository->findById($id);
         if (!$reservation) {
             $this->json(['success' => false, 'message' => 'Réservation non trouvée.'], 404);
-            return;
         }
         try {
             $this->reservationDeletionService->deleteReservation($id);
+            Logger::get()->event(
+                'reservation.deleted',
+                [
+                    'reservation_id' => $id,
+                ]);
             $this->flashMessageService->setFlashMessage('success', "La réservation a été supprimée avec succès.");
 
             $this->json(['success' => true]);
         } catch (Exception $e) {
             // Log de l'erreur pour le débogage
             error_log("Erreur lors de la suppression de la réservation ID $id : " . $e->getMessage());
+            Logger::get()->event(
+                'reservation.delete.failed',
+                [
+                    'reservation_id' => $id,
+                    'error' => $e->getMessage(),
+                ]);
             // Message d'erreur générique pour l'utilisateur
-            $this->json(['success' => false, 'message' => 'Une erreur serveur est survenue lors de la suppression de la réservation.'], 500);
+            $this->json(['success' => false, 'message' => 'Une erreur serveur est survenue lors de la suppression de la réservation.' . $e], 500);
         } catch (Throwable $e) {
-            $this->json(['success' => false, 'message' => 'Une erreur serveur est survenue lors de la suppression de la réservation.'], 500);
+            Logger::get()->event(
+                'reservation.delete.failed',
+                [
+                    'reservation_id' => $id,
+                    'error' => $e->getMessage(),
+                ]);
+            $this->json(['success' => false, 'message' => 'Une erreur serveur est survenue lors de la suppression de la réservation.' . $e], 500);
         }
 
 
@@ -373,11 +475,32 @@ class ReservationsController extends AbstractController
         }
 
         if ($payment->getType() == 'man' || $payment->getCheckoutId() === 0) {
+            Logger::get()->event(
+                'reservation.payment.refresh.failed',
+                [
+                    'payment_id' => $data['paymentId'],
+                    'reason' => 'Payment already up to date or manual payment',
+                ]);
             $this->json(['success' => false, 'message' => 'Paiement déjà à jour.'], 404);
         }
-        $result = $this->paymentWebhookService->handlePaymentState($payment->getPaymentId());
 
-        $this->json($result);
+        try {
+            $result = $this->paymentWebhookService->handlePaymentState($payment->getPaymentId());
+            Logger::get()->event(
+                'reservation.payment.refreshed',
+                [
+                    'payment_id' => $data['paymentId'],
+                ]);
+            $this->json($result);
+        } catch (Exception $e) {
+            Logger::get()->event(
+                'reservation.payment.refresh.failed',
+                [
+                    'payment_id' => $data['paymentId'],
+                    'error' => $e->getMessage(),
+                ]);
+            $this->json(['success' => false, 'message' => 'Erreur lors de l\'actualisation du paiement.'], 500);
+        }
     }
 
 
@@ -393,18 +516,34 @@ class ReservationsController extends AbstractController
         $payment = $this->reservationPaymentRepository->findById($data['paymentId']);
         if (!$payment) {
             $this->json(['success' => false, 'message' => 'Paiement non trouvé.'], 404);
-            return;
         }
 
-        //Si le paiement était en type 'man' on gère différemment, car pas passé par HelloAsso.
-        if ($payment->getType() != 'man') {
-            $this->helloAssoService->refundPayment($payment->getPaymentId(), 'remboursement sur demande)');
-            $result = $this->paymentWebhookService->handlePaymentState($payment->getPaymentId());
-        } else {
-            $result = $this->paymentWebhookService->processRefundManuelPayment($payment);
-        }
+        try {
+            //Si le paiement était en type 'man' on gère différemment, car pas passé par HelloAsso.
+            if ($payment->getType() != 'man') {
+                $this->helloAssoService->refundPayment($payment->getPaymentId(), 'remboursement sur demande)');
+                $result = $this->paymentWebhookService->handlePaymentState($payment->getPaymentId());
+            } else {
+                $result = $this->paymentWebhookService->processRefundManuelPayment($payment);
+            }
 
-        $this->json(['success' => true, 'result' => $result]);
+            Logger::get()->event(
+                'reservation.payment.refunded',
+                [
+                    'payment_id' => $data['paymentId'],
+                    'payment_type' => $payment->getType(),
+                ]);
+
+            $this->json(['success' => true, 'result' => $result]);
+        } catch (Exception $e) {
+            Logger::get()->event(
+                'reservation.payment.refund.failed',
+                [
+                    'payment_id' => $data['paymentId'],
+                    'error' => $e->getMessage(),
+                ]);
+            $this->json(['success' => false, 'message' => 'Erreur lors du remboursement.'], 500);
+        }
     }
 
     #[Route('/gestion/reservations/paid', name: 'app_gestion_reservations_paid', methods: ['POST'])]
@@ -440,18 +579,14 @@ class ReservationsController extends AbstractController
         $this->reservationPaymentRepository->insert($newPayment);
         //On met à jour la réservation : amount paid = total amount
         $this->reservationRepository->update($reservation);
-        // Log action sensible sur le channel "application"
-        Logger::get()->info(
-            LogType::APPLICATION->value,
-            'reservation_marked_as_paid',
+
+        Logger::get()->event(
+            'reservation.manual_payment.marked',
             [
                 'reservation_id' => $reservation->getId(),
                 'amount' => $amount,
                 'method' => 'manual',
-                'user_id' => $this->currentUser?->getId() ?? null,
-                'user_login' => $this->currentUser?->getUsername() ?? ''
-            ]
-        );
+            ]);
 
         $this->json(['success' => true, 'reservation' => $reservation]);
     }
@@ -471,16 +606,36 @@ class ReservationsController extends AbstractController
             $this->json(['success' => false, 'message' => 'Réservation non trouvée']);
         }
 
-        $newReservation = $this->reservationTokenService->updateToken(
-            $reservation,
-            isset($data['token']),
-            $data['new_expire_at'] ?? false,
-            $data['sendEmail'] ?? false
-        );
+        try {
+            $newReservation = $this->reservationTokenService->updateToken(
+                $reservation,
+                isset($data['token']),
+                $data['new_expire_at'] ?? false,
+                $data['sendEmail'] ?? false
+            );
 
-        $this->json(['success' => true, 'reservation' => $newReservation->toArray()]);
+            Logger::get()->event(
+                'reservation.token.reinitialized',
+                [
+                    'reservation_id' => $data['reservationId'],
+                    'send_email' => $data['sendEmail'] ?? false,
+                ]);
+
+            $this->json(['success' => true, 'reservation' => $newReservation->toArray()]);
+        } catch (Exception $e) {
+            Logger::get()->event(
+                'reservation.token.reinit.failed',
+                [
+                    'reservation_id' => $data['reservationId'],
+                    'error' => $e->getMessage(),
+                ]);
+            $this->json(['success' => false, 'message' => 'Erreur lors de la réinitialisation du token.'], 500);
+        }
     }
 
+    /**
+     * @throws \PHPMailer\PHPMailer\Exception
+     */
     #[Route('/gestion/reservations/send-mail', name: 'app_gestion_reservations_send_email', methods: ['POST'])]
     public function sendEmail(): void
     {
@@ -494,21 +649,45 @@ class ReservationsController extends AbstractController
             $this->json(['success' => false, 'message' => 'Réservation non trouvée.'], 404);
         }
 
-        // Si c'est un récap final, on passe par le service dédié pour avoir le PDF
-        if ($data['templateCode'] === 'final_summary') {
-            $returnEmailSent = $this->reservationFinalSummaryService->sendForReservation($reservation);
-        } else {
-            // Cas général
-            $returnEmailSent = $this->mailPrepareService->sendReservationConfirmationEmail($reservation, $data['templateCode']);
-            //On enregistre l'envoi
-            $this->mailService->recordMailSent($reservation, $data['templateCode']);
-        }
+        try {
+            //On envoie le mail
+            $returnEmailSent = $this->mailService->send($data['templateCode'],
+                [
+                    'reservation' => $reservation,
+                ],
+                $reservation->getEmail(),
+                'reservation.' . $data['templateCode']
+            );
 
-        if (!$returnEmailSent) {
-            $this->json(['success' => false, 'message' => 'Mail non envoyé']);
+            if (!$returnEmailSent) {
+                Logger::get()->event(
+                    'reservation.email.send.failed',
+                    [
+                        'reservation_id' => $data['reservationId'],
+                        'template_code' => $data['templateCode'],
+                        'reason' => 'Mail not sent',
+                    ]);
+                $this->json(['success' => false, 'message' => 'Mail non envoyé']);
+            } else {
+                Logger::get()->event(
+                    'reservation.email.sent',
+                    [
+                        'reservation_id' => $data['reservationId'],
+                        'template_code' => $data['templateCode'],
+                        'recipient' => $reservation->getEmail(),
+                    ]);
+                $this->json(['success' => true, 'message' => 'Mail envoyé', 'reservation' => $reservation->toArray()]);
+            }
+        } catch (Exception $e) {
+            Logger::get()->event(
+                'reservation.email.send.failed',
+                [
+                    'reservation_id' => $data['reservationId'],
+                    'template_code' => $data['templateCode'],
+                    'error' => $e->getMessage(),
+                ]);
+            $this->json(['success' => false, 'message' => 'Erreur serveur lors de l\'envoi du mail.'], 500);
         }
-
-        $this->json(['success' => true, 'message' => 'Mail envoyé', 'reservation' => $reservation->toArray()]);
     }
 
 }

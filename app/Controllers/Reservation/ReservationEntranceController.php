@@ -6,6 +6,7 @@ use app\Attributes\Route;
 use app\Controllers\AbstractController;
 use app\Repository\Reservation\ReservationRepository;
 use app\Services\Event\EventQueryService;
+use app\Services\Log\Logger;
 use app\Services\Reservation\ReservationEntranceAccessService;
 use app\Services\Reservation\ReservationQueryService;
 
@@ -36,13 +37,30 @@ class ReservationEntranceController extends AbstractController
     #[Route('/entrance', name: 'app_entrance', methods: ['GET'])]
     public function reservationEntrance(): void
     {
-        $reservationToken = (string)($_GET['token'] ?? '');
-        if (empty($reservationToken)) {
-            $this->render('errors/404', [], 'Accès refusé');
+        $reservationToken = trim((string)($_GET['token'] ?? ''));
+        if ($reservationToken === '') {
+            $this->render('/entrance/entrance-search', [
+                ...$this->getEntranceSearchViewData(),
+                'searchQuery' => '',
+                'searchError' => "Lien d'acces invalide: token manquant.",
+                'reservations' => [],
+                'single' => false,
+            ], "Recherche d'entrée");
             return;
         }
 
         $reservation = $this->reservationRepository->findByField('token', $reservationToken, true, true, false);
+
+        if (!$reservation) {
+            $this->render('/entrance/entrance-search', [
+                ...$this->getEntranceSearchViewData(),
+                'searchQuery' => '',
+                'searchError' => "Le lien d'acces est invalide ou la reservation n'existe plus.",
+                'reservations' => [],
+                'single' => false,
+            ], "Recherche d'entrée");
+            return;
+        }
 
         // Vérification de l'accès temporel
         $accessCheck = $this->reservationEntranceAccessService->canModifyReservation($reservation);
@@ -71,36 +89,31 @@ class ReservationEntranceController extends AbstractController
     public function reservationEntranceSearch(): void
     {
         $searchQuery = $_GET['q'] ?? '';
+        $trimmedSearchQuery = trim($searchQuery);
+        $entranceSearchViewData = $this->getEntranceSearchViewData();
 
-        // Récupérer les sessions du jour dans tous les cas
-        $events = $this->eventQueryService->getAllEventsWithRelations(true, $this->delayIsComing);
-        $todaySessions = [];
-
-        if (!empty($events)) {
-            $nbSpectatorsPerSession = $this->reservationQueryService->getNbSpectatorsPerSession($events);
-            $sessions = $events[0]->getSessions();
-
-            foreach($sessions as $session) {
-                $todaySessions[$session->getId()] = [
-                    'name' => $session->getSessionName(),
-                    'total' => $nbSpectatorsPerSession[$session->getId()]['qty'],
-                    'entered' => $nbSpectatorsPerSession[$session->getId()]['entered'],
-                ];
-            }
-        }
-
-        if (empty(trim($searchQuery))) {
+        if ($trimmedSearchQuery === '') {
             $this->render('/entrance/entrance-search', [
                 'searchQuery' => '',
                 'reservations' => [],
                 'single' => false,
-                'todaySessions' => $todaySessions,
-                'noUpcomingEvents' => empty($events),
+                ...$entranceSearchViewData,
             ], "Recherche d'entrée");
             return;
         }
 
-        $result = $this->reservationQueryService->searchForEntrance($searchQuery);
+        if (!$this->isValidEntranceSearchQuery($trimmedSearchQuery)) {
+            $this->render('/entrance/entrance-search', [
+                'searchQuery' => $trimmedSearchQuery,
+                'searchError' => 'Saisissez au moins 2 caractères, ou 1 chiffre pour rechercher un numéro de réservation.',
+                'reservations' => [],
+                'single' => false,
+                ...$entranceSearchViewData,
+            ], "Recherche d'entrée");
+            return;
+        }
+
+        $result = $this->reservationQueryService->searchForEntrance($trimmedSearchQuery);
 
         if ($result['single'] && !empty($result['reservations'])) {
             $reservation = $result['reservations'][0];
@@ -109,11 +122,47 @@ class ReservationEntranceController extends AbstractController
         }
 
         $this->render('/entrance/entrance-search', [
-            'searchQuery' => $searchQuery,
+            'searchQuery' => $trimmedSearchQuery,
             'reservations' => $result['reservations'],
             'single' => $result['single'],
-            'todaySessions' => $todaySessions,
+            ...$entranceSearchViewData,
         ], "Recherche d'entrée");
+    }
+
+    /**
+     * Données communes de la vue de recherche d'entrée.
+     */
+    private function getEntranceSearchViewData(): array
+    {
+        $events = $this->eventQueryService->getAllEventsWithRelations(true, $this->delayIsComing);
+        $todaySessions = [];
+
+        if (!empty($events)) {
+            $nbSpectatorsPerSession = $this->reservationQueryService->getNbSpectatorsPerSession($events);
+            $sessions = $events[0]->getSessions();
+
+            foreach ($sessions as $session) {
+                $todaySessions[$session->getId()] = [
+                    'name' => $session->getSessionName(),
+                    'datetime' => $session->getEventStartAt()->format('d/m/Y à H:i'),
+                    'total' => $nbSpectatorsPerSession[$session->getId()]['qty'],
+                    'entered' => $nbSpectatorsPerSession[$session->getId()]['entered'],
+                ];
+            }
+        }
+
+        return [
+            'todaySessions' => $todaySessions,
+            'noUpcomingEvents' => empty($events),
+        ];
+    }
+
+    /**
+     * Recherche d'entrée : minimum 2 caractères, sauf un seul chiffre pour un id de réservation.
+     */
+    private function isValidEntranceSearchQuery(string $query): bool
+    {
+        return preg_match('/^\d$/', $query) === 1 || strlen($query) >= 2;
     }
 
 
@@ -130,14 +179,12 @@ class ReservationEntranceController extends AbstractController
         $reservation = $this->reservationRepository->findById($id, true, true);
         if (!$reservation) {
             $this->json(['success' => false, 'message' => 'Réservation non trouvée.'], 404);
-            return;
         }
 
         // Vérification de l'accès temporel
         $accessCheck = $this->reservationEntranceAccessService->canModifyReservation($reservation);
         if (!$accessCheck['allowed']) {
             $this->json($accessCheck, 403);
-            return;
         }
 
         //On récupère les données
@@ -165,6 +212,13 @@ class ReservationEntranceController extends AbstractController
 
         if ($isChecked !== null) {
             $this->reservationRepository->updateSingleField($reservation->getId(), 'is_checked', true);
+            //On log l'event
+            Logger::get()->event(
+                'reservation.entrance.checked',
+                [
+                    'reservation_id' => $reservation->getId(),
+                    'entry_validate_by_user_id' => $this->currentUser->getId()
+                ]);
             $this->json(['success' => true, 'message' => 'Réservation marquée comme vérifiée']);
         }
 

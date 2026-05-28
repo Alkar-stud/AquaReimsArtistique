@@ -635,23 +635,46 @@ class ReservationRepository extends AbstractRepository
      *
      * @param string $searchQuery
      * @param int|null $limit
+     * @param bool $isComing
      * @return Reservation[]
      */
-    public function findByNameOrId(string $searchQuery, ?int $limit = null): array
+    public function findByNameOrId(string $searchQuery, ?int $limit = null, bool $isComing = false): array
     {
+        $searchQuery = trim($searchQuery);
+        if ($searchQuery === '') {
+            return [];
+        }
+
         $params = [];
-        $q = '%' . trim($searchQuery) . '%';
+        $isNumericSearch = ctype_digit($searchQuery);
 
-        $params['q_id'] = $q;
-        $params['q_name'] = $q;
-        $params['q_firstname'] = $q;
+        $sql = "SELECT $this->tableName.* FROM $this->tableName";
 
-        $sql = "SELECT * FROM $this->tableName 
-            WHERE (CAST(id AS CHAR) LIKE :q_id 
-                   OR name LIKE :q_name 
-                   OR firstname LIKE :q_firstname)
-              AND is_canceled = 0
-            ORDER BY created_at";
+        if ($isComing) {
+            // Joindre avec event_session pour vérifier la date
+            $sql .= " INNER JOIN event_session es ON $this->tableName.event_session = es.id";
+        }
+
+        if ($isNumericSearch) {
+            // Une recherche purement numérique correspond à un numéro de réservation exact.
+            $sql .= " WHERE $this->tableName.id = :reservationId AND $this->tableName.is_canceled = 0";
+            $params['reservationId'] = (int)$searchQuery;
+        } else {
+            $q = '%' . $searchQuery . '%';
+            $params['q_name'] = $q;
+            $params['q_firstname'] = $q;
+
+            $sql .= " WHERE ($this->tableName.name LIKE :q_name 
+                       OR $this->tableName.firstname LIKE :q_firstname)
+                  AND $this->tableName.is_canceled = 0";
+        }
+
+        if ($isComing) {
+            // Filtrer pour ne garder que les réservations avec une date >= aujourd'hui (comparaison des dates uniquement)
+            $sql .= " AND DATE(es.event_start_at) >= CURDATE()";
+        }
+
+        $sql .= " ORDER BY $this->tableName.created_at";
 
         if ($limit !== null) {
             $sql .= " LIMIT $limit";
@@ -896,7 +919,7 @@ class ReservationRepository extends AbstractRepository
     }
 
     /**
-     * On fait pareil pour vérifier s'il y a des réservations active pour un event
+     * Pour vérifier s'il y a des réservations active pour un event
      * @param int $eventId
      * @return bool
      */

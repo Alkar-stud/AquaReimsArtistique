@@ -4,14 +4,20 @@ namespace app\Controllers\Auth;
 use app\Attributes\Route;
 use app\Controllers\AbstractController;
 use app\Repository\User\UserRepository;
+use app\Services\Log\Logger;
 use app\Services\Mails\MailPrepareService;
+use app\Services\Mails\MailService;
 use Exception;
 
 class AccountController extends AbstractController
 {
-    public function __construct()
+    private MailService $mailService;
+    public function __construct(
+        MailService $mailService,
+    )
     {
         parent::__construct(false); // true = route publique, pas de vérif session pour éviter le TOO_MANY_REDIRECT
+        $this->mailService = $mailService;
     }
 
     #[Route('/account', name: 'app_account', methods: ['GET'])]
@@ -91,14 +97,18 @@ class AccountController extends AbstractController
             $newHash = password_hash($new_password, PASSWORD_DEFAULT, ['cost' => (int)$_ENV['BCRYPT_ROUNDS']]);
             $userRepository->updatePassword($user->getId(), $newHash);
 
+            //On log l'event
+            Logger::get()->event('security.password_modified', ['user_id' => $user->getId()]);
+
             //on envoie un mail au user pour signaler le changement
             try {
-                $mailPrepareService = new MailPrepareService();
-
-                $mailPrepareService->sendPasswordModifiedEmail(
+                $this->mailService->send(
+                    'password_modified',
+                    ['username' => $user->getDisplayName()],
                     $user->getEmail(),
-                    $user->getDisplayName()
+                    'user.password_modified'
                 );
+
             } catch (Exception $e) {
                 error_log('Erreur critique du service Mail: ' . $e->getMessage());
             }

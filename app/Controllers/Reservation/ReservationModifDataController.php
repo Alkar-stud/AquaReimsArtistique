@@ -211,7 +211,7 @@ class ReservationModifDataController extends AbstractController
             $this->json(['success' => false, 'message' => 'Modification non autorisée.']);
         }
         //On récupère la réservation
-        $reservation = $this->reservationRepository->findByField('token', $token, false, false, false, true);
+        $reservation = $this->reservationRepository->findByField('token', $token, true, true, false, true);
         if (!$reservation) {
             $this->json(['success' => false, 'message' => 'Modification non autorisée.']);
         }

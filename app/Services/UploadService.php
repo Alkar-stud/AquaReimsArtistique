@@ -2,6 +2,7 @@
 
 namespace app\Services;
 
+use app\Services\Log\Logger;
 use DateTime;
 use Exception;
 
@@ -19,15 +20,35 @@ class UploadService
     {
         // --- Vérifications de sécurité ---
         if ($fileData['error'] !== UPLOAD_ERR_OK) {
+            //On log l'event
+            Logger::get()->event(
+                'filesystem.upload.failed',
+                [
+                    'fileData' => $this->getUploadErrorMessage($fileData['error'])
+                ]);
             throw new Exception($this->getUploadErrorMessage($fileData['error']));
         }
 
         $allowedMimeTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
         if (!in_array($fileData['type'], $allowedMimeTypes)) {
+            //On log l'event
+            Logger::get()->event(
+                'filesystem.upload.failed',
+                [
+                    'error' => 'Type de fichier non autorisé.',
+                    'fileData' => $fileData
+                ]);
             throw new Exception('Type de fichier non autorisé.');
         }
 
         if ($fileData['size'] > 2 * 1024 * 1024) { // Limite à 2 Mo
+            //On log l'event
+            Logger::get()->event(
+                'filesystem.upload.failed',
+                [
+                    'error' => 'Le fichier est trop volumineux (max 2Mo)',
+                    'fileData' => $fileData
+                ]);
             throw new Exception('Le fichier est trop volumineux (max 2Mo).');
         }
 

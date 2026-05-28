@@ -7,6 +7,7 @@ use app\Controllers\AbstractController;
 use app\Models\Tarif\Tarif;
 use app\Repository\Tarif\TarifRepository;
 use app\Services\DataValidation\TarifDataValidationService;
+use app\Services\Log\Logger;
 
 class TarifController extends AbstractController
 {
@@ -72,7 +73,15 @@ class TarifController extends AbstractController
             ->setAccessCode($this->tarifDataValidationService->getAccessCode())
             ->setIsActive($this->tarifDataValidationService->getIsActive());
 
-        $this->tarifRepository->insert($tarif);
+        $tarifId = $this->tarifRepository->insert($tarif);
+        //On log l'event
+        Logger::get()->event(
+            'application.admin.tarif.created',
+            [
+                'tarif_id' => $tarifId,
+                'name' => $tarif->getName(),
+                'price' => $tarif->getPrice(),
+            ]);
         $this->flashMessageService->setFlashMessage('success', "Tarif ajouté.");
         $this->redirect($redirectUrl);
     }
@@ -115,6 +124,14 @@ class TarifController extends AbstractController
             ->setIsActive($this->tarifDataValidationService->getIsActive());
 
         $this->tarifRepository->update($tarif);
+        //On log l'event
+        Logger::get()->event(
+            'application.admin.tarif.updated',
+            [
+                'tarif_id' => $tarif->getId(),
+                'name' => $tarif->getName(),
+                'price' => $tarif->getPrice(),
+            ]);
         $this->flashMessageService->setFlashMessage('success', "Tarif modifié.");
         $this->redirect($redirectUrl);
     }
@@ -138,11 +155,25 @@ class TarifController extends AbstractController
 
         //On vérifie si le tarif est utilisé
         if ($this->tarifRepository->isUsed($tarifId)) {
+            //On log l'event
+            Logger::get()->event(
+                'application.admin.tarif.deleted.failed',
+                [
+                    'tarif_id' => $tarifId,
+                    'name' => $tarif->getName(),
+                ]);
             $this->flashMessageService->setFlashMessage('danger', "Impossible de supprimer ce tarif.\nIl est utilisé dans au moins un événement.");
             $this->redirect($redirectUrl);
         }
 
         $this->tarifRepository->delete($tarifId);
+        //On log l'event
+        Logger::get()->event(
+            'application.admin.tarif.deleted',
+            [
+                'tarif_id' => $tarifId,
+                'name' => $tarif->getName(),
+            ]);
         $this->flashMessageService->setFlashMessage('success', "Tarif supprimé.");
         $this->redirect($redirectUrl);
 

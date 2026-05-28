@@ -38,12 +38,12 @@
                             data-bs-target="#editModal-{{ $template->getId() }}">
                         <i class="bi bi-pencil-square"></i><span class="btn-label">Modifier</span>
                     </button>
-                    <form method="POST" action="/gestion/mails_templates/delete" class="m-0 flex-fill">
-                        <input type="hidden" name="id" value="{{ $template->getId() }}">
-                        <button type="submit" class="btn btn-danger btn-sm w-100 btn-gestion">
-                            <i class="bi bi-trash"></i><span class="btn-label">Supprimer</span>
-                        </button>
-                    </form>
+                    <button type="button"
+                            class="btn btn-danger btn-sm flex-fill btn-gestion"
+                            data-bs-toggle="modal"
+                            data-bs-target="#deleteConfirmModal-{{ $template->getId() }}">
+                        <i class="bi bi-trash"></i><span class="btn-label">Supprimer</span>
+                    </button>
                 </div>
             </td>
         </tr>
@@ -80,6 +80,39 @@
                             </button>
                             <button type="submit" class="btn btn-secondary w-100 w-sm-auto">
                                 <i class="bi bi-save"></i>&nbsp;Enregistrer
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modale de confirmation de suppression -->
+        <div class="modal fade" id="deleteConfirmModal-{{ $template->getId() }}" tabindex="-1" aria-labelledby="deleteConfirmLabel-{{ $template->getId() }}" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <form method="POST" action="/gestion/mails_templates/delete">
+                        <div class="modal-header bg-danger text-white">
+                            <h5 class="modal-title" id="deleteConfirmLabel-{{ $template->getId() }}">
+                                <i class="bi bi-exclamation-triangle"></i>&nbsp;Confirmer la suppression
+                            </h5>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fermer"></button>
+                        </div>
+                        <div class="modal-body">
+                            <p class="mb-3">
+                                Êtes-vous sûr de vouloir supprimer le template <strong>{{ htmlspecialchars($template->getCode()) }}</strong> ?
+                            </p>
+                            <p class="text-muted mb-0">
+                                <i class="bi bi-info-circle"></i>&nbsp;Cette action est irréversible.
+                            </p>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                                <i class="bi bi-x-circle"></i>&nbsp;Annuler
+                            </button>
+                            <input type="hidden" name="id" value="{{ $template->getId() }}">
+                            <button type="submit" class="btn btn-danger">
+                                <i class="bi bi-trash"></i>&nbsp;Supprimer définitivement
                             </button>
                         </div>
                     </form>

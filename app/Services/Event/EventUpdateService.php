@@ -9,6 +9,7 @@ use app\Repository\Event\EventSessionRepository;
 use app\Repository\Event\EventTarifRepository;
 use app\Repository\Reservation\ReservationRepository;
 use app\Services\DataValidation\EventDataValidationService;
+use app\Services\Log\Logger;
 use Exception;
 use Throwable;
 
@@ -117,7 +118,6 @@ class EventUpdateService
                 }
             }
 
-
             // Remplacer les périodes d'inscription (supprimer les anciennes, insérer les nouvelles)
             $this->eventInscriptionDateRepository->deleteAllForEvent($event->getId());
             foreach ($inscriptionDates as $inscriptionDate) {
@@ -127,6 +127,14 @@ class EventUpdateService
 
             // Finalisation
             $this->eventRepository->commit();
+
+            //On log l'event
+            Logger::get()->event(
+                'event.update.succeeded',
+                [
+                    'event_id' => $event->getId(),
+                    'event_name' => $event->getName(),
+                ]);
 
             if (empty($undeletableSessionNames)) {
                 return new EventResult(EventResult::SUCCESS, $event->getName());

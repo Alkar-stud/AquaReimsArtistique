@@ -181,7 +181,7 @@ readonly class ReservationDataPersist
         }
 
         $closeRegistrationDate = $inscriptionDateToUse ? $inscriptionDateToUse->getCloseRegistrationAt() : $sessionObj->getEventStartAt();
-        $tokenGenerated = $this->tokenGenerateService->generateToken(32, null, $closeRegistrationDate);
+        $tokenGenerated = $this->tokenGenerateService->generateToken((int)NB_CARACTERE_TOKEN, null, $closeRegistrationDate);
 
         $this->reservation->setEvent($tempReservation->getEvent())
             ->setEventSession($tempReservation->getEventSession())

@@ -86,13 +86,14 @@ class MailTemplateRepository extends AbstractRepository
      */
     public function insert(MailTemplate $mailTemplate): int
     {
-        $sql = "INSERT INTO $this->tableName (code, subject, body_html, body_text)
-                VALUES (:code, :subject, :body_html, :body_text)";
+        $sql = "INSERT INTO $this->tableName (code, subject, body_html, body_text, requires_resume_attachment)
+                VALUES (:code, :subject, :body_html, :body_text, :requires_resume_attachment)";
         $ok = $this->execute($sql, [
             'code' => $mailTemplate->getCode(),
             'subject' => $mailTemplate->getSubject(),
             'body_html' => $mailTemplate->getBodyHtml(),
             'body_text' => $mailTemplate->getBodyText(),
+            'requires_resume_attachment' => (int) $mailTemplate->getRequiresResumeAttachment(),
         ]);
         return $ok ? $this->getLastInsertId() : 0;
     }
@@ -105,7 +106,12 @@ class MailTemplateRepository extends AbstractRepository
     public function update(MailTemplate $mailTemplate): bool
     {
         $sql = "UPDATE $this->tableName
-                SET code = :code, subject = :subject, body_html = :body_html, body_text = :body_text, updated_at = NOW()
+                SET code = :code, 
+                    subject = :subject, 
+                    body_html = :body_html, 
+                    body_text = :body_text, 
+                    requires_resume_attachment = :requires_resume_attachment, 
+                    updated_at = NOW()
                 WHERE id = :id";
         return $this->execute($sql, [
             'id' => $mailTemplate->getId(),
@@ -113,6 +119,7 @@ class MailTemplateRepository extends AbstractRepository
             'subject' => $mailTemplate->getSubject(),
             'body_html' => $mailTemplate->getBodyHtml(),
             'body_text' => $mailTemplate->getBodyText(),
+            'requires_resume_attachment' => (int) $mailTemplate->getRequiresResumeAttachment(),
         ]);
     }
 
@@ -128,7 +135,8 @@ class MailTemplateRepository extends AbstractRepository
             ->setCode($data['code'])
             ->setSubject($data['subject'])
             ->setBodyHtml($data['body_html'])
-            ->setBodyText($data['body_text']);
+            ->setBodyText($data['body_text'])
+            ->setRequiresResumeAttachment((bool)($data['requires_resume_attachment'] ?? false));
 
         return $template;
     }

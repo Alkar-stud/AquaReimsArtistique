@@ -39,12 +39,18 @@ readonly class PdfGenerationService
         ],
     ];
 
-    public function __construct(
-        private EventQueryService     $eventQueryService,
-        private ReservationRepository $reservationRepository,
-        private ReservationQueryService $reservationQueryService,
+    private ReservationQueryService $reservationQueryService;
+    private EventQueryService $eventQueryService;
+    private ReservationRepository $reservationRepository;
 
+    public function __construct(
+        ReservationQueryService $reservationQueryService,
+        EventQueryService       $eventQueryService,
+        ReservationRepository   $reservationRepository,
     ) {
+        $this->reservationQueryService = $reservationQueryService;
+        $this->eventQueryService = $eventQueryService;
+        $this->reservationRepository = $reservationRepository;
     }
 
     /**

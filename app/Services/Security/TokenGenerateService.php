@@ -77,7 +77,7 @@ class TokenGenerateService
      * @param int $length
      * @return string|null
      */
-    private function generate(int $length): ?string
+    private function generate(int $length = 32): ?string
     {
         try {
             return bin2hex(random_bytes($length));

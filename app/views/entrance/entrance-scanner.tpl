@@ -1,4 +1,4 @@
-<script src="https://unpkg.com/@zxing/library@latest"></script>
+<script src="/assets/zxing/zxing-0.23.0.min.js"></script>
 
 <style>
     #preview {
@@ -15,63 +15,8 @@
 
 {% include 'partials/search-form.tpl' %}
 
+<div id="scan-feedback" class="alert alert-warning d-none" role="alert"></div>
+
 <video id="preview" autoplay></video>
 
-<script>
-
-    //Pour désactiver l'autofocus du formulaire de recherche
-    document.addEventListener('DOMContentLoaded', () => {
-        const searchInput = document.getElementById('search-input');
-        if (searchInput) {
-            // Supprime l'attribut autofocus
-            searchInput.removeAttribute('autofocus');
-            // Retire le focus si jamais il est mis par défaut
-            searchInput.blur();
-        }
-    });
-
-    const codeReader = new ZXing.BrowserQRCodeReader();
-    const preview = document.getElementById('preview');
-    const scanAgainButton = document.getElementById('scanAgain');
-    let stream = null;
-
-    // Fonction pour démarrer le scan
-    async function startScan() {
-        try {
-            // Arrêter le flux existant si présent
-            if (stream) {
-                stream.getTracks().forEach(track => track.stop());
-            }
-
-            // Demander l'accès à la caméra arrière
-            stream = await navigator.mediaDevices.getUserMedia({
-                video: { facingMode: 'environment' }
-            });
-            preview.srcObject = stream;
-            preview.style.display = 'block';
-
-            // Démarrer la détection des QR codes
-            codeReader.decodeFromVideoDevice(
-                null,
-                preview,
-                (result, error) => {
-                    if (result) {
-                        // Rediriger vers le lien du QR code
-                        window.location.href = result.text;
-                    }
-                    if (error) {
-                        console.error("Erreur de détection :", error);
-                    }
-                }
-            );
-        } catch (error) {
-            alert("Impossible d'accéder à la caméra : " + error.message);
-        }
-    }
-
-    // Démarrer le scan au chargement de la page
-    startScan();
-
-    // Bouton pour relancer le scan
-    scanAgainButton.addEventListener('click', startScan);
-</script>
+<script src="/assets/js/components/zxing.js"></script>

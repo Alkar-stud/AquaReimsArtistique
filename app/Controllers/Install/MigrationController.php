@@ -377,7 +377,7 @@ class MigrationController
         }
 
         try {
-            $token = bin2hex(random_bytes(32));
+            $token = bin2hex(random_bytes((int)NB_CARACTERE_TOKEN));
         } catch (RandomException) {
             return 'Impossible de générer un token de réinitialisation.';
         }

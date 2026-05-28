@@ -8,6 +8,7 @@ use app\Models\Swimmer\SwimmerGroup;
 use app\Repository\Swimmer\SwimmerGroupRepository;
 use app\Repository\Swimmer\SwimmerRepository;
 use app\Services\DataValidation\SwimmerGroupDataValidationService;
+use app\Services\Log\Logger;
 
 class SwimmersGroupsController extends AbstractController
 {
@@ -56,7 +57,15 @@ class SwimmersGroupsController extends AbstractController
             ->setCoach($this->swimmerGroupDataValidationService->getCoach())
             ->setIsActive($this->swimmerGroupDataValidationService->getIsActive())
             ->setOrder($this->swimmerGroupDataValidationService->getOrder());
-        $this->swimmerGroupRepository->insert($group);
+        $groupId = $this->swimmerGroupRepository->insert($group);
+        //On log l'event
+        Logger::get()->event(
+            'application.admin.swimmer.group.created',
+            [
+                'group_id' => $groupId,
+                'name' => $group->getName(),
+                'coach' => $group->getCoach(),
+            ]);
         $this->flashMessageService->setFlashMessage('success', "Groupe ajouté");
         $this->redirect('/gestion/swimmers-groups');
     }
@@ -87,7 +96,14 @@ class SwimmersGroupsController extends AbstractController
             ->setCoach($this->swimmerGroupDataValidationService->getCoach())
             ->setIsActive($this->swimmerGroupDataValidationService->getIsActive())
             ->setOrder($this->swimmerGroupDataValidationService->getOrder());
-
+        //On log l'event
+        Logger::get()->event(
+            'application.admin.swimmer.group.updated',
+            [
+                'group_id' => $group->getId(),
+                'name' => $group->getName(),
+                'coach' => $group->getCoach(),
+            ]);
         $this->swimmerGroupRepository->update($group);
         $this->flashMessageService->setFlashMessage('success', "Groupe modifié.");
         $this->redirect('/gestion/swimmers-groups');
@@ -106,11 +122,23 @@ class SwimmersGroupsController extends AbstractController
         $swimmers = $swimmerRepository->findByGroupId($groupId, true);
 
         if (count($swimmers) > 0) {
+            //On log l'event
+            Logger::get()->event(
+                'application.admin.swimmer.group.deleted.failed',
+                [
+                    'group_id' => $groupId
+                ]);
             $this->flashMessageService->setFlashMessage('danger', "Suppression impossible car le groupe n'est pas vide.");
             $this->redirect('/gestion/swimmers-groups');
         }
 
         $ok = $this->swimmerGroupRepository->delete($groupId);
+        //On log l'event
+        Logger::get()->event(
+            'application.admin.swimmer.group.deleted',
+            [
+                'group_id' => $groupId
+            ]);
         if (!$ok) {
             $error = $this->swimmerGroupRepository->getLastError();
             $this->flashMessageService->setFlashMessage('danger', "Erreur SQL : $error");

@@ -25,7 +25,7 @@
         // Ne référencer que les éléments réellement présents
         $describedBy = "form_error_message_{$event->getId()}";
         if (!$periodeOuverte || $codeNecessaire) {
-        $describedBy = "event_note_{$event->getId()} " . $describedBy;
+            $describedBy = "event_note_{$event->getId()} " . $describedBy;
         }
         {% endphp %}
 
@@ -93,9 +93,9 @@
                                 name="session_{{ $event->getId() }}"
                                 id="session_{{ $event->getId() }}_{{ $session->getId() }}"
                                 value="{{ $session->getId() }}"
-                                    {% if isset($nbSpectatorsPerSession[$session->getId()]['is_full']) and $nbSpectatorsPerSession[$session->getId()]['is_full'] === true %}
+                                {% if isset($nbSpectatorsPerSession[$session->getId()]['is_full']) and $nbSpectatorsPerSession[$session->getId()]['is_full'] === true %}
                                 disabled
-                                    {% endif %}
+                                {% endif %}
                             >
                             <label class="form-check-label" for="session_{{ $event->getId() }}_{{ $session->getId() }}">
                                 {{ $session->getSessionName() ?? '' }} {{ $session->getSessionName() ? ' : ' : '' }}{{ $session->getEventStartAt()->format('d/m/Y H:i') }}
@@ -152,6 +152,61 @@
                         {% if $nextPublic %}
                         <br>Prochaine ouverture publique :
                         <strong>{{ $nextPublic->getStartRegistrationAt()->format('d/m/Y H:i') }}</strong>
+
+                        {% if isset($calendarLinksByEvent[$event->getId()]) %}
+                        <div class="mt-2 dropdown">
+                            <button
+                                class="btn btn-outline-primary btn-sm dropdown-toggle"
+                                type="button"
+                                id="calendarDropdown_{{ $event->getId() }}"
+                                data-bs-toggle="dropdown"
+                                aria-expanded="false"
+                            >
+                                Ajouter à mon calendrier
+                            </button>
+                            <ul class="dropdown-menu" aria-labelledby="calendarDropdown_{{ $event->getId() }}">
+                                {% foreach $calendarLinksByEvent[$event->getId()] as $key => $link %}
+                                {% if $key === 'google' %}
+                                <li>
+                                    <a class="dropdown-item" href="{{ $link['href'] }}" target="_blank" rel="noopener noreferrer">
+                                        <i class="bi bi-google me-2" aria-hidden="true"></i>
+                                        {{ $link['label'] }}
+                                    </a>
+                                </li>
+                                {% elseif $key === 'outlook' %}
+                                <li>
+                                    <a class="dropdown-item" href="{{ $link['href'] }}" target="_blank" rel="noopener noreferrer">
+                                        <i class="bi bi-microsoft me-2" aria-hidden="true"></i>
+                                        {{ $link['label'] }}
+                                    </a>
+                                </li>
+                                {% elseif $key === 'yahoo' %}
+                                <li>
+                                    <a class="dropdown-item" href="{{ $link['href'] }}" target="_blank" rel="noopener noreferrer">
+                                        <span class="badge rounded-circle me-2 d-inline-flex align-items-center justify-content-center" style="width:1.25rem;height:1.25rem;background:#6001D2;color:#fff;font-size:.65rem;line-height:1;" aria-hidden="true">Y</span>
+                                        {{ $link['label'] }}
+                                    </a>
+                                </li>
+                                {% elseif $key === 'apple' %}
+                                <li>
+                                    <a class="dropdown-item" href="{{ $link['href'] }}" target="_blank" rel="noopener noreferrer">
+                                        <i class="bi bi-apple me-2" aria-hidden="true"></i>
+                                        {{ $link['label'] }}
+                                    </a>
+                                </li>
+                                {% elseif $key === 'ics' %}
+                                <li><hr class="dropdown-divider"></li>
+                                <li>
+                                    <a class="dropdown-item" href="{{ $link['href'] }}">
+                                        <i class="bi bi-download me-2" aria-hidden="true"></i>
+                                        {{ $link['label'] }}
+                                    </a>
+                                </li>
+                                {% endif %}
+                                {% endforeach %}
+                            </ul>
+                        </div>
+                        {% endif %}
                         {% endif %}
                     </div>
                     {% endif %}

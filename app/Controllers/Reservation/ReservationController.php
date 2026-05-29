@@ -6,14 +6,17 @@ use app\Attributes\Route;
 use app\Controllers\AbstractController;
 use app\Repository\Event\EventRepository;
 use app\Repository\Event\EventTarifRepository;
+use app\Services\Calendar\CalendarLinkService;
+use app\Services\Calendar\CalendarIcsService;
 use app\Services\DataValidation\ReservationDataValidationService;
 use app\Services\Event\EventQueryService;
-use app\Services\Piscine\PiscineQueryService;
 use app\Services\Reservation\ReservationQueryService;
 use app\Services\Reservation\ReservationSessionService;
 use app\Services\Swimmer\SwimmerQueryService;
 use app\Services\Tarif\TarifService;
 use app\Utils\BuildLink;
+use app\Utils\StringHelper;
+use DateMalformedStringException;
 
 class ReservationController extends AbstractController
 {
@@ -24,7 +27,8 @@ class ReservationController extends AbstractController
     private TarifService $tarifService;
     private EventRepository $eventRepository;
     private ReservationQueryService $reservationQueryService;
-    private PiscineQueryService $piscineQueryService;
+    private CalendarIcsService $calendarIcsService;
+    private CalendarLinkService $calendarLinkService;
 
     public function __construct(
         EventQueryService $eventQueryService,
@@ -35,7 +39,8 @@ class ReservationController extends AbstractController
         TarifService $tarifService,
         EventRepository $eventRepository,
         ReservationQueryService $reservationQueryService,
-        PiscineQueryService $piscineQueryService,
+        CalendarIcsService $calendarIcsService,
+        CalendarLinkService $calendarLinkService,
     )
     {
         // On déclare la route comme publique pour éviter la redirection vers la page de login.
@@ -48,7 +53,8 @@ class ReservationController extends AbstractController
         $this->tarifService = $tarifService;
         $this->eventRepository = $eventRepository;
         $this->reservationQueryService = $reservationQueryService;
-        $this->piscineQueryService = $piscineQueryService;
+        $this->calendarIcsService = $calendarIcsService;
+        $this->calendarLinkService = $calendarLinkService;
     }
 
     /**
@@ -76,11 +82,20 @@ class ReservationController extends AbstractController
         //On récupère le nombre de spectateurs par session
         $nbSpectatorsPerSession = $this->reservationQueryService->getNbSpectatorsPerSession($events);
 
+        $calendarLinksByEvent = [];
+        foreach ($events as $event) {
+            $nextPublic = $inscriptionPeriodsStatus['nextPublicOuvertures'][$event->getId()] ?? null;
+            if ($nextPublic) {
+                $calendarLinksByEvent[$event->getId()] = $this->calendarLinkService->buildAdaptiveCalendarLinks($event, $nextPublic);
+            }
+        }
+
         $this->render('reservation/etape1', [
             'events' => $events,
             'periodesOuvertes' => $inscriptionPeriodsStatus['periodesOuvertes'],
             'nextPublicOuvertures' => $inscriptionPeriodsStatus['nextPublicOuvertures'],
             'periodesCloses' => $inscriptionPeriodsStatus['periodesCloses'],
+            'calendarLinksByEvent' => $calendarLinksByEvent,
             'groupes' => $groupes,
             'swimmerPerGroup' => $swimmerPerGroup,
             'nbSpectatorsPerSession' => $nbSpectatorsPerSession,
@@ -283,6 +298,36 @@ class ReservationController extends AbstractController
         }
 
         return $session;
+    }
+
+    /**
+     * @throws DateMalformedStringException
+     */
+    #[Route('/reservation/{id}/ics', name: 'reservation_ics', methods: ['GET'])]
+    public function reservation_ics(int $id): void
+    {
+        //On récupère eventInscriptionDate->getStartRegistrationAt de l'event où il n'y a pas de accessCode
+        $event = $this->eventRepository->findById($id, false, false, true, false, false);
+
+        if (!$event) {
+            $this->flashMessageService->setFlashMessage('warning', 'Évènement introuvable.');
+            $this->redirect('/reservation');
+        }
+
+        $period = $this->eventQueryService->getNextPublicInscriptionPeriod($event);
+        if (!$period) {
+            $this->flashMessageService->setFlashMessage('warning', 'Aucune ouverture publique à exporter pour cet évènement.');
+            $this->redirect('/reservation');
+        }
+
+        //Générer le fichier ICS
+        $icsContent = $this->calendarIcsService->buildIcsFile($event, $period);
+
+        // Envoyer le fichier ICS en réponse
+        header('Content-Type: text/calendar; charset=utf-8');
+        header('Content-Disposition: attachment; filename="reservation-' . StringHelper::slugify($event->getName()) . '.ics"');
+        echo $icsContent;
+        exit;
     }
 
 

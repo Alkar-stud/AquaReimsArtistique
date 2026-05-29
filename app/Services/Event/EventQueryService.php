@@ -198,12 +198,7 @@ class EventQueryService
                      }
                  }
 
-                 // Prochaine période publique (sans code)
-                 if ($date->getAccessCode() === null && $start > $now) {
-                     if ($nextPublicPeriod === null || $start < $nextPublicPeriod->getStartRegistrationAt()) {
-                         $nextPublicPeriod = $date;
-                     }
-                 }
+                 $nextPublicPeriod = $this->getNextPublicInscriptionPeriodForDate($date, $now, $nextPublicPeriod);
 
                  // Dernière période close (pour le message)
                  if ($end < $now) {
@@ -229,6 +224,47 @@ class EventQueryService
              'periodesCloses' => $periodesCloses,
          ];
      }
+
+    /**
+     * Récupère la prochaine période publique d'un événement.
+     *
+     * @param Event $event
+     * @return EventInscriptionDate|null
+     */
+    public function getNextPublicInscriptionPeriod(Event $event): ?EventInscriptionDate
+    {
+        $now = new DateTime();
+        $nextPublicPeriod = null;
+
+        foreach ($event->getInscriptionDates() ?? [] as $date) {
+            if (!$date instanceof EventInscriptionDate) {
+                continue;
+            }
+
+            $nextPublicPeriod = $this->getNextPublicInscriptionPeriodForDate($date, $now, $nextPublicPeriod);
+        }
+
+        return $nextPublicPeriod;
+    }
+
+    /**
+     * @param EventInscriptionDate $date
+     * @param DateTime $now
+     * @param EventInscriptionDate|null $currentNextPublicPeriod
+     * @return EventInscriptionDate|null
+     */
+    private function getNextPublicInscriptionPeriodForDate(EventInscriptionDate $date, DateTime $now, ?EventInscriptionDate $currentNextPublicPeriod): ?EventInscriptionDate
+    {
+        $start = $date->getStartRegistrationAt();
+
+        if ($date->getAccessCode() === null && $start > $now) {
+            if ($currentNextPublicPeriod === null || $start < $currentNextPublicPeriod->getStartRegistrationAt()) {
+                return $date;
+            }
+        }
+
+        return $currentNextPublicPeriod;
+    }
 
     /**
      * Valide un code d'accès pour un événement et vérifie si la période d'inscription est active.

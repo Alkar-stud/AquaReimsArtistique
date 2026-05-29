@@ -149,8 +149,12 @@ class CalendarLinkService
 
     private function buildEndDateTime(DateTimeInterface $start): DateTimeInterface
     {
-        return (new DateTimeImmutable($start->format('Y-m-d H:i:s'), $start->getTimezone() ?: new DateTimeZone('Europe/Paris')))
-            ->modify('+30 minutes');
+        $startForEnd = new DateTimeImmutable(
+            $start->format('Y-m-d H:i:s'),
+            $start->getTimezone() ?: new DateTimeZone('Europe/Paris')
+        );
+
+        return $startForEnd->modify('+30 minutes');
     }
 
     private function formatGoogleDates(DateTimeInterface $start, DateTimeInterface $end): string
@@ -160,9 +164,12 @@ class CalendarLinkService
 
     private function formatGoogleDateTime(DateTimeInterface $date): string
     {
-        return (new DateTimeImmutable($date->format('Y-m-d H:i:s'), $date->getTimezone() ?: new DateTimeZone('Europe/Paris')))
-            ->setTimezone(new DateTimeZone('UTC'))
-            ->format('Ymd\THis\Z');
+        $normalized = new DateTimeImmutable(
+            $date->format('Y-m-d H:i:s'),
+            $date->getTimezone() ?: new DateTimeZone('Europe/Paris')
+        );
+
+        return $normalized->setTimezone(new DateTimeZone('UTC'))->format('Ymd\THis\Z');
     }
 
     private function formatDateTimeForUrl(DateTimeInterface $date): string
@@ -172,9 +179,12 @@ class CalendarLinkService
 
     private function formatYahooDateTime(DateTimeInterface $date): string
     {
-        return (new DateTimeImmutable($date->format('Y-m-d H:i:s'), $date->getTimezone() ?: new DateTimeZone('Europe/Paris')))
-            ->setTimezone(new DateTimeZone('UTC'))
-            ->format('Ymd\THis\Z');
+        $normalized = new DateTimeImmutable(
+            $date->format('Y-m-d H:i:s'),
+            $date->getTimezone() ?: new DateTimeZone('Europe/Paris')
+        );
+
+        return $normalized->setTimezone(new DateTimeZone('UTC'))->format('Ymd\THis\Z');
     }
 
 

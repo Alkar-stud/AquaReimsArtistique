@@ -23,7 +23,11 @@ class CalendarIcsService
     public function buildIcsFile(Event $event, EventInscriptionDate $period): string
     {
         $start = $period->getStartRegistrationAt();
-        $end = new DateTimeImmutable($start->format('Y-m-d H:i:s'), $start->getTimezone() ?: new DateTimeZone('Europe/Paris'))->modify('+30 minutes');
+        $startForEnd = new DateTimeImmutable(
+            $start->format('Y-m-d H:i:s'),
+            $start->getTimezone() ?: new DateTimeZone('Europe/Paris')
+        );
+        $end = $startForEnd->modify('+30 minutes');
 
         $icsContent = "BEGIN:VCALENDAR\n";
         $icsContent .= "VERSION:2.0\r\n";

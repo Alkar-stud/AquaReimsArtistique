@@ -165,36 +165,45 @@
                                 Ajouter à mon calendrier
                             </button>
                             <ul class="dropdown-menu" aria-labelledby="calendarDropdown_{{ $event->getId() }}">
+                                {% foreach $calendarLinksByEvent[$event->getId()] as $key => $link %}
+                                {% if $key === 'google' %}
                                 <li>
-                                    <a class="dropdown-item" href="{{ $calendarLinksByEvent[$event->getId()]['google'] }}" target="_blank" rel="noopener noreferrer">
+                                    <a class="dropdown-item" href="{{ $link['href'] }}" target="_blank" rel="noopener noreferrer">
                                         <i class="bi bi-google me-2" aria-hidden="true"></i>
-                                        Google
+                                        {{ $link['label'] }}
                                     </a>
                                 </li>
+                                {% elseif $key === 'outlook' %}
                                 <li>
-                                    <a class="dropdown-item" href="{{ $calendarLinksByEvent[$event->getId()]['outlook'] }}" target="_blank" rel="noopener noreferrer">
+                                    <a class="dropdown-item" href="{{ $link['href'] }}" target="_blank" rel="noopener noreferrer">
                                         <i class="bi bi-microsoft me-2" aria-hidden="true"></i>
-                                        Outlook
+                                        {{ $link['label'] }}
                                     </a>
                                 </li>
+                                {% elseif $key === 'yahoo' %}
                                 <li>
-                                    <a class="dropdown-item" href="{{ $calendarLinksByEvent[$event->getId()]['yahoo'] }}" target="_blank" rel="noopener noreferrer">
+                                    <a class="dropdown-item" href="{{ $link['href'] }}" target="_blank" rel="noopener noreferrer">
                                         <span class="badge rounded-circle me-2 d-inline-flex align-items-center justify-content-center" style="width:1.25rem;height:1.25rem;background:#6001D2;color:#fff;font-size:.65rem;line-height:1;" aria-hidden="true">Y</span>
-                                        Yahoo
+                                        {{ $link['label'] }}
                                     </a>
                                 </li>
+                                {% elseif $key === 'apple' %}
                                 <li>
-                                    <a class="dropdown-item" href="{{ $calendarLinksByEvent[$event->getId()]['apple'] }}" target="_blank" rel="noopener noreferrer">
+                                    <a class="dropdown-item" href="{{ $link['href'] }}" target="_blank" rel="noopener noreferrer">
                                         <i class="bi bi-apple me-2" aria-hidden="true"></i>
-                                        Apple
+                                        {{ $link['label'] }}
                                     </a>
                                 </li>
+                                {% elseif $key === 'ics' %}
                                 <li><hr class="dropdown-divider"></li>
                                 <li>
-                                    <a class="dropdown-item" href="{{ $calendarLinksByEvent[$event->getId()]['ics'] }}">
-                                        Télécharger .ics
+                                    <a class="dropdown-item" href="{{ $link['href'] }}">
+                                        <i class="bi bi-download me-2" aria-hidden="true"></i>
+                                        {{ $link['label'] }}
                                     </a>
                                 </li>
+                                {% endif %}
+                                {% endforeach %}
                             </ul>
                         </div>
                         {% endif %}

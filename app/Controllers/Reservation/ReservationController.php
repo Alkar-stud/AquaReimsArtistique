@@ -15,6 +15,7 @@ use app\Services\Reservation\ReservationSessionService;
 use app\Services\Swimmer\SwimmerQueryService;
 use app\Services\Tarif\TarifService;
 use app\Utils\BuildLink;
+use app\Utils\StringHelper;
 use DateMalformedStringException;
 
 class ReservationController extends AbstractController
@@ -85,7 +86,7 @@ class ReservationController extends AbstractController
         foreach ($events as $event) {
             $nextPublic = $inscriptionPeriodsStatus['nextPublicOuvertures'][$event->getId()] ?? null;
             if ($nextPublic) {
-                $calendarLinksByEvent[$event->getId()] = $this->calendarLinkService->buildCalendarLinks($event, $nextPublic);
+                $calendarLinksByEvent[$event->getId()] = $this->calendarLinkService->buildAdaptiveCalendarLinks($event, $nextPublic);
             }
         }
 
@@ -324,7 +325,7 @@ class ReservationController extends AbstractController
 
         // Envoyer le fichier ICS en réponse
         header('Content-Type: text/calendar; charset=utf-8');
-        header('Content-Disposition: attachment; filename="reservation-' . $id . '.ics"');
+        header('Content-Disposition: attachment; filename="reservation-' . StringHelper::slugify($event->getName()) . '.ics"');
         echo $icsContent;
         exit;
     }

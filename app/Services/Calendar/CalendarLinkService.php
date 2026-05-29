@@ -8,6 +8,7 @@ use DateTimeImmutable;
 use DateTimeInterface;
 use DateTimeZone;
 use app\Utils\BuildLink;
+use app\Utils\DeviceDetector;
 
 class CalendarLinkService
 {
@@ -30,6 +31,52 @@ class CalendarLinkService
         ];
     }
 
+    /**
+     * Retourne les liens calendrier adaptés au device (mobile/desktop)
+     *
+     * @param Event $event
+     * @param EventInscriptionDate $period
+     * @return array<string, array{label:string,href:string,priority:int}> Liens indexés par clé fournisseur
+     */
+    public function buildAdaptiveCalendarLinks(Event $event, EventInscriptionDate $period): array
+    {
+        $isMobile = DeviceDetector::isMobileOrTablet();
+        $isApple = DeviceDetector::isAppleDevice();
+
+        $links = [
+            'google' => [
+                'label' => 'Google',
+                'href' => $this->buildGoogleCalendarUrl($event, $period),
+                'priority' => $isMobile ? 2 : 1,
+            ],
+            'outlook' => [
+                'label' => 'Outlook',
+                'href' => $this->buildOutlookCalendarUrl($event, $period),
+                'priority' => $isMobile ? 3 : 2,
+            ],
+            'yahoo' => [
+                'label' => 'Yahoo',
+                'href' => $this->buildYahooCalendarUrl($event, $period),
+                'priority' => 4,
+            ],
+            'apple' => [
+                'label' => 'Apple',
+                'href' => $this->buildAppleCalendarUrl($event),
+                'priority' => $isApple && $isMobile ? 1 : 3,
+            ],
+            'ics' => [
+                'label' => 'Télécharger .ics',
+                'href' => $this->buildIcsDownloadUrl($event),
+                'priority' => $isMobile ? 5 : 4,
+            ],
+        ];
+
+        // Trier par priorité (les moins prioritaires en dernier)
+        uasort($links, fn($a, $b) => $a['priority'] <=> $b['priority']);
+
+        return $links;
+    }
+
     public function buildGoogleCalendarUrl(Event $event, EventInscriptionDate $period): string
     {
         $start = $period->getStartRegistrationAt();
@@ -37,7 +84,7 @@ class CalendarLinkService
 
         $params = [
             'action' => 'TEMPLATE',
-            'text' => $event->getName(),
+            'text' => 'Ouverture publique des inscriptions pour ' . $event->getName(),
             'dates' => $this->formatGoogleDates($start, $end),
             'details' => 'Ouverture publique des inscriptions.',
         ];
@@ -57,7 +104,7 @@ class CalendarLinkService
         $params = [
             'path' => '/calendar/action/compose',
             'rru' => 'addevent',
-            'subject' => $event->getName(),
+            'subject' => 'Ouverture publique des inscriptions pour ' . $event->getName(),
             'body' => 'Ouverture publique des inscriptions.',
             'startdt' => $this->formatDateTimeForUrl($start),
             'enddt' => $this->formatDateTimeForUrl($end),
@@ -77,7 +124,7 @@ class CalendarLinkService
 
         $params = [
             'v' => 60,
-            'title' => $event->getName(),
+            'title' => 'Ouverture publique des inscriptions pour ' . $event->getName(),
             'st' => $this->formatYahooDateTime($start),
             'et' => $this->formatYahooDateTime($end),
             'desc' => 'Ouverture publique des inscriptions.',

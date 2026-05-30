@@ -102,6 +102,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 function step2Valid(name, firstname, email, phone, eventId, eventSessionId, rgpdConsent) {
     const alertDiv = document.getElementById('reservationAlert');
+    const navButtons = document.getElementById('navButtons');
     apiPost('/reservation/check-duplicate-email', {
         event_id: eventId,
         event_session_id: eventSessionId,
@@ -117,13 +118,16 @@ function step2Valid(name, firstname, email, phone, eventId, eventSessionId, rgpd
                 html += `</ul><p>Que souhaitez-vous faire ?</p>
                         <button id="continueBtn" class="btn btn-success me-2 mb-2">Continuer ma nouvelle réservation</button>
                         <button id="resendBtn" class="btn btn-info me-2 mb-2">Renvoyer le(s) mail(s) de confirmation</button>
-                        <button id="cancelBtn" class="btn btn-secondary mb-2">Annuler</button>
+                        <button id="cancelBtn" class="btn btn-secondary me-2 mb-2">Annuler</button>
                     </div>`;
                 alertDiv.innerHTML = html;
                 alertDiv.focus();
 
                 document.getElementById('continueBtn').onclick = () => submitEtape2(name, firstname, email, phone, eventId, eventSessionId, rgpdConsent);
-                document.getElementById('cancelBtn').onclick = () => alertDiv.innerHTML = '';
+                document.getElementById('cancelBtn').onclick = () => {
+                    alertDiv.innerHTML = '';
+                    navButtons.style.display = "";
+                };
                 document.getElementById('resendBtn').onclick = () => {
                     apiPost('/reservation/resend-confirmation', { email, event_id: eventId, event_session_id: eventSessionId })
                         .then(res => {
@@ -135,6 +139,8 @@ function step2Valid(name, firstname, email, phone, eventId, eventSessionId, rgpd
                             alertDiv.focus();
                         });
                 };
+                //On masque les boutons "classiques".
+                navButtons.style.display = "none";
             } else {
                 submitEtape2(name, firstname, email, phone, eventId, eventSessionId, rgpdConsent);
             }

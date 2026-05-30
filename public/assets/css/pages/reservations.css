@@ -82,3 +82,8 @@
     font-size: 0.9em;
 }
 
+@media (max-width: 767.98px) {
+    #reservationAlert {
+        text-align: center;
+    }
+}

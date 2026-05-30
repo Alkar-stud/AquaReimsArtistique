@@ -94,8 +94,8 @@
                 Politique de confidentialité : <a href="https://aquareimsartistique.fr/politique-confidentialite/" target="_blank" rel="noopener noreferrer">https://aquareimsartistique.fr/politique-confidentialite/</a>.
             </div>
         </div>
-
-        <div class="row">
+        <div id="reservationAlert" role="alert" aria-live="polite" tabindex="-1"></div>
+        <div class="row" id="navButtons">
             <!-- order-x pour position x en mobile et order-mg-x pour desktop -->
             <!-- afin que le bouton principal soit à droite en desktop -->
             <!-- et en 1er en mobile -->
@@ -107,7 +107,6 @@
             </div>
         </div>
     </form>
-    <div id="reservationAlert" role="alert" aria-live="polite" tabindex="-1"></div>
 </div>
 
 <script>

@@ -48,6 +48,14 @@ form .mb-2 + .btn,
 form .mb-3 + .btn {
     margin-top: 1rem;
 }
+/* On annule cette règle en mode desktop à cet endroit
+car sinon le 1er bouton n'a pas la marge et est donc décalé par rapport aux suivants*/
+@media (min-width: 768px) {
+    #reservationAlert .btn {
+        margin-top: 0 !important;
+    }
+}
+
 
 /* Sécurise les cas d’actions en flex et pieds de modales */
 .d-flex form > .btn,

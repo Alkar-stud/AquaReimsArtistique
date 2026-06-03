@@ -72,6 +72,13 @@ table.zone-plan td.tdplacePris {
     font-weight: bold; /* Améliore la lisibilité sur fond rouge */
 }
 
+/* Places PMR prises */
+table.zone-plan td.tdplacePMR.tdplacePris {
+    background: var(--ara-color-red); /* Explicitly set to red */
+    color: var(--ara-color-white);
+    font-weight: bold;
+}
+
 table.zone-plan td.tdplacePMR {
     background: var(--ara-color-darkblue);
     color: var(--ara-color-white);

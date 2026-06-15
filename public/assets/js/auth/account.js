@@ -10,7 +10,9 @@ document.addEventListener('DOMContentLoaded', () => {
         currentPasswordSelector: '#current_password',
         newPasswordSelector: '#new_password',
         confirmPasswordSelector: '#confirm_password',
-        submitButtonSelector: 'button[type="submit"]'
+        submitButtonSelector: '#changePasswordButton',
+        newPasswordFeedbackSelector: '#new_password_feedback',
+        confirmPasswordFeedbackSelector: '#confirm_password_feedback'
     });
 
 

@@ -27,6 +27,24 @@
         if (!$periodeOuverte || $codeNecessaire) {
             $describedBy = "event_note_{$event->getId()} " . $describedBy;
         }
+
+        $guichetText = '';
+        if ($nbSessions > 0) { // S'il y a des sessions
+            $sessionsByDate = [];
+            foreach ($sessions as $session) {
+                $date = $session->getOpeningDoorsAt()->format('d/m/Y');
+                $time = $session->getOpeningDoorsAt()->format('H:i');
+                $sessionsByDate[$date][] = $time; // Regroupe les heures par date
+            }
+
+            $dateStrings = [];
+            foreach ($sessionsByDate as $date => $times) {
+                sort($times); // Trie les heures pour un affichage cohérent
+                $timeString = implode(' ou ', $times); // Concatène les heures avec "ou"
+                $dateStrings[] = "le " . $date . " à partir de " . $timeString;
+            }
+            $guichetText = "Rendez-vous au guichet " . implode(' ou ', $dateStrings); // Concatène les groupes de dates avec "ou"
+        }
         {% endphp %}
 
         <div class="col-md-6 mb-4">
@@ -143,9 +161,11 @@
                         </div>
                         {% else %}
                         {% if (isset($periodesCloses[$event->getId()])) %}
-                        Les inscriptions sont closes depuis le {{ $periodesCloses[$event->getId()]->getCloseRegistrationAt()->format('d/m/Y H:i') }}.
+                        Les réservations en lignes sont closes depuis le {{ $periodesCloses[$event->getId()]->getCloseRegistrationAt()->format('d/m/Y H:i') }}.
+                        <br>
+                        {{ $guichetText }}
                         {% else %}
-                        Les inscriptions ne sont pas ouvertes pour cet événement.
+                        Les réservations ne sont pas ouvertes pour cet événement.
                         {% endif %}
                         {% endif %}
 

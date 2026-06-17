@@ -35,7 +35,7 @@ class EventPresentationsController extends AbstractController
         $this->eventSessionRepository = $eventSessionRepository;
         $this->uploadService = $uploadService;
         $this->eventPresentationDataValidationService = $eventPresentationDataValidationService;
-        $this->checkIfCurrentUserIsAllowedToManagedThis(2);
+        $this->checkIfCurrentUserIsAllowedToManagedThis(3);
     }
 
     #[Route('/gestion/accueil', name: 'app_gestion_accueil', methods: ['GET'])]

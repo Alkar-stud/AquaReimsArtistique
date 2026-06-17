@@ -20,6 +20,7 @@ class HomeGestionController extends AbstractController
         parent::__construct(false);
         $this->reservationRepository = $reservationRepository;
         $this->eventQueryService = $eventQueryService;
+        $this->checkIfCurrentUserIsAllowedToManagedThis(3);
     }
 
     #[Route('/gestion', name: 'app_gestion_home')]

@@ -17,7 +17,7 @@
     </form>
     {% endif %}
     <!-- Formulaire de changement de mot de passe -->
-    <form action="/account/password" method="POST">
+    <form action="/account/password" method="POST" id="passwordChangeForm">
         <input type="text" name="username" value="{{ $_SESSION['user']['username'] ?? '' }}" autocomplete="username" hidden>
         <h4 class="mb-3">Changer mon mot de passe</h4>
         <div class="mb-3">
@@ -27,12 +27,14 @@
         <div class="mb-3">
             <label for="new_password" class="form-label">Nouveau mot de passe</label>
             <input type="password" class="form-control" id="new_password" name="new_password" autocomplete="new-password" required>
+            <div class="invalid-feedback" id="new_password_feedback"></div>
         </div>
         <div class="mb-3">
             <label for="confirm_password" class="form-label">Confirmer le nouveau mot de passe</label>
             <input type="password" class="form-control" id="confirm_password" name="confirm_password" autocomplete="new-password" required>
+            <div class="invalid-feedback" id="confirm_password_feedback"></div>
         </div>
-        <button type="submit" class="btn btn-secondary w-100" disabled>Changer mon mot de passe</button>
+        <button type="submit" class="btn btn-secondary w-100" id="changePasswordButton" disabled>Changer mon mot de passe</button>
     </form>
     <br>
 </div>

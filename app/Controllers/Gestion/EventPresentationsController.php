@@ -35,7 +35,7 @@ class EventPresentationsController extends AbstractController
         $this->eventSessionRepository = $eventSessionRepository;
         $this->uploadService = $uploadService;
         $this->eventPresentationDataValidationService = $eventPresentationDataValidationService;
-        $this->checkIfCurrentUserIsAllowedToManagedThis(2);
+        $this->checkIfCurrentUserIsAllowedToManagedThis(3);
     }
 
     #[Route('/gestion/accueil', name: 'app_gestion_accueil', methods: ['GET'])]
@@ -47,7 +47,7 @@ class EventPresentationsController extends AbstractController
             $eventPresentations = $this->eventPresentationsRepository->findAll(false, true);
         }
 
-        $events = $this->eventRepository->findAllSortByDate(true);
+        $events = $this->eventRepository->findAllSortByDate(null);
 
         $eventSessions = $this->eventSessionRepository->findAllLastSessionDateByEvent();
 
@@ -74,7 +74,7 @@ class EventPresentationsController extends AbstractController
     public function uploadImage(): void
     {
         //On vérifie que le CurrentUser a bien le droit de faire ça
-        $this->checkIfCurrentUserIsAllowedToManagedThis(2, 'accueil');
+        $this->checkIfCurrentUserIsAllowedToManagedThis(3, 'accueil');
 
         if (!isset($_FILES['upload'])) {
              parent::json(['error' => ['message' => 'Aucun fichier envoyé.']], 400);
@@ -110,7 +110,7 @@ class EventPresentationsController extends AbstractController
     public function add(): void
     {
         //On vérifie que le CurrentUser a bien le droit de faire ça
-        $this->checkIfCurrentUserIsAllowedToManagedThis(2, 'accueil');
+        $this->checkIfCurrentUserIsAllowedToManagedThis(3, 'accueil');
 
         try {
             // Valider les données
@@ -176,7 +176,7 @@ class EventPresentationsController extends AbstractController
     public function edit(): void
     {
         //On vérifie que le CurrentUser a bien le droit de faire ça
-        $this->checkIfCurrentUserIsAllowedToManagedThis(2, 'accueil');
+        $this->checkIfCurrentUserIsAllowedToManagedThis(3, 'accueil');
 
         $eventPresentationsId = (int)($_POST['id'] ?? 0);
         $eventPresentations = $this->eventPresentationsRepository->findById($eventPresentationsId);

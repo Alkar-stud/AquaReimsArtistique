@@ -107,7 +107,7 @@
                         <div class="small text-muted">
                             {{ $detail->getTarifObject()->getName() }}
                             {% if $detail->getPlaceNumber() %}
-                            · Place {{ $detail->getPlaceNumber() }}
+                            · Place {{ $detail->getPlaceObject()->getZoneObject()->getZoneName() }}{{ $detail->getPlaceObject()->getRankInZone() }}{{ $detail->getPlaceNumber() }}
                             {% endif %}
                         </div>
                     </div>

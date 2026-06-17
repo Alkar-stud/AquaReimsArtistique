@@ -22,6 +22,7 @@ class SwimmerController extends AbstractController
         $this->swimmerGroupRepository = new SwimmerGroupRepository();
         $this->swimmerRepository = new SwimmerRepository();
         $this->swimmerDataValidationService = new SwimmerDataValidationService();
+        $this->checkIfCurrentUserIsAllowedToManagedThis(3);
     }
 
     #[Route('/gestion/swimmers/{groupId}', name: 'app_gestion_swimmers_group', requirements: ['groupId' => 'all|0|\d+'])]

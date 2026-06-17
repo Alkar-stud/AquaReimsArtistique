@@ -27,6 +27,25 @@
         if (!$periodeOuverte || $codeNecessaire) {
             $describedBy = "event_note_{$event->getId()} " . $describedBy;
         }
+
+        $guichetText = '';
+        if ($nbSessions > 0) { // S'il y a des sessions
+            $sessionsByDate = [];
+            foreach ($sessions as $session) {
+                $opening = $session->getOpeningDoorsAt();
+                $date = $opening->format('d/m/Y');
+                $time = $opening->format($opening->format('i') === '00' ? 'H\h' : 'H\hi');
+                $sessionsByDate[$date][] = $time; // Regroupe les heures par date
+            }
+
+            $dateStrings = [];
+            foreach ($sessionsByDate as $date => $times) {
+                sort($times); // Trie les heures pour un affichage cohérent
+                $timeString = implode(' ou ', $times); // Concatène les heures avec "ou"
+                $dateStrings[] = "le " . $date . " à partir de " . $timeString;
+            }
+            $guichetText = "Rendez-vous au guichet " . implode(' ou ', $dateStrings); // Concatène les groupes de dates avec "ou"
+        }
         {% endphp %}
 
         <div class="col-md-6 mb-4">
@@ -143,15 +162,17 @@
                         </div>
                         {% else %}
                         {% if (isset($periodesCloses[$event->getId()])) %}
-                        Les inscriptions sont closes depuis le {{ $periodesCloses[$event->getId()]->getCloseRegistrationAt()->format('d/m/Y H:i') }}.
+                        Les réservations en lignes sont closes depuis le {{ $periodesCloses[$event->getId()]->getCloseRegistrationAt()->format('d/m/Y H:i') }}.
+                        <br>
+                        {{ $guichetText }}
                         {% else %}
-                        Les inscriptions ne sont pas ouvertes pour cet événement.
+                        Les réservations ne sont pas ouvertes pour cet événement.
                         {% endif %}
                         {% endif %}
 
                         {% if $nextPublic %}
                         <br>Prochaine ouverture publique :
-                        <strong>{{ $nextPublic->getStartRegistrationAt()->format('d/m/Y H:i') }}</strong>
+                        <strong>{{ $nextPublic->getStartRegistrationAt()->format('d/m/Y H\hi') }}</strong>
 
                         {% if isset($calendarLinksByEvent[$event->getId()]) %}
                         <div class="mt-2 dropdown">

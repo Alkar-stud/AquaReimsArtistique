@@ -16,6 +16,7 @@ class CommandsController extends AbstractController
     {
         parent::__construct(false);
         $this->reservationFinalSummaryService = $reservationFinalSummaryService;
+        $this->checkIfCurrentUserIsAllowedToManagedThis(1);
     }
 
     #[Route('/gestion/commands', name: 'app_gestion_commands')]

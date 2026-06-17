@@ -34,6 +34,7 @@ class UserController extends AbstractController
         $this->roleRepository = $roleRepository;
         $this->userDataValidationService = $userDataValidationService;
         $this->mailService = $mailService;
+        $this->checkIfCurrentUserIsAllowedToManagedThis(3);
     }
 
     #[Route('/gestion/users', name: 'app_gestion_users')]

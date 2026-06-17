@@ -20,6 +20,7 @@ class SwimmersGroupsController extends AbstractController
         parent::__construct(false);
         $this->swimmerGroupRepository = new SwimmerGroupRepository();
         $this->swimmerGroupDataValidationService = new SwimmerGroupDataValidationService();
+        $this->checkIfCurrentUserIsAllowedToManagedThis(3);
     }
 
     #[Route('/gestion/swimmers-groups', name: 'app_gestion_swimmers_groups')]

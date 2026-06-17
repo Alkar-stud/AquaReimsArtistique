@@ -63,7 +63,7 @@ class ReservationDetailTempRepository extends AbstractRepository
      */
     public function findById(int $id): ?ReservationDetailTemp
     {
-        $rows = $this->query("SELECT * FROM {$this->tableName} WHERE id = :id", ['id' => $id]);
+        $rows = $this->query("SELECT * FROM $this->tableName WHERE id = :id", ['id' => $id]);
         if (empty($rows)) return null;
 
         $detail = $this->hydrate($rows[0]);
@@ -94,7 +94,7 @@ class ReservationDetailTempRepository extends AbstractRepository
             if ($val === null) {
                 $clauses[] = "`$field` IS NULL";
             } else {
-                $p = "p{$i}";
+                $p = "p$i";
                 $clauses[] = "`$field` = :$p";
                 $params[$p] = $val;
                 $i++;
@@ -105,7 +105,7 @@ class ReservationDetailTempRepository extends AbstractRepository
             return [];
         }
 
-        $sql = "SELECT * FROM `{$this->tableName}` WHERE " . implode(' AND ', $clauses);
+        $sql = "SELECT * FROM `$this->tableName` WHERE " . implode(' AND ', $clauses);
         $rows = $this->query($sql, $params);
 
         $details = array_map(fn($r) => $this->hydrate($r), $rows);
@@ -150,7 +150,7 @@ class ReservationDetailTempRepository extends AbstractRepository
         }
 
         $placeholders = implode(',', array_fill(0, count($detailIds), '?'));
-        $sql = "SELECT justificatif_name FROM {$this->tableName} WHERE id IN ($placeholders) AND justificatif_name IS NOT NULL";
+        $sql = "SELECT justificatif_name FROM $this->tableName WHERE id IN ($placeholders) AND justificatif_name IS NOT NULL";
 
         $results = $this->query($sql, $detailIds);
 
@@ -170,7 +170,7 @@ class ReservationDetailTempRepository extends AbstractRepository
         if (empty($reservationIds)) return [];
 
         $placeholders = implode(',', array_fill(0, count($reservationIds), '?'));
-        $sql = "SELECT * FROM {$this->tableName} WHERE reservation_temp IN ($placeholders) ORDER BY id";
+        $sql = "SELECT * FROM $this->tableName WHERE reservation_temp IN ($placeholders) ORDER BY id";
 
         $rows = $this->query($sql, $reservationIds);
         if (empty($rows)) return [];
@@ -317,7 +317,8 @@ class ReservationDetailTempRepository extends AbstractRepository
             $placesById[$place->getId()] = $place;
         }
         foreach ($details as $detail) {
-            $detail->setPlaceObject($placesById[$detail->getPlaceNumber()] ?? null);
+            $placeNumber = $detail->getPlaceNumber();
+            $detail->setPlaceObject($placeNumber !== null ? ($placesById[$placeNumber] ?? null) : null);
         }
     }
 }

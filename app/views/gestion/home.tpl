@@ -17,7 +17,7 @@
                         <li class="list-group-item d-flex justify-content-between align-items-center">
                             <div>
                                 <a href="/gestion/reservations?s={{ $stat['sessionId'] }}" class="text-decoration-none">{{ $stat['eventName'] }}</a>
-                                <small class="d-block text-muted">{{ $stat['sessionName'] }} - {{ (new DateTime($stat['sessionDate']))->format('d/m/Y H:i') }}</small>
+                                <small class="d-block text-muted">{{ $stat['sessionName'] }} - {{ ($d = new DateTime($stat['sessionDate']))->format($d->format('i') === '00' ? 'd/m/Y H\h' : 'd/m/Y H:i') }}</small>
                             </div>
                             <div class="d-flex align-items-center">
                                 <span class="badge bg-primary rounded-pill me-1">{{ $stat['reservationCount'] }} R</span>
@@ -49,7 +49,7 @@
                     <ul class="list-unstyled ps-3">
                         {% foreach $event['sessions'] as $session %}
                         <li>
-                            <strong>{{ $session['name'] }}</strong> le {{ (new DateTime($session['date']))->format('d/m/Y à H:i') }}
+                            <strong>{{ $session['name'] }}</strong> le {{ ($d = new DateTime($session['date']))->format($d->format('i') === '00' ? 'd/m/Y à H\h' : 'd/m/Y à H:i') }}
                         </li>
                         {% endforeach %}
                     </ul>
@@ -57,8 +57,11 @@
                     <ul class="list-unstyled ps-3">
                         {% foreach $event['registrationPeriods'] as $period %}
                         <li>
-                            <small>
-                                <i class="bi bi-clock-history"></i> {{ $period['name'] }}: du {{ (new DateTime($period['start']))->format('d/m/Y') }} au {{ (new DateTime($period['end']))->format('d/m/Y') }}
+                            <small class="{% if (new DateTime($period['start']) <= ($now = new DateTime()) && new DateTime($period['end']) >= $now) %}fw-bold{% endif %}">
+                                <i class="bi bi-clock-history"></i>
+                                <span>
+                                    {{ $period['name'] }}: du {{ ($s = new DateTime($period['start']))->format($s->format('i') === '00' ? 'd/m/Y à H\h' : 'd/m/Y à H\hi') }} au {{ ($e = new DateTime($period['end']))->format($e->format('i') === '00' ? 'd/m/Y à H\h' : 'd/m/Y à H\hi') }}
+                                </span>
                             </small>
                         </li>
                         {% endforeach %}

@@ -32,8 +32,9 @@
         if ($nbSessions > 0) { // S'il y a des sessions
             $sessionsByDate = [];
             foreach ($sessions as $session) {
-                $date = $session->getOpeningDoorsAt()->format('d/m/Y');
-                $time = $session->getOpeningDoorsAt()->format('H:i');
+                $opening = $session->getOpeningDoorsAt();
+                $date = $opening->format('d/m/Y');
+                $time = $opening->format($opening->format('i') === '00' ? 'H\h' : 'H\hi');
                 $sessionsByDate[$date][] = $time; // Regroupe les heures par date
             }
 
@@ -171,7 +172,7 @@
 
                         {% if $nextPublic %}
                         <br>Prochaine ouverture publique :
-                        <strong>{{ $nextPublic->getStartRegistrationAt()->format('d/m/Y H:i') }}</strong>
+                        <strong>{{ $nextPublic->getStartRegistrationAt()->format('d/m/Y H\hi') }}</strong>
 
                         {% if isset($calendarLinksByEvent[$event->getId()]) %}
                         <div class="mt-2 dropdown">

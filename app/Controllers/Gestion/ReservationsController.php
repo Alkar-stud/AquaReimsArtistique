@@ -76,6 +76,7 @@ class ReservationsController extends AbstractController
         $this->mailService = $mailService;
         $this->dataHelper = $dataHelper;
         $this->EventPiscineService = $EventPiscineService;
+        $this->checkIfCurrentUserIsAllowedToManagedThis(3);
     }
 
     #[Route('/gestion/reservations', name: 'app_gestion_reservations')]

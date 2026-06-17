@@ -19,6 +19,7 @@ class ConfigController extends AbstractController
         parent::__construct(false);
         $this->configRepository = new ConfigRepository();
         $this->configDataValidationService = new ConfigDataValidationService();
+        $this->checkIfCurrentUserIsAllowedToManagedThis(1);
     }
 
     #[Route('/gestion/configs', name: 'app_gestion_configs')]

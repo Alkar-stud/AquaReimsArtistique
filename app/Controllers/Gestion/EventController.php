@@ -33,6 +33,7 @@ class EventController extends AbstractController
         $this->eventDeletionService = $eventDeletionService;
         $this->eventCreateService = $eventCreateService;
         $this->eventUpdateService = $eventUpdateService;
+        $this->checkIfCurrentUserIsAllowedToManagedThis(3);
     }
 
     /**

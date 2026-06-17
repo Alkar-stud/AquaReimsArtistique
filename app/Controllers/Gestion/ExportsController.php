@@ -29,6 +29,7 @@ class ExportsController extends AbstractController
         $this->PdfGenerationService = $PdfGenerationService;
         $this->dataHelper = $dataHelper;
         $this->reservationQueryService = $reservationQueryService;
+        $this->checkIfCurrentUserIsAllowedToManagedThis(3);
     }
 
     #[Route('/gestion/reservations/exports', name: 'app_gestion_reservations_exports', methods: ['GET'])]

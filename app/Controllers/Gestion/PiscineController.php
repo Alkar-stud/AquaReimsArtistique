@@ -25,6 +25,7 @@ class PiscineController extends AbstractController
         $this->piscineRepository = new PiscineRepository();
         $this->piscineDataValidationService = new PiscineDataValidationService();
         $this->seatingPlanService = $seatingPlanService;
+        $this->checkIfCurrentUserIsAllowedToManagedThis(3);
     }
 
     #[Route('/gestion/piscines', name: 'app_gestion_piscines')]

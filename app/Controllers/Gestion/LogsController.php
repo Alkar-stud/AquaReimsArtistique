@@ -17,6 +17,7 @@ class LogsController extends AbstractController
         parent::__construct(false);
         $this->logQueryService = $logQueryService;
         $this->userRepository = $userRepository;
+        $this->checkIfCurrentUserIsAllowedToManagedThis(1);
     }
 
     #[Route('/gestion/logs', name: 'app_gestion_logs')]

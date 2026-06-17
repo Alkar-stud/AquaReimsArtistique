@@ -25,6 +25,7 @@ class MailTemplateController extends AbstractController
         $this->mailTemplateRepository = $mailTemplateRepository;
         $this->mailTemplate = $mailTemplate;
         $this->mailTemplateDataValidationService = $mailTemplateDataValidationService;
+        $this->checkIfCurrentUserIsAllowedToManagedThis(3);
     }
 
     #[Route('/gestion/mails_templates', name: 'app_gestion_mail_template')]

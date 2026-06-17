@@ -22,6 +22,7 @@ class TarifController extends AbstractController
         parent::__construct(false);
         $this->tarifRepository = $tarifRepository;
         $this->tarifDataValidationService = $tarifDataValidationService;
+        $this->checkIfCurrentUserIsAllowedToManagedThis(3);
     }
 
     #[Route('/gestion/tarifs', name: 'app_gestion_tarifs')]

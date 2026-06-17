@@ -47,7 +47,7 @@ class EventPresentationsController extends AbstractController
             $eventPresentations = $this->eventPresentationsRepository->findAll(false, true);
         }
 
-        $events = $this->eventRepository->findAllSortByDate(true);
+        $events = $this->eventRepository->findAllSortByDate(null);
 
         $eventSessions = $this->eventSessionRepository->findAllLastSessionDateByEvent();
 

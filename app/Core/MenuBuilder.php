@@ -43,7 +43,7 @@ class MenuBuilder
         }
         elseif($isEntrancePage) {
             $menuItems[] = $this->createItem('Gestion des entrées', '/entrance/search', str_starts_with($uri, '/entrance'), true);
-            if ($userRoleLevel <= 2) {
+            if ($userRoleLevel <= 3) {
                 $menuItems[] = $this->createItem('Gestion', '/gestion', $uri === '/gestion');
             }
         } else {

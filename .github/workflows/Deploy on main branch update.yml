@@ -16,7 +16,7 @@ jobs:
       uses: SamKirkland/FTP-Deploy-Action@v4.3.4
       with:
         server: ${{ secrets.ftp_host_ara_prod }}
-        username: ${{ secrets.user_ara_prod }}
+        username: ${{ secrets.ftp_user_ara_prod }}
         password: ${{ secrets.ftp_password_ara_prod }}
         exclude: |
           **/.git*

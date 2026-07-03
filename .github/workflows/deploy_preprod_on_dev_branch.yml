@@ -34,24 +34,16 @@ jobs:
       uses: actions/checkout@v4
 
     - name: Install SSH Key
-      env:
-        SSH_PRIVATE_KEY: ${{ secrets.PREPROD_SSH_PRIVATE_KEY }}
-        SSH_PASSPHRASE: ${{ secrets.PREPROD_SSH_PASSPHRASE }}
-        SSH_KEY_NAME: ${{ secrets.PREPROD_SSH_KEY_NAME }}
-      run: |
-        mkdir -p ~/.ssh
-        echo "$SSH_PRIVATE_KEY" > ~/.ssh/$SSH_KEY_NAME
-        chmod 600 ~/.ssh/$SSH_KEY_NAME
-        eval $(ssh-agent -s)
-        echo "$SSH_PASSPHRASE" | ssh-add ~/.ssh/$SSH_KEY_NAME
+      uses: webfactory/ssh-agent@v0.5.3
+      with:
+        ssh-private-key: ${{ secrets.PREPROD_SSH_PRIVATE_KEY }}
 
-    - name: Test SSH and Path
+    - name: Copy files with rsync
       run: |
-        ssh -T -o StrictHostKeyChecking=no ${{ secrets.PREPROD_SSH_USER }}@${{ secrets.PREPROD_SSH_HOST }} "pwd && whoami && ls -la ${{ secrets.PREPROD_SSH_PATH }}"
-
+        rsync -rlvz --delete --exclude-from='.gitignore' --exclude='.env' --exclude='vendor/' --exclude='.github/' --exclude='/public/images/accueil/' --exclude='Dockerfile' --exclude='docker-compose.yml' -e "ssh -o StrictHostKeyChecking=no" . ${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_HOST }}:${{ secrets.SSH_PATH }}
     - name: Run Composer commands
       run: |
-        ssh -T -o StrictHostKeyChecking=no ${{ secrets.PREPROD_SSH_USER }}@${{ secrets.PREPROD_SSH_HOST }} << 'EOF'
+        ssh -o StrictHostKeyChecking=no ${{ secrets.PREPROD_SSH_USER }}@${{ secrets.PREPROD_SSH_HOST }} << 'EOF'
           cd ${{ secrets.PREPROD_SSH_PATH }}
           composer install
           composer update

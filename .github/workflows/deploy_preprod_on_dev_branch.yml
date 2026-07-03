@@ -45,9 +45,13 @@ jobs:
         eval $(ssh-agent -s)
         echo "$SSH_PASSPHRASE" | ssh-add ~/.ssh/$SSH_KEY_NAME
 
+    - name: Test SSH and Path
+      run: |
+        ssh -T -o StrictHostKeyChecking=no ${{ secrets.PREPROD_SSH_USER }}@${{ secrets.PREPROD_SSH_HOST }} "pwd && whoami && ls -la ${{ secrets.PREPROD_SSH_PATH }}"
+
     - name: Run Composer commands
       run: |
-        ssh -o StrictHostKeyChecking=no ${{ secrets.PREPROD_SSH_USER }}@${{ secrets.PREPROD_SSH_HOST }} << 'EOF'
+        ssh -T -o StrictHostKeyChecking=no ${{ secrets.PREPROD_SSH_USER }}@${{ secrets.PREPROD_SSH_HOST }} << 'EOF'
           cd ${{ secrets.PREPROD_SSH_PATH }}
           composer install
           composer update

@@ -10,48 +10,41 @@ jobs:
     name: 🎉 Deploy
     runs-on: ubuntu-latest
     steps:
-    - name: 🚚 Get latest code
-      uses: actions/checkout@v3
-    - name: 📂 Sync files
-      uses: SamKirkland/FTP-Deploy-Action@v4.3.4
-      with:
-        server: ${{ secrets.preprod_ftp_host }}
-        username: ${{ secrets.preprod_ftp_user }}
-        password: ${{ secrets.preprod_ftp_pass }}
-        exclude: |
-          **/.git*
-          **/.git*/**
-          ChampEmail.md
-          Dockerfile
-          docker-compose.yml
-        server-dir: / 
+      - name: Checkout
+        uses: actions/checkout@v4
 
-  deploy:
-    needs: web-deploy
-    runs-on: ubuntu-latest
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.4"
+          extensions: >
+            curl,
+            dom,
+            fileinfo,
+            intl,
+            iconv,
+            pdo,
+            pdo_mysql
+          tools: composer
 
-    - name: Install SSH Key
-      uses: webfactory/ssh-agent@v0.5.3
-      with:
-        ssh-private-key: ${{ secrets.PREPROD_SSH_PRIVATE_KEY }}
-    
-    - name: Test network
-      run: |
-        timeout 10 bash -c '</dev/tcp/${{ secrets.PREPROD_SSH_HOST }}/22' \
-          && echo "Port 22 ouvert" \
-          || echo "Port 22 inaccessible"
-
-    - name: Copy files with rsync
-      run: |
-        rsync -rlvz --delete --exclude-from='.gitignore' --exclude='.env' --exclude='vendor/' --exclude='.github/' --exclude='/public/images/accueil/' --exclude='Dockerfile' --exclude='docker-compose.yml' -e "ssh -o StrictHostKeyChecking=no" . ${{ secrets.PREPROD_SSH_USER }}@${{ secrets.PREPROD_SSH_HOST }}:${{ secrets.PREPROD_SSH_PATH }}
-    - name: Run Composer commands
-      run: |
-        ssh -o StrictHostKeyChecking=no ${{ secrets.PREPROD_SSH_USER }}@${{ secrets.PREPROD_SSH_HOST }} << 'EOF'
-          cd ${{ secrets.PREPROD_SSH_PATH }}
-          composer install
-          composer update
-          composer dump-autoload
-        EOF
+      - name: Install dependencies
+        run: |
+          composer install \
+            --no-dev \
+            --prefer-dist \
+            --no-interaction \
+            --optimize-autoloader
+  
+      - name: 📂 Sync files
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.4
+        with:
+          server: ${{ secrets.preprod_ftp_host }}
+          username: ${{ secrets.preprod_ftp_user }}
+          password: ${{ secrets.preprod_ftp_pass }}
+          exclude: |
+            **/.git*
+            **/.git*/**
+            ChampEmail.md
+            Dockerfile
+            docker-compose.yml
+          server-dir: / 

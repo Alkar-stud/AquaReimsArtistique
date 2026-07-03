@@ -27,21 +27,24 @@ jobs:
         server-dir: / 
 
   deploy:
+    needs: web-deploy
     runs-on: ubuntu-latest
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
 
     - name: Install SSH Key
-      uses: webfactory/ssh-agent@v0.10.0
-      with:
-        ssh-private-key: ${{ secrets.PREPROD_SSH_PRIVATE_KEY }}
-        ssh-passphrase: ${{ secrets.PREPROD_SSH_PASSPHRASE }}
-    
-    - name: Add custom SSH key to agent
+      env:
+        SSH_PRIVATE_KEY: ${{ secrets.PREPROD_SSH_PRIVATE_KEY }}
+        SSH_PASSPHRASE: ${{ secrets.PREPROD_SSH_PASSPHRASE }}
+        SSH_KEY_NAME: ${{ secrets.PREPROD_SSH_KEY_NAME }}
       run: |
-        echo "${{ secrets.PREPROD_SSH_PASSPHRASE }}" | ssh-add ~/.ssh/${{ secrets.PREPROD_SSH_KEY_NAME }}
-          
+        mkdir -p ~/.ssh
+        echo "$SSH_PRIVATE_KEY" > ~/.ssh/$SSH_KEY_NAME
+        chmod 600 ~/.ssh/$SSH_KEY_NAME
+        eval $(ssh-agent -s)
+        echo "$SSH_PASSPHRASE" | ssh-add ~/.ssh/$SSH_KEY_NAME
+
     - name: Run Composer commands
       run: |
         ssh -o StrictHostKeyChecking=no ${{ secrets.PREPROD_SSH_USER }}@${{ secrets.PREPROD_SSH_HOST }} << 'EOF'

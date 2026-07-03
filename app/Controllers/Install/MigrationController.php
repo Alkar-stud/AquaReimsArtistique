@@ -379,14 +379,15 @@ class MigrationController
         if (!$userRepo->updateData(1, $displayName, $email)) {
             return 'Impossible de mettre à jour l’email.';
         }
-
+var_dump(NB_CARACTERE_TOKEN);
+die;
         try {
             $token = bin2hex(random_bytes((int)NB_CARACTERE_TOKEN));
         } catch (RandomException) {
             return 'Impossible de générer un token de réinitialisation.';
         }
 
-        $expiresAt = (new DateTime('+1 hour'))->format('Y-m-d H:i:s');
+        $expiresAt = new DateTime('+1 hour')->format('Y-m-d H:i:s');
         if (!$userRepo->savePasswordResetToken(1, $token, $expiresAt)) {
             return 'Impossible d’enregistrer le token de réinitialisation.';
         }

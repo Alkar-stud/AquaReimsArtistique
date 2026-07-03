@@ -101,7 +101,6 @@ class MigrationController
 
         if (empty($toApply)) {
             $this->redirect('/404');
-            return;
         }
 
         echo '<a href="/">Retour à l\'accueil</a>';
@@ -379,8 +378,11 @@ class MigrationController
         if (!$userRepo->updateData(1, $displayName, $email)) {
             return 'Impossible de mettre à jour l’email.';
         }
-var_dump(NB_CARACTERE_TOKEN);
-die;
+
+        if (!defined('NB_CARACTERE_TOKEN')) {
+            define('NB_CARACTERE_TOKEN', 32);
+        }
+
         try {
             $token = bin2hex(random_bytes((int)NB_CARACTERE_TOKEN));
         } catch (RandomException) {

@@ -25,3 +25,24 @@ jobs:
           Dockerfile
           docker-compose.yml
         server-dir: / 
+
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install SSH Key
+      uses: webfactory/ssh-agent@v0.5.3
+      with:
+        ssh-private-key: ${{ secrets.PREPROD_SSH_PRIVATE_KEY }}
+        ssh-passphrase: ${{ secrets.PREPROD_SSH_PASSPHRASE }}
+
+    - name: Run Composer commands
+      run: |
+        ssh -o StrictHostKeyChecking=no ${{ secrets.PREPROD_SSH_USER }}@${{ secrets.PREPROD_SSH_HOST }} << 'EOF'
+          cd ${{ secrets.PREPROD_SSH_PATH }}
+          composer install
+          composer update
+          composer dump-autoload
+        EOF

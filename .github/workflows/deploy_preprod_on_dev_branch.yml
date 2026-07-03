@@ -1,9 +1,9 @@
-name: Deploy preprod on main branch update
+name: Deploy preprod on dev branch update
 
 on:
   push:
     branches:
-      - main
+      - dev
   workflow_dispatch:  # Permet de déclencher le workflow manuellement
 jobs:
   web-deploy:
@@ -24,4 +24,4 @@ jobs:
           ChampEmail.md
           Dockerfile
           docker-compose.yml
-        server-dir: /
+        server-dir: / 

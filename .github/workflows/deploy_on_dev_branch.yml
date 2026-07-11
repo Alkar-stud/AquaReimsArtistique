@@ -1,4 +1,4 @@
-name: Deploy on dev branch update
+name: Deploy on VPS dev branch update
 
 on:
   push:

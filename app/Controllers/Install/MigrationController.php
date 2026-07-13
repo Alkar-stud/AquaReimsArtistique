@@ -101,7 +101,6 @@ class MigrationController
 
         if (empty($toApply)) {
             $this->redirect('/404');
-            return;
         }
 
         echo '<a href="/">Retour à l\'accueil</a>';
@@ -380,13 +379,17 @@ class MigrationController
             return 'Impossible de mettre à jour l’email.';
         }
 
+        if (!defined('NB_CARACTERE_TOKEN')) {
+            define('NB_CARACTERE_TOKEN', 32);
+        }
+
         try {
             $token = bin2hex(random_bytes((int)NB_CARACTERE_TOKEN));
         } catch (RandomException) {
             return 'Impossible de générer un token de réinitialisation.';
         }
 
-        $expiresAt = (new DateTime('+1 hour'))->format('Y-m-d H:i:s');
+        $expiresAt = new DateTime('+1 hour')->format('Y-m-d H:i:s');
         if (!$userRepo->savePasswordResetToken(1, $token, $expiresAt)) {
             return 'Impossible d’enregistrer le token de réinitialisation.';
         }

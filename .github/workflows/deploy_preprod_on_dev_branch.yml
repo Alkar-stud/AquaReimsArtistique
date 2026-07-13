@@ -1,0 +1,50 @@
+name: Deploy preprod on dev branch update
+
+on:
+  push:
+    branches:
+      - dev
+  workflow_dispatch:  # Permet de déclencher le workflow manuellement
+jobs:
+  web-deploy:
+    name: 🎉 Deploy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout  # Récupère les fichiers
+        uses: actions/checkout@v4
+
+      - name: Setup PHP  # Installe PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.4"
+          extensions: >
+            curl,
+            dom,
+            fileinfo,
+            intl,
+            iconv,
+            pdo,
+            pdo_mysql
+          tools: composer
+
+      - name: Install dependencies  # Installe les dépendances pour ne pas avoir à le faire en SSH
+        run: |
+          composer install \
+            --no-dev \
+            --prefer-dist \
+            --no-interaction \
+            --optimize-autoloader
+  
+      - name: 📂 Sync files    #On envoie les fichiers sur le serveur
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.4
+        with:
+          server: ${{ secrets.preprod_ftp_host }}
+          username: ${{ secrets.preprod_ftp_user }}
+          password: ${{ secrets.preprod_ftp_pass }}
+          exclude: |
+            **/.git*
+            **/.git*/**
+            ChampEmail.md
+            Dockerfile
+            docker-compose.yml
+          server-dir: / 

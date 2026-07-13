@@ -35,6 +35,13 @@ readonly class UserSessionService
 
         // Enregistre le nouvel ID de session en BDD
         $this->userRepository->addSessionId($user->getId(), session_id());
+        /*
+         * TODO: il faudra d'abord adapter le Model et les connexions PDO pour utiliser la BDD USER
+        //On met à jour User avec session_id et la date courante pour le dernier login
+        $user->setSessionId(session_id());
+        $user->setLastLoginAt(new DateTime());
+        $this->userRepository->update($user);
+         */
     }
 
     /**

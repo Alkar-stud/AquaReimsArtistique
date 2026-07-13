@@ -10,10 +10,10 @@ jobs:
     name: 🎉 Deploy
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout  # Récupère les fichiers
         uses: actions/checkout@v4
 
-      - name: Setup PHP
+      - name: Setup PHP  # Installe PHP
         uses: shivammathur/setup-php@v2
         with:
           php-version: "8.4"
@@ -27,7 +27,7 @@ jobs:
             pdo_mysql
           tools: composer
 
-      - name: Install dependencies
+      - name: Install dependencies  # Installe les dépendances pour ne pas avoir à le faire en SSH
         run: |
           composer install \
             --no-dev \
@@ -35,7 +35,7 @@ jobs:
             --no-interaction \
             --optimize-autoloader
   
-      - name: 📂 Sync files
+      - name: 📂 Sync files    #On envoie les fichiers sur le serveur
         uses: SamKirkland/FTP-Deploy-Action@v4.3.4
         with:
           server: ${{ secrets.preprod_ftp_host }}

@@ -252,10 +252,8 @@ class HelloAssoService
 
     /**
      * Récupère les informations utiles d'une commande.
-     *
-     * On recherche les customFields par leur nom et non par leur ID,
-     * car les IDs peuvent être différents selon les formulaires.
-     *
+     * Tous les customFields sont conservés, quel que soit leur nom.
+     * Cela permet de supporter automatiquement tous les produits présents dans la boutique HelloAsso.
      * @param array $order
      * @return array
      */
@@ -265,48 +263,58 @@ class HelloAssoService
 
         $result = [
             'orderId' => $order['id'] ?? null,
+
             'payer' => [
                 'email' => $payer['email'] ?? '',
                 'firstName' => $payer['firstName'] ?? '',
                 'lastName' => $payer['lastName'] ?? '',
                 'country' => $payer['country'] ?? '',
             ],
+
             'items' => [],
+
         ];
 
         foreach ($order['items'] ?? [] as $item) {
+
             $customFields = [];
 
+            /*
+             * CustomFields directement rattachés à l'article.
+             */
             foreach ($item['customFields'] ?? [] as $customField) {
-                $name = $customField['name'] ?? '';
-                $answer = $customField['answer'] ?? '';
 
-                if ($name === 'Prénom imprimé sur le tee-shirt') {
-                    $customFields['printedFirstName'] = $answer;
+                if (!isset($customField['name'])) {
+                    continue;
                 }
 
-                if ($name === 'Taille du T-shirt enfant') {
-                    $customFields['tshirtSize'] = $answer;
-                }
+                $customFields[] = [
+                    'id' => $customField['id'] ?? null,
+                    'name' => $customField['name'],
+                    'type' => $customField['type'] ?? null,
+                    'answer' => $customField['answer'] ?? '',
+                ];
             }
 
             /*
-             * Les options peuvent elles aussi contenir des customFields.
-             * Dans ton exemple, le prénom imprimé est justement dans une
-             * option du T-shirt.
+             * CustomFields éventuellement présents dans les options
+             * de l'article.
              */
             foreach ($item['options'] ?? [] as $option) {
+
                 foreach ($option['customFields'] ?? [] as $customField) {
-                    $name = $customField['name'] ?? '';
-                    $answer = $customField['answer'] ?? '';
 
-                    if ($name === 'Prénom imprimé sur le tee-shirt') {
-                        $customFields['printedFirstName'] = $answer;
+                    if (!isset($customField['name'])) {
+                        continue;
                     }
 
-                    if ($name === 'Taille du T-shirt enfant') {
-                        $customFields['tshirtSize'] = $answer;
-                    }
+                    $customFields[] = [
+                        'id' => $customField['id'] ?? null,
+                        'name' => $customField['name'],
+                        'type' => $customField['type'] ?? null,
+                        'answer' => $customField['answer'] ?? '',
+                        'optionName' => $option['name'] ?? null,
+                    ];
                 }
             }
 
@@ -314,8 +322,11 @@ class HelloAssoService
                 'name' => $item['name'] ?? '',
                 'id' => $item['id'] ?? null,
                 'amount' => $item['amount'] ?? 0,
+                'type' => $item['type'] ?? null,
+                'state' => $item['state'] ?? null,
                 'customFields' => $customFields,
             ];
+
         }
 
         return $result;

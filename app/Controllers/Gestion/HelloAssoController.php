@@ -5,20 +5,16 @@ namespace app\Controllers\Gestion;
 use app\Attributes\Route;
 use app\Controllers\AbstractController;
 use app\Services\Payment\HelloAssoService;
-use app\Services\Reservation\ReservationFinalSummaryService;
 use Throwable;
 
 class HelloAssoController extends AbstractController
 {
-    private ReservationFinalSummaryService $reservationFinalSummaryService;
-    private HelloAssoService $helloAssoService;
+     private HelloAssoService $helloAssoService;
 
     public function __construct(
-        ReservationFinalSummaryService $reservationFinalSummaryService
+        HelloAssoService $helloAssoService
     ) {
         parent::__construct(false);
-
-        $this->reservationFinalSummaryService = $reservationFinalSummaryService;
         $this->helloAssoService = new HelloAssoService();
     }
 

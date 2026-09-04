@@ -2,6 +2,8 @@
 
 namespace app\Services\Payment;
 
+use RuntimeException;
+
 class HelloAssoService
 {
     protected string $urlToken = 'oauth2/token';
@@ -37,7 +39,7 @@ class HelloAssoService
             )));
 
         $json = curl_exec($curl);
-        curl_close($curl);
+        //curl_close($curl);
 
         // returned json string
         $obj = json_decode($json);
@@ -82,7 +84,7 @@ class HelloAssoService
         ));
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         $rawResponse = curl_exec($ch);
-        curl_close ($ch);
+        //curl_close ($ch);
 
         // return json string
         return json_decode($rawResponse);
@@ -105,7 +107,7 @@ class HelloAssoService
         ));
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         $rawResponse = curl_exec($ch);
-        curl_close ($ch);
+        //curl_close ($ch);
 
         // returned json string
         return json_decode($rawResponse);
@@ -128,7 +130,7 @@ class HelloAssoService
         ));
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         $rawResponse = curl_exec($ch);
-        curl_close ($ch);
+        //curl_close ($ch);
 
         // returned json string
         return json_decode($rawResponse);
@@ -159,10 +161,164 @@ class HelloAssoService
         ));
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         $rawResponse = curl_exec($ch);
-        curl_close ($ch);
+        //curl_close ($ch);
 
         // return json string
         return json_decode($rawResponse);
+    }
+
+
+    /**
+     * Récupère une commande HelloAsso.
+     *
+     * @param int $orderId
+     * @return array
+     */
+    public function GetOrder(int $orderId): array
+    {
+        if ($orderId <= 0) {
+            throw new RuntimeException(
+                'Le numéro de commande HelloAsso est invalide.'
+            );
+        }
+
+        $accessToken = $this->GetToken();
+
+        $apiUrl = rtrim($_ENV['HELLOASSO_API_URL'] ?? '', '/') . '/';
+
+        $url = $apiUrl
+            . 'v5/orders/'
+            . $orderId
+            . '?withFormData=false&checkPaymentsRefundEligibility=false';
+
+        $curl = curl_init();
+
+        curl_setopt_array($curl, [
+            CURLOPT_URL => $url,
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_ENCODING => '',
+            CURLOPT_MAXREDIRS => 10,
+            CURLOPT_TIMEOUT => 30,
+            CURLOPT_FOLLOWLOCATION => true,
+            CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+            CURLOPT_CUSTOMREQUEST => 'GET',
+            CURLOPT_HTTPHEADER => [
+                'accept: application/json',
+                'Authorization: Bearer ' . $accessToken,
+            ],
+        ]);
+
+        $json = curl_exec($curl);
+        $curlError = curl_error($curl);
+        $httpCode = (int) curl_getinfo($curl, CURLINFO_HTTP_CODE);
+
+        //curl_close($curl);
+
+        if ($json === false || !empty($curlError)) {
+            throw new RuntimeException(
+                'Erreur lors de la connexion à HelloAsso.'
+            );
+        }
+
+        /*
+         * Une commande inexistante renvoie normalement un code HTTP 404.
+         * On utilise une exception spécifique pour permettre au contrôleur
+         * d'afficher un message adapté.
+         */
+        if ($httpCode === 404) {
+            throw new RuntimeException(
+                'Commande HelloAsso introuvable.',
+                404
+            );
+        }
+
+        if ($httpCode < 200 || $httpCode >= 300) {
+            throw new RuntimeException(
+                'HelloAsso a retourné une erreur lors de la récupération de la commande.',
+                $httpCode
+            );
+        }
+
+        $order = json_decode($json, true);
+
+        if (!is_array($order)) {
+            throw new RuntimeException(
+                'La réponse de HelloAsso est invalide.'
+            );
+        }
+
+        return $order;
+    }
+
+    /**
+     * Récupère les informations utiles d'une commande.
+     *
+     * On recherche les customFields par leur nom et non par leur ID,
+     * car les IDs peuvent être différents selon les formulaires.
+     *
+     * @param array $order
+     * @return array
+     */
+    public function GetUsefulOrderData(array $order): array
+    {
+        $payer = $order['payer'] ?? [];
+
+        $result = [
+            'orderId' => $order['id'] ?? null,
+            'payer' => [
+                'email' => $payer['email'] ?? '',
+                'firstName' => $payer['firstName'] ?? '',
+                'lastName' => $payer['lastName'] ?? '',
+                'country' => $payer['country'] ?? '',
+            ],
+            'items' => [],
+        ];
+
+        foreach ($order['items'] ?? [] as $item) {
+            $customFields = [];
+
+            foreach ($item['customFields'] ?? [] as $customField) {
+                $name = $customField['name'] ?? '';
+                $answer = $customField['answer'] ?? '';
+
+                if ($name === 'Prénom imprimé sur le tee-shirt') {
+                    $customFields['printedFirstName'] = $answer;
+                }
+
+                if ($name === 'Taille du T-shirt enfant') {
+                    $customFields['tshirtSize'] = $answer;
+                }
+            }
+
+            /*
+             * Les options peuvent elles aussi contenir des customFields.
+             * Dans ton exemple, le prénom imprimé est justement dans une
+             * option du T-shirt.
+             */
+            foreach ($item['options'] ?? [] as $option) {
+                foreach ($option['customFields'] ?? [] as $customField) {
+                    $name = $customField['name'] ?? '';
+                    $answer = $customField['answer'] ?? '';
+
+                    if ($name === 'Prénom imprimé sur le tee-shirt') {
+                        $customFields['printedFirstName'] = $answer;
+                    }
+
+                    if ($name === 'Taille du T-shirt enfant') {
+                        $customFields['tshirtSize'] = $answer;
+                    }
+                }
+            }
+
+            $result['items'][] = [
+                'name' => $item['name'] ?? '',
+                'id' => $item['id'] ?? null,
+                'amount' => $item['amount'] ?? 0,
+                'customFields' => $customFields,
+            ];
+        }
+
+        return $result;
     }
 
 

@@ -170,7 +170,6 @@
             </div>
 
 
-
             <!-- Articles -->
             <div class="card border-0 shadow-sm mb-4">
 
@@ -181,127 +180,75 @@
                 </div>
 
                 <div class="card-body px-4 pb-4">
-
                     {% if !empty($orderData['items']) %}
-
-                    <div class="row g-3">
-
-                        {% foreach $orderData['items'] as $item %}
-
-                        <div class="col-12">
-
-                            <div class="border rounded-3 p-3">
-
-                                <div class="d-flex align-items-start justify-content-between gap-3 mb-3">
-
-                                    <div>
-                                        <h4 class="h6 mb-1">
-                                            {{ $item['name'] ?: 'Article' }}
-                                        </h4>
-
-                                        {% if !empty($item['id']) %}
-
-                                        <div class="text-muted small">
-                                            Article #{{ $item['id'] }}
+                        <div class="row g-3">
+                            {% foreach $orderData['items'] as $item %}
+                                <div class="col-12">
+                                    <div class="border rounded-3 p-3">
+                                        <div class="d-flex align-items-start justify-content-between gap-3 mb-3">
+                                            <div>
+                                                <h4 class="h6 mb-1">
+                                                    {{ $item['name'] ?: 'Article' }}
+                                                </h4>
+                                                {% if !empty($item['id']) %}
+                                                <div class="text-muted small">
+                                                    Article #{{ $item['id'] }}
+                                                </div>
+                                                {% endif %}
+                                            </div>
                                         </div>
 
+                                        <!-- Champs personnalisés -->
+                                        {% if !empty($item['customFields']) %}
+                                            <div class="row g-3">
+                                                {% foreach $item['customFields'] as $customField %}
+                                                <div class="col-12 col-md-6">
+                                                    <div class="bg-light rounded-3 p-3 h-100">
+                                                        <div class="text-muted small mb-1">
+                                                            {{ $customField['name'] }}
+                                                        </div>
+                                                        <div class="fs-5 fw-semibold">
+                                                            {% if !empty($customField['answer']) %}
+                                                            {{ $customField['answer'] }}
+                                                            {% else %}
+                                                            <span class="text-muted">
+                                                —
+                                            </span>
+                                                            {% endif %}
+                                                        </div>
+
+                                                        {% if !empty($customField['optionName']) %}
+                                                        <div class="text-muted small mt-1">
+                                                            Option :
+                                                            {{ $customField['optionName'] }}
+                                                        </div>
+                                                        {% endif %}
+                                                    </div>
+                                                </div>
+                                                {% endforeach %}
+                                            </div>
                                         {% endif %}
                                     </div>
-
-
                                 </div>
-
-
-                                <!-- Champs personnalisés -->
-                                {% if !empty($item['customFields']) %}
-
-                                <div class="row g-3">
-
-                                    {% if !empty($item['customFields']['printedFirstName']) %}
-
-                                    <div class="col-12 col-md-6">
-
-                                        <div class="bg-light rounded-3 p-3 h-100">
-
-                                            <div class="text-muted small mb-1">
-                                                Prénom imprimé sur le tee-shirt
-                                            </div>
-
-                                            <div class="fs-5 fw-semibold">
-                                                {{ $item['customFields']['printedFirstName'] }}
-                                            </div>
-
-                                        </div>
-
-                                    </div>
-
-                                    {% endif %}
-
-
-                                    {% if !empty($item['customFields']['tshirtSize']) %}
-
-                                    <div class="col-12 col-md-6">
-
-                                        <div class="bg-light rounded-3 p-3 h-100">
-
-                                            <div class="text-muted small mb-1">
-                                                Taille du T-shirt enfant
-                                            </div>
-
-                                            <div class="fs-5 fw-semibold">
-                                                {{ $item['customFields']['tshirtSize'] }}
-                                            </div>
-
-                                        </div>
-
-                                    </div>
-
-                                    {% endif %}
-
-                                </div>
-
-                                {% else %}
-
-                                <div class="text-muted small">
-                                    Aucun renseignement complémentaire pour cet article.
-                                </div>
-
-                                {% endif %}
-
-                            </div>
-
+                            {% endforeach %}
                         </div>
-
-                        {% endforeach %}
-
-                    </div>
-
                     {% else %}
-
-                    <div class="text-muted">
-                        Aucun article trouvé dans cette commande.
-                    </div>
-
+                        <div class="text-muted">
+                            Aucun article trouvé dans cette commande.
+                        </div>
                     {% endif %}
-
                 </div>
-
             </div>
 
-
             <div class="text-center pb-3">
-
                 <a
                         href="/gestion/command-helloasso"
                         class="btn btn-outline-secondary"
                 >
                     Vérifier une autre commande
                 </a>
-
             </div>
-
             {% endif %}
-
         </div>
     </div>
 

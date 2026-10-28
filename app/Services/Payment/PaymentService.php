@@ -134,7 +134,8 @@ class PaymentService
         // HelloAsso nous le renverra lors de la confirmation du paiement.
         $this->helloAssoCartDTO->setMetaData([
             'primary_id' => $reservation['reservation']->getId(),
-            'context'    => 'new_reservation'
+            'context'    => 'new_reservation',
+            'app_code'   => $_ENV['APP_CODE'],
         ]);
 
         return $this->helloAssoCartDTO;
@@ -184,7 +185,8 @@ class PaymentService
         // Métadonnées cruciales pour le webhook
         $cartDTO->setMetaData([
             'context'   => 'balance_payment',
-            'primaryId' => $reservation->getId() // ID SQL de la réservation
+            'primaryId' => $reservation->getId(), // ID SQL de la réservation
+            'app_code'   => $_ENV['APP_CODE'],
         ]);
 
         return $cartDTO;

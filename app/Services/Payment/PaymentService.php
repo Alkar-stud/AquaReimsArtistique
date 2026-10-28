@@ -134,6 +134,7 @@ class PaymentService
         // HelloAsso nous le renverra lors de la confirmation du paiement.
         $this->helloAssoCartDTO->setMetaData([
             'primary_id' => $reservation['reservation']->getId(),
+            'id' => $reservation['reservation']->getId(),
             'context'    => 'new_reservation',
             'app_code'   => $_ENV['APP_CODE'],
         ]);
@@ -186,6 +187,7 @@ class PaymentService
         $cartDTO->setMetaData([
             'context'   => 'balance_payment',
             'primaryId' => $reservation->getId(), // ID SQL de la réservation
+            'id' => $reservation->getId(), // ID SQL de la réservation
             'app_code'   => $_ENV['APP_CODE'],
         ]);
 
